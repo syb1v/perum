@@ -103,10 +103,11 @@
 - **Мульти-тенант по hostname**: корневой layout читает Host (`next/headers`) — `admin.*` рендерит платформу **без** школьного AuthProvider, поддомен → школьный легаси с его провайдерами.
 - **Платформенный раздел** `src/app/platform/` (`login` + dashboard): вход platform_admin → список/создание орг, фирменная тёмная тема (`platform.module.css` на легаси-переменных), свой `platformApi` (control plane). SSR-проверено: форма и дашборд рендерятся; `admin.*`→платформа, `acme.*`→легаси.
 - Роли `org_admin/director` добавлены во фронт-роутинг (`lib/roles.ts`), хелпер `lib/host.ts`.
+- **Tenant-side вход выровнен под легаси-контракт.** Бэкенд `perum-tenant` отдаёт `POST /api/login`→`{token}`, `GET /api/user/me` (`first_name/last_name/balance/avatar_url/password_changed`), `POST /api/logout`; JWT несёт `id/session_token/role/org_slug` (их читает веб-middleware из cookie). Модель `User` приведена к легаси (first_name/last_name + balance + avatar_url). **E2E:** org_admin логинится на `acme.perum.local`, `/user/me` отдаёт роль → middleware ведёт в `/admin`.
 
-**Осталось по фронту:**
-1. **Tenant-side вход.** Легаси зовёт `POST /api/login`→`{token}` и `GET /api/user/me` (поля `first_name/last_name/balance/...`); у нас `POST /api/auth/login`→`{access_token}` и `/api/auth/me` (`full_name`). По директиве «функционал из легаси» — привести **бэкенд perum-tenant к контракту легаси** (эндпоинты `/api/login`,`/api/user/me`,`/api/logout` + поля User). Тогда школьный логин заработает на поддомене.
-2. Школьные экраны (журнал/биржа/маркет/админка) оживают по мере бэкенда (Фазы 5-8).
+**Осталось:**
+1. **Школьные эндпоинты бэкенда** (Фазы 5-8): после входа org_admin попадает на `/admin`, но панели школы (журнал/биржа/маркет/классы/предметы) дёргают эндпоинты, которых ещё нет → пустые/ошибочные панели. Оживают по мере портирования бэкенда из легаси.
+2. Дашборды ролей school_admin/director/teacher/student/parent — по мере появления данных.
 
 Тестируется в браузере: **`http://admin.perum.local`** (вход `admin`/`admin`) — создание/список орг. Школьный дизайн — `http://<slug>.perum.local`. API напрямую — `…/docs` (Swagger).
 
@@ -143,7 +144,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
 
 ## Рабочие правила
 
-- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.12`.
+- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.13`.
 - Коммитим осмысленными порциями; пуш в `main` — по ходу работы.
 
 ## Зафиксированные решения (не пересматривать без запроса)

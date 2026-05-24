@@ -1,29 +1,26 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
     login: str
     password: str
+    remember_me: bool = True
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+class LoginResponse(BaseModel):
+    # Legacy frontend reads `data.token`.
+    token: str
 
 
 class UserRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
+    # Legacy-compatible user shape consumed by the school frontend.
     id: int
     login: str
-    email: str | None
-    full_name: str | None
+    first_name: str | None
+    last_name: str | None
     role: str
+    balance: int
+    avatar_url: str | None
+    password_changed: bool
     school_id: int | None
-    is_active: bool
-    must_change_password: bool
-
-
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str = Field(min_length=8, max_length=128)
+    email: str | None

@@ -71,10 +71,14 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(30), nullable=False)
     login: Mapped[str] = mapped_column(String(150), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Гамификация (ливки) — наполнится в Фазе 7; здесь чтобы фронт-шапка читала баланс.
+    balance: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

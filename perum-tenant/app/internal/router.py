@@ -48,7 +48,8 @@ async def bootstrap_org_admin(
         role=ORG_ADMIN,
         login=payload.email,
         email=payload.email,
-        full_name=payload.full_name,
+        first_name=payload.full_name or "Администратор",
+        last_name="организации",
         password_hash=hash_password(temp_password),
         must_change_password=True,
     )
