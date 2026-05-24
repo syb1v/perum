@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import ParentStudent, School, ShopItem, Subject, User
+from app.models import ParentStudent, Quest, School, ShopItem, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -350,6 +350,28 @@ async def _seed_market(db, sid: int) -> None:
     logger.info("seeded %d market items", len(MARKET_ITEMS))
 
 
+QUESTS = [
+    # title, type, reward, target_count, description
+    ("Отличная неделя", "positive_grades", 50, 5, "Получи 5 оценок «4» или «5»"),
+    ("Без троек", "no_threes", 100, 5, "Получи серию из 5 оценок без троек"),
+    ("Ежедневный визит", "daily_login", 30, 3, "Заходи на платформу 3 дня"),
+]
+
+
+async def _seed_quests(db, sid: int) -> None:
+    if await db.scalar(select(func.count()).select_from(Quest).where(Quest.school_id == sid)):
+        logger.info("quests already present — skipping")
+        return
+    import json as _json
+    for title, qtype, reward, target, desc in QUESTS:
+        db.add(Quest(
+            school_id=sid, title=title, description=desc, reward=reward, quest_type=qtype,
+            conditions=_json.dumps({"target_count": target}), status="available",
+        ))
+    await db.commit()
+    logger.info("seeded %d quests", len(QUESTS))
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -363,6 +385,7 @@ async def seed() -> None:
         await _seed_finals(db, school.id)
         await _seed_parents(db, school.id, pwd)
         await _seed_market(db, school.id)
+        await _seed_quests(db, school.id)
 
 
 if __name__ == "__main__":

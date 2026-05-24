@@ -117,3 +117,6 @@ from app.models.parent import ParentStudent  # noqa: E402,F401
 
 # Market models (Phase 7).
 from app.models.market import ShopItem, UserInventory  # noqa: E402,F401
+
+# Quest models (Phase 7).
+from app.models.quests import Quest, UserQuest  # noqa: E402,F401

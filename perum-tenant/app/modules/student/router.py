@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.db import get_db
 from app.core.deps import require_student
 from app.models import User
+from app.modules.quests import service as quests_service
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.student import service
 
@@ -62,6 +63,5 @@ async def grades_finals(
 
 
 @router.get("/quests")
-async def quests(user: User = Depends(require_student)) -> list:
-    # Gamification arrives in Phase 7; the dashboard tolerates an empty list.
-    return []
+async def quests(user: User = Depends(require_student), db: AsyncSession = Depends(get_db)) -> list:
+    return await quests_service.get_student_quests(db, await _school(user, db), user)
