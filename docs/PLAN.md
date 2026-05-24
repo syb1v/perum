@@ -200,9 +200,18 @@ JWT payload: `{user_id, school_id, org_slug, role, session_token, exp}`. В tena
 
 Внутри `org_acme_app`: одна Organization (мета), 1..N School, все таблицы с `school_id NOT NULL`, утилита `ensure_same_school(user, entity.school_id)`. `org_admin` видит все школы орг. Между орг — физическая изоляция. Подробнее — [TENANT_ISOLATION.md](TENANT_ISOLATION.md).
 
-### 6. Раскатывание миграций по всем орг (`rollout_service.py`)
+### 6. Обновление версии tenant — модель «всё по кнопке» (`rollout_service.py`)
 
-Цикл по активным орг: pull нового образа → recreate стека → wait healthy → `alembic upgrade head` → отметка deployment. Стратегия canary (сначала N%, потом всем). Forward-compatible миграции (удаление колонок — отдельным релизом). См. [DEPLOYMENT.md](DEPLOYMENT.md).
+Платформа **не пушит** обновления. Control plane выступает «дирижёром»:
+**публикует** релиз (версия + тег образа + changelog), а каждая орг видит
+уведомление в админке и обновляется **одной кнопкой когда захочет** (pull /
+opt-in). Обновление volume-preserving: recreate только `org_<slug>_app` с новым
+образом → `alembic upgrade head`; БД, volume и настройки школы не трогаются. Орг
+независимы, обновляются в своём темпе. **Принудительных/авто-обновлений нет — даже
+секьюрити-патчи по кнопке орг** (платформа лишь помечает релиз критичным).
+Forward-compatible миграции обязательны (удаление колонок — отдельным релизом).
+Multi-host (`dedicated_vm`) — через агент-контейнер на VM (модель Remnawave
+panel↔node), не SSH. См. [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### 7. Бэкапы и observability
 

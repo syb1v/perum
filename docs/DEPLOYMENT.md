@@ -46,25 +46,43 @@ docker exec perum_core python -m app.cli create-org \
   --slug=acme --name="Acme Education" --admin-email=a@a.ru
 ```
 
-## Релиз новой версии tenant (когда будет)
+## Обновление tenant-версии — модель «всё по кнопке»
 
-Tenant-образ собирается через GitHub Actions при merge в `main`. Image push в GHCR с тегами `latest` и `${{ github.sha }}`.
+Tenant-образ собирается в GitHub Actions при релизе и пушится в GHCR с
+версией-тегом (`ghcr.io/syb1v/perum-tenant:1.2.0`) и `latest`.
 
-Раскатывание на прод (через perum-core):
+**Платформа НЕ катит обновления сама. Модель — pull / opt-in:**
 
-```bash
-curl -X POST https://admin.perum.ru/api/rollout \
-  -H "Authorization: Bearer $PLATFORM_TOKEN" \
-  -d '{"new_version": "ghcr.io/syb1v/perum-tenant:abc1234", "canary_percent": 10}'
-```
+1. **Публикация релиза.** Оператор регистрирует релиз в control plane: версия +
+   тег образа + changelog (+ опц. пометка «критичный»).
+2. **Уведомление.** Каждая активная орг получает в админке (`org_admin`) баннер
+   «доступна версия X» со списком изменений.
+3. **Обновление по кнопке.** `org_admin` жмёт «Обновить» → control plane
+   обновляет ТОЛЬКО стек этой орг:
+   - pull нового tenant-образа;
+   - recreate `org_<slug>_app` (БД `org_<slug>_db`, volume и секреты **не трогаются**);
+   - `alembic upgrade head` внутри нового контейнера;
+   - wait healthy; при провале — автооткат на предыдущий тег.
+4. **Независимость.** Каждая орг обновляется в своём темпе. Принудительных и
+   авто-обновлений нет — **даже секьюрити-патчи накатываются только по кнопке орг**
+   (платформа может лишь пометить релиз критичным и слать напоминания).
 
-Control plane:
-1. Pull нового образа.
-2. На canary_percent орг — `compose up -d` с новым образом (recreate).
-3. Ожидание healthcheck.
-4. Применение Alembic-миграций.
-5. Если canary прошёл успешно (нет ошибок 30 минут) — раскатать на остальные.
-6. При проблемах — rollback на предыдущий тег.
+Эндпоинт (Phase ~9): `POST /api/organizations/{slug}/update {version}` —
+volume-preserving апдейт. Опирается на те же примитивы, что и провижининг
+(`docker_client.run_container` + exec alembic), но контейнеры пересоздаются
+без удаления volume (`remove_containers`, а не `remove_stack`).
+
+> «Контейнер тянет код» = тянет готовый **образ** из GHCR, не исходники. Сборка —
+> на стороне CI; орг лишь перетягивает образ и гонит миграции.
+
+## Multi-host: dedicated_vm (Phase 9)
+
+Для крупных орг на отдельных VM control plane не имеет прямого доступа к их
+Docker. Вместо SSH+docker — лёгкий **агент-контейнер** на каждой VM (модель
+Remnawave panel↔node): ставится одним bootstrap-скриптом, слушает команды
+control plane по защищённому каналу (mTLS/токен) и выполняет provisioning /
+update / health локально. `shared_host` (по умолчанию) агента не требует —
+control plane управляет Docker хоста напрямую через сокет.
 
 ## Релиз control plane
 
@@ -81,9 +99,12 @@ docker compose -f deploy/docker-compose.core.yml exec perum_core alembic upgrade
 
 ## Rollback
 
-### Tenant
+### Tenant (одна орг)
 
-`POST /api/rollout` с предыдущей версией tenant-образа. Control plane перезапустит все стеки на старом образе. Миграции БД — отдельно (см. ниже).
+`POST /api/organizations/{slug}/update` с предыдущим тегом образа — control plane
+пересоздаёт стек **этой орг** на старом образе (volume-preserving). Откат
+схемы — отдельно (forward-compatible правило ниже делает откат образа безопасным
+без отката миграций). Массового отката «всем сразу» нет — всё пер-орг.
 
 ### Control plane
 
