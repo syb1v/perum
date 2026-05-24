@@ -20,6 +20,10 @@ services:
       SHARED_REDIS_URL: redis://shared_redis:6379
       DOCKER_NETWORK: perum_internal
       PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
+      # First platform admin, seeded on startup if no admins exist yet.
+      # Dev default is admin/admin — OVERRIDE in prod via .env.
+      BOOTSTRAP_ADMIN_LOGIN: ${BOOTSTRAP_ADMIN_LOGIN:-admin}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin}
     depends_on:
       perum_control_db:
         condition: service_healthy

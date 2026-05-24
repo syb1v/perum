@@ -3,8 +3,8 @@
 > Этот файл — точка возобновления для новой сессии. Полный план — [PLAN.md](PLAN.md). Обновлять при каждом значимом продвижении.
 
 **Дата последнего обновления:** 2026-05-24
-**Текущая фаза:** Phase 1 (Control Plane + Provisioning) — **провижининг работает end-to-end**; осталась `platform_admin` auth, дальше Phase 2.
-**Последний коммит:** feat провижининга (см. `git log`).
+**Текущая фаза:** **Phase 1 ЗАВЕРШЕНА** (control plane + provisioning + `platform_admin` auth). Дальше — Phase 2 (tenant auth + модели).
+**Последний коммит:** feat platform_admin auth (см. `git log`).
 
 ---
 
@@ -49,6 +49,14 @@
 - **`perum-tenant` каркас** — `app/{core,models,main}`, `/health` + `/health/db`, `TenantMeta` + миграция `tenant_0001_init`, Dockerfile (curl healthcheck). Образ `perum-tenant:dev` собирается локально.
 - **`deploy/docker-compose.core.yml`** — `perum_core` получил docker-сокет + `IMAGE_REGISTRY`/`CONTROL_PLANE_URL`; дефолт `TENANT_IMAGE=perum-tenant:dev`.
 
+### Phase 1 — platform_admin auth (готово, проверено)
+- **`app/core/security.py`** — bcrypt (`hash_password`/`verify_password`) + JWT (`create/decode_access_token`, HS256, TTL 7 дней).
+- **`app/core/deps.py`** — `require_platform_admin` (HTTPBearer, `auto_error=False`; декод JWT → проверка роли → загрузка `PlatformAdmin`; 401 на отсутствие/невалидность).
+- **`app/routers/auth.py`** — `POST /api/auth/login`, `GET /api/auth/me`.
+- **`app/schemas/auth.py`** — LoginRequest / TokenResponse / PlatformAdminRead.
+- **`app/main.py`** — весь `/api/organizations` закрыт `require_platform_admin`; на старте сидится первый админ (`BOOTSTRAP_ADMIN_*`, dev `admin`/`admin`), если админов ещё нет.
+- Тесты: `test_security.py` + `test_auth_protection.py`. **47 passed** суммарно.
+
 ### Проверено вживую (на dev-машине)
 - `docker compose up` — все 4 сервиса healthy. Миграции `0001`+`0002` на старте.
 - `/health` → `{"status":"ok"}`; `/health/db` → `{"status":"ok","db":1}`.
@@ -59,12 +67,13 @@
   - `curl --resolve acme.perum.local:80:127.0.0.1 http://acme.perum.local/health` → `200 {"org":"acme"}`; `/health/db` → `{"db":1}`.
   - В `org_acme_db` применилась миграция tenant (`tenant_meta`, `alembic_version=tenant_0001_init`).
   - Дубликат → 409; секреты и `organization_domains` записаны.
+- **Auth + provisioning за гейтом:** login `admin/admin` → токен; `/api/organizations` без токена → 401, с токеном → 200; `/api/auth/me` → админ; неверный пароль → 401. Authed `POST {slug:demo}` → 201 active, стек поднялся, `demo.perum.local/health` → 200; authed `DELETE demo?purge` → всё снесено (0 контейнеров, маршрут Caddy 404).
+- **Route sync на старте:** после пересоздания perum_core маршрут `acme.perum.local` восстановился автоматически.
 
 ---
 
-## Чего ещё НЕТ ❌ (остаток Phase 1 + задел)
+## Чего ещё НЕТ ❌ (задел на следующие фазы)
 
-- **`platform_admin` авторизация** — login, JWT, sessions. Сейчас `/api/organizations` и lifecycle-эндпоинты открыты **без auth** — это следующий шаг.
 - **Сидинг дефолтов (PROVISIONING шаг 8)** — `perum-tenant/app/scripts/seed_defaults.py` (WorkType, базовые Subject, BellSchedule, аватары). Phase 2.
 - **Bootstrap org_admin (шаг 9)** — `POST /internal/bootstrap-org-admin` в tenant + инвайт на email. Phase 2.
 - **`app/routers/domains.py`** — `/internal/validate-domain` для on-demand TLS. Phase 4.
@@ -77,11 +86,13 @@
 
 ## Следующие шаги (рекомендуемый порядок)
 
-1. **`platform_admin` auth** (закрывает Phase 1). Модель `PlatformAdmin` уже есть. Добавить `app/core/security.py` (bcrypt + JWT), `app/routers/auth.py` (`/api/auth/login`, `/api/auth/me`), зависимость `require_platform_admin`, закрыть ею `/api/organizations` (create/delete/reprovision). Сидинг первого админа (env-переменные или мини-CLI).
-2. **Phase 2 — tenant auth + модели.** В perum-tenant: модели Organization(meta)/School/User; `seed_defaults.py` (PROVISIONING шаг 8); `POST /internal/bootstrap-org-admin` (шаг 9, защита `TELEMETRY_TOKEN`); JWT с `org_slug` + middleware (валидация `payload.org_slug == settings.ORG_SLUG`). Достроить провижининг до шагов 8-9 (вызвать после миграций).
-3. **E2E Phase 2:** создать орг → bootstrap org_admin → login на `acme.perum.local` → `/auth/me`; токен на чужую орг → 401.
+**Phase 1 закрыта.** Дальше:
 
-Smoke Phase 1 (`POST` → `docker ps` org_acme_* → `curl acme.perum.local/health` 200) — **пройден** (см. «Проверено вживую»).
+1. **Phase 2 — tenant auth + модели.** В perum-tenant: модели Organization(meta)/School/User; `seed_defaults.py` (PROVISIONING шаг 8); `POST /internal/bootstrap-org-admin` (шаг 9, защита `TELEMETRY_TOKEN`); JWT с `org_slug` + middleware (валидация `payload.org_slug == settings.ORG_SLUG`). Достроить провижининг до шагов 8-9 (вызвать после миграций).
+2. **E2E Phase 2:** создать орг → bootstrap org_admin → login на `acme.perum.local` → `/auth/me`; токен на чужую орг → 401.
+3. **Phase 3 — perum-web (фронт).** Login, AuthContext, API-клиент, middleware platform-vs-tenant; platform UI (список + создание орг), dashboard-заглушки ролей. **Первый кликабельный фронт.** Можно поднять раньше как тонкую admin-панель поверх готового control plane API.
+
+Уже тестируется руками: **Swagger UI `http://admin.perum.local/docs`** — login → Authorize токеном → create/list/delete орг с реальным подъёмом стеков.
 
 ---
 
@@ -116,7 +127,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
 
 ## Рабочие правила
 
-- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.8`.
+- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.9`.
 - Коммитим осмысленными порциями; пуш в `main` — по ходу работы.
 
 ## Зафиксированные решения (не пересматривать без запроса)

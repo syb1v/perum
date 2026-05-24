@@ -17,6 +17,13 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = Field(default="dev-secret-change-me")
     ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
+    JWT_ALGORITHM: str = "HS256"
+
+    # First platform_admin: seeded on startup only if no admins exist yet AND a
+    # password is set. In dev the compose file provides admin/admin; in prod set
+    # BOOTSTRAP_ADMIN_PASSWORD via .env (or create the admin out of band).
+    BOOTSTRAP_ADMIN_LOGIN: str = "admin"
+    BOOTSTRAP_ADMIN_PASSWORD: str = ""
 
     CADDY_ADMIN_URL: str = Field(
         default="http://caddy:2019",

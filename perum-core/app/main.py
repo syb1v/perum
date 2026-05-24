@@ -48,8 +48,36 @@ async def _sync_caddy_routes() -> None:
             logger.warning("route sync failed for %s: %s", domain.domain, exc)
 
 
+async def _seed_bootstrap_admin() -> None:
+    """Create the first platform_admin if none exist and a password is configured."""
+    if not settings.BOOTSTRAP_ADMIN_PASSWORD:
+        return
+    from sqlalchemy import func
+
+    from app.core.db import SessionLocal
+    from app.core.security import hash_password
+    from app.models import PlatformAdmin
+
+    try:
+        async with SessionLocal() as db:
+            count = await db.scalar(select(func.count()).select_from(PlatformAdmin))
+            if count and count > 0:
+                return
+            db.add(
+                PlatformAdmin(
+                    login=settings.BOOTSTRAP_ADMIN_LOGIN,
+                    password_hash=hash_password(settings.BOOTSTRAP_ADMIN_PASSWORD),
+                )
+            )
+            await db.commit()
+            logger.info("seeded bootstrap platform_admin '%s'", settings.BOOTSTRAP_ADMIN_LOGIN)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("bootstrap admin seeding skipped: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await _seed_bootstrap_admin()
     await _sync_caddy_routes()
     yield
 
@@ -69,10 +97,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routers import health, organizations  # noqa: E402
+from fastapi import Depends  # noqa: E402
+
+from app.core.deps import require_platform_admin  # noqa: E402
+from app.routers import auth, health, organizations  # noqa: E402
 
 app.include_router(health.router)
-app.include_router(organizations.router, prefix="/api/organizations", tags=["organizations"])
+app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(
+    organizations.router,
+    prefix="/api/organizations",
+    tags=["organizations"],
+    dependencies=[Depends(require_platform_admin)],
+)
 
 
 @app.get("/")
