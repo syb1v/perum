@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core.roles import DIRECTOR, ORG_ADMIN, SCHOOL_ADMIN, TEACHER
+from app.core.roles import DIRECTOR, ORG_ADMIN, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.security import decode_access_token
 from app.models import User
 
@@ -65,3 +65,9 @@ require_admin = require_roles(ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)
 # Teacher + admins (journal/grades). Per-subject/class assignment is checked in
 # the journal service.
 require_teacher = require_roles(TEACHER, ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)
+
+# Student cabinet (own diary/grades only — service scopes every query to user.id).
+require_student = require_roles(STUDENT)
+
+# Parent cabinet (own children only).
+require_parent = require_roles(PARENT)
