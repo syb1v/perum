@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import School, Subject, User, WorkType
 from app.models.academic import Class
+from app.models.journal import Grade
 from app.modules.school_admin.schemas import (
     SubjectCreate,
     SubjectUpdate,
@@ -141,25 +142,53 @@ async def delete_work_type(db: AsyncSession, school_id: int, work_type_id: int) 
 # ---- Dashboard overview --------------------------------------------------
 
 async def dashboard_overview(db: AsyncSession, school_id: int, period_days: int) -> dict:
-    """Empty-safe overview. Grade-derived metrics are 0 until Phase 6 (grades)."""
+    """KPIs computed from grades. Attendance/homework widgets land with their data."""
+    gv = Grade.grade_value
+    base = (Grade.school_id == school_id, gv.is_not(None))
+
     total_students = await db.scalar(
-        select(func.count())
-        .select_from(User)
-        .where(User.school_id == school_id, User.role == "student")
+        select(func.count()).select_from(User).where(User.school_id == school_id, User.role == "student")
     )
+    total_grades = await db.scalar(select(func.count()).select_from(Grade).where(*base))
+    avg = await db.scalar(select(func.avg(gv)).where(*base))
+    average_grade = round(float(avg), 2) if avg is not None else 0
+
+    dist_rows = (
+        await db.execute(select(gv, func.count()).where(*base).group_by(gv))
+    ).all()
+    dist_map = {int(v): int(c) for v, c in dist_rows}
+    grade_distribution = [{"grade_value": v, "count": dist_map.get(v, 0)} for v in (5, 4, 3, 2)]
+
+    cp_rows = (
+        await db.execute(select(Grade.class_id, func.avg(gv), func.count()).where(*base).group_by(Grade.class_id))
+    ).all()
+    class_performance = []
+    for cid, cavg, ccount in cp_rows:
+        c = await db.get(Class, cid)
+        class_performance.append(
+            {
+                "class_id": cid,
+                "class_name": c.name if c else str(cid),
+                "grade_level": c.grade_level if c else None,
+                "avg_grade": round(float(cavg), 2),
+                "grades_count": int(ccount),
+            }
+        )
+    class_performance.sort(key=lambda x: x["class_name"])
+
     return {
         "success": True,
         "kpi": {
-            "average_grade": 0,
-            "total_grades": 0,
+            "average_grade": average_grade,
+            "total_grades": int(total_grades or 0),
             "total_students": int(total_students or 0),
-            "failing_count": 0,
+            "failing_count": dist_map.get(2, 0),
             "absences": 0,
             "homework_count": 0,
             "control_work_count": 0,
         },
-        "class_performance": [],
-        "grade_distribution": [],
+        "class_performance": class_performance,
+        "grade_distribution": grade_distribution,
         "attendance": [],
         "failing_students": [],
         "teacher_activity": [],

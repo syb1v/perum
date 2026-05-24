@@ -101,3 +101,13 @@ from app.models.academic import (  # noqa: E402,F401
     Topic,
     WorkType,
 )
+
+# Journal / grades models (Phase 6).
+from app.models.journal import (  # noqa: E402,F401
+    ControlWork,
+    FinalGrade,
+    Grade,
+    Homework,
+    HomeworkAttachment,
+    Transaction,
+)
