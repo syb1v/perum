@@ -1,0 +1,29 @@
+# PERUM central reverse-proxy — local dev configuration.
+#
+# Production version of this file is rendered from Caddyfile.tmpl by
+# perum-core/app/services/caddy_admin.py (Phase 1, not in this commit yet).
+# In production:
+#   - `*.perum.ru` uses DNS-01 challenge via Cloudflare.
+#   - custom domains use on-demand TLS with `ask` to the control plane.
+#
+# For local development:
+#   - We listen on plain HTTP and auto-route admin.perum.local to perum_core.
+#   - You add `127.0.0.1 admin.perum.local acme.perum.local` to /etc/hosts.
+#   - org subdomains will be added by the control plane via the admin API
+#     once provisioning is implemented in the next session.
+{
+    admin :2019
+    auto_https off
+    local_certs
+}
+
+# Control plane
+admin.perum.local, admin.perum.local:80 {
+    reverse_proxy perum_core:3000
+    encode gzip zstd
+}
+
+# Fallback for any localhost / direct-IP probing
+:80 {
+    respond "PERUM Caddy is up. Use admin.perum.local or <org>.perum.local" 200
+}

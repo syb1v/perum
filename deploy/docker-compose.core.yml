@@ -1,0 +1,82 @@
+name: perum-core
+
+services:
+  perum_core:
+    build:
+      context: ../perum-core
+    image: perum-core:dev
+    container_name: perum_core
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://perum:perum@perum_control_db:5432/perum_control
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      ENVIRONMENT: ${ENVIRONMENT:-dev}
+      CADDY_ADMIN_URL: http://caddy:2019
+      TENANT_IMAGE: ${TENANT_IMAGE:-ghcr.io/syb1v/perum-tenant:latest}
+      SHARED_REDIS_URL: redis://shared_redis:6379
+      DOCKER_NETWORK: perum_internal
+      PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
+    depends_on:
+      perum_control_db:
+        condition: service_healthy
+      shared_redis:
+        condition: service_started
+    networks:
+      - perum_internal
+    command:
+      - sh
+      - -c
+      - |
+        alembic upgrade head &&
+        exec uvicorn app.main:app --host 0.0.0.0 --port 3000 --proxy-headers --forwarded-allow-ips=*
+
+  perum_control_db:
+    image: postgres:15-alpine
+    container_name: perum_control_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: perum
+      POSTGRES_PASSWORD: perum
+      POSTGRES_DB: perum_control
+    volumes:
+      - perum_control_data:/var/lib/postgresql/data
+    networks:
+      - perum_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perum -d perum_control"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  shared_redis:
+    image: redis:7-alpine
+    container_name: shared_redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    networks:
+      - perum_internal
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - perum_internal
+
+volumes:
+  perum_control_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  perum_internal:
+    name: perum_internal
+    driver: bridge
