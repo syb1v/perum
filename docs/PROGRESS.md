@@ -3,8 +3,8 @@
 > Этот файл — точка возобновления для новой сессии. Полный план — [PLAN.md](PLAN.md). Обновлять при каждом значимом продвижении.
 
 **Дата последнего обновления:** 2026-05-24
-**Текущая фаза:** **Phase 1 ЗАВЕРШЕНА** (control plane + provisioning + `platform_admin` auth). Дальше — Phase 2 (tenant auth + модели).
-**Последний коммит:** feat platform_admin auth (см. `git log`).
+**Текущая фаза:** **Phase 2 ЗАВЕРШЕНА** (tenant auth + модели + bootstrap org_admin; провижининг доведён до шагов 8-9). Дальше — Phase 3 (фронт perum-web).
+**Последний коммит:** feat Phase 2 tenant auth (см. `git log`).
 
 ---
 
@@ -57,6 +57,15 @@
 - **`app/main.py`** — весь `/api/organizations` закрыт `require_platform_admin`; на старте сидится первый админ (`BOOTSTRAP_ADMIN_*`, dev `admin`/`admin`), если админов ещё нет.
 - Тесты: `test_security.py` + `test_auth_protection.py`. **47 passed** суммарно.
 
+### Phase 2 — tenant auth + identity (готово, проверено)
+- **Модели** `perum-tenant/app/models/`: Organization (meta, 1 строка = stack), School, User (роли org_admin/school_admin/director/teacher/student/parent; `school_id NULL` у org-level). Миграция `tenant_0002_identity`.
+- **`app/core/security.py`** — bcrypt + JWT, токен несёт `org_slug`. **`app/core/deps.py`** — `get_current_user` с проверкой `payload.org_slug == settings.ORG_SLUG` (cross-org guard) + `require_roles`.
+- **`app/modules/auth/`** (router → service → schemas): `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password`, `POST /api/auth/logout`.
+- **`app/internal/router.py`** — `POST /internal/bootstrap-org-admin` (шаг 9), защита `TELEMETRY_TOKEN`; создаёт первого org_admin с временным паролем.
+- **`app/scripts/seed_defaults.py`** — шаг 8: создаёт Organization meta (slug=ORG_SLUG). Academic/market дефолты — позже с их моделями.
+- **perum-core провижининг доведён**: после миграций — seed (exec) + bootstrap org_admin (HTTP RPC по `TELEMETRY_TOKEN`); `POST`/`reprovision` возвращают `ProvisionResult` (орг + одноразовая учётка org_admin).
+- Тесты: tenant `tests/unit/test_security.py` (3).
+
 ### Проверено вживую (на dev-машине)
 - `docker compose up` — все 4 сервиса healthy. Миграции `0001`+`0002` на старте.
 - `/health` → `{"status":"ok"}`; `/health/db` → `{"status":"ok","db":1}`.
@@ -69,13 +78,14 @@
   - Дубликат → 409; секреты и `organization_domains` записаны.
 - **Auth + provisioning за гейтом:** login `admin/admin` → токен; `/api/organizations` без токена → 401, с токеном → 200; `/api/auth/me` → админ; неверный пароль → 401. Authed `POST {slug:demo}` → 201 active, стек поднялся, `demo.perum.local/health` → 200; authed `DELETE demo?purge` → всё снесено (0 контейнеров, маршрут Caddy 404).
 - **Route sync на старте:** после пересоздания perum_core маршрут `acme.perum.local` восстановился автоматически.
+- **Phase 2 E2E:** provision acme+beta с admin_email → в ответе одноразовая учётка org_admin; login на `acme.perum.local` → `/api/auth/me` (role=org_admin); **изоляция:** токен acme на `beta.perum.local` → 401. Проверены оба барьера: чужой `SECRET_KEY` (подпись) и guard `org_slug` (валидная подпись acme + чужой slug → 401 "another organization").
 
 ---
 
 ## Чего ещё НЕТ ❌ (задел на следующие фазы)
 
-- **Сидинг дефолтов (PROVISIONING шаг 8)** — `perum-tenant/app/scripts/seed_defaults.py` (WorkType, базовые Subject, BellSchedule, аватары). Phase 2.
-- **Bootstrap org_admin (шаг 9)** — `POST /internal/bootstrap-org-admin` в tenant + инвайт на email. Phase 2.
+- **Академические/market дефолты в сидинге** — WorkType, базовые Subject, BellSchedule, аватары (добавятся с их моделями, Phase 5-7). База сидинга (Organization meta) + bootstrap org_admin — готовы.
+- **Инвайт org_admin на email (шаг 12)** — пока временный пароль возвращается оператору в ответе `create`. Email — Phase 4.
 - **`app/routers/domains.py`** — `/internal/validate-domain` для on-demand TLS. Phase 4.
 - **CLI** `perum-core create-org` (опционально; сейчас провижининг идёт через POST API).
 - **CI** `.github/workflows/test.yml` (pytest + tsc).
@@ -86,13 +96,12 @@
 
 ## Следующие шаги (рекомендуемый порядок)
 
-**Phase 1 закрыта.** Дальше:
+**Phase 1 и 2 закрыты.** Дальше:
 
-1. **Phase 2 — tenant auth + модели.** В perum-tenant: модели Organization(meta)/School/User; `seed_defaults.py` (PROVISIONING шаг 8); `POST /internal/bootstrap-org-admin` (шаг 9, защита `TELEMETRY_TOKEN`); JWT с `org_slug` + middleware (валидация `payload.org_slug == settings.ORG_SLUG`). Достроить провижининг до шагов 8-9 (вызвать после миграций).
-2. **E2E Phase 2:** создать орг → bootstrap org_admin → login на `acme.perum.local` → `/auth/me`; токен на чужую орг → 401.
-3. **Phase 3 — perum-web (фронт).** Login, AuthContext, API-клиент, middleware platform-vs-tenant; platform UI (список + создание орг), dashboard-заглушки ролей. **Первый кликабельный фронт.** Можно поднять раньше как тонкую admin-панель поверх готового control plane API.
+1. **Phase 3 — perum-web (фронт).** Next.js: login, AuthContext, API-клиент (base = текущий host), middleware platform-vs-tenant; platform UI (список + создание орг), tenant UI (вход org_admin, заглушки дашбордов ролей). **Первый кликабельный фронт.**
+2. Параллельно можно начинать **Phase 5** (academic core) в perum-tenant — Class/Subject/Schedule, затем журнал/оценки и геймификация (ливки/маркет/биржа) из старого ПЭРУМ.
 
-Уже тестируется руками: **Swagger UI `http://admin.perum.local/docs`** — login → Authorize токеном → create/list/delete орг с реальным подъёмом стеков.
+Тестируется руками через **Swagger**: control plane `http://admin.perum.local/docs`; tenant `http://acme.perum.local/docs` (войти org_admin'ом — учётка отдаётся в ответе на создание орг).
 
 ---
 
@@ -127,7 +136,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
 
 ## Рабочие правила
 
-- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.9`.
+- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.10`.
 - Коммитим осмысленными порциями; пуш в `main` — по ходу работы.
 
 ## Зафиксированные решения (не пересматривать без запроса)

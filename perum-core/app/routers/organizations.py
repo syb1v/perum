@@ -16,8 +16,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.models import Organization, OrganizationSecret
-from app.schemas.organization import OrganizationCreate, OrganizationRead
-from app.services.tenant_provisioner import ProvisioningError, deprovision, provision
+from app.schemas.organization import (
+    OrganizationCreate,
+    OrganizationRead,
+    OrgAdminCredentials,
+    ProvisionResult,
+)
+from app.services.tenant_provisioner import (
+    ProvisioningError,
+    ProvisionOutcome,
+    deprovision,
+    provision,
+)
 
 logger = logging.getLogger("perum.organizations")
 
@@ -27,6 +37,17 @@ router = APIRouter()
 REPROVISIONABLE = {"failed", "archived"}
 # Statuses that block a new POST for the same slug.
 BLOCKING = {"active", "provisioning"}
+
+
+def _to_result(outcome: ProvisionOutcome) -> ProvisionResult:
+    admin = None
+    if outcome.admin_login and outcome.admin_temp_password:
+        admin = OrgAdminCredentials(
+            login=outcome.admin_login, temporary_password=outcome.admin_temp_password
+        )
+    return ProvisionResult(
+        organization=OrganizationRead.model_validate(outcome.org), org_admin=admin
+    )
 
 
 async def _get_org(slug: str, db: AsyncSession) -> Organization | None:
@@ -40,11 +61,11 @@ async def list_organizations(db: AsyncSession = Depends(get_db)) -> list[Organiz
     return list(result.scalars().all())
 
 
-@router.post("", response_model=OrganizationRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProvisionResult, status_code=status.HTTP_201_CREATED)
 async def create_organization(
     payload: OrganizationCreate,
     db: AsyncSession = Depends(get_db),
-) -> Organization:
+) -> ProvisionResult:
     existing = await _get_org(payload.slug, db)
     if existing is not None and existing.status in BLOCKING:
         raise HTTPException(
@@ -75,13 +96,13 @@ async def create_organization(
     await db.refresh(org)
 
     try:
-        await provision(org, db)
+        outcome = await provision(org, db)
     except ProvisioningError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"provisioning failed for '{org.slug}': {exc}",
         )
-    return org
+    return _to_result(outcome)
 
 
 @router.get("/{slug}", response_model=OrganizationRead)
@@ -92,21 +113,21 @@ async def get_organization(slug: str, db: AsyncSession = Depends(get_db)) -> Org
     return org
 
 
-@router.post("/{slug}/reprovision", response_model=OrganizationRead)
+@router.post("/{slug}/reprovision", response_model=ProvisionResult)
 async def reprovision_organization(
     slug: str, db: AsyncSession = Depends(get_db)
-) -> Organization:
+) -> ProvisionResult:
     org = await _get_org(slug, db)
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="organization not found")
     try:
-        await provision(org, db)
+        outcome = await provision(org, db)
     except ProvisioningError as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"reprovisioning failed for '{org.slug}': {exc}",
         )
-    return org
+    return _to_result(outcome)
 
 
 @router.delete("/{slug}")

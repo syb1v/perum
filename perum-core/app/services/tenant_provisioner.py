@@ -14,8 +14,10 @@ from __future__ import annotations
 
 import logging
 import secrets as secrets_mod
+from dataclasses import dataclass
 from datetime import datetime
 
+import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +34,20 @@ REDIS_DB_COUNT = 16  # Redis ships with logical DBs 0..15
 
 class ProvisioningError(RuntimeError):
     pass
+
+
+@dataclass
+class BringUpResult:
+    host: str
+    admin_login: str | None = None
+    admin_temp_password: str | None = None
+
+
+@dataclass
+class ProvisionOutcome:
+    org: Organization
+    admin_login: str | None = None
+    admin_temp_password: str | None = None
 
 
 async def _get_or_create_secret(
@@ -53,9 +69,13 @@ async def _get_or_create_secret(
 
 
 async def _bring_up_stack(
-    spec: StackSpec, settings: Settings, docker: DockerClient, caddy: CaddyAdmin
-) -> str:
-    """Create the stack and return the routed host. Cleans up on failure."""
+    spec: StackSpec,
+    settings: Settings,
+    docker: DockerClient,
+    caddy: CaddyAdmin,
+    admin_email: str | None,
+) -> BringUpResult:
+    """Create + seed + bootstrap + route the stack. Cleans up on failure."""
     try:
         await docker.ensure_network(spec.network)
         await docker.ensure_image(spec.postgres_image)
@@ -109,11 +129,24 @@ async def _bring_up_stack(
             )
         logger.info("org %s: migrations applied", spec.slug)
 
-        # --- Caddy route ---
+        # --- Seed defaults (PROVISIONING step 8) ---
+        code, out = await docker.exec(
+            spec.app_container, ["python", "-m", "app.scripts.seed_defaults"], workdir="/app"
+        )
+        if code != 0:
+            raise ProvisioningError(f"seed_defaults failed (exit {code}):\n{out[-2000:]}")
+        logger.info("org %s: defaults seeded", spec.slug)
+
+        # --- Bootstrap org_admin (PROVISIONING step 9) ---
+        admin_login, admin_temp_password = await _bootstrap_org_admin(spec, admin_email)
+
+        # --- Caddy route (PROVISIONING step 10) ---
         host = f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
         await caddy.add_route(spec.slug, host, f"{spec.app_container}:3000")
         logger.info("org %s: route %s -> %s:3000 added", spec.slug, host, spec.app_container)
-        return host
+        return BringUpResult(
+            host=host, admin_login=admin_login, admin_temp_password=admin_temp_password
+        )
     except Exception as exc:
         logger.warning("org %s: provisioning failed, cleaning up: %s", spec.slug, exc)
         await _safe_cleanup(spec.slug, docker, caddy)
@@ -129,6 +162,32 @@ async def _safe_cleanup(slug: str, docker: DockerClient, caddy: CaddyAdmin) -> N
         await caddy.remove_route(slug)
     except Exception as exc:  # noqa: BLE001
         logger.error("org %s: cleanup remove_route failed: %s", slug, exc)
+
+
+async def _bootstrap_org_admin(
+    spec: StackSpec, admin_email: str | None
+) -> tuple[str | None, str | None]:
+    """Ask the tenant to create the first org_admin (authenticated by TELEMETRY_TOKEN).
+
+    Returns (login, temporary_password), or (None, None) if there's no admin email
+    or an admin already exists. Reaches the app by container name over the docker
+    network (the Caddy route is added afterwards)."""
+    if not admin_email:
+        return None, None
+    url = f"http://{spec.app_container}:3000/internal/bootstrap-org-admin"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await client.post(
+            url,
+            headers={"X-Telemetry-Token": spec.telemetry_token},
+            json={"email": admin_email},
+        )
+    if resp.status_code == 409:
+        logger.info("org %s: org_admin already exists, skipping bootstrap", spec.slug)
+        return None, None
+    if resp.status_code >= 300:
+        raise ProvisioningError(f"bootstrap-org-admin failed: {resp.status_code} {resp.text}")
+    data = resp.json()
+    return data.get("login"), data.get("temporary_password")
 
 
 async def _upsert_subdomain(
@@ -158,7 +217,7 @@ async def provision(
     org: Organization,
     db: AsyncSession,
     settings: Settings | None = None,
-) -> Organization:
+) -> ProvisionOutcome:
     """Full provisioning flow with control-DB bookkeeping.
 
     Mutates and commits the org's status: provisioning → active (or failed).
@@ -177,7 +236,7 @@ async def provision(
     spec = build_stack_spec(org, secret, settings)
 
     try:
-        host = await _bring_up_stack(spec, settings, docker, caddy)
+        result = await _bring_up_stack(spec, settings, docker, caddy, admin_email=org.admin_email)
     except Exception as exc:
         org.status = "failed"
         await db.commit()
@@ -185,11 +244,15 @@ async def provision(
 
     org.status = "active"
     org.activated_at = datetime.utcnow()
-    await _upsert_subdomain(org, host, db)
+    await _upsert_subdomain(org, result.host, db)
     await db.commit()
     await db.refresh(org)
-    logger.info("org %s: provisioned and active at %s", org.slug, host)
-    return org
+    logger.info("org %s: provisioned and active at %s", org.slug, result.host)
+    return ProvisionOutcome(
+        org=org,
+        admin_login=result.admin_login,
+        admin_temp_password=result.admin_temp_password,
+    )
 
 
 async def deprovision(org: Organization, db: AsyncSession) -> None:

@@ -64,3 +64,19 @@ class OrganizationRead(BaseModel):
     admin_email: str | None
     created_at: datetime
     activated_at: datetime | None
+
+
+class OrgAdminCredentials(BaseModel):
+    """One-time initial org_admin credentials, returned to the platform operator
+    who created the org. In prod this is delivered to the org_admin by email."""
+
+    login: str
+    temporary_password: str
+
+
+class ProvisionResult(BaseModel):
+    """Returned by create/reprovision: the org plus (when freshly bootstrapped)
+    the initial org_admin login."""
+
+    organization: OrganizationRead
+    org_admin: OrgAdminCredentials | None = None

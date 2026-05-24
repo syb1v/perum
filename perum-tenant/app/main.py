@@ -22,6 +22,12 @@ app = FastAPI(
     description="Per-organization tenant application.",
 )
 
+from app.internal.router import router as internal_router  # noqa: E402
+from app.modules.auth.router import router as auth_router  # noqa: E402
+
+app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
+app.include_router(internal_router, prefix="/internal", tags=["internal"])
+
 
 @app.get("/health")
 async def health() -> dict:

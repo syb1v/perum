@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://shared_redis:6379/0"
 
     SECRET_KEY: str = "dev-secret-change-me"
+    ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
+    JWT_ALGORITHM: str = "HS256"
     TELEMETRY_TOKEN: str = ""
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
 
