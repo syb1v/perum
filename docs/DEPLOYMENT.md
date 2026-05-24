@@ -6,11 +6,32 @@
 
 Каркас и документация. Деплоить нечего — нет ни тестов, ни production кода.
 
-Локальный dev-стенд будет в `deploy/docker-compose.core.yml` (Phase 1):
+Локальный dev-стенд в `deploy/docker-compose.core.yml` (Phase 1):
 
 ```bash
-docker compose -f deploy/docker-compose.core.yml up -d
+docker compose -f deploy/docker-compose.core.yml up -d --build
 ```
+
+### Docker registry mirror (обязательно в РФ)
+
+С середины 2024 Docker Hub (`registry-1.docker.io`) троттлится/блокируется российскими провайдерами: TLS-handshake проходит, но скачивание слоёв обрывается с `EOF`. Базовые образы (`postgres`, `redis`, `caddy`) не вытягиваются. Это касается и dev-машины, и прод-Ubuntu.
+
+Фикс — зеркало реестра в `/etc/docker/daemon.json`. Проверенный рабочий вариант — `mirror.gcr.io` (Google pull-through cache, не режется в РФ):
+
+```bash
+sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+{
+  "registry-mirrors": [
+    "https://mirror.gcr.io",
+    "https://dockerhub.timeweb.cloud",
+    "https://huecker.io"
+  ]
+}
+EOF
+sudo systemctl restart docker
+```
+
+`registry-mirrors` применяется только к образам Docker Hub (`docker.io/library/*`) — а все наши базовые образы именно оттуда. Наш собственный `perum-core:dev` собирается локально (`pull_policy: build` в compose), мимо реестра.
 
 Поднимет:
 - `perum_core` (control plane, FastAPI)

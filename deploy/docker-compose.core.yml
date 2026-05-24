@@ -5,6 +5,8 @@ services:
     build:
       context: ../perum-core
     image: perum-core:dev
+    # Build locally; never try to pull this image from a registry.
+    pull_policy: build
     container_name: perum_core
     restart: unless-stopped
     environment:
