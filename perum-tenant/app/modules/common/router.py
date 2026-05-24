@@ -91,12 +91,6 @@ async def periods(
     return {"current_period": current, "periods": [_dump(p) for p in visible]}
 
 
-@router.get("/news/unread-count")
-async def news_unread_count(user: User = Depends(get_current_user)) -> dict:
-    # News module arrives in Phase 8; nothing unread yet.
-    return {"count": 0}
-
-
 @router.post("/user/set-default-avatar")
 async def set_default_avatar(
     payload: SetDefaultAvatarRequest,

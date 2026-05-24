@@ -129,3 +129,6 @@ from app.models.exchange import (  # noqa: E402,F401
     SubjectAverage,
     TradingWindow,
 )
+
+# News models (Phase 8).
+from app.models.news import News, NewsLike, NewsRead  # noqa: E402,F401

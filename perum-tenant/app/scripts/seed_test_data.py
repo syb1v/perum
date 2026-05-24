@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import ExchangeSettings, ParentStudent, Quest, School, ShopItem, Subject, User
+from app.models import ExchangeSettings, News, ParentStudent, Quest, School, ShopItem, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -386,6 +386,26 @@ async def _seed_exchange(db, sid: int) -> None:
     logger.info("seeded exchange settings (week-long open window)")
 
 
+NEWS_ITEMS = [
+    ("Добро пожаловать в ПЭРУМ!", "Платформа запущена. Зарабатывайте ливки за хорошую учёбу, тратьте их в маркете и на бирже."),
+    ("Открыта биржа ливок", "Теперь можно вкладывать ливки в предметы. Чем выше средний балл класса по предмету за неделю — тем больше прибыль с вклада!"),
+    ("Новые квесты недели", "Загляните в раздел квестов на главной — за серию хороших оценок начисляются бонусные ливки."),
+]
+
+
+async def _seed_news(db, sid: int) -> None:
+    if await db.scalar(select(func.count()).select_from(News).where(News.school_id == sid)):
+        logger.info("news already present — skipping")
+        return
+    author = (
+        await db.execute(select(User).where(User.school_id == sid, User.role == "teacher").order_by(User.id).limit(1))
+    ).scalar_one_or_none()
+    for title, content in NEWS_ITEMS:
+        db.add(News(school_id=sid, title=title, content=content, author_id=author.id if author else None, is_published=1))
+    await db.commit()
+    logger.info("seeded %d news items", len(NEWS_ITEMS))
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -401,6 +421,7 @@ async def seed() -> None:
         await _seed_market(db, school.id)
         await _seed_quests(db, school.id)
         await _seed_exchange(db, school.id)
+        await _seed_news(db, school.id)
 
 
 if __name__ == "__main__":
