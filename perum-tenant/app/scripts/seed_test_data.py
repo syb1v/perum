@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import ParentStudent, School, Subject, User
+from app.models import ParentStudent, School, ShopItem, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -324,6 +324,32 @@ async def _seed_parents(db, sid: int, pwd: str) -> None:
     logger.info("seeded parent1 linked to %d children", len(kids))
 
 
+MARKET_ITEMS = [
+    # name, type, price, rarity, image_path, per_user_limit
+    ("Пиксель-аватар", "avatar", 60, "common", "/market/avatars/pixel.svg", None),
+    ("Космо-аватар", "avatar", 100, "rare", "/market/avatars/cosmo.svg", None),
+    ("Золотой аватар", "avatar", 250, "legendary", "/market/avatars/gold.svg", None),
+    ("Неоновый фон", "background", 150, "rare", "/market/bg/neon.svg", None),
+    ("Звезда", "gift", 30, "common", "/market/gifts/star.svg", 10),
+    ("Кубок", "gift", 80, "rare", "/market/gifts/cup.svg", 5),
+    ("Значок отличника", "gift", 50, "common", "/market/gifts/badge.svg", 5),
+]
+
+
+async def _seed_market(db, sid: int) -> None:
+    if await db.scalar(select(func.count()).select_from(ShopItem).where(ShopItem.school_id == sid)):
+        logger.info("market items already present — skipping")
+        return
+    for name, itype, price, rarity, image, limit in MARKET_ITEMS:
+        db.add(ShopItem(
+            school_id=sid, name=name, item_type=itype, price=price, rarity=rarity,
+            image_path=image, per_user_limit=limit, is_active=True,
+            description=f"Демо-товар: {name}",
+        ))
+    await db.commit()
+    logger.info("seeded %d market items", len(MARKET_ITEMS))
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -336,6 +362,7 @@ async def seed() -> None:
         await _seed_schedules(db, school.id)
         await _seed_finals(db, school.id)
         await _seed_parents(db, school.id, pwd)
+        await _seed_market(db, school.id)
 
 
 if __name__ == "__main__":

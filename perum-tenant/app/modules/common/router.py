@@ -11,6 +11,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,9 +20,14 @@ from app.core.deps import get_current_user
 from app.models import Subject, User
 from app.models.academic import Class
 from app.modules.journal.service import _list_periods
+from app.modules.market import service as market_service
 from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
+
+
+class SetDefaultAvatarRequest(BaseModel):
+    avatar_url: str | None = None
 
 
 def _as_date(value):
@@ -89,3 +95,12 @@ async def periods(
 async def news_unread_count(user: User = Depends(get_current_user)) -> dict:
     # News module arrives in Phase 8; nothing unread yet.
     return {"count": 0}
+
+
+@router.post("/user/set-default-avatar")
+async def set_default_avatar(
+    payload: SetDefaultAvatarRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await market_service.set_default_avatar(db, user, payload.avatar_url)
