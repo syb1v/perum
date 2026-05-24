@@ -1,0 +1,612 @@
+/* ==================== Profile Main ==================== */
+.profileMain {
+    max-width: 1000px;
+    margin: 24px auto 40px;
+    padding: 0 20px;
+}
+
+/* ==================== Profile Card ==================== */
+.profileCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.profileHeader {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 32px;
+}
+
+.avatarContainer {
+    position: relative;
+}
+
+.avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    overflow: hidden;
+}
+
+.avatarEdit {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    border: 3px solid var(--bg-card);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.avatarEdit:hover {
+    transform: scale(1.1);
+    background: var(--accent-secondary);
+}
+
+.profileInfo {
+    flex: 1;
+}
+
+.profileName {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.profileRole {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.profileBalance {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(14, 165, 233, 0.1));
+    border-radius: 20px;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.profileBalance svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* ==================== Gift Badges (Equipped) ==================== */
+.profileBadges h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+
+.badgeCount {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-left: 4px;
+}
+
+.badgesScroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 4px 12px 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.badgesScroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+.badgesScroll::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+.badgesScroll::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
+.badgePlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--bg-secondary);
+    border-radius: 14px;
+    color: var(--text-muted);
+    text-align: center;
+    gap: 8px;
+    min-width: 200px;
+}
+
+.badgePlaceholder span {
+    font-size: 12px;
+}
+
+.giftBadge {
+    width: 100px;
+    height: 100px;
+    min-width: 100px;
+    border-radius: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+    position: relative;
+    scroll-snap-align: start;
+}
+
+.giftBadge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border-color: var(--accent-primary);
+}
+
+.giftImage {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 0;
+}
+
+
+
+/* ==================== Menu Grid ==================== */
+.profileMenu {
+    margin-bottom: 24px;
+}
+
+.menuGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.menuCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+    text-align: center;
+    cursor: pointer;
+}
+
+.menuCard:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: var(--bg-tertiary);
+}
+
+.menuIcon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(99, 102, 241, 0.1));
+    color: var(--accent-primary);
+}
+
+.menuIconGifts {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(249, 115, 22, 0.1));
+    color: #ec4899;
+}
+
+.menuIconActivity {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(14, 165, 233, 0.1));
+    color: var(--success);
+}
+
+.menuIconFriends {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
+    color: #8b5cf6;
+}
+
+.menuTitle {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+}
+
+.menuDesc {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* ==================== Help Modal ==================== */
+.supportLinks {
+    display: flex;
+    gap: 12px;
+}
+
+.supportLink {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 14px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.supportLink:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+}
+
+.supportLinkTelegram {
+    background: #0088cc;
+    color: white;
+}
+
+.supportLinkEmail {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+/* ==================== Change Password Modal ==================== */
+.changePasswordForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+}
+
+.passwordGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.passwordGroup label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.passwordGroup input {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.passwordGroup input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+/* Change password form */
+.modalForm {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.field input {
+    padding: 10px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-family: inherit;
+}
+
+.field input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.submitBtn {
+    padding: 12px;
+    background: var(--accent-gradient);
+    color: white;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.submitBtn:hover {
+    box-shadow: 0 4px 20px rgba(14, 165, 233, 0.4);
+    transform: translateY(-1px);
+}
+
+/* ==================== Avatar Modal ==================== */
+.avatarModal {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-top: 8px;
+}
+
+.avatarTabs {
+    display: flex;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+}
+
+.avatarTab {
+    background: none;
+    border: none;
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.avatarTab:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.avatarTabActive {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.avatarTabActive:hover {
+    background: var(--accent-secondary);
+    color: white;
+}
+
+.avatarGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 16px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 4px;
+}
+
+.avatarGrid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.avatarGrid::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+}
+
+.avatarGrid::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
+.avatarChoice {
+    aspect-ratio: 1;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatarChoice:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.avatarChoice img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.emptyAvatarMsg {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-secondary);
+    padding: 40px 0;
+}
+
+/* ==================== Empty/Loading ==================== */
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 768px) {
+    .profileHeader {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profileInfo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .menuGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Shrink menu cards on mobile */
+    .menuCard {
+        padding: 14px 10px;
+    }
+
+    .menuIcon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        margin-bottom: 8px;
+    }
+
+    .menuIcon svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .menuTitle {
+        font-size: 13px;
+    }
+
+    .menuDesc {
+        font-size: 11px;
+    }
+
+    .giftBadge {
+        width: 90px;
+        height: 90px;
+        min-width: 90px;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profileCard {
+        padding: 20px;
+    }
+
+    .avatar {
+        width: 100px;
+        height: 100px;
+    }
+
+    .menuGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .menuCard {
+        padding: 12px 8px;
+    }
+
+    .menuIcon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        margin-bottom: 6px;
+    }
+
+    .menuIcon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .menuTitle {
+        font-size: 12px;
+    }
+
+    .menuDesc {
+        font-size: 10px;
+    }
+
+    .giftBadge {
+        width: 80px;
+        height: 80px;
+        min-width: 80px;
+        border-radius: 8px;
+    }
+
+    .supportLinks {
+        flex-direction: column;
+    }
+}

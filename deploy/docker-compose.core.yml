@@ -61,6 +61,20 @@ services:
       timeout: 3s
       retries: 10
 
+  perum_web:
+    build:
+      context: ../perum-web
+      args:
+        NODE_IMAGE: ${IMAGE_REGISTRY:-docker.io}/library/node:20-alpine
+    image: perum-web:dev
+    pull_policy: build
+    container_name: perum_web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - perum_internal
+
   shared_redis:
     image: ${IMAGE_REGISTRY:-docker.io}/library/redis:7-alpine
     container_name: shared_redis

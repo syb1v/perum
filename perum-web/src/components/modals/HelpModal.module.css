@@ -1,0 +1,42 @@
+.helpDescription {
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.supportLinks {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.supportLink {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.supportLinkTelegram {
+    background: rgba(0, 136, 204, 0.1);
+    color: #0088cc;
+}
+
+.supportLinkTelegram:hover {
+    background: rgba(0, 136, 204, 0.2);
+    transform: translateY(-2px);
+}
+
+.supportLinkEmail {
+    background: rgba(152, 152, 166, 0.1);
+    color: var(--text-primary);
+}
+
+.supportLinkEmail:hover {
+    background: rgba(152, 152, 166, 0.2);
+    transform: translateY(-2px);
+}

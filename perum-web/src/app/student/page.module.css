@@ -1,0 +1,1502 @@
+/* ==========================================
+   Student Dashboard — T-Bank Parity Styles
+   ========================================== */
+
+.dashboard {
+    flex: 1;
+    padding: 24px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+/* ==========================================
+   Warning Banner
+   ========================================== */
+.warningBanner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    margin: 0 0 20px 0;
+    background: var(--warning-light);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid var(--border-hover);
+    border-radius: 20px;
+    color: var(--warning);
+    font-size: 0.875rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.warningBanner svg {
+    flex-shrink: 0;
+}
+
+.warningBanner span {
+    flex: 1;
+}
+
+.bannerBtn {
+    margin-left: auto;
+    padding: 6px 14px;
+    background: var(--warning);
+    border: none;
+    border-radius: 6px;
+    color: #000;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.bannerBtn:hover {
+    opacity: 0.9;
+}
+
+.bannerClose {
+    background: none;
+    border: none;
+    color: var(--warning);
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+}
+
+.bannerClose:hover {
+    opacity: 1;
+}
+
+/* ==========================================
+   Top Tabs
+   ========================================== */
+.topTabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+.topTab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    position: relative;
+}
+
+.topTab:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.topTabActive {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.unreadBadge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: #ef4444;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+    line-height: 1;
+}
+
+/* ==========================================
+   News Tab Content
+   ========================================== */
+.newsTabContent {
+    animation: fadeIn 0.3s ease;
+}
+
+.newsCardFull {
+    width: 100%;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==========================================
+   Main Tab Content
+   ========================================== */
+.mainTabContent {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Balance Card (Liquid Glass) */
+.balanceCard {
+    background: var(--bg-hover);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.balanceCard::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 250px;
+    height: 250px;
+    background: radial-gradient(circle, rgba(14, 165, 233, 0.1) 0%, transparent 60%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.balanceInfo {
+    display: flex;
+    flex-direction: column;
+}
+
+.balanceHeader {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.balanceAmount {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.coinIcon {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+.balanceActions {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+}
+
+.actionBtn {
+    flex: 1;
+    background: var(--bg-hover);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.actionBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateX(-2px);
+    box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.actionIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ==========================================
+   Widgets Grid
+   ========================================== */
+.contentGrid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-areas:
+        "balance leaderboard"
+        "quests leaderboard";
+    gap: 24px;
+    align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "balance"
+            "quests"
+            "leaderboard";
+    }
+}
+
+.widgetsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.widgetCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.widgetHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.widgetTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.widgetLink {
+    font-size: 0.875rem;
+    color: var(--accent-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity 0.2s ease;
+}
+
+.widgetLink:hover {
+    opacity: 0.8;
+}
+
+.emptyText {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 24px 0;
+}
+
+/* ==========================================
+   Transactions List
+   ========================================== */
+.transactionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.txItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.txIconWrap {
+    width: 40px;
+    flex-shrink: 0;
+}
+
+.txIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.txIconPos {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.txIconNeg {
+    background: var(--error-light);
+    color: var(--danger);
+}
+
+.txInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.txDesc {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.txDate {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.txAmount {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.txAmountPos {
+    color: var(--success);
+}
+
+.txAmountNeg {
+    color: var(--text-primary);
+}
+
+/* Or red, up to preference */
+
+/* ==========================================
+   Quests Widget
+   ========================================== */
+.questsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.qItem {
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--border-color);
+}
+
+.qInfo {
+    flex: 1;
+    min-width: 0;
+    padding-right: 12px;
+}
+
+.qTitle {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qProgress {
+    height: 4px;
+    background: var(--bg-input);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.qProgressFill {
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.qAction {
+    flex-shrink: 0;
+}
+
+.qReward {
+    font-weight: 600;
+    color: var(--success);
+    font-size: 0.875rem;
+}
+
+.qBtnClaim,
+.qBtnReady {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.qBtnClaim {
+    background: var(--accent-gradient);
+}
+
+.qBtnReady {
+    background: #10b981;
+}
+
+.qBtnClaim:hover,
+.qBtnReady:hover {
+    transform: scale(1.05);
+}
+
+/* ==========================================
+   Leaderboard Widget
+   ========================================== */
+.lbSelect {
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 6px 10px;
+    font-size: 0.875rem;
+    min-width: 120px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.lbSelect:hover {
+    border-color: var(--border-hover);
+}
+
+.lbList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lbItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.lbItem:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.lbItemCurrent {
+    border-color: var(--accent-primary);
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.lbRank {
+    font-weight: 700;
+    color: var(--text-secondary);
+    min-width: 24px;
+    text-align: center;
+    font-size: 0.9375rem;
+}
+
+.lbName {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lbAvg {
+    font-weight: 700;
+    color: var(--accent-primary);
+    font-size: 1rem;
+    padding-left: 12px;
+}
+
+/* ==========================================
+   Responsive Display
+   ========================================== */
+
+/* ==========================================
+   Quest Tabs
+   ========================================== */
+.tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab {
+    flex: 1;
+    padding: 8px 12px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+.tabActive {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white !important;
+}
+
+.questBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    margin-left: 6px;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+/* ==========================================
+   Quest List & Items
+   ========================================== */
+.questList {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.questItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.15s ease;
+}
+
+.questItem:hover {
+    border-color: var(--border-hover);
+}
+
+.questInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.questTitle {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.questDesc {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.questProgress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progressBar {
+    flex: 1;
+    max-width: 200px;
+    height: 6px;
+    background: var(--bg-input);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background: var(--accent-gradient);
+    border-radius: 3px;
+    transition: width 0.25s ease;
+}
+
+.progressText {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.questReward {
+    text-align: center;
+    padding-left: 20px;
+}
+
+.rewardValue {
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--success);
+}
+
+.rewardLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* Quest Actions */
+.claimBtn {
+    padding: 8px 16px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    animation: pulse 2s infinite;
+}
+
+.claimBtn:hover {
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+    transform: translateY(-1px);
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px rgba(14, 165, 233, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+    }
+}
+
+.takeBtn {
+    padding: 8px 16px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.takeBtn:hover {
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+.claimed {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+.questItemCompleted {
+    border-color: var(--success);
+    background: var(--color-success-light);
+}
+
+.questItemClaimed {
+    border-color: var(--border-color);
+    background: var(--bg-tertiary);
+    opacity: 0.7;
+}
+
+.showMoreBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.showMoreBtn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    background: rgba(14, 165, 233, 0.05);
+}
+
+/* ==========================================
+   Leaderboard List
+   ========================================== */
+.leaderboardList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 200px;
+}
+
+.leaderboardItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.leaderboardItem:hover {
+    border-color: var(--border-hover);
+}
+
+/* Top-3 row highlights */
+.leaderboardRank1 {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.08), rgba(255, 215, 0, 0.02));
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.leaderboardRank2 {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.08), rgba(192, 192, 192, 0.02));
+    border-color: rgba(192, 192, 192, 0.3);
+}
+
+.leaderboardRank3 {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.08), rgba(205, 127, 50, 0.02));
+    border-color: rgba(205, 127, 50, 0.3);
+}
+
+.currentUser {
+    background: rgba(14, 165, 233, 0.08);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+/* Rank Badge */
+.rank {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    background: var(--bg-input);
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.badgeGold {
+    background: linear-gradient(135deg, #FFD700, #F4C430);
+    color: #1a1a24;
+    box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+
+.badgeSilver {
+    background: linear-gradient(135deg, #C0C0C0, #A8A8A8);
+    color: #1a1a24;
+    box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
+}
+
+.badgeBronze {
+    background: linear-gradient(135deg, #CD7F32, #B87333);
+    color: #1a1a24;
+    box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
+}
+
+.leaderboardAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.leaderboardInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.leaderboardName {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboardClass {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.leaderboardAvg {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+
+.leaderboardGrades {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   Empty States
+   ========================================== */
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.empty svg {
+    opacity: 0.5;
+}
+
+
+/* ==========================================
+   FAQ Modal
+   ========================================== */
+.faqSection {
+    margin-bottom: 20px;
+}
+
+.faqSection:last-child {
+    margin-bottom: 0;
+}
+
+.faqSection h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.faqSection p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.faqSection ol {
+    padding-left: 20px;
+    margin-top: 8px;
+}
+
+.faqSection ol li {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.faqBadges {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.faqBadge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.faqBadgeGold {
+    background: rgba(255, 215, 0, 0.15);
+    color: #FFD700;
+}
+
+.faqBadgeSilver {
+    background: rgba(192, 192, 192, 0.15);
+    color: #C0C0C0;
+}
+
+.faqBadgeBronze {
+    background: rgba(205, 127, 50, 0.15);
+    color: #CD7F32;
+}
+
+/* ==========================================
+   Student Info Modal (leaderboard click)
+   ========================================== */
+.lbStudentStats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.lbStatCard {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.lbStatValue {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.lbStatLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.lbStudentMedal {
+    text-align: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 10px;
+    color: #FFD700;
+}
+
+.lbStudentDetails h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.lbDetailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.lbDetailRow:last-of-type {
+    border-bottom: none;
+}
+
+.lbDetailLabel {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.lbDetailValue {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.lbDetailExplanation {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--bg-input);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+
+
+/* ==========================================
+   FAQ Modal
+   ========================================== */
+.faqSection {
+    margin-bottom: 20px;
+}
+
+.faqSection:last-child {
+    margin-bottom: 0;
+}
+
+.faqSection h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.faqSection p {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.faqSection ol {
+    padding-left: 20px;
+    margin-top: 8px;
+}
+
+.faqSection ol li {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 4px;
+}
+
+.faqBadges {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.faqBadge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.faqBadgeGold {
+    background: rgba(255, 215, 0, 0.15);
+    color: #FFD700;
+}
+
+.faqBadgeSilver {
+    background: rgba(192, 192, 192, 0.15);
+    color: #C0C0C0;
+}
+
+.faqBadgeBronze {
+    background: rgba(205, 127, 50, 0.15);
+    color: #CD7F32;
+}
+
+/* ==========================================
+   Student Info Modal (leaderboard click)
+   ========================================== */
+.lbStudentStats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.lbStatCard {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.lbStatValue {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+}
+
+.lbStatLabel {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.lbStudentMedal {
+    text-align: center;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 12px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 10px;
+    color: #FFD700;
+}
+
+.lbStudentDetails h4 {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.lbDetailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.lbDetailRow:last-of-type {
+    border-bottom: none;
+}
+
+.lbDetailLabel {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.lbDetailValue {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.lbDetailExplanation {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--bg-input);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+
+
+/* ==========================================
+   Card
+   ========================================== */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.cardTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cardTitle svg {
+    color: var(--warning);
+}
+
+/* ==========================================
+   Leaderboard Header & Controls
+   ========================================== */
+.leaderboardHeaderRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.leaderboardControls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.leaderboardScope {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.leaderboardSubjectSelect {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-width: 0;
+}
+
+.leaderboardSubjectSelect:hover,
+.leaderboardSubjectSelect:focus {
+    border-color: var(--border-hover);
+    outline: none;
+}
+
+.leaderboardFaqBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.leaderboardFaqBtn:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+.leaderboardItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.leaderboardItem:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.currentUser {
+    border-color: var(--accent-primary) !important;
+    background: rgba(14, 165, 233, 0.05) !important;
+}
+
+.leaderboardAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.leaderboardInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboardName {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboardClass {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.leaderboardAvg {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    min-width: 42px;
+    text-align: right;
+}
+
+.leaderboardSeasonSelect {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    padding: 6px 28px 6px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    transition: all 0.2s ease;
+}
+
+.leaderboardSeasonSelect:hover {
+    border-color: var(--border-hover);
+}
+
+/* Move media queries to the end to ensure override */
+@media (max-width: 1024px) {
+    .widgetsGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        padding: 16px;
+    }
+
+    .balanceCard {
+        padding: 20px;
+    }
+
+    .balanceAmount {
+        font-size: 2.5rem;
+    }
+
+    .balanceActions {
+        flex-wrap: wrap;
+    }
+
+    .actionBtn {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;
+        justify-content: center;
+        padding: 10px 14px;
+        font-size: 0.875rem;
+    }
+
+    .widgetsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .contentGrid {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .questsCard,
+    .newsCard,
+    .leaderboardCard {
+        grid-column: span 1;
+        width: 100%;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+    }
+
+    .leaderboardControls {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .leaderboardSubjectSelect {
+        width: 100%;
+    }
+
+    .cardHeader {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .topTabs {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .topTab {
+        font-size: 0.85rem;
+        padding: 8px 12px;
+        gap: 4px;
+    }
+
+    .balanceAmount {
+        font-size: 2rem;
+    }
+
+    .actionBtn {
+        font-size: 0.9375rem;
+        padding: 10px 16px;
+    }
+}

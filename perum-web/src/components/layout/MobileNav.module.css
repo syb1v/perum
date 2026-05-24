@@ -1,0 +1,370 @@
+/* ==========================================
+   Mobile Bottom Navigation
+   Ported 1:1 from vanilla mobile-nav.css
+   ========================================== */
+
+/* Bottom nav bar - floating style */
+.nav {
+    position: fixed;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: var(--glass-border);
+    padding: 10px 12px;
+    z-index: var(--z-sticky);
+    box-shadow: var(--glass-shadow);
+    overflow: visible;
+    border-radius: var(--glass-radius);
+}
+
+/* Shadow overlay behind bottom nav gap */
+.navBlur {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to top, rgba(var(--bg-primary-rgb, 9, 9, 11), 1) 0%, rgba(var(--bg-primary-rgb, 9, 9, 11), 0.7) 40%, transparent 100%);
+    pointer-events: none;
+    z-index: calc(var(--z-sticky) - 1);
+}
+
+/* Hide on desktop */
+@media (min-width: 1100px) {
+
+    .nav,
+    .navBlur {
+        display: none;
+    }
+
+    .popup {
+        display: none !important;
+    }
+}
+
+/* Tab item */
+.tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 10px;
+    flex: 1;
+    min-width: 0;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-lg);
+    position: relative;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.tab svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+    transition: all var(--transition-fast);
+}
+
+.tabLabel {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Active state */
+.tabActive {
+    color: var(--accent-tertiary);
+    background: rgba(14, 165, 233, 0.12);
+}
+
+.tabActive svg {
+    stroke: var(--accent-tertiary);
+    transform: translateY(-2px);
+}
+
+/* Hover for desktop cursor */
+@media (hover: hover) {
+    .tab:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+    }
+}
+
+/* Compact for small screens */
+@media (max-width: 400px) {
+    .nav {
+        left: 8px;
+        right: 8px;
+        padding: 8px 6px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .tab {
+        padding: 6px 4px;
+        gap: 3px;
+    }
+
+    .tab svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .tabLabel {
+        font-size: 0.6rem;
+    }
+}
+
+/* ==========================================
+   Profile Popup (Bottom Sheet)
+   ========================================== */
+.popup {
+    position: fixed;
+    inset: 0;
+    z-index: calc(var(--z-modal) + 10);
+    display: flex;
+    align-items: flex-end;
+}
+
+.popupBackdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.popupContent {
+    position: relative;
+    width: 100%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* Popup header */
+.popupHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.popupHeader h3 {
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.popupClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.popupClose:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+/* User info card */
+.popupUser {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+}
+
+.popupAvatar {
+    width: 56px;
+    height: 56px;
+    background: var(--bg-input);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.popupInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.popupName {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.popupRole {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+/* Wallet section */
+.walletSection {
+    margin: 20px 0;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(99, 102, 241, 0.08));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}
+
+.walletRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.walletLabel {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.walletValue {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.walletValue>span:first-child {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-tertiary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.coinIcon {
+    flex-shrink: 0;
+}
+
+.historyBtn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    margin-top: 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+}
+
+.historyBtn:hover,
+.historyBtn:active {
+    border-color: var(--border-hover);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.historyBtn svg {
+    flex-shrink: 0;
+}
+
+/* Menu items */
+.popupMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.popupItem {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: inherit;
+    width: 100%;
+}
+
+.popupItem svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.popupItem:hover,
+.popupItem:active {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+.logoutItem {
+    color: var(--error);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.logoutItem:hover,
+.logoutItem:active {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: var(--error);
+}

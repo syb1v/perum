@@ -1,0 +1,31 @@
+.fab {
+    position: fixed;
+    right: 16px;
+    bottom: 16px; /* On desktop, placed at the bottom corner */
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent-primary, #6366f1);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(99,102,241,0.45);
+    z-index: 900;
+    transition: transform 0.15s, box-shadow 0.15s, bottom 0.2s;
+}
+
+.fab:hover {
+    transform: scale(1.10);
+    box-shadow: 0 6px 20px rgba(99,102,241,0.6);
+}
+
+@media (max-width: 768px) {
+    .fab {
+        right: 16px;
+        /* Stay above MobileNav (usually ~65px) plus some padding and safe-area */
+        bottom: calc(75px + env(safe-area-inset-bottom, 16px));
+    }
+}

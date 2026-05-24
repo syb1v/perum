@@ -35,6 +35,11 @@ class Settings(BaseSettings):
         description="How org stacks reach the control plane (telemetry, RPC)",
     )
 
+    WEB_UPSTREAM: str = Field(
+        default="perum_web:3000",
+        description="Frontend upstream; serves non-/api paths on every host",
+    )
+
     TENANT_IMAGE: str = Field(
         default="perum-tenant:dev",
         description="Image used when provisioning new org stacks",

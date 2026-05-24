@@ -1,0 +1,185 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: var(--z-modal, 1000);
+    padding: 20px;
+}
+
+.backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.content {
+    position: relative;
+    width: 100%;
+    max-width: 450px;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card, #1a1a2e);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: modalIn 0.25s ease;
+    padding: 0;
+}
+
+/* gradient accent line at top */
+.content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0ea5e9, #3b82f6, #6366f1);
+    z-index: 1;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.lg {
+    max-width: 600px;
+}
+
+.xl {
+    max-width: 800px;
+}
+
+.xxl {
+    max-width: 1100px;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 24px 24px 12px;
+}
+
+.header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.close {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    transition: all 0.15s ease;
+}
+
+.close:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.body {
+    padding: 12px 24px 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.bodyFlex {
+    padding: 12px 24px 24px;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    /* Child elements will handle their own scroll */
+}
+
+/* Same custom scrollbar for standard body */
+.body::-webkit-scrollbar {
+    width: 4px;
+}
+
+.body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.body::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.2);
+    border-radius: 4px;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0 24px 24px;
+}
+
+/* Mobile: bottom sheet */
+@media (max-width: 640px) {
+    .overlay {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    .content {
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 85vh;
+    }
+
+    .lg,
+    .xl,
+    .xxl {
+        max-width: 100%;
+    }
+
+    .xxl {
+        max-height: 95vh;
+    }
+
+    .header {
+        padding: 20px 20px 8px;
+    }
+
+    .header h3 {
+        font-size: 1.1rem;
+    }
+
+    .body {
+        padding: 12px 20px 20px;
+        max-height: 65vh;
+    }
+
+    .bodyFlex {
+        padding: 12px 20px 20px;
+        max-height: 65vh;
+    }
+
+    .footer {
+        padding: 0 20px 20px;
+    }
+}

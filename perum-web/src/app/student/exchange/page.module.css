@@ -1,0 +1,678 @@
+/* ==================== Page Layout ==================== */
+.exchangePage {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    font-family: inherit;
+    animation: fadeIn 0.3s ease;
+}
+
+.exchangeHeader {
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pageTitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ==================== Header Controls ==================== */
+.headerControls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+/* ==================== View Toggle (Tabs) ==================== */
+.viewToggle {
+    display: flex;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 4px;
+    width: fit-content;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.faqButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.faqButton:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-primary);
+}
+
+.viewBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.viewBtn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.viewBtnActive {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== Animations ==================== */
+.fadeIn {
+    animation: exchFadeIn 0.3s ease;
+}
+
+@keyframes exchFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== Dashboard Layout ==================== */
+.dashboardGrid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+}
+
+/* ==================== Chart Card ==================== */
+.chartCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chartHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.chartControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.subjectSelect {
+    padding: 8px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    cursor: pointer;
+}
+
+.chartSubjectLabel {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.indexSummary {
+    text-align: right;
+}
+
+.indexLabel {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.indexValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.indexChange {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.chartContainer {
+    height: 300px;
+    width: 100%;
+    position: relative;
+    margin-top: 10px;
+}
+
+/* ==================== Sidebar (Stats & Invest) ==================== */
+.sidebarCards {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Market Status Card */
+.marketStatusCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.statusIndicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.statusIndicator.open {
+    background: var(--success);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+    animation: pulse 2s infinite;
+}
+
+.statusIndicator.closed {
+    background: var(--error);
+}
+
+.statusInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.statusTitleWrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tradingTime {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-left: 24px;
+}
+
+/* Invest Form Card */
+.investCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+}
+
+.mainInvestBtn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 16px;
+    color: white;
+    font-size: 1.125rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3);
+    transition: all 0.2s ease;
+}
+
+.mainInvestBtn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(14, 165, 233, 0.4);
+}
+
+.mainInvestBtn:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.investModalWrap {
+    padding: 12px 0;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.formGroup label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.formControl {
+    padding: 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.formControl:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.formHint {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.btnSubmit {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btnSubmit:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btnSubmit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--bg-tertiary);
+    color: var(--text-muted);
+}
+
+/* ==================== Subjects List ==================== */
+.subjectsCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 24px;
+}
+
+.subjectsTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+.subjectsList {
+    display: flex;
+    flex-direction: column;
+}
+
+.subjectRow {
+    display: grid;
+    grid-template-columns: 180px 1fr 100px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.subjectRow:hover {
+    background: var(--bg-tertiary);
+}
+
+.subjectRow:last-child {
+    border-bottom: none;
+}
+
+.subjectRowActive {
+    background: rgba(14, 165, 233, 0.1);
+    border: 1px solid rgba(14, 165, 233, 0.3);
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+.subjectNameWrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.subjectIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.subjectName {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.subjectValues {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.subjectGrade {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.subjectChangeDay {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.subjectChangeWeek {
+    text-align: right;
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+/* ==================== Pagination ==================== */
+.marketPagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pageBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.pageBtnActive {
+    background: var(--accent-gradient);
+    color: white;
+    border: none;
+}
+
+.pageBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==================== Portfolio Grid ==================== */
+.portfolioGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.statsRow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.statCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.statTitle {
+    font-size: 0.9375rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.statValue {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* Investments Lists */
+.investmentsSection {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 24px;
+}
+
+.investmentsSectionTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+.investmentsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.investmentItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    border-left: 4px solid var(--accent-primary);
+}
+
+.investmentItemProfit {
+    border-left-color: var(--success);
+}
+
+.investmentItemLoss {
+    border-left-color: var(--error);
+}
+
+.invInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.invSubject {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.invDetails {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+}
+
+.invDate {
+    display: block;
+}
+
+.invResult {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.invAmount {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.invPnl {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* Utilities */
+.positive {
+    color: var(--success);
+}
+
+.negative {
+    color: var(--error);
+}
+
+.neutral {
+    color: var(--text-muted);
+}
+
+.loading,
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@media (max-width: 900px) {
+    .dashboardGrid {
+        display: flex;
+        flex-direction: column;
+        grid-template-columns: unset;
+        gap: 24px;
+    }
+
+    .sidebarCards {
+        order: 1;
+    }
+
+    .mainCol {
+        order: 2;
+    }
+
+    .statsRow {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .exchangePage {
+        padding: 16px;
+        padding-bottom: 90px;
+    }
+
+    .viewToggle {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .viewBtn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .subjectRow {
+        grid-template-columns: 140px 1fr 60px;
+    }
+}
+
+/* No modal styles needed since using shared component */

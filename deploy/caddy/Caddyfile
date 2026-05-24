@@ -17,9 +17,16 @@
     local_certs
 }
 
-# Control plane
+# Control plane host: API + docs go to perum_core, everything else (the UI) to
+# perum_web. Tenant hosts get the same split, added dynamically by caddy_admin.
 admin.perum.local, admin.perum.local:80 {
-    reverse_proxy perum_core:3000
+    @backend path /api/* /docs /docs/* /openapi.json /health /health/*
+    handle @backend {
+        reverse_proxy perum_core:3000
+    }
+    handle {
+        reverse_proxy perum_web:3000
+    }
     encode gzip zstd
 }
 

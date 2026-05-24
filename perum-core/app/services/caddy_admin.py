@@ -34,14 +34,33 @@ def route_id(slug: str) -> str:
     return f"perum-org-{slug}"
 
 
-def _build_route(slug: str, host: str, upstream: str) -> dict:
+# Paths routed to the org's tenant app; everything else goes to the frontend.
+# /internal/* is deliberately NOT exposed publicly — the control plane reaches
+# it directly over the docker network (org_<slug>_app:3000).
+_BACKEND_PATHS = ["/api/*", "/docs", "/docs/*", "/openapi.json", "/health", "/health/*"]
+
+
+def _build_route(slug: str, host: str, app_upstream: str, web_upstream: str) -> dict:
+    """Host route that splits /api+/docs to the org app and the rest to the UI."""
     return {
         "@id": route_id(slug),
         "match": [{"host": [host]}],
         "handle": [
             {
-                "handler": "reverse_proxy",
-                "upstreams": [{"dial": upstream}],
+                "handler": "subroute",
+                "routes": [
+                    {
+                        "match": [{"path": _BACKEND_PATHS}],
+                        "handle": [
+                            {"handler": "reverse_proxy", "upstreams": [{"dial": app_upstream}]}
+                        ],
+                    },
+                    {
+                        "handle": [
+                            {"handler": "reverse_proxy", "upstreams": [{"dial": web_upstream}]}
+                        ]
+                    },
+                ],
             }
         ],
         "terminal": True,
@@ -65,13 +84,16 @@ class CaddyAdmin:
             return next(iter(servers))
         raise CaddyAdminError("no HTTP servers configured in Caddy")
 
-    async def add_route(self, slug: str, host: str, upstream: str) -> None:
-        """Insert (or replace) the org route at the front of the :80 server."""
+    async def add_route(self, slug: str, host: str, app_upstream: str) -> None:
+        """Insert (or replace) the org route at the front of the :80 server.
+
+        Splits the host: /api + /docs → the org's tenant app (app_upstream),
+        everything else → the shared frontend (settings.WEB_UPSTREAM)."""
         async with httpx.AsyncClient(timeout=10.0) as client:
             # Remove any stale route with the same id first to keep @id unique.
             await self._delete_id(client, route_id(slug), ignore_missing=True)
             server = await self._http_server_name(client)
-            route = _build_route(slug, host, upstream)
+            route = _build_route(slug, host, app_upstream, settings.WEB_UPSTREAM)
             resp = await client.put(
                 f"{self.base_url}/config/apps/http/servers/{server}/routes/0",
                 json=route,
