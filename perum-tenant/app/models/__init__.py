@@ -111,3 +111,6 @@ from app.models.journal import (  # noqa: E402,F401
     HomeworkAttachment,
     Transaction,
 )
+
+# Parent ↔ student link (Phase 6).
+from app.models.parent import ParentStudent  # noqa: E402,F401

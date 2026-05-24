@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import School, Subject, User
+from app.models import ParentStudent, School, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -294,6 +294,36 @@ async def _seed_finals(db, sid: int) -> None:
         logger.info("seeded %d final grades for period «%s»", added, period.name)
 
 
+async def _seed_parents(db, sid: int, pwd: str) -> None:
+    """One demo parent (`parent1`) linked to the first two 5А students."""
+    if await db.scalar(select(func.count()).select_from(User).where(User.school_id == sid, User.role == "parent")):
+        logger.info("parents already present — skipping")
+        return
+    kids = (
+        await db.execute(
+            select(User)
+            .join(ClassStudent, ClassStudent.student_id == User.id)
+            .join(Class, Class.id == ClassStudent.class_id)
+            .where(Class.school_id == sid, User.role == "student")
+            .order_by(User.id)
+            .limit(2)
+        )
+    ).scalars().all()
+    if not kids:
+        logger.info("no students — skipping parents")
+        return
+    parent = User(
+        school_id=sid, role="parent", login="parent1", email="parent1@acme.ru",
+        first_name="Ольга", last_name="Соколова", password_hash=pwd, is_active=True,
+    )
+    db.add(parent)
+    await db.flush()
+    for kid in kids:
+        db.add(ParentStudent(parent_id=parent.id, student_id=kid.id))
+    await db.commit()
+    logger.info("seeded parent1 linked to %d children", len(kids))
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -305,6 +335,7 @@ async def seed() -> None:
         await _seed_grades(db, school.id)
         await _seed_schedules(db, school.id)
         await _seed_finals(db, school.id)
+        await _seed_parents(db, school.id, pwd)
 
 
 if __name__ == "__main__":
