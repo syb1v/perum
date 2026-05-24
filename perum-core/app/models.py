@@ -70,6 +70,35 @@ class Organization(Base):
         back_populates="organization",
         cascade="all, delete-orphan",
     )
+    secret: Mapped["OrganizationSecret | None"] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+
+class OrganizationSecret(Base):
+    """Per-org generated secrets, consumed when provisioning its stack.
+
+    Phase 1: stored in plaintext in the control DB. KMS/Vault encryption is a
+    Phase 9 hardening item (see docs/PROVISIONING.md step 3). Kept separate from
+    `organizations` so the org listing API never returns these by accident.
+    """
+
+    __tablename__ = "organization_secrets"
+
+    org_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    db_password: Mapped[str] = mapped_column(String(128), nullable=False)
+    secret_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    telemetry_token: Mapped[str] = mapped_column(String(128), nullable=False)
+    redis_db_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    organization: Mapped[Organization] = relationship(back_populates="secret")
 
 
 class OrganizationDomain(Base):

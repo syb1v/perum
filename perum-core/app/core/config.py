@@ -23,13 +23,31 @@ class Settings(BaseSettings):
         description="Caddy admin API endpoint for route management",
     )
 
+    CONTROL_PLANE_URL: str = Field(
+        default="http://perum_core:3000",
+        description="How org stacks reach the control plane (telemetry, RPC)",
+    )
+
     TENANT_IMAGE: str = Field(
-        default="ghcr.io/syb1v/perum-tenant:latest",
+        default="perum-tenant:dev",
         description="Image used when provisioning new org stacks",
+    )
+
+    IMAGE_REGISTRY: str = Field(
+        default="docker.io",
+        description=(
+            "Registry prefix for base images (postgres) pulled by org stacks. "
+            "In Russia, Docker Hub is blocked — set mirror.gcr.io. Mirrors the "
+            "IMAGE_REGISTRY used by deploy/docker-compose.core.yml."
+        ),
     )
 
     SHARED_REDIS_URL: str = "redis://shared_redis:6379"
     DOCKER_NETWORK: str = "perum_internal"
+
+    # Provisioning timeouts (seconds) for waiting on container health.
+    DB_HEALTH_TIMEOUT_S: int = 60
+    APP_HEALTH_TIMEOUT_S: int = 90
 
     PUBLIC_BASE_DOMAIN: str = Field(
         default="perum.local",

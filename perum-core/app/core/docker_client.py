@@ -1,0 +1,252 @@
+"""Thin async wrapper over the Docker SDK (docker-py).
+
+The control plane provisions per-org stacks by talking to the host Docker
+daemon through the mounted socket (`/var/run/docker.sock`). docker-py is a
+blocking library, so every call is offloaded to a thread with
+``asyncio.to_thread`` to avoid stalling the event loop.
+
+We deliberately create containers directly (not via the ``docker compose``
+CLI): the SDK is already a dependency, it keeps the slim control-plane image
+free of the docker CLI + compose plugin, and it gives us precise programmatic
+control over health polling and exec. The human-readable compose manifest for a
+stack can still be produced on demand — see ``app.services.stack_spec``.
+
+Every resource we create is tagged with ``com.perum.org=<slug>`` so cleanup can
+find and remove an org's containers and volumes by label.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass
+
+import docker
+from docker.errors import ImageNotFound, NotFound
+from docker.models.containers import Container
+from docker.types import Healthcheck
+
+LABEL_ORG = "com.perum.org"
+LABEL_ROLE = "com.perum.role"
+LABEL_MANAGED = "com.perum.managed"
+
+
+class DockerClientError(RuntimeError):
+    """Raised for docker operations that fail in a way worth surfacing."""
+
+
+@dataclass
+class HealthSpec:
+    test: list[str]
+    interval_s: float = 5.0
+    timeout_s: float = 3.0
+    retries: int = 10
+    start_period_s: float = 2.0
+
+    def to_docker(self) -> Healthcheck:
+        s = 1_000_000_000  # seconds → nanoseconds
+        return Healthcheck(
+            test=self.test,
+            interval=int(self.interval_s * s),
+            timeout=int(self.timeout_s * s),
+            retries=self.retries,
+            start_period=int(self.start_period_s * s),
+        )
+
+
+class DockerClient:
+    """Lazily-connected wrapper around a single docker-py client."""
+
+    def __init__(self) -> None:
+        self._client: docker.DockerClient | None = None
+
+    @property
+    def client(self) -> docker.DockerClient:
+        if self._client is None:
+            # from_env honours DOCKER_HOST, falling back to the unix socket.
+            self._client = docker.from_env()
+        return self._client
+
+    async def ping(self) -> bool:
+        return await asyncio.to_thread(self.client.ping)
+
+    async def ensure_network(self, name: str) -> None:
+        def _check() -> None:
+            try:
+                self.client.networks.get(name)
+            except NotFound as exc:  # pragma: no cover - infra precondition
+                raise DockerClientError(
+                    f"docker network '{name}' does not exist; it is created by "
+                    f"deploy/docker-compose.core.yml"
+                ) from exc
+
+        await asyncio.to_thread(_check)
+
+    async def ensure_image(self, image: str, *, allow_pull: bool = True) -> None:
+        def _ensure() -> None:
+            try:
+                self.client.images.get(image)
+                return
+            except ImageNotFound:
+                pass
+            if not allow_pull:
+                raise DockerClientError(f"image '{image}' not found locally")
+            try:
+                self.client.images.pull(image)
+            except Exception as exc:  # noqa: BLE001 - re-raise with context
+                raise DockerClientError(
+                    f"image '{image}' not present locally and pull failed: {exc}. "
+                    f"If this is a locally-built image (e.g. perum-tenant:dev), "
+                    f"build it before provisioning."
+                ) from exc
+
+        await asyncio.to_thread(_ensure)
+
+    async def create_volume(self, name: str, *, slug: str) -> None:
+        """Create the named volume if absent (idempotent across retries)."""
+
+        def _create() -> None:
+            try:
+                self.client.volumes.get(name)
+                return
+            except NotFound:
+                pass
+            self.client.volumes.create(
+                name=name,
+                labels={LABEL_ORG: slug, LABEL_MANAGED: "true"},
+            )
+
+        await asyncio.to_thread(_create)
+
+    async def run_container(
+        self,
+        *,
+        name: str,
+        image: str,
+        slug: str,
+        role: str,
+        environment: dict[str, str] | None = None,
+        volumes: dict[str, dict[str, str]] | None = None,
+        health: HealthSpec | None = None,
+        network: str,
+        restart: str = "unless-stopped",
+    ) -> str:
+        labels = {LABEL_ORG: slug, LABEL_ROLE: role, LABEL_MANAGED: "true"}
+
+        def _run() -> Container:
+            return self.client.containers.run(
+                image=image,
+                name=name,
+                detach=True,
+                environment=environment or {},
+                volumes=volumes or {},
+                labels=labels,
+                network=network,
+                restart_policy={"Name": restart},
+                healthcheck=health.to_docker() if health else None,
+            )
+
+        container = await asyncio.to_thread(_run)
+        return container.id
+
+    async def wait_for_healthy(self, name: str, *, timeout_s: int) -> None:
+        """Poll a container until its healthcheck reports healthy.
+
+        A container with no healthcheck is treated as healthy once it is
+        ``running`` (used as a fallback; our stacks always define one).
+        """
+
+        def _probe() -> tuple[str, str | None]:
+            container = self.client.containers.get(name)
+            state = container.attrs.get("State", {})
+            status = state.get("Status", "unknown")
+            health = (state.get("Health") or {}).get("Status")
+            return status, health
+
+        deadline = asyncio.get_event_loop().time() + timeout_s
+        last: tuple[str, str | None] = ("unknown", None)
+        while asyncio.get_event_loop().time() < deadline:
+            last = await asyncio.to_thread(_probe)
+            status, health = last
+            if health == "healthy":
+                return
+            if health is None and status == "running":
+                return
+            if status in ("exited", "dead"):
+                raise DockerClientError(
+                    f"container '{name}' is '{status}' before becoming healthy"
+                )
+            await asyncio.sleep(1.5)
+        raise DockerClientError(
+            f"container '{name}' did not become healthy within {timeout_s}s "
+            f"(last status={last[0]!r}, health={last[1]!r})"
+        )
+
+    async def exec(
+        self, name: str, cmd: list[str], *, workdir: str | None = None
+    ) -> tuple[int, str]:
+        def _exec() -> tuple[int, str]:
+            container = self.client.containers.get(name)
+            exit_code, output = container.exec_run(cmd=cmd, workdir=workdir, demux=False)
+            text = output.decode("utf-8", errors="replace") if output else ""
+            return exit_code, text
+
+        return await asyncio.to_thread(_exec)
+
+    async def remove_containers(self, slug: str) -> list[str]:
+        """Remove the org's containers but keep its data volume.
+
+        Used as a defensive clean slate before (re)provisioning, so a fresh
+        attempt reuses the existing Postgres volume rather than wiping it.
+        """
+
+        def _remove() -> list[str]:
+            removed: list[str] = []
+            for c in self.client.containers.list(
+                all=True, filters={"label": f"{LABEL_ORG}={slug}"}
+            ):
+                try:
+                    c.remove(force=True)
+                    removed.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            return removed
+
+        return await asyncio.to_thread(_remove)
+
+    async def remove_stack(self, slug: str) -> list[str]:
+        """Stop+remove all containers AND volumes labelled for this org.
+
+        Idempotent: returns the names of removed resources; absent resources are
+        silently ignored. Used for deprovisioning and for cleanup after a failed
+        provision (matches `docker compose down -v`).
+        """
+
+        def _remove() -> list[str]:
+            removed: list[str] = []
+            for c in self.client.containers.list(
+                all=True, filters={"label": f"{LABEL_ORG}={slug}"}
+            ):
+                try:
+                    c.remove(force=True)
+                    removed.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            for v in self.client.volumes.list(filters={"label": f"{LABEL_ORG}={slug}"}):
+                try:
+                    v.remove(force=True)
+                    removed.append(f"volume:{v.name}")
+                except NotFound:
+                    pass
+            return removed
+
+        return await asyncio.to_thread(_remove)
+
+
+_docker_client: DockerClient | None = None
+
+
+def get_docker_client() -> DockerClient:
+    global _docker_client
+    if _docker_client is None:
+        _docker_client = DockerClient()
+    return _docker_client

@@ -14,7 +14,9 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
       ENVIRONMENT: ${ENVIRONMENT:-dev}
       CADDY_ADMIN_URL: http://caddy:2019
-      TENANT_IMAGE: ${TENANT_IMAGE:-ghcr.io/syb1v/perum-tenant:latest}
+      CONTROL_PLANE_URL: http://perum_core:3000
+      TENANT_IMAGE: ${TENANT_IMAGE:-perum-tenant:dev}
+      IMAGE_REGISTRY: ${IMAGE_REGISTRY:-docker.io}
       SHARED_REDIS_URL: redis://shared_redis:6379
       DOCKER_NETWORK: perum_internal
       PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
@@ -25,6 +27,11 @@ services:
         condition: service_started
     networks:
       - perum_internal
+    volumes:
+      # Control plane provisions per-org stacks by talking to the host Docker
+      # daemon. This grants perum_core root-equivalent control over Docker on
+      # the host — inherent to the silo-per-org architecture.
+      - /var/run/docker.sock:/var/run/docker.sock
     command:
       - sh
       - -c
