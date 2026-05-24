@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import ParentStudent, Quest, School, ShopItem, Subject, User
+from app.models import ExchangeSettings, ParentStudent, Quest, School, ShopItem, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -372,6 +372,20 @@ async def _seed_quests(db, sid: int) -> None:
     logger.info("seeded %d quests", len(QUESTS))
 
 
+async def _seed_exchange(db, sid: int) -> None:
+    """Exchange settings with a week-long open window (Mon 00:00 – Sun 23:59),
+    so the trading window is open for demo any day of the week."""
+    if await db.scalar(select(func.count()).select_from(ExchangeSettings).where(ExchangeSettings.school_id == sid)):
+        logger.info("exchange settings already present — skipping")
+        return
+    db.add(ExchangeSettings(
+        school_id=sid, open_day=1, open_time="00:00", close_day=7, close_time="23:59",
+        calc_day=7, calc_time="20:30",
+    ))
+    await db.commit()
+    logger.info("seeded exchange settings (week-long open window)")
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -386,6 +400,7 @@ async def seed() -> None:
         await _seed_parents(db, school.id, pwd)
         await _seed_market(db, school.id)
         await _seed_quests(db, school.id)
+        await _seed_exchange(db, school.id)
 
 
 if __name__ == "__main__":

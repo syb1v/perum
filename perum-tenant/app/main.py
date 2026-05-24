@@ -26,6 +26,7 @@ from app.internal.router import router as internal_router  # noqa: E402
 from app.modules.auth.router import router as auth_router  # noqa: E402
 from app.modules.common.router import router as common_router  # noqa: E402
 from app.modules.coursework.router import router as coursework_router  # noqa: E402
+from app.modules.exchange.router import router as exchange_router  # noqa: E402
 
 from app.modules.journal.router import router as journal_router  # noqa: E402
 from app.modules.leaderboard.router import router as leaderboard_router  # noqa: E402
@@ -47,6 +48,7 @@ app.include_router(parent_router, prefix="/api/parent", tags=["parent"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["leaderboard"])
 app.include_router(market_router, prefix="/api/market", tags=["market"])
 app.include_router(quests_router, prefix="/api/quests", tags=["quests"])
+app.include_router(exchange_router, prefix="/api/exchange", tags=["exchange"])
 app.include_router(teacher_router, prefix="/api/teacher", tags=["teacher"])
 
 

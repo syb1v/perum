@@ -120,3 +120,12 @@ from app.models.market import ShopItem, UserInventory  # noqa: E402,F401
 
 # Quest models (Phase 7).
 from app.models.quests import Quest, UserQuest  # noqa: E402,F401
+
+# Exchange models (Phase 7).
+from app.models.exchange import (  # noqa: E402,F401
+    ExchangeLog,
+    ExchangeSettings,
+    Investment,
+    SubjectAverage,
+    TradingWindow,
+)
