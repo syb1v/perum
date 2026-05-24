@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { useRouter } from 'next/navigation';
 import api from '@/lib/apiClient';
 import { getDashboardPath, ROLES, isAdmin } from '@/lib/roles';
+import { isPlatformHostname } from '@/lib/host';
 import type { User, LoginRequest, LoginResponse } from '@/types';
 import { useToast } from './ToastContext';
 import LoadingScreen from '@/components/ui/LoadingScreen';
@@ -59,6 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check auth ONCE on mount — not on every pathname change
     useEffect(() => {
         const checkAuth = async () => {
+            // On the platform host (admin.*) the school auth/user model doesn't
+            // apply — /platform/* pages manage their own auth. Stay inert here.
+            if (typeof window !== 'undefined' && isPlatformHostname(window.location.hostname)) {
+                setIsLoading(false);
+                return;
+            }
             // Only attempt to fetch /user/me if there is some token or cookie indicating a possible session.
             const hasAuthData = typeof window !== 'undefined' && !!(
                 localStorage.getItem('auth_token') || 

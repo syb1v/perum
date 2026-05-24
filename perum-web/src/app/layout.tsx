@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-// import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
+import { headers } from 'next/headers';
+import { isPlatformHostname } from '@/lib/host';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import AnalyticsTracker from '@/components/AnalyticsTracker';
@@ -30,19 +31,31 @@ export const viewport = {
   themeColor: '#6366f1',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Host-based tenancy: the control-plane UI (admin.*) doesn't use the school's
+  // auth/data providers, so render it bare. Tenant subdomains get the full
+  // legacy school stack (AuthProvider gates content on the /user/me check).
+  const host = (await headers()).get('host') || '';
+  const isPlatform = isPlatformHostname(host);
+
   return (
     <html lang="ru">
       <body>
-        <AnalyticsTracker />
-        <Providers>
-          <ToastProvider>
-            <AuthProvider>
-              {children}
-              <PWAInstallPrompt />
-            </AuthProvider>
-          </ToastProvider>
-        </Providers>
+        {isPlatform ? (
+          children
+        ) : (
+          <>
+            <AnalyticsTracker />
+            <Providers>
+              <ToastProvider>
+                <AuthProvider>
+                  {children}
+                  <PWAInstallPrompt />
+                </AuthProvider>
+              </ToastProvider>
+            </Providers>
+          </>
+        )}
       </body>
     </html>
   );

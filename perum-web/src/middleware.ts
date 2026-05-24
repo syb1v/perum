@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ROLES, ROLE_DASHBOARDS, isAdmin, isTeacher } from '@/lib/roles';
+import { isPlatformHostname } from '@/lib/host';
 
 /**
  * Middleware: clean-URL routing + базовый role-gating.
@@ -102,6 +103,23 @@ function rewriteTo(request: NextRequest, pathname: string) {
 }
 
 export function middleware(request: NextRequest) {
+    // Platform host (admin.*) → serve /platform/*; skip the school role-routing.
+    const host = request.headers.get('host') || '';
+    if (isPlatformHostname(host)) {
+        const p = request.nextUrl.pathname;
+        if (
+            p.startsWith('/platform') ||
+            p.startsWith('/_next') ||
+            p.startsWith('/api') ||
+            p.includes('.')
+        ) {
+            return NextResponse.next();
+        }
+        const url = request.nextUrl.clone();
+        url.pathname = `/platform${p === '/' ? '' : p}`;
+        return NextResponse.rewrite(url);
+    }
+
     const { pathname } = request.nextUrl;
     const cookie =
         request.cookies.get('next_auth_token')?.value ||
@@ -165,21 +183,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-    matcher: [
-        '/dashboard',
-        '/profile',
-        '/exchange',
-        '/market',
-        '/schedule',
-        '/journal',
-        '/analytics',
-        '/topics',
-        '/homeroom',
-        '/student/:path*',
-        '/teacher/:path*',
-        '/admin/:path*',
-        '/system-admin',
-        '/system-admin/:path*',
-        '/parent/:path*',
-    ],
+    // Broad matcher so the platform-host rewrite can catch "/" and "/login".
+    // Static assets are excluded; tenant-host paths the legacy logic doesn't
+    // handle simply fall through to NextResponse.next().
+    matcher: ['/((?!_next/static|_next/image|favicon.ico|manifest.json).*)'],
 };

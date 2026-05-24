@@ -7,8 +7,10 @@
 
 export const ROLES = {
     SYSTEM_ADMIN: 'system_admin',
+    ORG_ADMIN: 'org_admin',
     ADMIN: 'admin',
     SCHOOL_ADMIN: 'school_admin',
+    DIRECTOR: 'director',
     TEACHER: 'teacher',
     CLASS_TEACHER: 'class_teacher',
     HOMEROOM_TEACHER: 'homeroom_teacher',
@@ -19,8 +21,10 @@ export const ROLES = {
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const ADMIN_ROLES: readonly Role[] = [
+    ROLES.ORG_ADMIN,
     ROLES.ADMIN,
     ROLES.SCHOOL_ADMIN,
+    ROLES.DIRECTOR,
     ROLES.SYSTEM_ADMIN,
 ];
 
@@ -38,8 +42,10 @@ export const STAFF_ROLES: readonly Role[] = [...ADMIN_ROLES, ...TEACHER_ROLES];
  */
 export const ROLE_DASHBOARDS: Record<Role, string> = {
     [ROLES.SYSTEM_ADMIN]: '/system-admin',
+    [ROLES.ORG_ADMIN]: '/admin',
     [ROLES.ADMIN]: '/admin',
     [ROLES.SCHOOL_ADMIN]: '/admin',
+    [ROLES.DIRECTOR]: '/admin',
     [ROLES.TEACHER]: '/dashboard',
     [ROLES.CLASS_TEACHER]: '/dashboard',
     [ROLES.HOMEROOM_TEACHER]: '/dashboard',
