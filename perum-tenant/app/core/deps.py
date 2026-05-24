@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
+from app.core.roles import DIRECTOR, ORG_ADMIN, SCHOOL_ADMIN
 from app.core.security import decode_access_token
 from app.models import User
 
@@ -56,3 +57,7 @@ def require_roles(*roles: str) -> Callable:
         return user
 
     return _dep
+
+
+# Admin-level access for school management (org_admin spans the org's schools).
+require_admin = require_roles(ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)

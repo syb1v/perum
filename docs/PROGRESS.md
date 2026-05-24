@@ -105,9 +105,15 @@
 - Роли `org_admin/director` добавлены во фронт-роутинг (`lib/roles.ts`), хелпер `lib/host.ts`.
 - **Tenant-side вход выровнен под легаси-контракт.** Бэкенд `perum-tenant` отдаёт `POST /api/login`→`{token}`, `GET /api/user/me` (`first_name/last_name/balance/avatar_url/password_changed`), `POST /api/logout`; JWT несёт `id/session_token/role/org_slug` (их читает веб-middleware из cookie). Модель `User` приведена к легаси (first_name/last_name + balance + avatar_url). **E2E:** org_admin логинится на `acme.perum.local`, `/user/me` отдаёт роль → middleware ведёт в `/admin`.
 
-**Осталось:**
-1. **Школьные эндпоинты бэкенда** (Фазы 5-8): после входа org_admin попадает на `/admin`, но панели школы (журнал/биржа/маркет/классы/предметы) дёргают эндпоинты, которых ещё нет → пустые/ошибочные панели. Оживают по мере портирования бэкенда из легаси.
-2. Дашборды ролей school_admin/director/teacher/student/parent — по мере появления данных.
+**Фаза 5 (учебное ядро) — в работе:**
+- Перенесены 13 моделей учебного ядра из легаси (subjects/classes/class_students/topics/bell_schedules/bell_schedule_items/schedules/lesson_groups/lesson_group_students/teacher_subjects/academic_years/school_periods/work_types), миграция `tenant_0003`.
+- Сид при создании орг: дефолтная школа + 12 предметов + 6 видов работ.
+- Модуль `app/modules/school_admin` (router→service→schemas): `/api/admin/subjects` (CRUD), `/api/admin/work-types` (CRUD), `/api/admin/dashboard/overview` (пустой, корректной формы). Контракт легаси, RBAC `require_admin`, изоляция по школе. Разделы «Обзор/Предметы/Виды работ» в кабинете работают.
+- Резолвер `school_id`: org_admin (school_id NULL) → первая школа орг.
+
+**Осталось (Фаза 5+):**
+1. Эндпоинты остальных разделов: классы, учебный год, периоды, расписание звонков, расписание уроков, назначения учителей (модели уже есть, нужны router/service).
+2. Фаза 6: журнал/оценки (Grade, FinalGrade, Homework, ControlWork, …). Фаза 7: геймификация (ливки/маркет/биржа/квесты).
 
 Тестируется в браузере: **`http://admin.perum.local`** (вход `admin`/`admin`) — создание/список орг. Школьный дизайн — `http://<slug>.perum.local`. API напрямую — `…/docs` (Swagger).
 
@@ -144,7 +150,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
 
 ## Рабочие правила
 
-- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.14`.
+- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.15`.
 - Коммитим осмысленными порциями; пуш в `main` — по ходу работы.
 
 ## Зафиксированные решения (не пересматривать без запроса)

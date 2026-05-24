@@ -83,3 +83,21 @@ class User(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     school: Mapped[School | None] = relationship(back_populates="users")
+
+
+# Academic-core models (Phase 5) — registered on Base.metadata for migrations.
+from app.models.academic import (  # noqa: E402,F401
+    AcademicYear,
+    BellSchedule,
+    BellScheduleItem,
+    Class,
+    ClassStudent,
+    LessonGroup,
+    LessonGroupStudent,
+    Schedule,
+    SchoolPeriod,
+    Subject,
+    TeacherSubject,
+    Topic,
+    WorkType,
+)
