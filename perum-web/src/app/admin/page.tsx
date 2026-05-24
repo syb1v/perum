@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import styles from './page.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import { isAdmin } from '@/lib/roles';
 
 // Динамические импорты для вкладок (Next.js Code Splitting)
 // Это решает проблему предзагрузки лишних CSS и скриптов вкладок, на которых пользователь еще не находится
@@ -83,8 +84,9 @@ export default function AdminDashboard() {
         return () => { document.body.style.overflow = ''; };
     }, [sidebarOpen]);
 
-    // Role check is handled by AdminLayout — this is just a safety fallback
-    if (isLoading || !user || !['admin', 'school_admin', 'system_admin'].includes(user.role)) {
+    // Role check is handled by AdminLayout — this is just a safety fallback.
+    // Use the shared isAdmin() so org_admin (new org-level role) is recognised.
+    if (isLoading || !user || !isAdmin(user.role)) {
         return <LoadingScreen />;
     }
 
