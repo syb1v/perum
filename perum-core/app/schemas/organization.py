@@ -3,7 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]{2,38}[a-z0-9]$")
+# first char a letter, last char alnum, middle 1-38 of [a-z0-9-] → total length 3-40
+SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
 RESERVED_SLUGS = {
     "admin",
     "www",
