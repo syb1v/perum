@@ -228,7 +228,7 @@ panel↔node), не SSH. См. [DEPLOYMENT.md](DEPLOYMENT.md).
 ### Фаза 0 — Подготовка (1 неделя) ✅ ВЫПОЛНЕНО
 - Репозиторий, структура monorepo, архитектурные доки, .gitignore. Первый commit.
 
-### Фаза 1 — Control Plane + Provisioning (3 недели) 🔶 В РАБОТЕ
+### Фаза 1 — Control Plane + Provisioning (3 недели) ✅ ВЫПОЛНЕНО
 - `perum-core`: Organization model, CRUD, провижининг стеков через Docker SDK.
 - Шаблоны `deploy/stack-templates/*.tmpl` и рендеринг.
 - Central Caddy: routing на `admin.perum.ru` + динамическое добавление маршрутов через admin API.
@@ -236,43 +236,45 @@ panel↔node), не SSH. См. [DEPLOYMENT.md](DEPLOYMENT.md).
 - Провижининг тестовой орг через CLI: `perum-core create-org --slug=acme`.
 - Smoke: `curl admin.perum.local/api/organizations` → видна acme; `curl acme.perum.local/health` → 200.
 
-### Фаза 2 — Tenant skeleton + Auth (2 недели)
+### Фаза 2 — Tenant skeleton + Auth (2 недели) ✅ ВЫПОЛНЕНО
 - `perum-tenant`: auth (login, JWT с `org_slug`, sessions в БД, password change).
 - Tenant middleware: валидация `payload.org_slug == settings.ORG_SLUG`.
 - Модели Organization, School, User.
 - API: `/auth/login`, `/auth/me`, `/auth/logout`, `/auth/change-password`.
 - E2E: создать орг → org_admin → login → /me → токен на чужую орг → 401.
 
-### Фаза 3 — Frontend skeleton + multi-tenant routing (2 недели)
+### Фаза 3 — Frontend skeleton + multi-tenant routing (2 недели) ✅ ВЫПОЛНЕНО (адаптирован легаси-фронт)
 - `perum-web`: layout, AuthContext, API-клиент (base = current host).
 - Middleware: `(platform)` если host=admin.perum.ru, иначе `(tenant)`.
 - Страницы: login, dashboard-stubs всех ролей. Platform UI: список + создание орг.
 
-### Фаза 4 — Custom domains + on-demand TLS (1 неделя)
+### Фаза 4 — Custom domains + on-demand TLS (1 неделя) ⬜ НЕ НАЧАТО
 - `perum-core`: `/internal/validate-domain` для Caddy. Поток подключения кастом-домена в UI.
 
-### Фаза 5 — Academic core (3 недели)
+### Фаза 5 — Academic core (3 недели) ✅ ВЫПОЛНЕНО (хвосты — в PROGRESS)
 - Модели: Class, Subject, AcademicYear, SchoolPeriod, BellSchedule, Schedule, LessonGroup, TeacherSubject.
 - Роутеры school_admin (CRUD классов/предметов/расписания), teacher (свои классы). RBAC на 3 уровня.
 
-### Фаза 6 — Журнал и оценки (3 недели)
+### Фаза 6 — Журнал и оценки (3 недели) 🔶 В РАБОТЕ
 - Модели: Grade, FinalGrade, WorkType, Topic, Homework, ControlWork, HomeworkAttachment.
 - Сервисы: `journal_service.add_grade`, `points_calculator`. Парсер PDF (порт из старого).
 
-### Фаза 7 — Геймификация (3 недели)
+### Фаза 7 — Геймификация (3 недели) ⬜ НЕ НАЧАТО
 - Transaction, ShopItem, UserInventory, GiftUpgradeAsset/Bundle, MarketDeliveryCode, Investment, SubjectAverage, TradingWindow, ExchangeSettings, Quest, UserQuest.
 - Сервисы: market, exchange_jobs (background), quest_engine.
 
-### Фаза 8 — Аналитика, новости, апелляции, родители (2 недели)
+### Фаза 8 — Аналитика, новости, апелляции, родители (2 недели) ⬜ НЕ НАЧАТО
 - News, NewsLike, NewsRead, GradeAppeal, ContactInquiry, ParentStudent, PageVisit. Leaderboards, teacher analytics.
 
-### Фаза 9 — Биллинг (stubs) и observability (2 недели)
+### Фаза 9 — Биллинг (stubs) и observability (2 недели) ⬜ НЕ НАЧАТО
 - `perum-core`: подписки/инвойсы как **заглушки** (без платёжных систем). Heartbeat-метрики, Grafana, бэкапы.
 
-### Фаза 10 — Hardening, тесты, документация (1-2 недели)
+### Фаза 10 — Hardening, тесты, документация (1-2 недели) ⬜ НЕ НАЧАТО
 - Матрица RBAC-тестов (роль × эндпоинт). Isolation E2E (cross-org 401, cross-school 404). Загрузочное (k6).
 
-### Фаза 11 — Прод-деплой и onboarding (1 неделя)
+### Фаза 11 — Прод-деплой и onboarding (1 неделя) ⬜ НЕ НАЧАТО
+
+> Актуальный статус всех фаз — в [PROGRESS.md](PROGRESS.md), раздел «Статус по фазам».
 - Ubuntu VM, central Caddy, perum-core, мониторинг. Onboarding pilot-орг.
 
 ### За пределами 20 недель — миграция со старого ПЭРУМ (опционально)
