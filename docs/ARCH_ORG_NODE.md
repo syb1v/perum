@@ -93,8 +93,11 @@
    модель `OrgAdmin` + auth ядра (role+org_id) + `require_org_admin` (миграция
    `0004`); роутер `/api/schools` (CRUD/provision/reprovision/delete, scope по
    org_id); `platform_admin` заводит org_admin; bootstrap админа школы. **E2E ок.**
-3. **Тенант → одна школа:** схлопнуть модели; bootstrap `school_admin` (роль) вместо
-   org_admin; убрать org-уровневое из тенанта (OrgConsole/schools-CRUD).
+3. ✅ **Тенант → одна школа:** bootstrap создаёт `school_admin` (привязан к
+   единственной школе стека) вместо org_admin; из тенанта убраны org-уровневые
+   schools-CRUD/admins, `service_schools`, `require_org_admin`, фронт `OrgConsole`/
+   `SchoolManagement` и ветка org_admin. **E2E ок** (новый стек → school_admin;
+   `/api/admin/schools` в стеке 404). Схему БД оставили (одна школа на стек).
 4. **OTA-обновления:** канал релизов + сравнение версии + кнопка → агент
    `pull`+recreate (volume-preserving) + rollback.
 5. **Enrollment:** bootstrap-compose узла орг + регистрация по токену.
@@ -102,9 +105,9 @@
 7. **Доки/Caddy/деплой:** переписать ARCHITECTURE/ROLES/PROVISIONING/DEPLOYMENT под
    v2; прод-`Caddyfile`; runbook.
 
-**Сделано:** этапы 1–2 (ядро умеет провижинить школьные стеки, org_admin
-управляет своими школами через `/api/schools`). Дальше — этап 3 (тенант → одна
-школа) и этап 4 (OTA-обновления по кнопке).
+**Сделано:** этапы 1–3 (ядро провижинит школьные стеки; org_admin управляет
+своими школами через `/api/schools`; тенант-стек = одна школа с `school_admin`).
+Дальше — этап 4 (OTA-обновления по кнопке), затем enrollment и фронт.
 
 ## Открытые вопросы / риски
 - Реестр образов: свой (Harbor) или публичный с приватным каналом тегов.
