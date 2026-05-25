@@ -2,38 +2,37 @@
 
 > Документ описывает иерархию ролей в новой архитектуре PERUM. Единый источник правды на фронте — `perum-web/src/lib/roles.ts`. На бэке — FastAPI dependencies (`require_platform_admin`, `require_org_admin`, ...).
 
-## Иерархия
+## Иерархия (архитектура v2 — silo = ШКОЛА, см. [ARCH_ORG_NODE.md](ARCH_ORG_NODE.md))
 
 ```
-platform_admin    (Control Plane: admin.perum.ru)
-       │
-       │ управляет
+platform_admin    (ядро: admin.perum.ru) — организации, релизы, enrollment
+       │ создаёт орг + выдаёт enrollment-токен
        ▼
-org_admin         (Tenant: <org>.perum.ru, custom domain)
-       │
-       │ управляет школами своей организации
+org_admin         (узел орг: ядро/агент, портал /platform/org)
+       │ провижинит ШКОЛЫ (стек на школу) + заводит их админов + обновляет «по кнопке»
+       │ (внутрь школы НЕ заходит)
        ▼
-school_admin / director   (одна школа внутри орг)
-       │
-       │ управляет учителями, учениками, расписанием
+school_admin / director   (СТЕК ШКОЛЫ: <slug>.perum.ru) — полный админ одной школы
+       │ управляет учителями, учениками, расписанием, журналом
        ▼
-teacher / student / parent
+teacher / student / parent   (стек школы)
 ```
 
-Дополнительная роль `system_admin` из старого PERUM **не переносится** — её функции делятся между `platform_admin` (управление орг, мониторинг, биллинг) и `org_admin` (управление школами орг).
+Роль `system_admin` из старого PERUM **не переносится** — её функции делятся между
+`platform_admin` (орг, релизы, мониторинг) и `org_admin` (школы орг и их обновления).
 
 ## Где живёт каждая роль
 
-| Роль | Где живёт | На каком домене входит |
+| Роль | Где живёт | Где входит |
 |---|---|---|
-| `platform_admin` | `perum_control_db.platform_admins` | `admin.perum.ru` |
-| `org_admin` | `org_*_db.users` (внутри tenant app) | `<org>.perum.ru` или кастомный |
-| `school_admin` | `org_*_db.users` (с привязкой `school_id`) | `<org>.perum.ru` или кастомный |
-| `teacher` | `org_*_db.users` (с `school_id`) | `<org>.perum.ru` или кастомный |
-| `student` | `org_*_db.users` (с `school_id`) | `<org>.perum.ru` или кастомный |
-| `parent` | `org_*_db.users` (с `school_id`) | `<org>.perum.ru` или кастомный |
+| `platform_admin` | `perum_control_db.platform_admins` (ядро) | `admin.perum.ru` (портал платформы) |
+| `org_admin` | `perum_control_db.org_admins` (ядро/узел орг) | `admin.perum.ru/platform/org` (портал орг) |
+| `school_admin` / `director` | `school_<slug>_db.users` (стек школы) | `<slug>.perum.ru` |
+| `teacher` / `student` / `parent` | `school_<slug>_db.users` (стек школы) | `<slug>.perum.ru` |
 
-`platform_admin` физически не существует в org-стеках. JWT, выданный `platform_admin` в control plane, не валиден в tenant app (другой `org_slug` в payload).
+`platform_admin` и `org_admin` — операторы control-plane (в БД школ их нет). JWT
+платформы/орг не валиден в школьном стеке и наоборот. `org_admin` скоуплен `org_id`;
+внутришкольные эндпоинты возвращают ему 403 (инвариант: не лезет в данные школ).
 
 ## Что может каждая роль
 

@@ -1,0 +1,50 @@
+# PERUM — продакшн reverse-proxy (архитектура v2: silo = школа).
+#
+# Базовая статика + автоматический HTTPS. Маршруты конкретных школ
+# (`<slug>.perum.ru → school_<slug>_app:3000`) добавляются ДИНАМИЧЕСКИ узлом орг
+# через Caddy admin API при провижининге (app/services/caddy_admin.py) — как в dev.
+# Здесь задаются только общий хост платформы и политика TLS.
+#
+# Запуск: caddy run --config deploy/caddy/Caddyfile.prod
+# Переменные: PERUM_BASE_DOMAIN (напр. perum.ru), ACME_EMAIL.
+
+{
+    email {$ACME_EMAIL}
+    admin :2019
+    # on-demand TLS для кастомных доменов школ: Caddy спрашивает у ядра/узла,
+    # разрешён ли домен, прежде чем выпускать сертификат (защита от абуза).
+    on_demand_tls {
+        ask {$CONTROL_PLANE_URL:http://perum_core:3000}/internal/validate-domain
+    }
+}
+
+# Портал платформы и орг: /api → ядро, остальное (UI) → веб.
+admin.{$PERUM_BASE_DOMAIN} {
+    @backend path /api/* /docs /docs/* /openapi.json /health /health/*
+    handle @backend {
+        reverse_proxy perum_core:3000
+    }
+    handle {
+        reverse_proxy perum_web:3000
+    }
+    encode gzip zstd
+}
+
+# Поддомены школ под базовым доменом: тот же split (/api → стек школы, UI → веб).
+# Конкретные `<slug>` инжектятся динамически провижинером; этот блок даёт
+# дефолт + автоматический выпуск сертификата по мере появления поддоменов.
+*.{$PERUM_BASE_DOMAIN} {
+    tls {
+        on_demand
+    }
+    @api path /api/* /docs /docs/* /openapi.json /health /health/*
+    # upstream конкретной школы проставляется динамическим маршрутом; здесь —
+    # мягкий дефолт, чтобы хост отвечал до инъекции маршрута.
+    handle @api {
+        respond "school stack not routed yet" 503
+    }
+    handle {
+        reverse_proxy perum_web:3000
+    }
+    encode gzip zstd
+}
