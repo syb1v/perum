@@ -10,14 +10,15 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_org_admin
-from app.models import OrgAdmin, Release, School, SchoolSecret
+from app.models import OrgAdmin, Organization, Release, School, SchoolSecret
+from app.services.billing import school_limit
 from app.services.school_provisioner import (
     SchoolProvisionOutcome,
     current_release_image,
@@ -95,6 +96,17 @@ async def create_school(
     elif existing is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
     else:
+        # Лимит плана (биллинг-стаб): новая школа не должна превышать лимит орг.
+        org = await db.get(Organization, admin.org_id)
+        limit = school_limit(org.plan if org else "trial")
+        used = int(await db.scalar(
+            select(func.count(School.id)).where(School.org_id == admin.org_id, School.status != "archived")
+        ) or 0)
+        if used >= limit:
+            raise HTTPException(
+                status.HTTP_402_PAYMENT_REQUIRED,
+                f"достигнут лимит школ для плана '{org.plan if org else 'trial'}' ({limit}). Повысьте план.",
+            )
         school = School(
             org_id=admin.org_id, slug=payload.slug, name=payload.name,
             admin_email=payload.admin_email, status="provisioning",

@@ -15,13 +15,14 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
-from app.models import EnrollmentToken, OrgAdmin, Organization, OrganizationSecret
+from app.models import EnrollmentToken, OrgAdmin, Organization, OrganizationSecret, School
+from app.services.billing import PLANS, school_limit
 from app.schemas.organization import (
     OrganizationCreate,
     OrganizationRead,
@@ -209,3 +210,45 @@ async def issue_enrollment_token(slug: str, db: AsyncSession = Depends(get_db)) 
         token=raw, org_slug=org.slug,
         core_url=get_settings().CONTROL_PLANE_URL, expires_at=expires.isoformat(),
     )
+
+
+# --- v2: биллинг-заглушки (план + лимит школ) ---
+
+class PlanUpdate(BaseModel):
+    plan: str
+
+
+async def _active_school_count(db: AsyncSession, org_id: int) -> int:
+    return int(await db.scalar(
+        select(func.count(School.id)).where(School.org_id == org_id, School.status != "archived")
+    ) or 0)
+
+
+@router.get("/{slug}/billing")
+async def get_billing(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    used = await _active_school_count(db, org.id)
+    limit = school_limit(org.plan)
+    return {
+        "org_slug": org.slug,
+        "plan": org.plan,
+        "school_limit": limit,
+        "schools_used": used,
+        "schools_remaining": max(limit - used, 0),
+        "status": org.status,
+        "created_at": org.created_at.isoformat() if org.created_at else None,
+    }
+
+
+@router.put("/{slug}/billing")
+async def set_plan(slug: str, payload: PlanUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+    if payload.plan not in PLANS:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, f"неизвестный план; допустимо: {', '.join(PLANS)}")
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    org.plan = payload.plan
+    await db.commit()
+    return {"org_slug": org.slug, "plan": org.plan, "school_limit": school_limit(org.plan)}

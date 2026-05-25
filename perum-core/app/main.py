@@ -108,9 +108,11 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, enroll, health, organizations, releases, schools  # noqa: E402
+from app.routers import auth, enroll, health, metrics, organizations, releases, schools  # noqa: E402
 
 app.include_router(health.router)
+# Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
+app.include_router(metrics.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 # Подключение узла орг — публичный handshake (токен сам аутентифицирует).
 app.include_router(enroll.router, prefix="/api/enroll", tags=["enroll"])
