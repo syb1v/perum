@@ -66,6 +66,20 @@ class Settings(BaseSettings):
         description="Used when composing org subdomains (acme + perum.local = acme.perum.local)",
     )
 
+    # --- Режим узла организации (org-node v2, см. docs/ARCH_ORG_NODE.md) ---
+    ROLE: str = Field(
+        default="platform",
+        description="platform (центральное ядро) | org_agent (узел организации)",
+    )
+    CORE_URL: str = Field(
+        default="http://perum_core:3000",
+        description="Куда агент орг стучится для enroll/релизов (только в режиме org_agent)",
+    )
+    ENROLLMENT_TOKEN: str = Field(
+        default="",
+        description="Одноразовый токен подключения узла орг (выдаёт platform_admin)",
+    )
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

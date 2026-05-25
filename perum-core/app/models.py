@@ -240,6 +240,21 @@ class SchoolDomain(Base):
     school: Mapped[School] = relationship(back_populates="domains")
 
 
+class AgentState(Base):
+    """Локальная идентичность узла организации (режим ROLE=org_agent). Одна строка:
+    после enroll-on-boot хранит, к какой орг подключён узел и текущий релиз.
+    В режиме platform не используется."""
+
+    __tablename__ = "agent_state"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    org_slug: Mapped[str] = mapped_column(String(40), nullable=False)
+    org_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    core_url: Mapped[str] = mapped_column(String(255), nullable=False)
+    release_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    enrolled_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
 class EnrollmentToken(Base):
     """Одноразовый токен подключения узла организации (см. ARCH_ORG_NODE.md).
 
