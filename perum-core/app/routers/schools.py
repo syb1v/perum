@@ -14,13 +14,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_org_admin
-from app.models import OrgAdmin, School, SchoolSecret
+from app.models import OrgAdmin, Release, School, SchoolSecret
 from app.services.school_provisioner import (
     SchoolProvisionOutcome,
+    current_release_image,
     deprovision_school,
     provision_school,
+    update_school,
 )
 from app.services.tenant_provisioner import ProvisioningError
 
@@ -120,6 +123,44 @@ async def reprovision_school(school_id: int, admin: OrgAdmin = Depends(require_o
     except ProvisioningError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"reprovision школы '{school.slug}' не удался: {exc}")
     return _result(outcome)
+
+
+@router.get("/{school_id}/update-status")
+async def update_status(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    school = await _get_school(school_id, admin, db)
+    settings = get_settings()
+    latest = await current_release_image(db, settings)
+    rel = (
+        await db.execute(select(Release).where(Release.channel == "stable", Release.is_current.is_(True)).limit(1))
+    ).scalar_one_or_none()
+    return {
+        "school_id": school.id,
+        "current_tag": school.release_tag,
+        "latest_image": latest,
+        "latest_version": rel.version_tag if rel else None,
+        "changelog": rel.changelog if rel else None,
+        "update_available": bool(school.release_tag and school.release_tag != latest),
+    }
+
+
+@router.post("/{school_id}/update")
+async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    """Обновление школьного стека «по кнопке» на текущий релиз (volume-preserving)."""
+    school = await _get_school(school_id, admin, db)
+    try:
+        outcome = await update_school(school, db)
+    except ProvisioningError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"обновление школы '{school.slug}' не удалось: {exc}")
+    return {
+        "school": _school_dict(outcome.school),
+        "from_image": outcome.from_image,
+        "to_image": outcome.to_image,
+        "rolled_back": outcome.rolled_back,
+        "message": (
+            "откат на прежнюю версию (обновление не удалось)" if outcome.rolled_back
+            else ("уже на актуальной версии" if outcome.from_image == outcome.to_image else "обновлено")
+        ),
+    }
 
 
 @router.delete("/{school_id}")

@@ -241,6 +241,19 @@ class DockerClient:
 
         return await asyncio.to_thread(_remove)
 
+    async def remove_container(self, name: str) -> bool:
+        """Remove a SINGLE container by name (keep volumes). Used for OTA-обновления:
+        свап app-контейнера на новый образ, не трогая БД и её том."""
+
+        def _remove() -> bool:
+            try:
+                self.client.containers.get(name).remove(force=True)
+                return True
+            except NotFound:
+                return False
+
+        return await asyncio.to_thread(_remove)
+
 
 _docker_client: DockerClient | None = None
 

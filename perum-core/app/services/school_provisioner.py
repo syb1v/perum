@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.docker_client import DockerClient, HealthSpec, get_docker_client
-from app.models import School, SchoolDomain, SchoolSecret
+from app.models import Release, School, SchoolDomain, SchoolSecret
 from app.services.caddy_admin import CaddyAdmin, get_caddy_admin
 from app.services.stack_spec import StackSpec, build_school_stack_spec, school_label_slug
 from app.services.tenant_provisioner import ProvisioningError
@@ -27,6 +27,25 @@ from app.services.tenant_provisioner import ProvisioningError
 logger = logging.getLogger("perum.school_provisioner")
 
 REDIS_DB_COUNT = 16
+
+
+async def current_release_image(db: AsyncSession, settings: Settings, channel: str = "stable") -> str:
+    """Образ текущего релиза канала; fallback — settings.TENANT_IMAGE."""
+    rel = (
+        await db.execute(
+            select(Release).where(Release.channel == channel, Release.is_current.is_(True)).limit(1)
+        )
+    ).scalar_one_or_none()
+    if rel and (rel.image or rel.version_tag):
+        return rel.image or rel.version_tag
+    return settings.TENANT_IMAGE
+
+
+def _app_run_kwargs(spec: StackSpec, label_slug: str):
+    return dict(
+        name=spec.app_container, image=spec.tenant_image, slug=label_slug, role="app",
+        environment=spec.app_env, network=spec.network,
+    )
 
 
 @dataclass
@@ -141,12 +160,13 @@ async def provision_school(school: School, db: AsyncSession, settings: Settings 
     label_slug = school_label_slug(school.slug)
 
     secret = await _get_or_create_secret(school, db)
+    target_image = await current_release_image(db, settings)
     school.status = "provisioning"
     await db.commit()
     await db.refresh(school)
     await db.refresh(secret)
 
-    spec = build_school_stack_spec(school, secret, settings)
+    spec = build_school_stack_spec(school, secret, settings, image=target_image)
     try:
         outcome = await _bring_up(spec, label_slug, settings, docker, caddy, admin_email=school.admin_email)
     except Exception as exc:
@@ -156,7 +176,7 @@ async def provision_school(school: School, db: AsyncSession, settings: Settings 
 
     school.status = "active"
     school.activated_at = datetime.utcnow()
-    school.release_tag = settings.TENANT_IMAGE
+    school.release_tag = target_image
     await _upsert_subdomain(school, outcome.host, db)
     await db.commit()
     await db.refresh(school)
@@ -175,3 +195,67 @@ async def deprovision_school(school: School, db: AsyncSession) -> None:
     school.archived_at = datetime.utcnow()
     await db.commit()
     logger.info("school %s: deprovisioned", school.slug)
+
+
+@dataclass
+class UpdateOutcome:
+    school: School
+    from_image: str
+    to_image: str
+    rolled_back: bool = False
+
+
+async def _swap_app(spec: StackSpec, label_slug: str, image: str, settings: Settings, docker: DockerClient) -> None:
+    """Пересоздать ТОЛЬКО app-контейнер на заданном образе + прогнать миграции.
+    БД и её том не трогаются (volume-preserving)."""
+    spec.tenant_image = image
+    await docker.ensure_image(image)
+    await docker.remove_container(spec.app_container)
+    await docker.run_container(**_app_run_kwargs(spec, label_slug))
+    await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
+    code, out = await docker.exec(spec.app_container, ["alembic", "upgrade", "head"], workdir="/app")
+    if code != 0:
+        raise ProvisioningError(f"alembic upgrade failed (exit {code}):\n{out[-2000:]}")
+
+
+async def update_school(school: School, db: AsyncSession, settings: Settings | None = None) -> UpdateOutcome:
+    """OTA-обновление школьного стека на текущий релиз: pull нового образа +
+    пересоздание app-контейнера (том сохраняется) + миграции. При сбое — откат на
+    прежний образ. Это и есть «обновление по кнопке» (опт-ин, без принуждения)."""
+    settings = settings or get_settings()
+    docker = get_docker_client()
+    label_slug = school_label_slug(school.slug)
+
+    from_image = school.release_tag or settings.TENANT_IMAGE
+    to_image = await current_release_image(db, settings)
+    if to_image == from_image:
+        return UpdateOutcome(school=school, from_image=from_image, to_image=to_image)
+
+    secret = await db.get(SchoolSecret, school.id)
+    if secret is None:
+        raise ProvisioningError("school secret missing — школа не была запровижинена")
+    spec = build_school_stack_spec(school, secret, settings, image=to_image)
+
+    school.status = "updating"
+    await db.commit()
+    try:
+        await _swap_app(spec, label_slug, to_image, settings, docker)
+    except Exception as exc:
+        logger.warning("school %s: update to %s failed (%s) — откат на %s", school.slug, to_image, exc, from_image)
+        try:
+            await _swap_app(spec, label_slug, from_image, settings, docker)
+        except Exception as rb:  # noqa: BLE001
+            logger.error("school %s: ROLLBACK to %s also failed: %s", school.slug, from_image, rb)
+            school.status = "failed"
+            await db.commit()
+            raise ProvisioningError(f"update and rollback failed: {exc}; rollback: {rb}") from exc
+        school.status = "active"
+        await db.commit()
+        return UpdateOutcome(school=school, from_image=from_image, to_image=from_image, rolled_back=True)
+
+    school.release_tag = to_image
+    school.status = "active"
+    await db.commit()
+    await db.refresh(school)
+    logger.info("school %s: updated %s -> %s", school.slug, from_image, to_image)
+    return UpdateOutcome(school=school, from_image=from_image, to_image=to_image)

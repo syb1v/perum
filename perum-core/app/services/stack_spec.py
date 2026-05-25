@@ -121,9 +121,10 @@ def build_stack_spec(
 
 
 def build_school_stack_spec(
-    school: School, secret: SchoolSecret, settings: Settings
+    school: School, secret: SchoolSecret, settings: Settings, *, image: str | None = None
 ) -> StackSpec:
-    """Спек школьного стека. Контейнеры `school_<slug>_*`, тот же tenant-образ.
+    """Спек школьного стека. Контейнеры `school_<slug>_*`. `image` задаёт тег образа
+    приложения (для OTA-обновлений); по умолчанию `settings.TENANT_IMAGE`.
     `slug` в спеке = slug школы (для имён/хоста); namespacing Docker/Caddy-лейблов
     делает провижинер через `school_label_slug`."""
     slug = school.slug
@@ -154,7 +155,7 @@ def build_school_stack_spec(
         app_container=app_container,
         db_container=db_container,
         volume=school_volume_name(slug),
-        tenant_image=settings.TENANT_IMAGE,
+        tenant_image=image or settings.TENANT_IMAGE,
         postgres_image=postgres_image,
         db_password=secret.db_password,
         secret_key=secret.secret_key,
