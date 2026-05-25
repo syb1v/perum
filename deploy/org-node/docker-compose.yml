@@ -1,0 +1,56 @@
+# Узел организации (reference-шаблон) — поднимается на сервере орг «из коробки».
+# Агент сам провижинит школьные стеки на ЛОКАЛЬНОМ Docker и обновляет их по кнопке.
+# Запуск:  CORE_URL=https://<core> ENROLLMENT_TOKEN=<token> docker compose up -d
+#
+# ПРИМЕЧАНИЕ: в текущей сборке роль «агента» исполняет ядро (perum-core) на одном
+# хосте. Этот файл — целевой шаблон для отдельного сервера орг (этап вынесения
+# агента — в работе, см. docs/ARCH_ORG_NODE.md).
+name: perum-org-node
+
+services:
+  org_agent:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io}/perum/perum-core:latest
+    container_name: org_node_agent
+    environment:
+      ROLE: org_agent                      # режим «агент орг» (не платформенное ядро)
+      CORE_URL: ${CORE_URL:?задайте URL ядра}
+      ENROLLMENT_TOKEN: ${ENROLLMENT_TOKEN:?задайте enrollment-токен}
+      DATABASE_URL: postgresql+asyncpg://perum:${DB_PASSWORD:-perum}@org_node_db:5432/perum_node
+      IMAGE_REGISTRY: ${IMAGE_REGISTRY:-mirror.gcr.io}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock   # агент провижинит школьные стеки локально
+    depends_on:
+      org_node_db:
+        condition: service_healthy
+    networks: [perum_internal]
+    restart: unless-stopped
+
+  org_node_db:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io}/library/postgres:15-alpine
+    container_name: org_node_db
+    environment:
+      POSTGRES_USER: perum
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-perum}
+      POSTGRES_DB: perum_node
+    volumes:
+      - org_node_data:/var/lib/postgresql/data
+    networks: [perum_internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perum -d perum_node"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  caddy:
+    image: ${IMAGE_REGISTRY:-mirror.gcr.io}/library/caddy:2-alpine
+    container_name: org_node_caddy
+    ports: ["80:80", "443:443"]
+    networks: [perum_internal]
+    restart: unless-stopped
+
+volumes:
+  org_node_data: {}
+
+networks:
+  perum_internal:
+    driver: bridge

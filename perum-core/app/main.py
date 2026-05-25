@@ -100,10 +100,12 @@ app.add_middleware(
 from fastapi import Depends  # noqa: E402
 
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, health, organizations, releases, schools  # noqa: E402
+from app.routers import auth, enroll, health, organizations, releases, schools  # noqa: E402
 
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+# Подключение узла орг — публичный handshake (токен сам аутентифицирует).
+app.include_router(enroll.router, prefix="/api/enroll", tags=["enroll"])
 app.include_router(
     organizations.router,
     prefix="/api/organizations",

@@ -240,6 +240,25 @@ class SchoolDomain(Base):
     school: Mapped[School] = relationship(back_populates="domains")
 
 
+class EnrollmentToken(Base):
+    """Одноразовый токен подключения узла организации (см. ARCH_ORG_NODE.md).
+
+    platform_admin выдаёт токен для орг; новый сервер орг при первом запуске
+    предъявляет его на `POST /api/enroll` и получает свою конфигурацию (org_slug,
+    текущий релиз). Храним только sha256-хеш; плейнтекст показывается один раз."""
+
+    __tablename__ = "enrollment_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
 class Release(Base):
     """Канал релизов: версия образа стека школы + changelog. Узлы орг сравнивают
     свой `release_tag` с текущим релизом и обновляются по кнопке (OTA)."""

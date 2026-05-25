@@ -8,16 +8,20 @@ routed (status=active), or 502 if it failed (status=failed, resources cleaned).
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import secrets as secrets_mod
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
-from app.models import OrgAdmin, Organization, OrganizationSecret
+from app.models import EnrollmentToken, OrgAdmin, Organization, OrganizationSecret
 from app.schemas.organization import (
     OrganizationCreate,
     OrganizationRead,
@@ -177,3 +181,31 @@ async def create_org_admin(slug: str, payload: OrgAdminCreate, db: AsyncSession 
     await db.commit()
     await db.refresh(admin)
     return {"id": admin.id, "login": admin.login, "org_id": admin.org_id}
+
+
+# --- v2: enrollment-токен для подключения узла организации ---
+
+class EnrollmentTokenOut(BaseModel):
+    token: str
+    org_slug: str
+    core_url: str
+    expires_at: str
+
+
+@router.post("/{slug}/enrollment-token", response_model=EnrollmentTokenOut)
+async def issue_enrollment_token(slug: str, db: AsyncSession = Depends(get_db)) -> EnrollmentTokenOut:
+    """Выдать одноразовый токен подключения узла орг. Плейнтекст — только в ответе;
+    в БД хранится sha256-хеш. Узел орг предъявит токен на POST /api/enroll."""
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    raw = secrets_mod.token_urlsafe(32)
+    expires = datetime.utcnow() + timedelta(days=7)
+    db.add(EnrollmentToken(
+        org_id=org.id, token_hash=hashlib.sha256(raw.encode()).hexdigest(), expires_at=expires,
+    ))
+    await db.commit()
+    return EnrollmentTokenOut(
+        token=raw, org_slug=org.slug,
+        core_url=get_settings().CONTROL_PLANE_URL, expires_at=expires.isoformat(),
+    )
