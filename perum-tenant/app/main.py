@@ -25,6 +25,7 @@ app = FastAPI(
 from app.internal.router import router as internal_router  # noqa: E402
 from app.modules.analytics.router import admin_router as analytics_admin_router  # noqa: E402
 from app.modules.analytics.router import teacher_router as analytics_teacher_router  # noqa: E402
+from app.modules.appeals.router import router as appeals_router  # noqa: E402
 from app.modules.auth.router import router as auth_router  # noqa: E402
 from app.modules.common.router import router as common_router  # noqa: E402
 from app.modules.coursework.router import router as coursework_router  # noqa: E402
@@ -40,12 +41,14 @@ from app.modules.quests.router import router as quests_router  # noqa: E402
 from app.modules.school_admin.router import router as school_admin_router  # noqa: E402
 from app.modules.student.router import router as student_router  # noqa: E402
 from app.modules.teacher.router import router as teacher_router  # noqa: E402
+from app.modules.user_admin.router import router as user_admin_router  # noqa: E402
 
 app.include_router(auth_router, prefix="/api", tags=["auth"])
 app.include_router(internal_router, prefix="/internal", tags=["internal"])
 app.include_router(common_router, prefix="/api", tags=["common"])
 app.include_router(coursework_router, prefix="/api", tags=["coursework"])
 app.include_router(school_admin_router, prefix="/api/admin", tags=["school_admin"])
+app.include_router(user_admin_router, prefix="/api/admin", tags=["user-admin"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(student_router, prefix="/api/student", tags=["student"])
 app.include_router(parent_router, prefix="/api/parent", tags=["parent"])
@@ -57,6 +60,7 @@ app.include_router(news_router, prefix="/api/news", tags=["news"])
 app.include_router(news_admin_router, prefix="/api/admin/news", tags=["news-admin"])
 app.include_router(analytics_teacher_router, prefix="/api/teacher/analytics", tags=["analytics"])
 app.include_router(analytics_admin_router, prefix="/api/admin", tags=["analytics-admin"])
+app.include_router(appeals_router, prefix="/api/appeals", tags=["appeals"])
 app.include_router(teacher_router, prefix="/api/teacher", tags=["teacher"])
 
 

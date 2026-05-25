@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -33,6 +34,48 @@ from app.modules.school_admin.schemas import (
 from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
+
+
+# ---- Schedule / assignment request bodies (Phase 5 tail) ----
+
+class ScheduleGroupItem(BaseModel):
+    name: str
+    room: str | None = None
+    teacher_id: int | None = None
+    student_ids: list[int] = []
+
+
+class ScheduleItemIn(BaseModel):
+    subject_id: int
+    day_of_week: int
+    lesson_number: int
+    room: str | None = None
+    teacher_id: int | None = None
+    groups: list[ScheduleGroupItem] | None = None
+
+
+class UpdateScheduleRequest(BaseModel):
+    items: list[ScheduleItemIn]
+
+
+class TeacherScheduleItemIn(BaseModel):
+    subject_id: int
+    class_id: int
+    day_of_week: int
+    lesson_number: int
+    room: str | None = None
+
+
+class UpdateTeacherScheduleRequest(BaseModel):
+    items: list[TeacherScheduleItemIn]
+
+
+class SyncAssignmentsRequest(BaseModel):
+    context: str
+    context_id: int
+    teacher_ids: list[int] = []
+    subject_ids: list[int] = []
+    class_ids: list[int] = []
 
 
 async def _school(user: User, db: AsyncSession) -> int:
@@ -186,6 +229,18 @@ async def class_schedule(
     return await cls.get_class_schedule(db, await _school(user, db), class_id)
 
 
+@router.put("/classes/{class_id}/schedule")
+async def update_class_schedule(
+    class_id: int,
+    payload: UpdateScheduleRequest,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await cls.update_class_schedule(
+        db, await _school(user, db), class_id, [i.model_dump() for i in payload.items]
+    )
+
+
 # ============ Academic years ============
 @router.get("/academic-years")
 async def get_academic_years(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
@@ -305,3 +360,47 @@ async def delete_teacher_subject(
 ) -> dict:
     await tch.delete_assignment(db, await _school(user, db), assignment_id)
     return {"success": True, "message": "Назначение удалено"}
+
+
+@router.put("/teacher-subjects/sync")
+async def sync_teacher_subjects(
+    payload: SyncAssignmentsRequest, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await tch.sync_assignments(
+        db, await _school(user, db), payload.context, payload.context_id,
+        payload.teacher_ids, payload.subject_ids, payload.class_ids,
+    )
+
+
+@router.get("/teachers-by-subject/{subject_id}")
+async def teachers_by_subject(
+    subject_id: int, class_id: int | None = None,
+    user: User = Depends(require_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await tch.teachers_by_subject(db, await _school(user, db), subject_id, class_id)
+
+
+@router.get("/teachers/{teacher_id}/subjects")
+async def teacher_subjects(
+    teacher_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await tch.teacher_subjects(db, await _school(user, db), teacher_id)
+
+
+@router.get("/teachers/{teacher_id}/schedule")
+async def teacher_schedule(
+    teacher_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await tch.get_teacher_schedule(db, await _school(user, db), teacher_id)
+
+
+@router.put("/teachers/{teacher_id}/schedule")
+async def update_teacher_schedule(
+    teacher_id: int,
+    payload: UpdateTeacherScheduleRequest,
+    user: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await tch.update_teacher_schedule(
+        db, await _school(user, db), teacher_id, [i.model_dump() for i in payload.items]
+    )

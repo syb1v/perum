@@ -19,7 +19,7 @@ from sqlalchemy import func, select, update
 
 from app.core.db import SessionLocal
 from app.core.security import hash_password
-from app.models import ExchangeSettings, News, ParentStudent, Quest, School, ShopItem, Subject, User
+from app.models import ExchangeSettings, GradeAppeal, News, ParentStudent, Quest, School, ShopItem, Subject, User
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -432,6 +432,32 @@ async def _seed_news(db, sid: int) -> None:
     logger.info("seeded %d news items", len(NEWS_ITEMS))
 
 
+async def _seed_appeals(db, sid: int) -> None:
+    if await db.scalar(select(func.count()).select_from(GradeAppeal).where(GradeAppeal.school_id == sid)):
+        logger.info("appeals already present — skipping")
+        return
+    # Берём две низкие оценки с преподавателем — на них и заводим апелляции.
+    low_grades = (
+        await db.execute(
+            select(Grade)
+            .where(Grade.school_id == sid, Grade.grade_value <= 3, Grade.teacher_id.is_not(None))
+            .order_by(Grade.id)
+            .limit(2)
+        )
+    ).scalars().all()
+    reasons = [
+        "Не был учтён устный ответ на прошлом уроке",
+        "Считаю оценку заниженной — работа выполнена полностью",
+    ]
+    for i, g in enumerate(low_grades):
+        db.add(GradeAppeal(
+            school_id=sid, student_id=g.student_id, grade_id=g.id, teacher_id=g.teacher_id,
+            reason=reasons[i % len(reasons)], status="pending",
+        ))
+    await db.commit()
+    logger.info("seeded %d grade appeals", len(low_grades))
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -448,6 +474,7 @@ async def seed() -> None:
         await _seed_quests(db, school.id)
         await _seed_exchange(db, school.id)
         await _seed_news(db, school.id)
+        await _seed_appeals(db, school.id)
 
 
 if __name__ == "__main__":

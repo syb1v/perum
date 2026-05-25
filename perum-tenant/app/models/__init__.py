@@ -73,6 +73,8 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    patronymic: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     must_change_password: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -135,3 +137,6 @@ from app.models.news import News, NewsLike, NewsRead  # noqa: E402,F401
 
 # Analytics models (Phase 8).
 from app.models.analytics import PageVisit  # noqa: E402,F401
+
+# Appeals model (Phase 8).
+from app.models.appeals import GradeAppeal  # noqa: E402,F401
