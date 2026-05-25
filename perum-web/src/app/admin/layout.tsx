@@ -5,7 +5,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { isAdmin, getDashboardPath } from '@/lib/roles';
-import SchoolSwitcher from '@/components/admin/SchoolSwitcher';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
     const { user, isLoading } = useAuth();
@@ -26,10 +25,5 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         return <LoadingScreen />;
     }
 
-    return (
-        <>
-            <SchoolSwitcher />
-            {children}
-        </>
-    );
+    return <>{children}</>;
 }

@@ -88,6 +88,14 @@ class SchoolUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class SchoolAdminCreate(BaseModel):
+    login: str
+    password: str
+    first_name: str | None = None
+    last_name: str | None = None
+    role: str = "school_admin"
+
+
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
 
@@ -119,6 +127,31 @@ async def delete_school(
     school_id: int, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await schools.delete_school(db, school_id)
+
+
+@router.get("/schools/{school_id}/admins")
+async def list_school_admins(
+    school_id: int, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await schools.list_school_admins(db, school_id)
+
+
+@router.post("/schools/{school_id}/admins")
+async def create_school_admin(
+    school_id: int, payload: SchoolAdminCreate,
+    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await schools.create_school_admin(
+        db, school_id, payload.login, payload.password, payload.first_name, payload.last_name, payload.role
+    )
+
+
+@router.delete("/schools/{school_id}/admins/{user_id}")
+async def delete_school_admin(
+    school_id: int, user_id: int,
+    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await schools.delete_school_admin(db, school_id, user_id)
 
 
 # ============ Dashboard ============

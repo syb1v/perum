@@ -11,8 +11,11 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import hash_password
 from app.models import Organization, School, User
 from app.models.academic import Class
+
+SCHOOL_ADMIN_ROLES = ("school_admin", "director")
 
 
 async def _org_id(db: AsyncSession) -> int:
@@ -90,3 +93,68 @@ async def delete_school(db: AsyncSession, school_id: int) -> dict:
     await db.delete(school)
     await db.commit()
     return {"success": True, "message": "Школа удалена"}
+
+
+# ---- Администраторы школ (org_admin заводит/снимает админа каждой школы) ----
+
+async def _require_school(db: AsyncSession, school_id: int) -> School:
+    school = await db.get(School, school_id)
+    if not school:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Школа не найдена")
+    return school
+
+
+def _admin_dict(u: User) -> dict:
+    return {
+        "id": u.id,
+        "login": u.login,
+        "first_name": u.first_name,
+        "last_name": u.last_name,
+        "role": u.role,
+        "is_active": u.is_active,
+        "email": u.email,
+    }
+
+
+async def list_school_admins(db: AsyncSession, school_id: int) -> dict:
+    await _require_school(db, school_id)
+    rows = (
+        await db.execute(
+            select(User).where(User.school_id == school_id, User.role.in_(SCHOOL_ADMIN_ROLES))
+            .order_by(User.last_name, User.first_name)
+        )
+    ).scalars().all()
+    return {"admins": [_admin_dict(u) for u in rows]}
+
+
+async def create_school_admin(
+    db: AsyncSession, school_id: int, login: str, password: str,
+    first_name: str | None, last_name: str | None, role: str,
+) -> dict:
+    await _require_school(db, school_id)
+    role = role if role in SCHOOL_ADMIN_ROLES else "school_admin"
+    login = (login or "").strip()
+    if not login:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Укажите логин")
+    if not password:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Укажите пароль")
+    if await db.scalar(select(User.id).where(User.login == login)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Пользователь с таким логином уже существует")
+    user = User(
+        school_id=school_id, role=role, login=login, password_hash=hash_password(password),
+        first_name=(first_name or "").strip() or None, last_name=(last_name or "").strip() or None,
+        is_active=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return {"success": True, "message": "Администратор школы создан", "admin": _admin_dict(user)}
+
+
+async def delete_school_admin(db: AsyncSession, school_id: int, user_id: int) -> dict:
+    user = await db.get(User, user_id)
+    if not user or user.school_id != school_id or user.role not in SCHOOL_ADMIN_ROLES:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Администратор школы не найден")
+    await db.delete(user)
+    await db.commit()
+    return {"success": True, "message": "Администратор школы снят"}

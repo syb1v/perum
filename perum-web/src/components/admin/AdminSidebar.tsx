@@ -9,15 +9,13 @@ interface AdminSidebarProps {
     onSectionChange: (section: string) => void;
     onLogout: () => void;
     inquiriesCount?: number;
-    isOrgAdmin?: boolean;
 }
 
 type NavItem = { id: string; label: string; icon: React.ReactNode; badge?: number };
 type NavCategory = { title: string; items: NavItem[] };
 
-export default function AdminSidebar({ activeSection, onSectionChange, onLogout, inquiriesCount = 0, isOrgAdmin = false }: AdminSidebarProps) {
+export default function AdminSidebar({ activeSection, onSectionChange, onLogout, inquiriesCount = 0 }: AdminSidebarProps) {
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-        'Организация': true,
         'Аналитика и Дашборд': true,
         'Учебный процесс': true,
         'Экономика и Маркет': true,
@@ -33,12 +31,6 @@ export default function AdminSidebar({ activeSection, onSectionChange, onLogout,
     };
 
     const categories: NavCategory[] = [
-        ...(isOrgAdmin ? [{
-            title: 'Организация',
-            items: [
-                { id: 'schools', label: 'Школы', icon: <SchoolIcon /> }
-            ]
-        }] : []),
         {
             title: 'Аналитика и Дашборд',
             items: [

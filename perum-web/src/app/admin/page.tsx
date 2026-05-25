@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import OrgConsole from '@/components/admin/OrgConsole';
 import styles from './page.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { isAdmin } from '@/lib/roles';
@@ -35,7 +36,6 @@ const MarketManagement = dynamic(() => import('@/components/admin/MarketManageme
 const SchoolPeriods = dynamic(() => import('@/components/admin/SchoolPeriods'), { loading: () => <LoadingScreen /> });
 const SystemSettings = dynamic(() => import('@/components/admin/SystemSettings'), { loading: () => <LoadingScreen /> });
 const WorkTypeManagement = dynamic(() => import('@/components/admin/WorkTypeManagement'), { loading: () => <LoadingScreen /> });
-const SchoolManagement = dynamic(() => import('@/components/admin/SchoolManagement'), { loading: () => <LoadingScreen /> });
 
 const AcademicYearSection = dynamic(() => import('@/components/admin/AcademicYearSection'), { loading: () => <LoadingScreen /> });
 const ControlWorksSection = dynamic(() => import('@/components/admin/ControlWorksSection'), { loading: () => <LoadingScreen /> });
@@ -91,6 +91,12 @@ export default function AdminDashboard() {
         return <LoadingScreen />;
     }
 
+    // org_admin — управляющий слой над школами: отдельная консоль, без внутришкольного
+    // сайдбара. Внутришкольную админку видят только school_admin/director.
+    if ((user.role as string) === 'org_admin') {
+        return <OrgConsole onLogout={logout} orgName={user.first_name || undefined} />;
+    }
+
     const renderSection = () => {
         switch (activeSection) {
             case 'dashboard': return <AdminDashboardTab />;
@@ -114,7 +120,6 @@ export default function AdminDashboard() {
             case 'bell-schedules': return <BellSchedulesWrapper />;
             case 'work-types': return <WorkTypeManagement />;
             case 'school-settings': return <SystemSettings />;
-            case 'schools': return <SchoolManagement />;
             default: return <UserManagement />;
         }
     };
@@ -154,7 +159,6 @@ export default function AdminDashboard() {
                     activeSection={activeSection}
                     onSectionChange={handleSectionChange}
                     onLogout={logout}
-                    isOrgAdmin={(user?.role as string | undefined) === 'org_admin'}
                 />
             </div>
 

@@ -482,6 +482,23 @@ async def _seed_second_school(db, org_id: int, pwd: str) -> None:
     logger.info("seeded second school (id=%s) with 1 class + 2 students", s2.id)
 
 
+async def _seed_school_admin(db, sid: int, pwd: str) -> None:
+    """Завуч (school_admin) для школы — чтобы показать изолированную школьную
+    админку отдельно от org_admin (который школами лишь управляет)."""
+    exists = await db.scalar(
+        select(func.count()).select_from(User).where(User.school_id == sid, User.role == "school_admin")
+    )
+    if exists:
+        logger.info("school_admin already present — skipping")
+        return
+    db.add(User(
+        school_id=sid, role="school_admin", login="zavuch1", email="zavuch1@acme.ru",
+        first_name="Завуч", last_name="Первой", password_hash=pwd, is_active=True,
+    ))
+    await db.commit()
+    logger.info("seeded school_admin zavuch1 for school %s", sid)
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -499,6 +516,7 @@ async def seed() -> None:
         await _seed_exchange(db, school.id)
         await _seed_news(db, school.id)
         await _seed_appeals(db, school.id)
+        await _seed_school_admin(db, school.id, pwd)
         await _seed_second_school(db, school.org_id, pwd)
 
 

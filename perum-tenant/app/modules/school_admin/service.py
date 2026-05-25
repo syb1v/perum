@@ -12,7 +12,6 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.school_context import get_requested_school_id
 from app.models import School, Subject, User, WorkType
 from app.models.academic import Class
 from app.models.journal import ControlWork, Grade, Homework
@@ -25,17 +24,10 @@ from app.modules.school_admin.schemas import (
 
 
 async def resolve_school_id(user: User, db: AsyncSession) -> int:
-    # Роли с фиксированной школой (завуч/директор/учитель/ученик/родитель) всегда
-    # работают в своей школе — заголовок X-School-Id для них не действует.
+    # Внутришкольные роли (завуч/директор/учитель/ученик/родитель) привязаны к
+    # своей школе. org_admin сюда не попадает — он не работает внутри школы.
     if user.school_id is not None:
         return user.school_id
-    # org_admin (school_id NULL) охватывает все школы орг: уважаем выбранную
-    # школу из X-School-Id, если она есть в этой БД (silo ⇒ принадлежит орг).
-    requested = get_requested_school_id()
-    if requested is not None:
-        exists = await db.scalar(select(School.id).where(School.id == requested))
-        if exists:
-            return int(exists)
     result = await db.execute(select(School.id).order_by(School.id).limit(1))
     school_id = result.scalar_one_or_none()
     if school_id is None:

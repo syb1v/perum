@@ -59,15 +59,17 @@ def require_roles(*roles: str) -> Callable:
     return _dep
 
 
-# Admin-level access for school management (org_admin spans the org's schools).
-require_admin = require_roles(ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)
+# In-school administration (one school). org_admin is NOT here — он работает
+# уровнем выше (управляет школами и их админами), внутрь школы не заходит.
+require_admin = require_roles(SCHOOL_ADMIN, DIRECTOR)
 
-# Org-level only: creating/removing schools and switching between them.
+# Org-level only: управляет школами орг и их администраторами (как perum-core
+# управляет организациями). Не имеет доступа к внутришкольным данным.
 require_org_admin = require_roles(ORG_ADMIN)
 
-# Teacher + admins (journal/grades). Per-subject/class assignment is checked in
-# the journal service.
-require_teacher = require_roles(TEACHER, ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)
+# Teacher + in-school admins (journal/grades). Per-subject/class assignment is
+# checked in the journal service.
+require_teacher = require_roles(TEACHER, SCHOOL_ADMIN, DIRECTOR)
 
 # Student cabinet (own diary/grades only — service scopes every query to user.id).
 require_student = require_roles(STUDENT)
