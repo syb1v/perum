@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 
 import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
-import OrgConsole from '@/components/admin/OrgConsole';
 import styles from './page.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { isAdmin } from '@/lib/roles';
@@ -89,12 +88,6 @@ export default function AdminDashboard() {
     // Use the shared isAdmin() so org_admin (new org-level role) is recognised.
     if (isLoading || !user || !isAdmin(user.role)) {
         return <LoadingScreen />;
-    }
-
-    // org_admin — управляющий слой над школами: отдельная консоль, без внутришкольного
-    // сайдбара. Внутришкольную админку видят только school_admin/director.
-    if ((user.role as string) === 'org_admin') {
-        return <OrgConsole onLogout={logout} orgName={user.first_name || undefined} />;
     }
 
     const renderSection = () => {

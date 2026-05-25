@@ -56,7 +56,7 @@ async def _get_or_create_secret(school: School, db: AsyncSession) -> SchoolSecre
 async def _bootstrap_admin(spec: StackSpec, admin_email: str | None) -> tuple[str | None, str | None]:
     if not admin_email:
         return None, None
-    url = f"http://{spec.app_container}:3000/internal/bootstrap-org-admin"
+    url = f"http://{spec.app_container}:3000/internal/bootstrap-school-admin"
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
             url, headers={"X-Telemetry-Token": spec.telemetry_token}, json={"email": admin_email}

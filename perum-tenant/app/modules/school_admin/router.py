@@ -7,13 +7,12 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.core.deps import require_admin, require_org_admin
+from app.core.deps import require_admin
 from app.models import User
 from app.modules.school_admin import (
     service,
     service_academic as acad,
     service_classes as cls,
-    service_schools as schools,
     service_teachers as tch,
 )
 from app.modules.school_admin.schemas import (
@@ -79,79 +78,12 @@ class SyncAssignmentsRequest(BaseModel):
     class_ids: list[int] = []
 
 
-class SchoolCreate(BaseModel):
-    name: str
-
-
-class SchoolUpdate(BaseModel):
-    name: str | None = None
-    is_active: bool | None = None
-
-
-class SchoolAdminCreate(BaseModel):
-    login: str
-    password: str
-    first_name: str | None = None
-    last_name: str | None = None
-    role: str = "school_admin"
-
-
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
 
 
-# ============ Schools (org_admin manages the org's schools) ============
-
-@router.get("/schools")
-async def list_schools(user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
-    return await schools.list_schools(db)
-
-
-@router.post("/schools")
-async def create_school(
-    payload: SchoolCreate, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
-) -> dict:
-    return await schools.create_school(db, payload.name)
-
-
-@router.put("/schools/{school_id}")
-async def update_school(
-    school_id: int, payload: SchoolUpdate,
-    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
-) -> dict:
-    return await schools.update_school(db, school_id, payload.name, payload.is_active)
-
-
-@router.delete("/schools/{school_id}")
-async def delete_school(
-    school_id: int, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
-) -> dict:
-    return await schools.delete_school(db, school_id)
-
-
-@router.get("/schools/{school_id}/admins")
-async def list_school_admins(
-    school_id: int, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
-) -> dict:
-    return await schools.list_school_admins(db, school_id)
-
-
-@router.post("/schools/{school_id}/admins")
-async def create_school_admin(
-    school_id: int, payload: SchoolAdminCreate,
-    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
-) -> dict:
-    return await schools.create_school_admin(
-        db, school_id, payload.login, payload.password, payload.first_name, payload.last_name, payload.role
-    )
-
-
-@router.delete("/schools/{school_id}/admins/{user_id}")
-async def delete_school_admin(
-    school_id: int, user_id: int,
-    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
-) -> dict:
-    return await schools.delete_school_admin(db, school_id, user_id)
+# Школами и их администраторами управляет org_admin в ЯДРЕ (perum-core,
+# /api/schools), а не внутри школьного стека — см. docs/ARCH_ORG_NODE.md.
 
 
 # ============ Dashboard ============

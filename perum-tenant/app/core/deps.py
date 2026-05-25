@@ -59,13 +59,9 @@ def require_roles(*roles: str) -> Callable:
     return _dep
 
 
-# In-school administration (one school). org_admin is NOT here — он работает
-# уровнем выше (управляет школами и их админами), внутрь школы не заходит.
+# In-school administration (один стек = одна школа). Управление самими школами и
+# их админами — в ядре (perum-core), не здесь. См. docs/ARCH_ORG_NODE.md.
 require_admin = require_roles(SCHOOL_ADMIN, DIRECTOR)
-
-# Org-level only: управляет школами орг и их администраторами (как perum-core
-# управляет организациями). Не имеет доступа к внутришкольным данным.
-require_org_admin = require_roles(ORG_ADMIN)
 
 # Teacher + in-school admins (journal/grades). Per-subject/class assignment is
 # checked in the journal service.
