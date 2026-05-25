@@ -458,6 +458,30 @@ async def _seed_appeals(db, sid: int) -> None:
     logger.info("seeded %d grade appeals", len(low_grades))
 
 
+async def _seed_second_school(db, org_id: int, pwd: str) -> None:
+    """Вторая школа орг — чтобы демонстрировать переключатель школ у org_admin."""
+    count = await db.scalar(select(func.count()).select_from(School))
+    if count and count > 1:
+        logger.info("second school already present — skipping")
+        return
+    s2 = School(org_id=org_id, name="Школа №2 (демо)", is_active=True)
+    db.add(s2)
+    await db.flush()
+    cls = Class(school_id=s2.id, name="7А", grade_level=7, is_profile=0)
+    db.add(cls)
+    await db.flush()
+    for i in (1, 2):
+        stu = User(
+            school_id=s2.id, role="student", login=f"s2_student{i}", email=f"s2_student{i}@acme.ru",
+            first_name=f"Ученик{i}", last_name="Второшкольный", password_hash=pwd, is_active=True,
+        )
+        db.add(stu)
+        await db.flush()
+        db.add(ClassStudent(class_id=cls.id, student_id=stu.id))
+    await db.commit()
+    logger.info("seeded second school (id=%s) with 1 class + 2 students", s2.id)
+
+
 async def seed() -> None:
     pwd = hash_password(DEMO_PASSWORD)
     async with SessionLocal() as db:
@@ -475,6 +499,7 @@ async def seed() -> None:
         await _seed_exchange(db, school.id)
         await _seed_news(db, school.id)
         await _seed_appeals(db, school.id)
+        await _seed_second_school(db, school.org_id, pwd)
 
 
 if __name__ == "__main__":

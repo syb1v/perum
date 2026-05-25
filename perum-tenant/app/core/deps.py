@@ -62,6 +62,9 @@ def require_roles(*roles: str) -> Callable:
 # Admin-level access for school management (org_admin spans the org's schools).
 require_admin = require_roles(ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)
 
+# Org-level only: creating/removing schools and switching between them.
+require_org_admin = require_roles(ORG_ADMIN)
+
 # Teacher + admins (journal/grades). Per-subject/class assignment is checked in
 # the journal service.
 require_teacher = require_roles(TEACHER, ORG_ADMIN, SCHOOL_ADMIN, DIRECTOR)

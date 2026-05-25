@@ -88,6 +88,12 @@ function getHeaders(): Record<string, string> {
         if (csrfMeta) {
             headers['X-CSRF-Token'] = csrfMeta.getAttribute('content') || '';
         }
+
+        // Выбранная школа (для org_admin, который охватывает несколько школ).
+        const schoolId = localStorage.getItem('current_school_id');
+        if (schoolId && schoolId !== 'null') {
+            headers['X-School-Id'] = schoolId;
+        }
     }
 
     return headers;

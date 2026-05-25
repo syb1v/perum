@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from app.core.config import get_settings
 from app.core.db import engine
+from app.core.school_context import SchoolContextMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 settings = get_settings()
@@ -21,6 +22,8 @@ app = FastAPI(
     version="0.1.0",
     description="Per-organization tenant application.",
 )
+
+app.add_middleware(SchoolContextMiddleware)
 
 from app.internal.router import router as internal_router  # noqa: E402
 from app.modules.analytics.router import admin_router as analytics_admin_router  # noqa: E402

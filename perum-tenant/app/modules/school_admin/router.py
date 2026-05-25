@@ -7,12 +7,13 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.core.deps import require_admin
+from app.core.deps import require_admin, require_org_admin
 from app.models import User
 from app.modules.school_admin import (
     service,
     service_academic as acad,
     service_classes as cls,
+    service_schools as schools,
     service_teachers as tch,
 )
 from app.modules.school_admin.schemas import (
@@ -78,8 +79,46 @@ class SyncAssignmentsRequest(BaseModel):
     class_ids: list[int] = []
 
 
+class SchoolCreate(BaseModel):
+    name: str
+
+
+class SchoolUpdate(BaseModel):
+    name: str | None = None
+    is_active: bool | None = None
+
+
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
+
+
+# ============ Schools (org_admin manages the org's schools) ============
+
+@router.get("/schools")
+async def list_schools(user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    return await schools.list_schools(db)
+
+
+@router.post("/schools")
+async def create_school(
+    payload: SchoolCreate, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await schools.create_school(db, payload.name)
+
+
+@router.put("/schools/{school_id}")
+async def update_school(
+    school_id: int, payload: SchoolUpdate,
+    user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await schools.update_school(db, school_id, payload.name, payload.is_active)
+
+
+@router.delete("/schools/{school_id}")
+async def delete_school(
+    school_id: int, user: User = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await schools.delete_school(db, school_id)
 
 
 # ============ Dashboard ============
