@@ -23,6 +23,8 @@ app = FastAPI(
 )
 
 from app.internal.router import router as internal_router  # noqa: E402
+from app.modules.analytics.router import admin_router as analytics_admin_router  # noqa: E402
+from app.modules.analytics.router import teacher_router as analytics_teacher_router  # noqa: E402
 from app.modules.auth.router import router as auth_router  # noqa: E402
 from app.modules.common.router import router as common_router  # noqa: E402
 from app.modules.coursework.router import router as coursework_router  # noqa: E402
@@ -53,6 +55,8 @@ app.include_router(quests_router, prefix="/api/quests", tags=["quests"])
 app.include_router(exchange_router, prefix="/api/exchange", tags=["exchange"])
 app.include_router(news_router, prefix="/api/news", tags=["news"])
 app.include_router(news_admin_router, prefix="/api/admin/news", tags=["news-admin"])
+app.include_router(analytics_teacher_router, prefix="/api/teacher/analytics", tags=["analytics"])
+app.include_router(analytics_admin_router, prefix="/api/admin", tags=["analytics-admin"])
 app.include_router(teacher_router, prefix="/api/teacher", tags=["teacher"])
 
 

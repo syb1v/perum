@@ -132,3 +132,6 @@ from app.models.exchange import (  # noqa: E402,F401
 
 # News models (Phase 8).
 from app.models.news import News, NewsLike, NewsRead  # noqa: E402,F401
+
+# Analytics models (Phase 8).
+from app.models.analytics import PageVisit  # noqa: E402,F401

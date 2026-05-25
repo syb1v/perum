@@ -29,6 +29,8 @@ from app.models.academic import (
     Schedule,
     SchoolPeriod,
     TeacherSubject,
+    Topic,
+    WorkType,
 )
 from app.models.journal import FinalGrade, Grade, Transaction
 from app.services.points_calculator import calculate_points
@@ -57,6 +59,7 @@ STUDENT_POOL = [
 SCHEDULE_SUBJECTS = ["Математика", "Русский язык", "Физика", "Химия", "История"]
 GRADE_SUBJECTS = ["Математика", "Русский язык", "Физика"]
 GRADE_VALUE_POOL = [3, 3, 4, 4, 4, 5, 5, 5]  # weighted toward 4–5
+GRADE_TOPICS = ["Введение", "Основные понятия", "Углублённый раздел"]
 
 
 async def _seed_structure(db, sid: int, pwd: str) -> None:
@@ -163,6 +166,24 @@ async def _seed_grades(db, sid: int) -> None:
     ts_rows = (await db.execute(select(TeacherSubject).where(TeacherSubject.school_id == sid))).scalars().all()
     teacher_for = {(t.subject_id, t.class_id): t.teacher_id for t in ts_rows}
 
+    # Темы по предметам — чтобы аналитика «проблемных тем» показывала данные.
+    topics_for: dict[int, list[Topic]] = {}
+    for subj_name in GRADE_SUBJECTS:
+        subj = subjects.get(subj_name)
+        if subj is None:
+            continue
+        subj_topics = []
+        for i, tname in enumerate(GRADE_TOPICS, start=1):
+            t = Topic(school_id=sid, subject_id=subj.id, name=f"{tname}", order_num=i)
+            db.add(t)
+            subj_topics.append(t)
+        await db.flush()
+        topics_for[subj.id] = subj_topics
+
+    # Виды работ — для аналитики «анализа работ».
+    work_types = (await db.execute(select(WorkType).where(WorkType.school_id == sid))).scalars().all()
+    wt_pool = [wt for wt in work_types if wt.name in ("Контрольная работа", "Самостоятельная работа")] or work_types
+
     balances: dict[int, int] = {}
     total = 0
     for c in classes:
@@ -179,14 +200,19 @@ async def _seed_grades(db, sid: int) -> None:
             tid = teacher_for.get((subj.id, c.id))
             for stu in students:
                 balances.setdefault(stu.id, stu.balance or 0)
+                subj_topics = topics_for.get(subj.id, [])
                 for d in range(3):  # 3 grades, dated within Q4 (current period)
                     val = random.choice(GRADE_VALUE_POOL)
                     pts = calculate_points(
                         val, subj.category, 1.0, subj.profile_weight, subj.is_profile_track, class_is_profile
                     )
+                    # Тема — ротацией по урокам; вид работы — на каждой 3-й оценке.
+                    topic_id = subj_topics[d % len(subj_topics)].id if subj_topics else None
+                    work_type_id = wt_pool[d % len(wt_pool)].id if (wt_pool and d == 2) else None
                     g = Grade(
                         school_id=sid, student_id=stu.id, teacher_id=tid, class_id=c.id,
                         subject_id=subj.id, grade_value=val, weight=1.0, value=pts,
+                        topic_id=topic_id, work_type_id=work_type_id,
                         lesson_date=datetime(2026, 5, 5 + d * 5),
                     )
                     db.add(g)
