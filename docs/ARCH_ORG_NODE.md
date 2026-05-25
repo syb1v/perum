@@ -86,18 +86,25 @@
 
 ## Поэтапный план
 
-1. **Ядро — данные и релизы:** модели `School`, `Release`; эндпоинты
-   `platform_admin` (CRUD орг, публикация релиза) — аддитивно, не ломает текущее.
-2. **Агент орг — провижининг школ:** нацелить провижинер на школьные стеки;
-   эндпоинты `org_admin` (CRUD/провижининг школ, bootstrap school_admin).
-3. **Тенант → одна школа:** схлопнуть модели; bootstrap school_admin; убрать
-   org-уровневое из тенанта.
+1. ✅ **Ядро — данные и релизы:** модели `School`, `SchoolSecret`, `SchoolDomain`,
+   `Release` (миграция `0003`). Аддитивно, текущее провижининг орг не затронуто.
+2. ✅ **Агент орг — провижининг школ:** `school_provisioner` +
+   `build_school_stack_spec` (реюз docker/caddy, namespaced label `sch-<slug>`);
+   модель `OrgAdmin` + auth ядра (role+org_id) + `require_org_admin` (миграция
+   `0004`); роутер `/api/schools` (CRUD/provision/reprovision/delete, scope по
+   org_id); `platform_admin` заводит org_admin; bootstrap админа школы. **E2E ок.**
+3. **Тенант → одна школа:** схлопнуть модели; bootstrap `school_admin` (роль) вместо
+   org_admin; убрать org-уровневое из тенанта (OrgConsole/schools-CRUD).
 4. **OTA-обновления:** канал релизов + сравнение версии + кнопка → агент
    `pull`+recreate (volume-preserving) + rollback.
 5. **Enrollment:** bootstrap-compose узла орг + регистрация по токену.
 6. **Фронт:** портал орг + школьное приложение на поддоменах.
 7. **Доки/Caddy/деплой:** переписать ARCHITECTURE/ROLES/PROVISIONING/DEPLOYMENT под
    v2; прод-`Caddyfile`; runbook.
+
+**Сделано:** этапы 1–2 (ядро умеет провижинить школьные стеки, org_admin
+управляет своими школами через `/api/schools`). Дальше — этап 3 (тенант → одна
+школа) и этап 4 (OTA-обновления по кнопке).
 
 ## Открытые вопросы / риски
 - Реестр образов: свой (Harbor) или публичный с приватным каналом тегов.
