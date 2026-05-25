@@ -35,6 +35,7 @@ const MarketManagement = dynamic(() => import('@/components/admin/MarketManageme
 const SchoolPeriods = dynamic(() => import('@/components/admin/SchoolPeriods'), { loading: () => <LoadingScreen /> });
 const SystemSettings = dynamic(() => import('@/components/admin/SystemSettings'), { loading: () => <LoadingScreen /> });
 const WorkTypeManagement = dynamic(() => import('@/components/admin/WorkTypeManagement'), { loading: () => <LoadingScreen /> });
+const SchoolManagement = dynamic(() => import('@/components/admin/SchoolManagement'), { loading: () => <LoadingScreen /> });
 
 const AcademicYearSection = dynamic(() => import('@/components/admin/AcademicYearSection'), { loading: () => <LoadingScreen /> });
 const ControlWorksSection = dynamic(() => import('@/components/admin/ControlWorksSection'), { loading: () => <LoadingScreen /> });
@@ -51,7 +52,7 @@ const BellSchedulesManager = dynamic(() => import('@/components/admin/BellSchedu
 // const InquiriesSection = () => <div className={styles.card}>Inquiries (Coming Soon)</div>;
 // const NewsSection = () => <div className={styles.card}>News (Coming Soon)</div>;
 
-type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'support';
+type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'support' | 'schools';
 
 export default function AdminDashboard() {
     const { user, isLoading, logout } = useAuth();
@@ -113,6 +114,7 @@ export default function AdminDashboard() {
             case 'bell-schedules': return <BellSchedulesWrapper />;
             case 'work-types': return <WorkTypeManagement />;
             case 'school-settings': return <SystemSettings />;
+            case 'schools': return <SchoolManagement />;
             default: return <UserManagement />;
         }
     };
@@ -138,7 +140,8 @@ export default function AdminDashboard() {
         'control-works': 'КР и СР',
         'bell-schedules': 'Расписание звонков',
         'work-types': 'Виды работ',
-        'school-settings': 'Настройки школы'
+        'school-settings': 'Настройки школы',
+        schools: 'Школы организации'
     };
 
     return (
@@ -151,6 +154,7 @@ export default function AdminDashboard() {
                     activeSection={activeSection}
                     onSectionChange={handleSectionChange}
                     onLogout={logout}
+                    isOrgAdmin={(user?.role as string | undefined) === 'org_admin'}
                 />
             </div>
 
