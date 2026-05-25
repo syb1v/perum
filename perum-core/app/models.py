@@ -75,6 +75,10 @@ class Organization(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    schools: Mapped[list["School"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
 
 
 class OrganizationSecret(Base):
@@ -133,3 +137,102 @@ class OrganizationDomain(Base):
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     organization: Mapped[Organization] = relationship(back_populates="domains")
+
+
+# ============================================================================
+# Архитектура v2 («узел организации»): силовой юнит = ШКОЛА. School — ребёнок
+# Organization, провижинится в собственный стек (контейнер+БД+volume). См.
+# docs/ARCH_ORG_NODE.md. Зеркалит Organization-провижининг, но уровнем ниже.
+# ============================================================================
+
+
+class School(Base):
+    """Школа внутри организации. Провижинится в свой стек `school_<slug>_*`."""
+
+    __tablename__ = "schools"
+    __table_args__ = (UniqueConstraint("slug", name="uq_schools_slug"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    slug: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="provisioning", server_default="provisioning"
+    )
+    # Тег релиза, на котором сейчас крутится стек школы (для OTA-обновлений).
+    release_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    admin_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    organization: Mapped[Organization] = relationship(back_populates="schools")
+    secret: Mapped["SchoolSecret | None"] = relationship(
+        back_populates="school", cascade="all, delete-orphan", uselist=False
+    )
+    domains: Mapped[list["SchoolDomain"]] = relationship(
+        back_populates="school", cascade="all, delete-orphan"
+    )
+
+
+class SchoolSecret(Base):
+    """Секреты стека школы (плейнтекст; KMS — позже). Зеркало OrganizationSecret."""
+
+    __tablename__ = "school_secrets"
+
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True
+    )
+    db_password: Mapped[str] = mapped_column(String(128), nullable=False)
+    secret_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    telemetry_token: Mapped[str] = mapped_column(String(128), nullable=False)
+    redis_db_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    school: Mapped[School] = relationship(back_populates="secret")
+
+
+class SchoolDomain(Base):
+    """Hostname, маршрутизируемый на стек школы (поддомен или кастомный)."""
+
+    __tablename__ = "school_domains"
+    __table_args__ = (UniqueConstraint("domain", name="uq_school_domains_domain"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    domain: Mapped[str] = mapped_column(String(255), nullable=False)
+    domain_type: Mapped[str] = mapped_column(String(20), nullable=False, comment="subdomain | custom")
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="pending_dns", server_default="pending_dns"
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    school: Mapped[School] = relationship(back_populates="domains")
+
+
+class Release(Base):
+    """Канал релизов: версия образа стека школы + changelog. Узлы орг сравнивают
+    свой `release_tag` с текущим релизом и обновляются по кнопке (OTA)."""
+
+    __tablename__ = "releases"
+    __table_args__ = (UniqueConstraint("channel", "version_tag", name="uq_release_channel_version"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    channel: Mapped[str] = mapped_column(String(30), nullable=False, default="stable", server_default="stable")
+    version_tag: Mapped[str] = mapped_column(String(64), nullable=False)
+    image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    changelog: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    published_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    published_by: Mapped[int | None] = mapped_column(
+        ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True
+    )
