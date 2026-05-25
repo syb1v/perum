@@ -15,6 +15,19 @@ export function clearPlatformToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
 }
 
+/** Декодирует payload JWT (без проверки подписи — только для UX-роутинга). */
+export function getTokenPayload(): Record<string, any> | null {
+  const t = getPlatformToken();
+  if (!t) return null;
+  try {
+    let p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    p += "=".repeat((4 - (p.length % 4)) % 4);
+    return JSON.parse(atob(p));
+  } catch {
+    return null;
+  }
+}
+
 export async function papi(path: string, opts: RequestInit = {}): Promise<any> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",

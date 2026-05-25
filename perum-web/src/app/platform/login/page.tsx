@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { papi, setPlatformToken } from "@/lib/platformApi";
+import { getTokenPayload, papi, setPlatformToken } from "@/lib/platformApi";
 import styles from "../platform.module.css";
 
 export default function PlatformLogin() {
   const router = useRouter();
-  const [login, setLogin] = useState("admin");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -22,7 +22,8 @@ export default function PlatformLogin() {
         body: JSON.stringify({ login, password }),
       });
       setPlatformToken(data.access_token);
-      router.push("/");
+      const role = getTokenPayload()?.role;
+      router.push(role === "org_admin" ? "/platform/org" : "/platform");
     } catch (e: any) {
       setErr(e.message || "Ошибка входа");
     } finally {
