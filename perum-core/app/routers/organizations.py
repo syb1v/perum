@@ -11,11 +11,13 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.models import Organization, OrganizationSecret
+from app.core.security import hash_password
+from app.models import OrgAdmin, Organization, OrganizationSecret
 from app.schemas.organization import (
     OrganizationCreate,
     OrganizationRead,
@@ -148,3 +150,30 @@ async def delete_organization(
         await db.commit()
         return {"slug": slug, "purged": True}
     return {"slug": slug, "status": org.status}
+
+
+# --- v2: платформа заводит администратора организации (оператора узла орг) ---
+
+class OrgAdminCreate(BaseModel):
+    login: str
+    password: str
+    full_name: str | None = None
+    email: str | None = None
+
+
+@router.post("/{slug}/org-admins", status_code=status.HTTP_201_CREATED)
+async def create_org_admin(slug: str, payload: OrgAdminCreate, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    clash = await db.execute(select(OrgAdmin).where(OrgAdmin.login == payload.login))
+    if clash.scalar_one_or_none() is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "org_admin with this login already exists")
+    admin = OrgAdmin(
+        org_id=org.id, login=payload.login, password_hash=hash_password(payload.password),
+        full_name=payload.full_name, email=payload.email,
+    )
+    db.add(admin)
+    await db.commit()
+    await db.refresh(admin)
+    return {"id": admin.id, "login": admin.login, "org_id": admin.org_id}

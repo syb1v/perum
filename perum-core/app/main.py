@@ -99,8 +99,8 @@ app.add_middleware(
 
 from fastapi import Depends  # noqa: E402
 
-from app.core.deps import require_platform_admin  # noqa: E402
-from app.routers import auth, health, organizations  # noqa: E402
+from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
+from app.routers import auth, health, organizations, schools  # noqa: E402
 
 app.include_router(health.router)
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -109,6 +109,13 @@ app.include_router(
     prefix="/api/organizations",
     tags=["organizations"],
     dependencies=[Depends(require_platform_admin)],
+)
+# Школы — управляет org_admin (узел орг), скоуп по org_id из токена.
+app.include_router(
+    schools.router,
+    prefix="/api/schools",
+    tags=["schools"],
+    dependencies=[Depends(require_org_admin)],
 )
 
 

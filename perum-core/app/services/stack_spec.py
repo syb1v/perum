@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from jinja2 import Template
 
 from app.core.config import Settings
-from app.models import Organization, OrganizationSecret
+from app.models import Organization, OrganizationSecret, School, SchoolSecret
 
 
 def container_name(slug: str, role: str) -> str:
@@ -33,6 +33,26 @@ def volume_name(slug: str) -> str:
 
 def project_name(slug: str) -> str:
     return f"org_{slug}"
+
+
+# --- v2: школьные стеки (silo = школа). Префикс school_; label-slug namespace. ---
+
+def school_container_name(slug: str, role: str) -> str:
+    return f"school_{slug}_{role}"
+
+
+def school_volume_name(slug: str) -> str:
+    return f"school_{slug}_data"
+
+
+def school_project_name(slug: str) -> str:
+    return f"school_{slug}"
+
+
+def school_label_slug(slug: str) -> str:
+    """Ключ Docker/Caddy-лейблов школьного стека — namespace, чтобы не
+    пересекаться с орг-стеками в `com.perum.org`."""
+    return f"sch-{slug}"
 
 
 @dataclass
@@ -87,6 +107,53 @@ def build_stack_spec(
         app_container=app_container,
         db_container=db_container,
         volume=volume_name(slug),
+        tenant_image=settings.TENANT_IMAGE,
+        postgres_image=postgres_image,
+        db_password=secret.db_password,
+        secret_key=secret.secret_key,
+        telemetry_token=secret.telemetry_token,
+        redis_db_index=secret.redis_db_index,
+        database_url=database_url,
+        redis_url=redis_url,
+        control_plane_url=settings.CONTROL_PLANE_URL,
+        app_env=app_env,
+    )
+
+
+def build_school_stack_spec(
+    school: School, secret: SchoolSecret, settings: Settings
+) -> StackSpec:
+    """Спек школьного стека. Контейнеры `school_<slug>_*`, тот же tenant-образ.
+    `slug` в спеке = slug школы (для имён/хоста); namespacing Docker/Caddy-лейблов
+    делает провижинер через `school_label_slug`."""
+    slug = school.slug
+    db_container = school_container_name(slug, "db")
+    app_container = school_container_name(slug, "app")
+
+    database_url = f"postgresql://perum:{secret.db_password}@{db_container}:5432/perum"
+    redis_url = f"{settings.SHARED_REDIS_URL.rstrip('/')}/{secret.redis_db_index}"
+    postgres_image = f"{settings.IMAGE_REGISTRY}/library/postgres:15-alpine"
+
+    app_env = {
+        # Tenant-образ пока читает ORG_SLUG/ORG_NAME — на Этапе 3 семантика станет
+        # «одна школа»; до тех пор школьный стек идентифицируется slug-ом школы.
+        "ORG_SLUG": slug,
+        "ORG_NAME": school.name,
+        "DATABASE_URL": database_url,
+        "REDIS_URL": redis_url,
+        "CONTROL_PLANE_URL": settings.CONTROL_PLANE_URL,
+        "TELEMETRY_TOKEN": secret.telemetry_token,
+        "SECRET_KEY": secret.secret_key,
+    }
+
+    return StackSpec(
+        slug=slug,
+        org_name=school.name,
+        project=school_project_name(slug),
+        network=settings.DOCKER_NETWORK,
+        app_container=app_container,
+        db_container=db_container,
+        volume=school_volume_name(slug),
         tenant_image=settings.TENANT_IMAGE,
         postgres_image=postgres_image,
         db_password=secret.db_password,

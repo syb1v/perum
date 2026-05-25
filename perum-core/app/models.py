@@ -31,8 +31,29 @@ class PlatformAdmin(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class OrgAdmin(Base):
+    """Администратор организации — оператор УЗЛА ОРГ (control-plane уровня).
+    Провижинит школы своей орг и обновляет их по кнопке; внутрь школ не заходит.
+    Скоуплен `org_id`. Логинится в портал орг (v2, см. docs/ARCH_ORG_NODE.md)."""
+
+    __tablename__ = "org_admins"
+    __table_args__ = (UniqueConstraint("login", name="uq_org_admins_login"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    login: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class Organization(Base):
-    """A tenant org. Owns 1..N schools inside its dedicated docker stack."""
+    """A tenant org. Owns 1..N schools, each provisioned into its own stack."""
 
     __tablename__ = "organizations"
 
