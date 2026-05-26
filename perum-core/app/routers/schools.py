@@ -14,11 +14,15 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
+from datetime import datetime
+
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_org_admin
-from app.models import OrgAdmin, Organization, Release, School, SchoolSecret
+from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolSecret
 from app.services.billing import school_limit
+from app.services.caddy_admin import get_caddy_admin
+from app.services.stack_spec import school_container_name
 from app.services.school_provisioner import (
     SchoolProvisionOutcome,
     current_release_image,
@@ -39,6 +43,10 @@ class SchoolCreate(BaseModel):
     slug: str
     name: str
     admin_email: str | None = None
+
+
+class DomainCreate(BaseModel):
+    domain: str
 
 
 def _school_dict(s: School) -> dict:
@@ -173,6 +181,66 @@ async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(requi
             else ("уже на актуальной версии" if outcome.from_image == outcome.to_image else "обновлено")
         ),
     }
+
+
+def _domain_dict(d: SchoolDomain) -> dict:
+    return {"id": d.id, "domain": d.domain, "type": d.domain_type, "status": d.status}
+
+
+@router.get("/{school_id}/domains")
+async def list_domains(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    school = await _get_school(school_id, admin, db)
+    rows = (
+        await db.execute(select(SchoolDomain).where(SchoolDomain.school_id == school.id).order_by(SchoolDomain.id))
+    ).scalars().all()
+    return {"domains": [_domain_dict(d) for d in rows]}
+
+
+@router.post("/{school_id}/domains", status_code=status.HTTP_201_CREATED)
+async def add_domain(
+    school_id: int, payload: DomainCreate,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Привязать кастомный домен к школе: запись + Caddy-маршрут на стек школы.
+    On-demand TLS затем выпустит сертификат (через /internal/validate-domain)."""
+    school = await _get_school(school_id, admin, db)
+    host = (payload.domain or "").strip().lower().split("/")[0]
+    if not host or "." not in host or " " in host:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "некорректный домен")
+    taken = (await db.execute(select(SchoolDomain).where(SchoolDomain.domain == host))).scalar_one_or_none()
+    if taken is not None and taken.status != "removed":
+        raise HTTPException(status.HTTP_409_CONFLICT, "домен уже занят")
+
+    dom = SchoolDomain(school_id=school.id, domain=host, domain_type="custom", status="active", activated_at=datetime.utcnow())
+    db.add(dom)
+    await db.flush()
+    upstream = f"{school_container_name(school.slug, 'app')}:3000"
+    try:
+        await get_caddy_admin().add_route(f"dom-{dom.id}", host, upstream)
+    except Exception as exc:  # noqa: BLE001
+        await db.rollback()
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось добавить маршрут для {host}: {exc}")
+    await db.commit()
+    return {"domain": _domain_dict(dom), "host": host, "message": "домен привязан; DNS → этот сервер, TLS выпустится автоматически"}
+
+
+@router.delete("/{school_id}/domains/{domain_id}")
+async def remove_domain(
+    school_id: int, domain_id: int,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    school = await _get_school(school_id, admin, db)
+    dom = await db.get(SchoolDomain, domain_id)
+    if dom is None or dom.school_id != school.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "домен не найден")
+    if dom.domain_type == "custom":
+        try:
+            await get_caddy_admin().remove_route(f"dom-{dom.id}")
+        except Exception:  # noqa: BLE001
+            pass
+    await db.delete(dom)
+    await db.commit()
+    return {"id": domain_id, "removed": True}
 
 
 @router.delete("/{school_id}")
