@@ -65,7 +65,20 @@ docker exec school_<slug>_db pg_dump -U perum perum | gzip > school_<slug>_$(dat
 # восстановление: остановить app, восстановить БД, alembic upgrade head, запустить app
 ```
 
-## 7. Диагностика
+## 7. CI/CD и релизы образов
+
+- **CI** (`.github/workflows/ci.yml`): на push/PR в `main` — pytest ядра и тенанта
+  + `tsc --noEmit` фронта.
+- **Release** (`.github/workflows/release.yml`): на git-тег `vX.Y.Z` собирает и
+  пушит в GHCR три образа (`perum-core`, `perum-tenant`, `perum-web`) с тегами
+  `X.Y.Z` и `latest`.
+- **Выкат новой версии школ:**
+  1. `git tag v2.1.0 && git push --tags` → образы в GHCR.
+  2. `platform_admin`: `POST /api/releases {version_tag, image: ghcr.io/<owner>/perum-tenant:2.1.0}`.
+  3. `org_admin` жмёт «Обновить» в портале → OTA (см. §5).
+- Прод-окружение — `deploy/.env.prod.example` (образы из GHCR, секреты сгенерировать).
+
+## 8. Диагностика
 - `docker ps` — стеки `school_<slug>_app/_db` (healthy).
 - Маршруты Caddy восстанавливаются на старте ядра (`_sync_caddy_routes`).
 - Логи: `docker logs school_<slug>_app`, `docker logs perum_core`.
