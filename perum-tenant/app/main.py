@@ -34,6 +34,8 @@ from app.modules.exchange.router import router as exchange_router  # noqa: E402
 from app.modules.journal.router import router as journal_router  # noqa: E402
 from app.modules.leaderboard.router import router as leaderboard_router  # noqa: E402
 from app.modules.market.router import router as market_router  # noqa: E402
+from app.modules.misc.router import admin_router as misc_admin_router  # noqa: E402
+from app.modules.misc.router import user_router as misc_user_router  # noqa: E402
 from app.modules.news.router import admin_router as news_admin_router  # noqa: E402
 from app.modules.news.router import router as news_router  # noqa: E402
 from app.modules.parent.router import router as parent_router  # noqa: E402
@@ -61,6 +63,8 @@ app.include_router(news_admin_router, prefix="/api/admin/news", tags=["news-admi
 app.include_router(analytics_teacher_router, prefix="/api/teacher/analytics", tags=["analytics"])
 app.include_router(analytics_admin_router, prefix="/api/admin", tags=["analytics-admin"])
 app.include_router(appeals_router, prefix="/api/appeals", tags=["appeals"])
+app.include_router(misc_admin_router, prefix="/api/admin", tags=["misc-admin"])
+app.include_router(misc_user_router, prefix="/api/user", tags=["misc-user"])
 app.include_router(teacher_router, prefix="/api/teacher", tags=["teacher"])
 
 

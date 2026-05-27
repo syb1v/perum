@@ -140,3 +140,6 @@ from app.models.analytics import PageVisit  # noqa: E402,F401
 
 # Appeals model (Phase 8).
 from app.models.appeals import GradeAppeal  # noqa: E402,F401
+
+# Misc school models (Phase 8 tails): settings, notifications, inquiries.
+from app.models.misc import ContactInquiry, Notification, SchoolSetting  # noqa: E402,F401

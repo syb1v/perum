@@ -20,6 +20,7 @@ from sqlalchemy import func, select, update
 from app.core.db import SessionLocal
 from app.core.security import hash_password
 from app.models import ExchangeSettings, GradeAppeal, News, ParentStudent, Quest, School, ShopItem, Subject, User
+from app.models.misc import ContactInquiry
 from app.models.academic import (
     AcademicYear,
     BellSchedule,
@@ -458,6 +459,20 @@ async def _seed_appeals(db, sid: int) -> None:
     logger.info("seeded %d grade appeals", len(low_grades))
 
 
+async def _seed_inquiries(db, sid: int) -> None:
+    if await db.scalar(select(func.count()).select_from(ContactInquiry).where(ContactInquiry.school_id == sid)):
+        logger.info("inquiries already present — skipping")
+        return
+    items = [
+        ("Мария Иванова", "maria@example.ru", "Здравствуйте! Как записать ребёнка в вашу школу?"),
+        ("Пётр Сидоров", "petr@example.ru", "Подскажите расписание дней открытых дверей."),
+    ]
+    for name, email, msg in items:
+        db.add(ContactInquiry(school_id=sid, name=name, email=email, message=msg, is_read=False))
+    await db.commit()
+    logger.info("seeded %d contact inquiries", len(items))
+
+
 async def _seed_school_admin(db, sid: int, pwd: str) -> None:
     """Завуч (school_admin) для школы — чтобы показать изолированную школьную
     админку отдельно от org_admin (который школами лишь управляет)."""
@@ -493,6 +508,7 @@ async def seed() -> None:
         await _seed_news(db, school.id)
         await _seed_appeals(db, school.id)
         await _seed_school_admin(db, school.id, pwd)
+        await _seed_inquiries(db, school.id)
 
 
 if __name__ == "__main__":
