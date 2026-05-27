@@ -21,7 +21,14 @@ from app.core.config import Settings, get_settings
 from app.core.docker_client import DockerClient, HealthSpec, get_docker_client
 from app.models import Release, School, SchoolDomain, SchoolSecret
 from app.services.caddy_admin import CaddyAdmin, get_caddy_admin
-from app.services.stack_spec import StackSpec, build_school_stack_spec, school_label_slug
+from app.services.stack_spec import (
+    StackSpec,
+    build_school_stack_spec,
+    school_appdata_volume_name,
+    school_label_slug,
+)
+
+_APP_DATA_BIND = "/app/data"  # сюда tenant пишет вложения (UPLOAD_DIR=data/uploads/...)
 from app.services.tenant_provisioner import ProvisioningError
 
 logger = logging.getLogger("perum.school_provisioner")
@@ -45,6 +52,7 @@ def _app_run_kwargs(spec: StackSpec, label_slug: str):
     return dict(
         name=spec.app_container, image=spec.tenant_image, slug=label_slug, role="app",
         environment=spec.app_env, network=spec.network,
+        volumes={school_appdata_volume_name(spec.slug): {"bind": _APP_DATA_BIND, "mode": "rw"}},
     )
 
 
@@ -116,10 +124,9 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         )
         await docker.wait_for_healthy(spec.db_container, timeout_s=settings.DB_HEALTH_TIMEOUT_S)
 
-        await docker.run_container(
-            name=spec.app_container, image=spec.tenant_image, slug=label_slug, role="app",
-            environment=spec.app_env, network=spec.network,
-        )
+        # Том для файлов приложения (вложения) — переживает OTA-пересоздание app.
+        await docker.create_volume(school_appdata_volume_name(spec.slug), slug=label_slug)
+        await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
         code, out = await docker.exec(spec.app_container, ["alembic", "upgrade", "head"], workdir="/app")

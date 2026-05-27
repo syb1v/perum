@@ -11,6 +11,8 @@ described by SQLAlchemy models inside `perum-tenant/app/models/`.
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+
+from app.core.crypto import EncryptedString
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.db import Base
@@ -117,9 +119,9 @@ class OrganizationSecret(Base):
         ForeignKey("organizations.id", ondelete="CASCADE"),
         primary_key=True,
     )
-    db_password: Mapped[str] = mapped_column(String(128), nullable=False)
-    secret_key: Mapped[str] = mapped_column(String(128), nullable=False)
-    telemetry_token: Mapped[str] = mapped_column(String(128), nullable=False)
+    db_password: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
+    secret_key: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
+    telemetry_token: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
     redis_db_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
@@ -210,9 +212,9 @@ class SchoolSecret(Base):
     school_id: Mapped[int] = mapped_column(
         ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True
     )
-    db_password: Mapped[str] = mapped_column(String(128), nullable=False)
-    secret_key: Mapped[str] = mapped_column(String(128), nullable=False)
-    telemetry_token: Mapped[str] = mapped_column(String(128), nullable=False)
+    db_password: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
+    secret_key: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
+    telemetry_token: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
     redis_db_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 

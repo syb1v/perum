@@ -24,6 +24,10 @@ services:
       # Dev default is admin/admin — OVERRIDE in prod via .env.
       BOOTSTRAP_ADMIN_LOGIN: ${BOOTSTRAP_ADMIN_LOGIN:-admin}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      # Hardening (Фаза 10): шифрование секретов at-rest, защита /metrics.
+      # Пусто (dev) → плейнтекст/открыто; в проде задать через .env.
+      SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
     depends_on:
       perum_control_db:
         condition: service_healthy

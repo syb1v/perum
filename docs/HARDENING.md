@@ -61,8 +61,20 @@
 - **Нагрузка:** `BASE=http://admin.perum.local k6 run deploy/tests/load_test.js`
   (smoke: p95 ~2.6ms, 0% ошибок при 10 VU). Пороги: p95<800ms, ошибок <1%.
 
-## Известные ограничения (бэклог hardening)
-- Секреты школ/орг — plaintext в control-БД (TODO: KMS/Vault).
-- `/metrics` без auth — полагается на сетевую изоляцию (закрыть на проде по сети).
-- Rate-limiting на login — не реализован (TODO).
-- Вложения ДЗ — container-local, не на volume (TODO).
+## Реализовано (hardening)
+- **Шифрование секретов at-rest:** `EncryptedString` (Fernet) на колонках
+  `organization_secrets`/`school_secrets` (`db_password`/`secret_key`/`telemetry_token`).
+  Ключ — `SECRETS_ENCRYPTION_KEY`; обратная совместимость с легаси-плейнтекстом
+  (префикс `enc:`). Пусто → плейнтекст (dev).
+- **Rate-limit логина:** скользящее окно по ip+login (`LOGIN_RATE_LIMIT`/`_WINDOW_S`,
+  дефолт 10/60с) на `/api/auth/login` ядра и `/api/login` тенанта → 429. In-memory
+  (для мульти-реплики выносить в Redis).
+- **Защита `/metrics`:** при заданном `METRICS_TOKEN` требуется Bearer/X-Metrics-Token
+  (иначе 401); пусто → открыт (dev). Prometheus передаёт токен в scrape-конфиге.
+- **Вложения ДЗ на volume:** школьный стек монтирует `school_<slug>_appdata` в
+  `/app/data` → файлы переживают OTA-пересоздание app-контейнера.
+
+## Остаётся (бэклог)
+- Ротация `SECRETS_ENCRYPTION_KEY` (re-encrypt существующих секретов).
+- Вынос rate-limit в Redis (для нескольких реплик ядра).
+- Полноценный KMS/Vault вместо env-ключа.

@@ -19,6 +19,17 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
     JWT_ALGORITHM: str = "HS256"
 
+    # Шифрование секретов at-rest (Фаза 10). Fernet-ключ (urlsafe base64, 32 байта).
+    # Пусто → секреты хранятся плейнтекстом (dev). Прод: Fernet.generate_key().
+    SECRETS_ENCRYPTION_KEY: str = Field(default="")
+
+    # Ограничение попыток входа (rate-limit): N попыток за окно (сек) на ключ ip+login.
+    LOGIN_RATE_LIMIT: int = Field(default=10)
+    LOGIN_RATE_WINDOW_S: int = Field(default=60)
+
+    # Защита /metrics: если задан — требуется Bearer/X-Metrics-Token. Пусто → открыт (dev).
+    METRICS_TOKEN: str = Field(default="")
+
     # First platform_admin: seeded on startup only if no admins exist yet AND a
     # password is set. In dev the compose file provides admin/admin; in prod set
     # BOOTSTRAP_ADMIN_PASSWORD via .env (or create the admin out of band).

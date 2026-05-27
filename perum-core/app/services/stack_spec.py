@@ -45,6 +45,11 @@ def school_volume_name(slug: str) -> str:
     return f"school_{slug}_data"
 
 
+def school_appdata_volume_name(slug: str) -> str:
+    # Том для файлов приложения (вложения ДЗ и т.п.) — переживает OTA-пересоздание.
+    return f"school_{slug}_appdata"
+
+
 def school_project_name(slug: str) -> str:
     return f"school_{slug}"
 

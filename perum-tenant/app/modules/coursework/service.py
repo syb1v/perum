@@ -6,10 +6,9 @@ they are assigned to (admins bypass the assignment check). Everything is scoped
 to the resolved school_id. The student diary (app/modules/student) reads these
 back, closing the teacher → student loop.
 
-File attachments are written to a local uploads dir inside the container. NOTE:
-that path is NOT on the org's data volume yet, so uploaded files do not survive
-a container recreate — a dedicated files volume is a Phase 9 concern. URL-link
-attachments (the common case) have no such limitation.
+File attachments are written under /app/data, which in v2 is a dedicated app-data
+volume mounted on the school stack (school_<slug>_appdata). Файлы переживают
+OTA-пересоздание app-контейнера. URL-ссылки-вложения тома не требуют.
 """
 
 from __future__ import annotations
@@ -31,7 +30,8 @@ from app.modules.journal.service import _assigned, _is_admin
 
 DAY_NAMES_ACC = ["понедельник", "вторник", "среду", "четверг", "пятницу", "субботу"]
 
-UPLOAD_DIR = "data/uploads/homework"
+# Абсолютный путь под точкой монтирования app-data тома (см. school_provisioner).
+UPLOAD_DIR = os.environ.get("APP_DATA_DIR", "/app/data") + "/uploads/homework"
 MAX_FILE_SIZE = 13 * 1024 * 1024  # 13 MB
 ALLOWED_EXTENSIONS = {
     ".pdf", ".doc", ".docx", ".txt", ".rtf", ".odt",
