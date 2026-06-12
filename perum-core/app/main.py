@@ -54,7 +54,11 @@ async def _sync_caddy_routes() -> None:
     for domain, school in school_rows:
         try:
             upstream = f"{school_container_name(school.slug, 'app')}:3000"
-            await caddy.add_route(school_label_slug(school.slug), domain.domain, upstream)
+            # Уникальный route-id на КАЖДЫЙ домен: основной поддомен — sch-<slug>
+            # (как у провижинера), кастомные домены — dom-<id> (как у add_domain).
+            # Иначе несколько доменов одной школы перетирали бы друг друга.
+            rid = school_label_slug(school.slug) if domain.domain_type == "subdomain" else f"dom-{domain.id}"
+            await caddy.add_route(rid, domain.domain, upstream)
             logger.info("route sync (school): %s -> %s", domain.domain, upstream)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for school %s: %s", domain.domain, exc)
