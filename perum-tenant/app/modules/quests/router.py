@@ -74,7 +74,9 @@ async def create_quest(payload: QuestPayload, user: User = Depends(require_admin
 async def update_quest(quest_id: int, payload: QuestPayload, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     school_id = await resolve_school_id(user, db)
     q = await _get_school_quest(quest_id, school_id, db)
-    for k, v in payload.model_dump().items():
+    # Частичный апдейт: фронт при редактировании НЕ шлёт class_id/subject_id/
+    # target_grades — без exclude_unset они затёрлись бы в NULL (потеря таргетинга).
+    for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(q, k, v)
     await db.commit()
     await db.refresh(q)

@@ -1,0 +1,44 @@
+# Production override на docker-compose.core.yml.
+#
+# Запуск:
+#   docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml \
+#     --env-file deploy/.env.prod up -d --build
+#
+# Отличия от dev: реальные секреты из .env.prod, прод-Caddyfile, admin-API Caddy и
+# Prometheus/Grafana привязаны к 127.0.0.1 (наружу не торчат), образы пребилдятся.
+services:
+  caddy:
+    ports: !override
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:2019:2019"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      PERUM_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN}
+      CONTROL_PLANE_URL: http://perum_core:3000
+    volumes: !override
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  perum_core:
+    pull_policy: never
+    environment:
+      DATABASE_URL: postgresql+asyncpg://perum:${CONTROL_DB_PASSWORD}@perum_control_db:5432/perum_control
+
+  perum_web:
+    pull_policy: never
+
+  perum_control_db:
+    environment:
+      POSTGRES_USER: perum
+      POSTGRES_PASSWORD: ${CONTROL_DB_PASSWORD}
+      POSTGRES_DB: perum_control
+
+  prometheus:
+    ports: !override
+      - "127.0.0.1:9090:9090"
+
+  grafana:
+    ports: !override
+      - "127.0.0.1:3001:3000"

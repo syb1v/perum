@@ -153,6 +153,9 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(requir
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in _ALLOWED_EXT:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "разрешены только изображения png/jpg/gif/webp")
+    # Проверяем размер ДО чтения в память (если клиент сообщил Content-Length).
+    if getattr(file, "size", None) and file.size > 5 * 1024 * 1024:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "файл больше 5 МБ")
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     name = f"{secrets.token_hex(8)}{ext}"
     path = os.path.join(UPLOAD_DIR, name)

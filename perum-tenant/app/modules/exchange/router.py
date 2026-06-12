@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_admin, require_student, require_teacher
-from app.models import ExchangeLog, ExchangeSettings, Investment, Subject, TradingWindow, User
+from app.models import ExchangeLog, ExchangeSettings, Investment, Subject, Transaction, TradingWindow, User
 from app.modules.exchange import service
 from app.modules.school_admin.service import resolve_school_id
 
@@ -190,25 +190,33 @@ async def admin_investments(limit: int = Query(20, ge=1, le=200), user: User = D
     )).all()
     return [{
         "id": inv.id, "user": _user_brief(u), "subject": (subj.name if subj else "—"),
-        "amount": inv.amount, "status": inv.status,
+        "amount": inv.amount, "status": inv.status, "week_number": inv.week_number,
         "result_amount": inv.result_amount, "index_change": inv.index_change,
         "created_at": inv.created_at.isoformat() if inv.created_at else None,
     } for inv, u, subj in rows]
 
 
-async def _refund_investment(inv: Investment, db: AsyncSession) -> int:
+async def _refund_investment(inv: Investment, db: AsyncSession, admin_id: int) -> int:
     """Вернуть активный вклад: статус cancelled, вернуть amount на баланс ученика,
-    записать лог. Возвращает 1 если возврат выполнен, иначе 0."""
+    записать ExchangeLog И Transaction (как пользовательская отмена — иначе леджер
+    баланса расходится). Возвращает 1 если возврат выполнен, иначе 0."""
     if inv.status != "active":
         return 0
     inv.status = "cancelled"
     inv.completed_at = datetime.utcnow()
     student = await db.get(User, inv.user_id)
+    new_balance = None
     if student is not None:
-        student.balance = (student.balance or 0) + inv.amount
+        new_balance = (student.balance or 0) + inv.amount
+        student.balance = new_balance
     db.add(ExchangeLog(
         school_id=inv.school_id, user_id=inv.user_id, subject_id=inv.subject_id,
         action="cancel", amount=inv.amount, price=None,
+    ))
+    db.add(Transaction(
+        school_id=inv.school_id, user_id=inv.user_id, amount=inv.amount,
+        balance_after=new_balance if new_balance is not None else 0,
+        type="exchange_cancel", reason=f"Возврат вклада #{inv.id} (админ)", created_by=admin_id,
     ))
     return 1
 
@@ -221,7 +229,7 @@ async def admin_refund_all(user: User = Depends(require_admin), db: AsyncSession
     )).scalars().all()
     count = 0
     for inv in rows:
-        count += await _refund_investment(inv, db)
+        count += await _refund_investment(inv, db, user.id)
     await db.commit()
     return {"refunded_count": count, "message": f"Возвращено вкладов: {count}"}
 
@@ -232,7 +240,7 @@ async def admin_refund_one(investment_id: int, user: User = Depends(require_admi
     inv = await db.get(Investment, investment_id)
     if inv is None or inv.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "вклад не найден")
-    refunded = await _refund_investment(inv, db)
+    refunded = await _refund_investment(inv, db, user.id)
     await db.commit()
     return {"status": "ok", "refunded": refunded}
 
@@ -241,13 +249,15 @@ async def admin_refund_one(investment_id: int, user: User = Depends(require_admi
 async def admin_logs(limit: int = Query(50, ge=1, le=200), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> list[dict]:
     school_id = await _school(user, db)
     rows = (await db.execute(
-        select(ExchangeLog, User)
+        select(ExchangeLog, User, Subject)
         .join(User, ExchangeLog.user_id == User.id, isouter=True)
+        .join(Subject, ExchangeLog.subject_id == Subject.id, isouter=True)
         .where(ExchangeLog.school_id == school_id)
         .order_by(ExchangeLog.id.desc()).limit(limit)
     )).all()
     return [{
         "id": lg.id, "user": _user_brief(u), "action": lg.action,
+        "subject": (subj.name if subj else "—"),
         "amount": lg.amount, "price": lg.price,
         "created_at": lg.created_at.isoformat() if lg.created_at else None,
-    } for lg, u in rows]
+    } for lg, u, subj in rows]
