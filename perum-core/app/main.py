@@ -21,31 +21,43 @@ async def _sync_caddy_routes() -> None:
     the control plane must still come up if Caddy is briefly unreachable.
     """
     from app.core.db import SessionLocal
-    from app.models import Organization, OrganizationDomain
+    from app.models import Organization, OrganizationDomain, School, SchoolDomain
     from app.services.caddy_admin import get_caddy_admin
+    from app.services.stack_spec import school_container_name, school_label_slug
 
     caddy = get_caddy_admin()
     try:
         async with SessionLocal() as db:
-            result = await db.execute(
+            org_rows = (await db.execute(
                 select(OrganizationDomain, Organization)
                 .join(Organization, OrganizationDomain.org_id == Organization.id)
-                .where(
-                    Organization.status == "active",
-                    OrganizationDomain.status == "active",
-                )
-            )
-            rows = result.all()
+                .where(Organization.status == "active", OrganizationDomain.status == "active")
+            )).all()
+            # v2: маршруты ШКОЛ (silo=школа) — раньше не восстанавливались после
+            # рестарта/reload Caddy, и школа теряла маршрутизацию (AUDIT раздел 4).
+            school_rows = (await db.execute(
+                select(SchoolDomain, School)
+                .join(School, SchoolDomain.school_id == School.id)
+                .where(School.status == "active", SchoolDomain.status == "active")
+            )).all()
     except Exception as exc:  # noqa: BLE001
         logger.warning("caddy route sync skipped (DB not ready?): %s", exc)
         return
 
-    for domain, org in rows:
+    for domain, org in org_rows:
         try:
             await caddy.add_route(org.slug, domain.domain, f"org_{org.slug}_app:3000")
-            logger.info("route sync: %s -> org_%s_app:3000", domain.domain, org.slug)
+            logger.info("route sync (org): %s -> org_%s_app:3000", domain.domain, org.slug)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for %s: %s", domain.domain, exc)
+
+    for domain, school in school_rows:
+        try:
+            upstream = f"{school_container_name(school.slug, 'app')}:3000"
+            await caddy.add_route(school_label_slug(school.slug), domain.domain, upstream)
+            logger.info("route sync (school): %s -> %s", domain.domain, upstream)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("route sync failed for school %s: %s", domain.domain, exc)
 
 
 async def _seed_bootstrap_admin() -> None:
