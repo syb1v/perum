@@ -12,7 +12,7 @@ from app.core.db import get_db
 from app.core.deps import require_platform_admin
 from app.core.ratelimit import check_login_rate
 from app.core.security import create_access_token, verify_password
-from app.models import OrgAdmin, PlatformAdmin
+from app.models import OrgAdmin, Organization, PlatformAdmin
 from app.schemas.auth import LoginRequest, PlatformAdminRead, TokenResponse
 
 router = APIRouter()
@@ -34,6 +34,9 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     result = await db.execute(select(OrgAdmin).where(OrgAdmin.login == payload.login))
     org_admin = result.scalar_one_or_none()
     if org_admin is not None and org_admin.is_active and verify_password(payload.password, org_admin.password_hash):
+        org = await db.get(Organization, org_admin.org_id)
+        if org is not None and org.status == "suspended":
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "организация приостановлена")
         org_admin.last_login_at = datetime.utcnow()
         await db.commit()
         token = create_access_token(

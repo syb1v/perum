@@ -18,8 +18,32 @@
     }
 }
 
+# Корневой домен ЯДРА (апекс) — ЛЕНДИНГ платформы. /api → ядро (форма «Связаться»
+# = публичный POST /api/contact), остальное → веб (маркетинговая страница; middleware
+# рендерит лендинг только на апексе). Обычный ACME-сертификат (НЕ on-demand).
+{$PERUM_BASE_DOMAIN} {
+    # Приём телеметрии — только по внутренней docker-сети (школы ходят в ядро
+    # напрямую через CONTROL_PLANE_URL), наружу закрыт.
+    @telemetry path /api/telemetry /api/telemetry/*
+    handle @telemetry {
+        respond "not found" 404
+    }
+    @backend path /api/* /docs /docs/* /openapi.json /health /health/*
+    handle @backend {
+        reverse_proxy perum_core:3000
+    }
+    handle {
+        reverse_proxy perum_web:3000
+    }
+    encode gzip zstd
+}
+
 # Портал платформы и орг: /api → ядро, остальное (UI) → веб.
 admin.{$PERUM_BASE_DOMAIN} {
+    @telemetry path /api/telemetry /api/telemetry/*
+    handle @telemetry {
+        respond "not found" 404
+    }
     @backend path /api/* /docs /docs/* /openapi.json /health /health/*
     handle @backend {
         reverse_proxy perum_core:3000

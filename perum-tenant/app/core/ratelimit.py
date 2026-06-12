@@ -17,8 +17,11 @@ _hits: dict[str, deque[float]] = defaultdict(deque)
 def check_login_rate(request: Request, login: str) -> None:
     if _LIMIT <= 0:
         return
-    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-          or (request.client.host if request.client else "unknown"))
+    # Реальный клиентский IP за доверенным Caddy — ПОСЛЕДНИЙ элемент XFF (Caddy
+    # дописывает peer в конец). Первый элемент подделывается клиентом → обход лимита.
+    _xff = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",") if p.strip()]
+    ip = (_xff[-1] if _xff
+          else (request.client.host if request.client else "unknown"))
     key = f"{ip}::{(login or '').lower()}"
     now = time.monotonic()
     dq = _hits[key]

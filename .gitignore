@@ -27,6 +27,9 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+# Prod env carries real secrets (SECRET_KEY, CONTROL_DB_PASSWORD, ...). NEVER commit.
+.env.prod
+deploy/.env.prod
 *.pem
 *.key
 !**/*.key.example

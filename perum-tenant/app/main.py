@@ -5,7 +5,10 @@ and the domain modules arrive in Phase 2+. The point of this skeleton is to give
 the control-plane provisioner a real image to bring up and migrate.
 """
 
+import asyncio
+import contextlib
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from sqlalchemy import text
@@ -14,12 +17,34 @@ from app.core.config import get_settings
 from app.core.db import engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger("perum.tenant")
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Фоновая телеметрия в ядро (агрегаты без PII). Запускается, только если задан
+    # TELEMETRY_TOKEN и интервал > 0; иначе тихо пропускается (dev/standalone).
+    task = None
+    if settings.TELEMETRY_TOKEN and settings.TELEMETRY_INTERVAL_S > 0:
+        from app.telemetry import telemetry_loop
+
+        task = asyncio.create_task(telemetry_loop())
+        logger.info("telemetry loop started (interval=%ss)", settings.TELEMETRY_INTERVAL_S)
+    try:
+        yield
+    finally:
+        if task is not None:
+            task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+
 
 app = FastAPI(
     title=f"PERUM Tenant — {settings.ORG_SLUG}",
     version="0.1.0",
     description="Per-organization tenant application.",
+    lifespan=lifespan,
 )
 
 from app.internal.router import router as internal_router  # noqa: E402

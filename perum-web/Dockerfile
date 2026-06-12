@@ -22,6 +22,11 @@ COPY . .
 # Next.js telemetry is disabled
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Базовый домен платформы — нужен middleware/host.ts, чтобы отличать апекс ядра
+# (лендинг) от кастомного домена школы. NEXT_PUBLIC_* инлайнится при сборке.
+ARG NEXT_PUBLIC_BASE_DOMAIN=
+ENV NEXT_PUBLIC_BASE_DOMAIN=${NEXT_PUBLIC_BASE_DOMAIN}
+
 # Ограничиваем память Node.js (чтобы сервер не зависал при сборке)
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 
@@ -55,8 +60,11 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# 127.0.0.1 (НЕ localhost): busybox wget пробует только ПЕРВЫЙ резолв localhost
+# (::1), а Next слушает IPv4 0.0.0.0 — из-за этого healthcheck вечно падал
+# (контейнер «unhealthy» при рабочем сервисе). См. docs/AUDIT_2026-06-12.md.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1
+    CMD wget -qO- http://127.0.0.1:3000/ >/dev/null 2>&1 || exit 1
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output

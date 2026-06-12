@@ -10,7 +10,8 @@ from app.models.academic import Class, ClassStudent, Subject, TeacherSubject
 
 
 def _is_admin(user: User) -> bool:
-    return user.role in {"org_admin", "school_admin", "director"}
+    # org_admin внутрь школы не заходит — см. journal/service.py. Убран org_admin.
+    return user.role in {"school_admin", "director"}
 
 
 async def teacher_classes(db: AsyncSession, school_id: int, user: User) -> list[dict]:

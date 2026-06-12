@@ -72,6 +72,10 @@ class Settings(BaseSettings):
     DB_HEALTH_TIMEOUT_S: int = 60
     APP_HEALTH_TIMEOUT_S: int = 90
 
+    # Куда писать авто-бэкап БД школы (pg_dump) перед безвозвратным удалением.
+    # В проде это смонтированный том perum_backups (см. docker-compose.core.yml).
+    BACKUP_DIR: str = Field(default="/backups")
+
     PUBLIC_BASE_DOMAIN: str = Field(
         default="perum.local",
         description="Used when composing org subdomains (acme + perum.local = acme.perum.local)",

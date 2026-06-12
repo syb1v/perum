@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.models import SchoolDomain
+from app.models import OrganizationDomain, SchoolDomain
 
 router = APIRouter()
 
@@ -25,11 +25,21 @@ router = APIRouter()
 async def validate_domain(domain: str = Query(...), db: AsyncSession = Depends(get_db)) -> str:
     host = (domain or "").strip().lower().split(":")[0]
     base = get_settings().PUBLIC_BASE_DOMAIN.lower()
-    if host == f"admin.{base}" or host.endswith(f".{base}"):
-        return "ok"  # поддомены платформы/школ
-    known = await db.scalar(
+    # Платформенные хосты: апекс (лендинг ядра) и admin (консоль платформы).
+    if host == base or host == f"admin.{base}":
+        return "ok"
+    # ВАЖНО: НЕ выдаём сертификат на любой `*.{base}` (раньше endswith пропускал
+    # любой поддомен). С wildcard-DNS это давало сканерам выпускать серты на
+    # mail/www/vpn/случайные строки и грозило rate-limit Let's Encrypt. Теперь —
+    # только хосты, реально зарегистрированные как домены школы или (легаси) орг.
+    known_school = await db.scalar(
         select(SchoolDomain.id).where(SchoolDomain.domain == host, SchoolDomain.status != "removed")
     )
-    if known:
-        return "ok"  # одобренный кастомный домен школы
+    if known_school:
+        return "ok"
+    known_org = await db.scalar(
+        select(OrganizationDomain.id).where(OrganizationDomain.domain == host, OrganizationDomain.status != "removed")
+    )
+    if known_org:
+        return "ok"
     raise HTTPException(status.HTTP_403_FORBIDDEN, f"домен {host} не разрешён")

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import { headers } from 'next/headers';
-import { isPlatformHostname } from '@/lib/host';
+import { isPlatformHostname, isApexHostname } from '@/lib/host';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import AnalyticsTracker from '@/components/AnalyticsTracker';
@@ -32,16 +32,18 @@ export const viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Host-based tenancy: the control-plane UI (admin.*) doesn't use the school's
-  // auth/data providers, so render it bare. Tenant subdomains get the full
-  // legacy school stack (AuthProvider gates content on the /user/me check).
+  // Host-based tenancy: the control-plane UI (admin.*) и лендинг ядра (апекс)
+  // не используют школьные auth/data-провайдеры, поэтому рендерятся «голыми».
+  // Иначе AuthProvider до завершения checkAuth показывал бы «Загрузка…» вместо
+  // лендинга (нулевой SSR/SEO — см. docs/AUDIT_2026-06-12.md). Школьные поддомены
+  // получают полный стек (AuthProvider гейтит контент по /user/me).
   const host = (await headers()).get('host') || '';
-  const isPlatform = isPlatformHostname(host);
+  const bare = isPlatformHostname(host) || isApexHostname(host);
 
   return (
     <html lang="ru">
       <body>
-        {isPlatform ? (
+        {bare ? (
           children
         ) : (
           <>

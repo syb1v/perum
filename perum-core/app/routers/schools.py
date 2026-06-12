@@ -9,18 +9,21 @@ from __future__ import annotations
 
 import logging
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from datetime import datetime
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.core.deps import require_org_admin
-from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolSecret
-from app.services.billing import school_limit
+from app.core.deps import require_billing_ok, require_org_admin
+from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
+from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
+from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
+from app.services.stats import rollup, school_stat, schools_with_metrics
 from app.services.caddy_admin import get_caddy_admin
 from app.services.stack_spec import school_container_name
 from app.services.school_provisioner import (
@@ -28,6 +31,8 @@ from app.services.school_provisioner import (
     current_release_image,
     deprovision_school,
     provision_school,
+    suspend_school,
+    unsuspend_school,
     update_school,
 )
 from app.services.tenant_provisioner import ProvisioningError
@@ -36,13 +41,30 @@ logger = logging.getLogger("perum.schools")
 
 router = APIRouter()
 
-BLOCKING = {"active", "provisioning"}
+BLOCKING = {"active", "provisioning", "suspended"}
 
 
 class SchoolCreate(BaseModel):
-    slug: str
-    name: str
+    slug: str = Field(min_length=3, max_length=40)
+    name: str = Field(min_length=2, max_length=255)
     admin_email: str | None = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        # Slug школы напрямую формирует хост `<slug>.<base>` и Caddy-маршрут
+        # (terminal, index 0). Без этой проверки org_admin мог завести школу со
+        # slug='admin'/'api' и перехватить хост платформы. Тот же контракт, что
+        # и у организаций (см. app/schemas/organization.py).
+        v = v.strip().lower()
+        if v in RESERVED_SLUGS:
+            raise ValueError(f"slug '{v}' зарезервирован")
+        if not SLUG_PATTERN.match(v):
+            raise ValueError(
+                "slug: строчные латинские буквы/цифры/дефис, начинается с буквы, "
+                "заканчивается буквой или цифрой, длина 3-40"
+            )
+        return v
 
 
 class DomainCreate(BaseModel):
@@ -59,7 +81,13 @@ def _school_dict(s: School) -> dict:
         "release_tag": s.release_tag,
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "activated_at": s.activated_at.isoformat() if s.activated_at else None,
+        "suspended_at": s.suspended_at.isoformat() if s.suspended_at else None,
     }
+
+
+class SchoolPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=255)
+    admin_email: str | None = None
 
 
 def _result(outcome: SchoolProvisionOutcome) -> dict:
@@ -87,10 +115,27 @@ async def list_schools(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSe
     return {"schools": [_school_dict(s) for s in rows]}
 
 
+async def _enforce_school_limit(db: AsyncSession, org_id: int) -> None:
+    """402, если число активных (не-archived) школ орг уже на лимите плана.
+    Вызывается при ЛЮБОЙ операции, увеличивающей число активных школ: создание
+    новой, возрождение archived-школы, reprovision archived. Закрывает обход
+    лимита через delete-без-purge → reuse (AUDIT_2026-06-12)."""
+    org = await db.get(Organization, org_id)
+    limit = school_limit(org.plan if org else "trial")
+    used = int(await db.scalar(
+        select(func.count(School.id)).where(School.org_id == org_id, School.status != "archived")
+    ) or 0)
+    if used >= limit:
+        raise HTTPException(
+            status.HTTP_402_PAYMENT_REQUIRED,
+            f"достигнут лимит школ для плана '{org.plan if org else 'trial'}' ({limit}). Повысьте план.",
+        )
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_school(
     payload: SchoolCreate,
-    admin: OrgAdmin = Depends(require_org_admin),
+    admin: OrgAdmin = Depends(require_billing_ok),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     existing = (await db.execute(select(School).where(School.slug == payload.slug))).scalar_one_or_none()
@@ -98,23 +143,16 @@ async def create_school(
         raise HTTPException(status.HTTP_409_CONFLICT, f"школа '{payload.slug}' уже существует (status={existing.status})")
 
     if existing is not None and existing.org_id == admin.org_id:
+        # Возрождение archived-школы увеличивает число активных → проверяем лимит.
+        if existing.status == "archived":
+            await _enforce_school_limit(db, admin.org_id)
         school = existing
         school.name = payload.name
         school.admin_email = payload.admin_email
     elif existing is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
     else:
-        # Лимит плана (биллинг-стаб): новая школа не должна превышать лимит орг.
-        org = await db.get(Organization, admin.org_id)
-        limit = school_limit(org.plan if org else "trial")
-        used = int(await db.scalar(
-            select(func.count(School.id)).where(School.org_id == admin.org_id, School.status != "archived")
-        ) or 0)
-        if used >= limit:
-            raise HTTPException(
-                status.HTTP_402_PAYMENT_REQUIRED,
-                f"достигнут лимит школ для плана '{org.plan if org else 'trial'}' ({limit}). Повысьте план.",
-            )
+        await _enforce_school_limit(db, admin.org_id)
         school = School(
             org_id=admin.org_id, slug=payload.slug, name=payload.name,
             admin_email=payload.admin_email, status="provisioning",
@@ -130,14 +168,58 @@ async def create_school(
     return _result(outcome)
 
 
+@router.get("/billing")
+async def org_billing(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    """Биллинг своей организации для org_admin (read-only): план, лимит/использование,
+    подписка (триал/оплачено-до/просрочка). Сменить план/оплатить — через platform_admin."""
+    org = await db.get(Organization, admin.org_id)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "организация не найдена")
+    sub = await get_or_create_subscription(db, org)
+    used = int(await db.scalar(
+        select(func.count(School.id)).where(School.org_id == org.id, School.status != "archived")
+    ) or 0)
+    limit = school_limit(org.plan)
+    return {
+        "plan": org.plan,
+        "price_rub_month": plan_price(org.plan),
+        "school_limit": limit,
+        "schools_used": used,
+        "schools_remaining": max(limit - used, 0),
+        "subscription": billing_state(sub, datetime.utcnow()),
+    }
+
+
+@router.get("/stats/overview")
+async def org_schools_stats(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    """Статистика org_admin: сводка по своим школам + разбивка по каждой (R5).
+    Данные — из снимков телеметрии; org_admin внутрь школ при этом не заходит."""
+    rows = await schools_with_metrics(db, org_id=admin.org_id)
+    agg, schools = rollup(rows, datetime.utcnow())
+    return {**agg, "schools": schools}
+
+
 @router.get("/{school_id}")
 async def get_school(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
     return _school_dict(await _get_school(school_id, admin, db))
 
 
-@router.post("/{school_id}/reprovision")
-async def reprovision_school(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/{school_id}/stats")
+async def school_stats_endpoint(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    """Статистика одной школы (метаданные + снимок телеметрии)."""
     school = await _get_school(school_id, admin, db)
+    metric = await db.get(SchoolMetric, school.id)
+    return school_stat(school, metric, datetime.utcnow())
+
+
+@router.post("/{school_id}/reprovision")
+async def reprovision_school(school_id: int, admin: OrgAdmin = Depends(require_billing_ok), db: AsyncSession = Depends(get_db)) -> dict:
+    school = await _get_school(school_id, admin, db)
+    if school.status == "suspended":
+        raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
+    # Возрождение archived-школы через reprovision тоже увеличивает число активных.
+    if school.status == "archived":
+        await _enforce_school_limit(db, admin.org_id)
     try:
         outcome = await provision_school(school, db)
     except ProvisioningError as exc:
@@ -167,6 +249,8 @@ async def update_status(school_id: int, admin: OrgAdmin = Depends(require_org_ad
 async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
     """Обновление школьного стека «по кнопке» на текущий релиз (volume-preserving)."""
     school = await _get_school(school_id, admin, db)
+    if school.status == "suspended":
+        raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
     try:
         outcome = await update_school(school, db)
     except ProvisioningError as exc:
@@ -181,6 +265,135 @@ async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(requi
             else ("уже на актуальной версии" if outcome.from_image == outcome.to_image else "обновлено")
         ),
     }
+
+
+@router.patch("/{school_id}")
+async def patch_school(
+    school_id: int, payload: SchoolPatch,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Редактирование метаданных школы (имя/admin_email) без пересоздания стека."""
+    school = await _get_school(school_id, admin, db)
+    if payload.name is not None:
+        school.name = payload.name
+    if payload.admin_email is not None:
+        school.admin_email = payload.admin_email or None
+    await db.commit()
+    await db.refresh(school)
+    return _school_dict(school)
+
+
+@router.post("/{school_id}/suspend")
+async def suspend_school_endpoint(
+    school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Заморозить школу (том сохранён, маршрут → «приостановлено»)."""
+    school = await _get_school(school_id, admin, db)
+    if school.status not in ("active", "suspended"):
+        raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя заморозить")
+    try:
+        await suspend_school(school, db)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось заморозить школу: {exc}")
+    return _school_dict(school)
+
+
+@router.post("/{school_id}/unsuspend")
+async def unsuspend_school_endpoint(
+    school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Разморозить школу (поднять стек, вернуть нормальный маршрут)."""
+    school = await _get_school(school_id, admin, db)
+    if school.status not in ("suspended", "active"):
+        raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя разморозить")
+    try:
+        await unsuspend_school(school, db)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось разморозить школу: {exc}")
+    return _school_dict(school)
+
+
+# ============================================================================
+# R5: управление АДМИНАМИ школы (org_admin). Ядро проксирует во внутренний RPC
+# стека школы (telemetry-token), сам внутрь данных школы не заходит. Закрывает
+# пробел «нельзя завести/сбросить/удалить админа школы» (AUDIT_2026-06-12 2.8).
+# ============================================================================
+
+
+class SchoolAdminCreate(BaseModel):
+    email: str
+    full_name: str | None = None
+
+
+class SchoolAdminPatch(BaseModel):
+    full_name: str | None = None
+    email: str | None = None
+    is_active: bool | None = None
+
+
+async def _school_admin_rpc(method: str, school: School, db: AsyncSession, path: str, json: dict | None = None) -> dict:
+    if school.status != "active":
+        raise HTTPException(status.HTTP_409_CONFLICT, f"школа недоступна (статус '{school.status}')")
+    secret = await db.get(SchoolSecret, school.id)
+    if secret is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "школа не запровижинена (нет секретов)")
+    url = f"http://{school_container_name(school.slug, 'app')}:3000/internal{path}"
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.request(method, url, headers={"X-Telemetry-Token": secret.telemetry_token}, json=json)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"школа недоступна: {exc}")
+    if resp.status_code == status.HTTP_401_UNAUTHORIZED:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "ошибка авторизации RPC к школе")
+    if resp.status_code >= 300:
+        try:
+            detail = resp.json().get("detail", resp.text)
+        except Exception:  # noqa: BLE001
+            detail = resp.text
+        raise HTTPException(resp.status_code, detail)
+    return resp.json() if resp.content else {}
+
+
+@router.get("/{school_id}/admins")
+async def list_school_admins(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    school = await _get_school(school_id, admin, db)
+    return await _school_admin_rpc("GET", school, db, "/school-admins")
+
+
+@router.post("/{school_id}/admins", status_code=status.HTTP_201_CREATED)
+async def add_school_admin(
+    school_id: int, payload: SchoolAdminCreate,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    school = await _get_school(school_id, admin, db)
+    return await _school_admin_rpc("POST", school, db, "/school-admins", json=payload.model_dump())
+
+
+@router.patch("/{school_id}/admins/{uid}")
+async def patch_school_admin(
+    school_id: int, uid: int, payload: SchoolAdminPatch,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    school = await _get_school(school_id, admin, db)
+    return await _school_admin_rpc("PATCH", school, db, f"/school-admins/{uid}", json=payload.model_dump(exclude_none=True))
+
+
+@router.delete("/{school_id}/admins/{uid}")
+async def remove_school_admin(
+    school_id: int, uid: int,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    school = await _get_school(school_id, admin, db)
+    return await _school_admin_rpc("DELETE", school, db, f"/school-admins/{uid}")
+
+
+@router.post("/{school_id}/admins/{uid}/reset-password")
+async def reset_school_admin_password(
+    school_id: int, uid: int,
+    admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db),
+) -> dict:
+    school = await _get_school(school_id, admin, db)
+    return await _school_admin_rpc("POST", school, db, f"/school-admins/{uid}/reset-password")
 
 
 def _domain_dict(d: SchoolDomain) -> dict:
@@ -251,7 +464,13 @@ async def delete_school(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     school = await _get_school(school_id, admin, db)
-    await deprovision_school(school, db)
+    # purge=True: pg_dump → снос стека вместе с томами → удаление записи.
+    # purge=False: архивация (контейнеры долой, тома данных сохранены — обратимо).
+    try:
+        await deprovision_school(school, db, purge=purge)
+    except ProvisioningError as exc:
+        # Бэкап не удался → тома сохранены, запись НЕ удаляем (защита от потери данных).
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
     if purge:
         secret = await db.get(SchoolSecret, school.id)
         if secret is not None:

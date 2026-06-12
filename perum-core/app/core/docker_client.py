@@ -241,6 +241,57 @@ class DockerClient:
 
         return await asyncio.to_thread(_remove)
 
+    async def container_exists(self, name: str) -> bool:
+        def _check() -> bool:
+            try:
+                self.client.containers.get(name)
+                return True
+            except NotFound:
+                return False
+
+        return await asyncio.to_thread(_check)
+
+    async def volume_exists(self, name: str) -> bool:
+        def _check() -> bool:
+            try:
+                self.client.volumes.get(name)
+                return True
+            except NotFound:
+                return False
+
+        return await asyncio.to_thread(_check)
+
+    async def stop_containers(self, slug: str) -> list[str]:
+        """Stop (но НЕ удалять) все контейнеры стека — для заморозки школы.
+        Тома и сами контейнеры сохраняются; start_containers поднимает обратно."""
+
+        def _stop() -> list[str]:
+            stopped: list[str] = []
+            for c in self.client.containers.list(all=True, filters={"label": f"{LABEL_ORG}={slug}"}):
+                try:
+                    c.stop(timeout=10)
+                    stopped.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            return stopped
+
+        return await asyncio.to_thread(_stop)
+
+    async def start_containers(self, slug: str) -> list[str]:
+        """Start ранее остановленные контейнеры стека — для разморозки школы."""
+
+        def _start() -> list[str]:
+            started: list[str] = []
+            for c in self.client.containers.list(all=True, filters={"label": f"{LABEL_ORG}={slug}"}):
+                try:
+                    c.start()
+                    started.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            return started
+
+        return await asyncio.to_thread(_start)
+
     async def remove_container(self, name: str) -> bool:
         """Remove a SINGLE container by name (keep volumes). Used for OTA-обновления:
         свап app-контейнера на новый образ, не трогая БД и её том."""

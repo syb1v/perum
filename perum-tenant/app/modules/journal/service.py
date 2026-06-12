@@ -31,7 +31,9 @@ VALID_ATTENDANCE = {"УП", "НП", "осв.", "точка"}
 
 
 def _is_admin(user: User) -> bool:
-    return user.role in {"org_admin", "school_admin", "director"}
+    # org_admin внутрь школы не заходит (его токен невалиден в стеке школы), поэтому
+    # здесь его быть не должно. Убран как мёртвый код и латентный риск изоляции.
+    return user.role in {"school_admin", "director"}
 
 
 async def _get_class(db: AsyncSession, school_id: int, class_id: int) -> Class:

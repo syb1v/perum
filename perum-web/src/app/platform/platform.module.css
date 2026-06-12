@@ -81,6 +81,16 @@
 .s_provisioning { color: var(--warning); border-color: var(--warning); }
 .s_failed { color: var(--error); border-color: var(--error); }
 .s_archived { color: var(--text-muted); }
+.s_suspended { color: var(--warning); border-color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+.s_updating { color: var(--accent-primary); border-color: var(--accent-primary); }
+
+/* KPI-карточки статистики (R3) */
+.kpiGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 12px; margin: 12px 0 22px; }
+.kpiCard { border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 14px; }
+.kpiVal { font-size: 24px; font-weight: 800; line-height: 1.1; }
+.kpiLabel { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.dotOnline { color: var(--success); }
+.dotOffline { color: var(--text-muted); }
 
 .loginWrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); }
 .loginWrap .card { width: 400px; }

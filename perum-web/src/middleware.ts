@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ROLES, ROLE_DASHBOARDS, isAdmin, isTeacher } from '@/lib/roles';
-import { isPlatformHostname } from '@/lib/host';
+import { isPlatformHostname, isApexHostname } from '@/lib/host';
 
 /**
  * Middleware: clean-URL routing + базовый role-gating.
@@ -120,11 +120,41 @@ export function middleware(request: NextRequest) {
         return NextResponse.rewrite(url);
     }
 
+    // Apex (корневой домен ядра) — ТОЛЬКО лендинг. Никакого школьного
+    // role-routing и AuthProvider (layout рендерит его «голым»).
+    if (isApexHostname(host)) {
+        const p = request.nextUrl.pathname;
+        // «Войти» с лендинга: у апекса своего бэкенда входа нет (школы логинятся
+        // на своих поддоменах, платформа/орг — на admin.*). Ведём на admin.<домен>.
+        // В dev (localhost без точки) admin.localhost не резолвится — пропускаем.
+        if (p === '/login' && request.nextUrl.hostname.includes('.')) {
+            const url = request.nextUrl.clone();
+            url.hostname = `admin.${url.hostname}`;
+            url.pathname = '/platform/login';
+            return NextResponse.redirect(url);
+        }
+        if (p === '/' || p.startsWith('/_next') || p.startsWith('/api') || p.includes('.')) {
+            return NextResponse.next();
+        }
+        // Прочие пути на апексе не обслуживаются — возвращаем на лендинг.
+        return redirectTo(request, '/');
+    }
+
     const { pathname } = request.nextUrl;
     const cookie =
         request.cookies.get('next_auth_token')?.value ||
         request.cookies.get('access_token')?.value;
     const role = decodeJwtRole(cookie);
+
+    // Школьный хост: корень — это ВХОД школы, а не маркетинговый лендинг ядра
+    // (раньше '/' отдавал лендинг на корне каждого поддомена — жалоба владельца).
+    if (pathname === '/') {
+        if (role) {
+            const dash = ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard';
+            return redirectTo(request, dash);
+        }
+        return redirectTo(request, '/login');
+    }
 
     const cleanPath = LEGACY_REDIRECTS[pathname];
     if (cleanPath) return redirectTo(request, cleanPath);

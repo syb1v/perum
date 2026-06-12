@@ -108,7 +108,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, enroll, health, internal_domains, metrics, organizations, releases, schools  # noqa: E402
+from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, organizations, releases, schools, stats, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -116,6 +116,20 @@ app.include_router(metrics.router)
 # On-demand TLS gate для Caddy (/internal/validate-domain) — по внутренней сети.
 app.include_router(internal_domains.router, prefix="/internal", tags=["internal"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+# Лиды лендинга: POST публичный (форма «Связаться»), GET/PATCH — platform_admin.
+app.include_router(contact.router, prefix="/api/contact", tags=["contact"])
+# Приём телеметрии от школьных стеков — публичный путь, auth по telemetry-token.
+app.include_router(telemetry.router, prefix="/api/telemetry", tags=["telemetry"])
+# Сводная статистика платформы — только platform_admin.
+app.include_router(
+    stats.router, prefix="/api/platform", tags=["stats"],
+    dependencies=[Depends(require_platform_admin)],
+)
+# Биллинг-операции платформы (sweep просроченных) — только platform_admin.
+app.include_router(
+    billing.router, prefix="/api/billing", tags=["billing"],
+    dependencies=[Depends(require_platform_admin)],
+)
 # Подключение узла орг — публичный handshake (токен сам аутентифицирует).
 app.include_router(enroll.router, prefix="/api/enroll", tags=["enroll"])
 # Статус узла орг (whoami) — работает в обоих режимах.

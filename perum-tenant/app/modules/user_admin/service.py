@@ -49,7 +49,11 @@ def _user_dict(u: User, admin_id: int | None = None) -> dict:
 
 async def _get_scoped(db: AsyncSession, school_id: int, user_id: int) -> User:
     u = await db.get(User, user_id)
-    if not u or (u.school_id is not None and u.school_id != school_id):
+    # Строго: пользователь должен принадлежать ИМЕННО этой школе. Прежнее условие
+    # пропускало записи с school_id IS NULL (org-level) — школьный админ мог бы
+    # править/удалять/начислять баланс таким записям «вслепую» по ID. В v2-стеке
+    # таких записей нет, но проверку держим жёсткой (страховка от регресса/легаси).
+    if not u or u.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
     return u
 

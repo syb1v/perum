@@ -10,8 +10,9 @@ services:
     container_name: perum_core
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://perum:perum@perum_control_db:5432/perum_control
+      DATABASE_URL: postgresql+asyncpg://perum:${CONTROL_DB_PASSWORD:-perum}@perum_control_db:5432/perum_control
       SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
+      BACKUP_DIR: /backups
       ENVIRONMENT: ${ENVIRONMENT:-dev}
       CADDY_ADMIN_URL: http://caddy:2019
       CONTROL_PLANE_URL: http://perum_core:3000
@@ -40,6 +41,8 @@ services:
       # daemon. This grants perum_core root-equivalent control over Docker on
       # the host — inherent to the silo-per-org architecture.
       - /var/run/docker.sock:/var/run/docker.sock
+      # Авто-бэкап БД школы (pg_dump) перед безвозвратным удалением (purge).
+      - perum_backups:/backups
     command:
       - sh
       - -c
@@ -53,7 +56,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: perum
-      POSTGRES_PASSWORD: perum
+      POSTGRES_PASSWORD: ${CONTROL_DB_PASSWORD:-perum}
       POSTGRES_DB: perum_control
     volumes:
       - perum_control_data:/var/lib/postgresql/data
@@ -70,6 +73,8 @@ services:
       context: ../perum-web
       args:
         NODE_IMAGE: ${IMAGE_REGISTRY:-docker.io}/library/node:20-alpine
+        # Апекс-домен ядра (лендинг) vs кастомный домен школы — middleware/host.ts.
+        NEXT_PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
     image: perum-web:dev
     pull_policy: build
     container_name: perum_web
@@ -133,6 +138,7 @@ services:
 
 volumes:
   perum_control_data:
+  perum_backups:
   caddy_data:
   caddy_config:
   prometheus_data:

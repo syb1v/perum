@@ -28,6 +28,8 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     TELEMETRY_TOKEN: str = ""
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
+    # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
+    TELEMETRY_INTERVAL_S: int = 60
 
     @property
     def async_database_url(self) -> str:

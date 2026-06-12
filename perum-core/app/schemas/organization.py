@@ -44,6 +44,16 @@ class OrganizationCreate(BaseModel):
             )
         return v
 
+    @field_validator("plan")
+    @classmethod
+    def validate_plan(cls, v: str) -> str:
+        # Симметрично PUT /billing: неизвестный план не должен молча стать trial.
+        from app.services.billing import PLANS
+
+        if v not in PLANS:
+            raise ValueError(f"unknown plan; allowed: {', '.join(PLANS)}")
+        return v
+
     @field_validator("deployment_mode")
     @classmethod
     def validate_deployment_mode(cls, v: str) -> str:

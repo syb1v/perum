@@ -89,6 +89,12 @@ class CaddyAdmin:
 
         Splits the host: /api + /docs → the org's tenant app (app_upstream),
         everything else → the shared frontend (settings.WEB_UPSTREAM)."""
+        # Defense-in-depth: маршрут школы/кастомного домена НИКОГДА не должен
+        # перекрывать платформенные хосты (консоль ядра / апекс-лендинг). Slug
+        # школы уже валидируется, но кастомный домен мог бы прийти как admin.<base>.
+        base = settings.PUBLIC_BASE_DOMAIN.lower()
+        if host.lower() in {base, f"admin.{base}", f"www.{base}"}:
+            raise CaddyAdminError(f"host '{host}' зарезервирован платформой")
         async with httpx.AsyncClient(timeout=10.0) as client:
             # Remove any stale route with the same id first to keep @id unique.
             await self._delete_id(client, route_id(slug), ignore_missing=True)
@@ -102,6 +108,26 @@ class CaddyAdmin:
                 raise CaddyAdminError(
                     f"failed to add Caddy route for {host}: "
                     f"{resp.status_code} {resp.text}"
+                )
+
+    async def add_maintenance_route(self, slug: str, host: str, *, message: str = "Школа временно приостановлена") -> None:
+        """Заменить маршрут школы на терминальный ответ 503 (заморозка). Контейнер
+        остановлен, но хост отдаёт понятную страницу вместо 502 Bad Gateway."""
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await self._delete_id(client, route_id(slug), ignore_missing=True)
+            server = await self._http_server_name(client)
+            route = {
+                "@id": route_id(slug),
+                "match": [{"host": [host]}],
+                "handle": [{"handler": "static_response", "status_code": 503, "body": message}],
+                "terminal": True,
+            }
+            resp = await client.put(
+                f"{self.base_url}/config/apps/http/servers/{server}/routes/0", json=route
+            )
+            if resp.status_code >= 300:
+                raise CaddyAdminError(
+                    f"failed to add maintenance route for {host}: {resp.status_code} {resp.text}"
                 )
 
     async def remove_route(self, slug: str) -> None:

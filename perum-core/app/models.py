@@ -10,7 +10,7 @@ described by SQLAlchemy models inside `perum-tenant/app/models/`.
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 
 from app.core.crypto import EncryptedString
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -88,6 +88,9 @@ class Organization(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Заморозка (suspend): статус становится 'suspended', стеки школ останавливаются,
+    # org_admin теряет доступ. Разморозка возвращает в 'active'.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     domains: Mapped[list["OrganizationDomain"]] = relationship(
         back_populates="organization",
@@ -194,6 +197,13 @@ class School(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Заморозка школы: 'suspended' — app-контейнер остановлен, маршрут отдаёт
+    # страницу «школа приостановлена», том сохранён. Разморозка → 'active'.
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Источник заморозки: 'manual' (org_admin вручную) | 'org' (каскад при заморозке
+    # орг). Разморозка орг поднимает ТОЛЬКО школы с 'org' — вручную замороженные
+    # остаются замороженными.
+    suspended_by: Mapped[str | None] = mapped_column(String(10), nullable=True)
 
     organization: Mapped[Organization] = relationship(back_populates="schools")
     secret: Mapped["SchoolSecret | None"] = relationship(
@@ -242,6 +252,30 @@ class SchoolDomain(Base):
     school: Mapped[School] = relationship(back_populates="domains")
 
 
+class SchoolMetric(Base):
+    """Последний снимок телеметрии школы (R3). Тенант шлёт агрегаты без PII раз в
+    минуту; ядро хранит свежий снимок + last_heartbeat_at для liveness. Одна строка
+    на школу (upsert). Полный снимок дублируется в payload для расширяемости."""
+
+    __tablename__ = "school_metrics"
+
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True
+    )
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    users_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    students: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    teachers: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    parents: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    admins: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    grades_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    avg_grade: Mapped[float | None] = mapped_column(Float, nullable=True)
+    active_24h: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    balance_total: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
 class AgentState(Base):
     """Локальная идентичность узла организации (режим ROLE=org_agent). Одна строка:
     после enroll-on-boot хранит, к какой орг подключён узел и текущий релиз.
@@ -273,6 +307,69 @@ class EnrollmentToken(Base):
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class Subscription(Base):
+    """Подписка организации (R2). 1:1 с Organization. Тариф (tier) живёт в
+    organizations.plan; здесь — жизненный цикл оплаты: триал, оплачено-до, статус."""
+
+    __tablename__ = "subscriptions"
+
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="trial", server_default="trial",
+        comment="trial | active | past_due | canceled",
+    )
+    trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    paid_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Invoice(Base):
+    """Счёт/платёж организации (R2). Ручной платёж — сразу status='paid'. Под
+    провайдера (ЮKassa): счёт создаётся 'open', закрывается webhook'ом →'paid'."""
+
+    __tablename__ = "invoices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    plan: Mapped[str] = mapped_column(String(30), nullable=False)
+    amount_rub: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    period_start: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    period_end: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open",
+        comment="open | paid | void",
+    )
+    provider: Mapped[str] = mapped_column(String(30), nullable=False, default="manual", server_default="manual")
+    provider_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class ContactLead(Base):
+    """Заявка с лендинга («Связаться»). Это лиды ПЛАТФОРМЫ (а не школы): форма на
+    апекс-домене ядра постит сюда через публичный POST /api/contact. Видит и
+    обрабатывает platform_admin. Раньше форма била в несуществующий эндпоинт и
+    все заявки терялись (см. docs/AUDIT_2026-06-12.md)."""
+
+    __tablename__ = "contact_leads"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source_host: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="new", server_default="new",
+        comment="new | handled",
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 

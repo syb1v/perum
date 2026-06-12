@@ -20,7 +20,13 @@ _hits: dict[str, deque[float]] = defaultdict(deque)
 def _client_ip(request: Request) -> str:
     fwd = request.headers.get("x-forwarded-for")
     if fwd:
-        return fwd.split(",")[0].strip()
+        # За единственным доверенным прокси (Caddy) реальный клиентский IP — это
+        # ПОСЛЕДНИЙ элемент цепочки: Caddy дописывает peer-адрес в конец. Первый
+        # элемент полностью контролируется клиентом, поэтому брать его (как было
+        # раньше) = тривиальный обход лимита подменой X-Forwarded-For.
+        parts = [p.strip() for p in fwd.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
     return request.client.host if request.client else "unknown"
 
 
