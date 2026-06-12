@@ -1,12 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import styles from './page.module.css';
 
 export default function Home() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Кнопки «Войти» ведут на консоль на admin-поддомене (там логин платформы/орг),
+  // т.к. лендинг живёт на корневом домене ядра. URL считается на клиенте из хоста.
+  const [loginUrl, setLoginUrl] = useState('/platform/login');
+  useEffect(() => {
+    const h = window.location.hostname;
+    if (!h.includes('.') || h === 'localhost') { setLoginUrl('/platform/login'); return; }
+    if (h.startsWith('admin.')) { setLoginUrl('/platform/login'); return; }
+    setLoginUrl(`${window.location.protocol}//admin.${h}/platform/login`);
+  }, []);
 
   // Scroll animation observer and header scroll effect
   useEffect(() => {
@@ -136,14 +144,14 @@ export default function Home() {
             <a href="#investors" onClick={(e) => scrollToSection(e, 'investors')} className={styles['landing-nav-link']} data-section="investors">Инвесторам</a>
             <a href="#modules" onClick={(e) => scrollToSection(e, 'modules')} className={styles['landing-nav-link']} data-section="modules">Платформа</a>
           </div>
-          <Link href="/login" className={styles['landing-login-btn']}>
+          <a href={loginUrl} className={styles['landing-login-btn']}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
               <polyline points="10 17 15 12 10 7" />
               <line x1="15" y1="12" x2="3" y2="12" />
             </svg>
             Войти
-          </Link>
+          </a>
         </nav>
       </header>
 
@@ -640,14 +648,14 @@ export default function Home() {
               </svg>
               Написать нам
             </button>
-            <Link href="/login" className={styles['cta-btn-secondary']}>
+            <a href={loginUrl} className={styles['cta-btn-secondary']}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
                 <polyline points="10 17 15 12 10 7" />
                 <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
               Войти в систему
-            </Link>
+            </a>
           </div>
         </div>
       </section>

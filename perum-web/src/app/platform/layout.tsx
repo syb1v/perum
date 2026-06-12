@@ -1,18 +1,5 @@
-import styles from "./platform.module.css";
-
+// Консоли платформы/орг сами рендерят app-shell (ConsoleShell). Логин — свой
+// центрированный экран. Поэтому layout — прозрачный контейнер.
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className={styles.shell}>
-      <header className={styles.topbar}>
-        <span
-          className={styles.brand}
-          title="Платформа Экономико-Аналитического Развития Учащейся Молодёжи"
-        >
-          ПЭРУМ
-        </span>
-        <span className={styles.sub}>— панель платформы</span>
-      </header>
-      <main className={styles.main}>{children}</main>
-    </div>
-  );
+  return <>{children}</>;
 }

@@ -3,468 +3,294 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clearPlatformToken, getPlatformToken, getTokenPayload, papi } from "@/lib/platformApi";
-import styles from "../platform.module.css";
+import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell";
+import Modal from "@/components/platform/Modal";
+import styles from "@/app/admin/page.module.css";
+import c from "@/components/platform/console.module.css";
 
-/**
- * Кабинет организации (org_admin). Управляющий слой над школами: список школ,
- * создание (провижининг изолированного стека), обновление «по кнопке» (OTA),
- * удаление. Внутрь школы org_admin не заходит — это дело school_admin.
- */
+function statusBadge(s: string): string {
+  const map: Record<string, string> = {
+    active: styles.success, failed: styles.error,
+    suspended: c.badgeWarn, provisioning: c.badgeWarn, updating: c.badgeWarn, archived: c.badgeMuted,
+  };
+  return `${styles.statusBadge} ${map[s] || c.badgeMuted}`;
+}
+
 export default function OrgConsole() {
   const router = useRouter();
+  const [section, setSection] = useState("dashboard");
+  const [err, setErr] = useState("");
   const [schools, setSchools] = useState<any[] | null>(null);
   const [statuses, setStatuses] = useState<Record<number, any>>({});
   const [stats, setStats] = useState<any>(null);
   const [billing, setBilling] = useState<any>(null);
-  const [err, setErr] = useState("");
-  const [slug, setSlug] = useState("");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [created, setCreated] = useState<any>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  // Управление администраторами выбранной школы (R5).
-  const [adminsFor, setAdminsFor] = useState<any | null>(null);
+  // create school
+  const [form, setForm] = useState({ slug: "", name: "", email: "" });
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<any>(null);
+
+  // admins modal
+  const [adminsFor, setAdminsFor] = useState<any>(null);
   const [admins, setAdmins] = useState<any[] | null>(null);
-  const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdmin, setNewAdmin] = useState({ email: "", name: "" });
   const [adminBusy, setAdminBusy] = useState(false);
   const [adminCred, setAdminCred] = useState<any>(null);
-  const [adminErr, setAdminErr] = useState("");
+
+  // domains modal
+  const [domainsFor, setDomainsFor] = useState<any>(null);
+  const [domains, setDomains] = useState<any[] | null>(null);
+  const [newDomain, setNewDomain] = useState("");
 
   async function load() {
     try {
       const r = await papi("/api/schools");
       const list = r.schools || [];
       setSchools(list);
-      const entries = await Promise.all(
-        list.map(async (s: any) => {
-          try {
-            return [s.id, await papi(`/api/schools/${s.id}/update-status`)] as const;
-          } catch {
-            return [s.id, null] as const;
-          }
-        }),
-      );
+      const entries = await Promise.all(list.map(async (s: any) => {
+        try { return [s.id, await papi(`/api/schools/${s.id}/update-status`)] as const; } catch { return [s.id, null] as const; }
+      }));
       setStatuses(Object.fromEntries(entries));
-      try {
-        setStats(await papi("/api/schools/stats/overview"));
-      } catch {
-        /* статистика не критична */
-      }
-      try {
-        setBilling(await papi("/api/schools/billing"));
-      } catch {
-        /* биллинг не критичен для остального экрана */
-      }
+      try { setStats(await papi("/api/schools/stats/overview")); } catch { /* non-fatal */ }
+      try { setBilling(await papi("/api/schools/billing")); } catch { /* non-fatal */ }
     } catch (e: any) {
-      if (e.status === 401) {
-        router.push("/platform/login");
-        return;
-      }
+      if (e.status === 401) { router.push("/platform/login"); return; }
       setErr(e.message);
     }
   }
 
   useEffect(() => {
-    if (!getPlatformToken()) {
-      router.push("/platform/login");
-      return;
-    }
-    if (getTokenPayload()?.role !== "org_admin") {
-      router.push("/platform");
-      return;
-    }
+    if (!getPlatformToken()) { router.push("/platform/login"); return; }
+    if (getTokenPayload()?.role !== "org_admin") { router.push("/platform"); return; }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const delinquent = billing?.subscription?.delinquent;
+
   async function createSchool(e: React.FormEvent) {
-    e.preventDefault();
-    setErr("");
-    setCreated(null);
-    setCreating(true);
-    try {
-      const r = await papi("/api/schools", {
-        method: "POST",
-        body: JSON.stringify({ slug, name, admin_email: email || null }),
-      });
-      setCreated(r);
-      setSlug("");
-      setName("");
-      setEmail("");
-      load();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setCreating(false);
-    }
+    e.preventDefault(); setErr(""); setCreated(null); setCreating(true);
+    try { const r = await papi("/api/schools", { method: "POST", body: JSON.stringify({ slug: form.slug, name: form.name, admin_email: form.email || null }) }); setCreated(r); setForm({ slug: "", name: "", email: "" }); load(); }
+    catch (e: any) { setErr(e.message); } finally { setCreating(false); }
   }
-
   async function updateSchool(id: number) {
-    setBusyId(id);
-    setErr("");
-    try {
-      const r = await papi(`/api/schools/${id}/update`, { method: "POST" });
-      alert(r.message + (r.rolled_back ? "" : ` (→ ${r.to_image})`));
-      load();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusyId(null);
-    }
+    setBusyId(id); setErr("");
+    try { const r = await papi(`/api/schools/${id}/update`, { method: "POST" }); alert(r.message + (r.rolled_back ? "" : ` (→ ${r.to_image})`)); load(); }
+    catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
-
-  async function removeSchool(id: number, sslug: string) {
-    if (!confirm(`Удалить школу «${sslug}» вместе с её стеком и данными?`)) return;
-    setBusyId(id);
-    try {
-      await papi(`/api/schools/${id}?purge=true`, { method: "DELETE" });
-      load();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function toggleSuspendSchool(s: any) {
+  async function toggleSuspend(s: any) {
     const action = s.status === "suspended" ? "unsuspend" : "suspend";
-    if (action === "suspend" && !confirm(`Заморозить школу «${s.name}»? Стек остановится, данные сохранятся.`)) return;
-    setBusyId(s.id);
-    setErr("");
-    try {
-      await papi(`/api/schools/${s.id}/${action}`, { method: "POST" });
-      load();
-    } catch (e: any) {
-      setErr(e.message);
-    } finally {
-      setBusyId(null);
-    }
+    if (action === "suspend" && !confirm(`Заморозить «${s.name}»? Стек остановится, данные сохранятся.`)) return;
+    setBusyId(s.id); setErr("");
+    try { await papi(`/api/schools/${s.id}/${action}`, { method: "POST" }); load(); }
+    catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
+  }
+  async function removeSchool(id: number, slug: string) {
+    if (!confirm(`Удалить школу «${slug}» вместе со стеком и данными? Перед удалением снимается бэкап.`)) return;
+    setBusyId(id);
+    try { await papi(`/api/schools/${id}?purge=true`, { method: "DELETE" }); load(); }
+    catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
 
+  // --- admins ---
   async function openAdmins(s: any) {
-    setAdminsFor(s);
-    setAdmins(null);
-    setAdminCred(null);
-    setAdminErr("");
-    setNewAdminEmail("");
-    setNewAdminName("");
-    try {
-      const r = await papi(`/api/schools/${s.id}/admins`);
-      setAdmins(r.admins || []);
-    } catch (e: any) {
-      setAdminErr(e.message);
-    }
+    setAdminsFor(s); setAdmins(null); setAdminCred(null); setNewAdmin({ email: "", name: "" });
+    try { setAdmins((await papi(`/api/schools/${s.id}/admins`)).admins || []); } catch (e: any) { setErr(e.message); }
   }
-
-  async function reloadAdmins() {
-    if (!adminsFor) return;
-    try {
-      const r = await papi(`/api/schools/${adminsFor.id}/admins`);
-      setAdmins(r.admins || []);
-    } catch (e: any) {
-      setAdminErr(e.message);
-    }
-  }
-
+  async function reloadAdmins() { if (adminsFor) try { setAdmins((await papi(`/api/schools/${adminsFor.id}/admins`)).admins || []); } catch (e: any) { setErr(e.message); } }
   async function addAdmin(e: React.FormEvent) {
-    e.preventDefault();
-    if (!adminsFor) return;
-    setAdminBusy(true);
-    setAdminErr("");
-    setAdminCred(null);
-    try {
-      const r = await papi(`/api/schools/${adminsFor.id}/admins`, {
-        method: "POST",
-        body: JSON.stringify({ email: newAdminEmail, full_name: newAdminName || null }),
-      });
-      setAdminCred(r);
-      setNewAdminEmail("");
-      setNewAdminName("");
-      reloadAdmins();
-    } catch (e: any) {
-      setAdminErr(e.message);
-    } finally {
-      setAdminBusy(false);
-    }
+    e.preventDefault(); if (!adminsFor) return; setAdminBusy(true); setAdminCred(null);
+    try { const r = await papi(`/api/schools/${adminsFor.id}/admins`, { method: "POST", body: JSON.stringify({ email: newAdmin.email, full_name: newAdmin.name || null }) }); setAdminCred(r); setNewAdmin({ email: "", name: "" }); reloadAdmins(); }
+    catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); }
   }
+  async function resetAdmin(uid: number) { if (!adminsFor) return; setAdminBusy(true); try { setAdminCred(await papi(`/api/schools/${adminsFor.id}/admins/${uid}/reset-password`, { method: "POST" })); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
+  async function toggleAdmin(a: any) { if (!adminsFor) return; setAdminBusy(true); try { await papi(`/api/schools/${adminsFor.id}/admins/${a.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !a.is_active }) }); reloadAdmins(); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
+  async function removeAdmin(uid: number, login: string) { if (!adminsFor || !confirm(`Удалить администратора «${login}»?`)) return; setAdminBusy(true); try { await papi(`/api/schools/${adminsFor.id}/admins/${uid}`, { method: "DELETE" }); reloadAdmins(); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
 
-  async function resetAdmin(uid: number) {
-    if (!adminsFor) return;
-    setAdminBusy(true);
-    setAdminErr("");
-    try {
-      const r = await papi(`/api/schools/${adminsFor.id}/admins/${uid}/reset-password`, { method: "POST" });
-      setAdminCred(r);
-    } catch (e: any) {
-      setAdminErr(e.message);
-    } finally {
-      setAdminBusy(false);
-    }
-  }
+  // --- domains ---
+  async function openDomains(s: any) { setDomainsFor(s); setDomains(null); setNewDomain(""); try { setDomains((await papi(`/api/schools/${s.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } }
+  async function addDomain(e: React.FormEvent) { e.preventDefault(); if (!domainsFor) return; setAdminBusy(true); try { await papi(`/api/schools/${domainsFor.id}/domains`, { method: "POST", body: JSON.stringify({ domain: newDomain }) }); setNewDomain(""); setDomains((await papi(`/api/schools/${domainsFor.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
+  async function delDomain(did: number) { if (!domainsFor) return; setAdminBusy(true); try { await papi(`/api/schools/${domainsFor.id}/domains/${did}`, { method: "DELETE" }); setDomains((await papi(`/api/schools/${domainsFor.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
 
-  async function toggleAdminActive(a: any) {
-    if (!adminsFor) return;
-    setAdminBusy(true);
-    setAdminErr("");
-    try {
-      await papi(`/api/schools/${adminsFor.id}/admins/${a.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ is_active: !a.is_active }),
-      });
-      reloadAdmins();
-    } catch (e: any) {
-      setAdminErr(e.message);
-    } finally {
-      setAdminBusy(false);
-    }
-  }
+  const statById: Record<number, any> = Object.fromEntries((stats?.schools || []).map((s: any) => [s.id, s]));
 
-  async function removeAdmin(uid: number, login: string) {
-    if (!adminsFor) return;
-    if (!confirm(`Удалить администратора «${login}»?`)) return;
-    setAdminBusy(true);
-    setAdminErr("");
-    try {
-      await papi(`/api/schools/${adminsFor.id}/admins/${uid}`, { method: "DELETE" });
-      reloadAdmins();
-    } catch (e: any) {
-      setAdminErr(e.message);
-    } finally {
-      setAdminBusy(false);
-    }
-  }
-
-  function logout() {
-    clearPlatformToken();
-    router.push("/platform/login");
-  }
-
-  const statById: Record<number, any> = Object.fromEntries(
-    (stats?.schools || []).map((s: any) => [s.id, s]),
-  );
+  const nav: NavItem[] = [
+    { id: "dashboard", label: "Дашборд", icon: <Icon.Dashboard /> },
+    { id: "schools", label: "Школы", icon: <Icon.School /> },
+    { id: "billing", label: "Биллинг", icon: <Icon.Billing /> },
+  ];
+  const titles: Record<string, string> = { dashboard: "Дашборд организации", schools: "Школы организации", billing: "Биллинг" };
 
   return (
-    <div>
-      <div className={styles.rowBetween}>
-        <h1 className={styles.h1}>Школы организации</h1>
-        <button className={styles.btnGhost} onClick={logout}>
-          Выйти
-        </button>
-      </div>
-      <p className={styles.muted}>
-        Вы управляете школами и их обновлениями. Каждая школа — изолированный стек (свой контейнер и база).
-        Внутреннюю работу школы (журнал, оценки, пользователи) ведёт администратор школы.
-      </p>
+    <ConsoleShell
+      nav={nav} active={section} onChange={setSection} title={titles[section]}
+      subtitle="Кабинет организатора — управление своими школами"
+      userLabel={getTokenPayload()?.login || "org"}
+      onLogout={() => { clearPlatformToken(); router.push("/platform/login"); }}
+    >
+      {err && <p className={styles.errorBanner}>{err}</p>}
+      {delinquent && <p className={styles.errorBanner}>Подписка просрочена — создание и изменение школ заблокировано. Обратитесь в поддержку платформы для оплаты.</p>}
 
-      {err && <p className={styles.err}>{err}</p>}
-
-      {billing && (
-        <div className={styles.card}>
-          <div className={styles.rowBetween}>
-            <span>
-              План: <b>{billing.plan}</b> · школы: <b>{billing.schools_used} / {billing.school_limit}</b> · подписка:{" "}
-              <b>{billing.subscription?.status}</b>
-              {billing.subscription?.days_left != null && <> · осталось дней: <b>{billing.subscription.days_left}</b></>}
-            </span>
-          </div>
-          {billing.subscription?.delinquent && (
-            <p className={styles.err}>Подписка просрочена — создание и изменение школ заблокировано. Обратитесь в поддержку платформы для оплаты.</p>
-          )}
-        </div>
-      )}
-
-      {stats && (
-        <div className={styles.kpiGrid}>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}><span className={stats.schools_online > 0 ? styles.dotOnline : styles.dotOffline}>{stats.schools_online}</span> / {stats.schools_total}</div><div className={styles.kpiLabel}>Школ онлайн</div></div>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}>{stats.students}</div><div className={styles.kpiLabel}>Учеников</div></div>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}>{stats.teachers}</div><div className={styles.kpiLabel}>Учителей</div></div>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}>{stats.users_total}</div><div className={styles.kpiLabel}>Пользователей</div></div>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}>{stats.grades_total}</div><div className={styles.kpiLabel}>Оценок</div></div>
-          <div className={styles.kpiCard}><div className={styles.kpiVal}>{stats.active_24h}</div><div className={styles.kpiLabel}>Активны за 24ч</div></div>
-        </div>
-      )}
-
-      {created && (
-        <div className={`${styles.card} ${styles.cardOk}`}>
-          <b>Школа создана: {created.school?.slug}</b>
-          {created.school_admin ? (
-            <p>
-              Администратор школы: <code>{created.school_admin.login}</code> &nbsp;временный пароль:{" "}
-              <code>{created.school_admin.temporary_password}</code>
-              <br />
-              <span className={styles.muted}>Адрес школы: {created.host}</span>
-            </p>
-          ) : (
-            <p className={styles.muted}>Админ школы не создан (не указан email).</p>
-          )}
-        </div>
-      )}
-
-      <div className={styles.card}>
-        <h2 className={styles.h2}>Создать школу</h2>
-        <form onSubmit={createSchool} className={styles.form}>
-          <label className={styles.label}>
-            Slug (поддомен)
-            <input className={styles.input} value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="gimnazia5" required />
-          </label>
-          <label className={styles.label}>
-            Название
-            <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Гимназия №5" required />
-          </label>
-          <label className={styles.label}>
-            Email администратора школы
-            <input className={styles.input} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="director@gimnazia5.ru" />
-          </label>
-          <button className={styles.btn} disabled={creating}>
-            {creating ? "Создаётся (поднимается стек)…" : "Создать школу"}
-          </button>
-        </form>
-      </div>
-
-      <table className={styles.tbl}>
-        <thead>
-          <tr>
-            <th>Школа</th>
-            <th>Статус</th>
-            <th>Ученики</th>
-            <th>Онлайн</th>
-            <th>Версия</th>
-            <th>Обновление</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {schools?.map((s) => {
-            const st = statuses[s.id];
-            const canUpdate = st?.update_available && s.status === "active";
-            return (
-              <tr key={s.id}>
-                <td>
-                  <b>{s.name}</b>
-                  <br />
-                  <span className={styles.muted}>{s.slug}</span>
-                </td>
-                <td>
-                  <span className={`${styles.badge} ${styles["s_" + s.status] || ""}`}>{s.status}</span>
-                </td>
-                <td>{statById[s.id]?.students ?? "—"}</td>
-                <td>
-                  <span className={statById[s.id]?.online ? styles.dotOnline : styles.dotOffline}>●</span>
-                </td>
-                <td>
-                  <code>{st?.latest_version && s.release_tag ? s.release_tag : s.release_tag || "—"}</code>
-                </td>
-                <td>
-                  {canUpdate ? (
-                    <button
-                      className={styles.btn}
-                      disabled={busyId === s.id}
-                      onClick={() => updateSchool(s.id)}
-                      title={st?.changelog || ""}
-                    >
-                      {busyId === s.id ? "Обновляется…" : `Обновить до ${st.latest_version}`}
-                    </button>
-                  ) : (
-                    <span className={styles.muted}>актуальна</span>
-                  )}
-                </td>
-                <td>
-                  <button className={styles.btnGhost} disabled={busyId === s.id} onClick={() => openAdmins(s)}>
-                    Админы
-                  </button>{" "}
-                  <button
-                    className={styles.btnGhost}
-                    disabled={busyId === s.id || !["active", "suspended"].includes(s.status)}
-                    onClick={() => toggleSuspendSchool(s)}
-                  >
-                    {s.status === "suspended" ? "Разморозить" : "Заморозить"}
-                  </button>{" "}
-                  <button className={styles.btnGhost} disabled={busyId === s.id} onClick={() => removeSchool(s.id, s.slug)}>
-                    Удалить
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {schools && schools.length === 0 && <p className={styles.muted}>Пока нет школ — создайте первую.</p>}
-
-      {adminsFor && (
-        <div className={styles.card} style={{ marginTop: 24 }}>
-          <div className={styles.rowBetween}>
-            <h2 className={styles.h2}>Администраторы школы «{adminsFor.name}»</h2>
-            <button className={styles.btnGhost} onClick={() => setAdminsFor(null)}>
-              Закрыть
-            </button>
-          </div>
-          <p className={styles.muted}>
-            Вы управляете учётками администраторов школы. Внутреннюю работу школы (журнал, оценки, пользователи) ведут они сами.
-          </p>
-
-          {adminErr && <p className={styles.err}>{adminErr}</p>}
-
-          {adminCred && (
-            <div className={`${styles.card} ${styles.cardOk}`}>
-              <b>Пароль выдан для {adminCred.login}</b>
-              <p>
-                Временный пароль: <code>{adminCred.temporary_password}</code> — передайте администратору, он сменит его при входе.
-              </p>
+      {/* DASHBOARD */}
+      {section === "dashboard" && (
+        <>
+          {stats ? (
+            <div className={c.kpiGrid}>
+              <Kpi v={`${stats.schools_online} / ${stats.schools_total}`} l="Школ онлайн" online={stats.schools_online > 0} />
+              <Kpi v={stats.students} l="Учеников" />
+              <Kpi v={stats.teachers} l="Учителей" />
+              <Kpi v={stats.parents} l="Родителей" />
+              <Kpi v={stats.users_total} l="Всего пользователей" />
+              <Kpi v={stats.grades_total} l="Оценок" />
+              <Kpi v={stats.active_24h} l="Активны за 24ч" />
+            </div>
+          ) : <p className={c.muted}>Загрузка статистики…</p>}
+          {billing && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Подписка</h2>
+              <p className={c.muted}>План <b style={{ color: "var(--text-primary)" }}>{billing.plan}</b> · школы <b style={{ color: "var(--text-primary)" }}>{billing.schools_used} / {billing.school_limit}</b> · подписка <b style={{ color: "var(--text-primary)" }}>{billing.subscription?.status}</b>{billing.subscription?.days_left != null && <> · осталось дней <b style={{ color: "var(--text-primary)" }}>{billing.subscription.days_left}</b></>}</p>
             </div>
           )}
-
-          <table className={styles.tbl}>
-            <thead>
-              <tr>
-                <th>Логин</th>
-                <th>Имя</th>
-                <th>Активен</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {admins?.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.login}</td>
-                  <td>{a.full_name || "—"}</td>
-                  <td>{a.is_active ? "да" : "нет"}</td>
-                  <td>
-                    <button className={styles.btnGhost} disabled={adminBusy} onClick={() => resetAdmin(a.id)}>
-                      Сбросить пароль
-                    </button>{" "}
-                    <button className={styles.btnGhost} disabled={adminBusy} onClick={() => toggleAdminActive(a)}>
-                      {a.is_active ? "Деактивировать" : "Активировать"}
-                    </button>{" "}
-                    <button className={styles.btnGhost} disabled={adminBusy} onClick={() => removeAdmin(a.id, a.login)}>
-                      Удалить
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {admins && admins.length === 0 && <p className={styles.muted}>Пока нет администраторов.</p>}
-          {!admins && !adminErr && <p className={styles.muted}>Загрузка…</p>}
-
-          <form onSubmit={addAdmin} className={styles.form} style={{ marginTop: 16 }}>
-            <h3 className={styles.h2}>Добавить администратора</h3>
-            <label className={styles.label}>
-              Email
-              <input className={styles.input} value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} placeholder="zavuch@school.ru" required />
-            </label>
-            <label className={styles.label}>
-              Имя (необязательно)
-              <input className={styles.input} value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} placeholder="Иван Петров" />
-            </label>
-            <button className={styles.btn} disabled={adminBusy}>
-              {adminBusy ? "…" : "Добавить администратора"}
-            </button>
-          </form>
-        </div>
+          {stats && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>По школам</h2>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead><tr><th>Школа</th><th>Онлайн</th><th>Ученики</th><th>Учителя</th><th>Ср. балл</th><th>Активны 24ч</th></tr></thead>
+                  <tbody>{stats.schools?.map((s: any) => (<tr key={s.id}><td><b>{s.name}</b><br /><span className={c.muted}>{s.slug}</span></td><td><span className={s.online ? c.dotOnline : c.dotOffline}>●</span></td><td>{s.students}</td><td>{s.teachers}</td><td>{s.avg_grade ?? "—"}</td><td>{s.active_24h}</td></tr>))}</tbody>
+                </table>
+                {stats.schools?.length === 0 && <p className={styles.emptyState}>Нет школ.</p>}
+              </div>
+            </div>
+          )}
+        </>
       )}
+
+      {/* SCHOOLS */}
+      {section === "schools" && (
+        <>
+          <p className={c.muted} style={{ marginBottom: 14 }}>Вы управляете школами и их администраторами. Каждая школа — изолированный стек (свой контейнер и база). Внутреннюю работу школы (журнал, оценки) ведёт администратор школы.</p>
+          {created && (
+            <div className={`${styles.card} ${c.okCard}`}>
+              <b>Школа создана: {created.school?.slug}</b>
+              {created.school_admin ? <p>Администратор: <code className={styles.code}>{created.school_admin.login}</code> · временный пароль: <code className={styles.code}>{created.school_admin.temporary_password}</code><br /><span className={c.muted}>Адрес: {created.host}</span></p> : <p className={c.muted}>Админ школы не создан (не указан email).</p>}
+            </div>
+          )}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Создать школу</h2>
+            <form onSubmit={createSchool} className={styles.form}>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}><label className={styles.label}>Slug (поддомен)</label><input className={styles.input} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="gimnazia5" required /></div>
+                <div className={styles.formGroup}><label className={styles.label}>Название</label><input className={styles.input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Гимназия №5" required /></div>
+              </div>
+              <div className={styles.formGroup}><label className={styles.label}>Email администратора школы</label><input className={styles.input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="director@gimnazia5.ru" /></div>
+              <div className={styles.formActions}><button className={styles.submitBtn} disabled={creating || delinquent}>{creating ? "Создаётся (поднимается стек)…" : "Создать школу"}</button></div>
+            </form>
+          </div>
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Школы</h2>
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead><tr><th>Школа</th><th>Статус</th><th>Ученики</th><th>Онлайн</th><th>Версия</th><th>Действия</th></tr></thead>
+                <tbody>
+                  {schools?.map((s) => {
+                    const st = statuses[s.id];
+                    const canUpdate = st?.update_available && s.status === "active";
+                    return (
+                      <tr key={s.id}>
+                        <td><b>{s.name}</b><br /><span className={c.muted}>{s.slug}</span></td>
+                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
+                        <td>{statById[s.id]?.students ?? "—"}</td>
+                        <td><span className={statById[s.id]?.online ? c.dotOnline : c.dotOffline}>●</span></td>
+                        <td><code className={styles.code}>{s.release_tag || "—"}</code></td>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <button className={styles.actionBtn} disabled={busyId === s.id} onClick={() => openAdmins(s)}>Админы</button>{" "}
+                          <button className={styles.actionBtn} disabled={busyId === s.id} onClick={() => openDomains(s)}>Домены</button>{" "}
+                          {canUpdate && <><button className={styles.actionBtn} disabled={busyId === s.id || delinquent} title={st?.changelog || ""} onClick={() => updateSchool(s.id)}>{busyId === s.id ? "…" : `Обновить → ${st.latest_version}`}</button>{" "}</>}
+                          <button className={styles.actionBtn} disabled={busyId === s.id || !["active", "suspended"].includes(s.status)} onClick={() => toggleSuspend(s)}>{s.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
+                          <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busyId === s.id} onClick={() => removeSchool(s.id, s.slug)}>Удал.</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {schools && schools.length === 0 && <p className={styles.emptyState}>Пока нет школ — создайте первую.</p>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* BILLING */}
+      {section === "billing" && (
+        billing ? (
+          <>
+            <div className={c.kpiGrid}>
+              <Kpi v={billing.plan} l={`План (${billing.price_rub_month} ₽/мес)`} />
+              <Kpi v={`${billing.schools_used} / ${billing.school_limit}`} l="Школ (исп./лимит)" />
+              <Kpi v={billing.subscription?.status} l="Подписка" />
+              <Kpi v={billing.subscription?.days_left ?? "—"} l="Дней до конца" />
+            </div>
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Подписка</h2>
+              <p className={c.muted}>Тариф и оплата управляются на стороне платформы. {billing.subscription?.paid_until ? <>Оплачено до: <b style={{ color: "var(--text-primary)" }}>{new Date(billing.subscription.paid_until).toLocaleDateString()}</b>.</> : billing.subscription?.trial_ends_at ? <>Пробный период до: <b style={{ color: "var(--text-primary)" }}>{new Date(billing.subscription.trial_ends_at).toLocaleDateString()}</b>.</> : null} Чтобы сменить план или продлить — обратитесь к администрации платформы.</p>
+            </div>
+          </>
+        ) : <p className={c.muted}>Загрузка…</p>
+      )}
+
+      {/* ADMINS MODAL */}
+      {adminsFor && (
+        <Modal title={`Администраторы школы «${adminsFor.name}»`} onClose={() => setAdminsFor(null)} width={700}>
+          <p className={c.muted}>Вы управляете учётками администраторов школы. Внутреннюю работу школы они ведут сами.</p>
+          {adminCred && <div className={`${styles.card} ${c.okCard}`}><b>Пароль выдан для {adminCred.login}</b><p>Временный пароль: <code className={styles.code}>{adminCred.temporary_password}</code> — передайте администратору.</p></div>}
+          <div className={styles.tableContainer}>
+            <table className={styles.table}>
+              <thead><tr><th>Логин</th><th>Имя</th><th>Активен</th><th>Действия</th></tr></thead>
+              <tbody>{admins?.map((a) => (<tr key={a.id}><td>{a.login}</td><td>{a.full_name || "—"}</td><td>{a.is_active ? "да" : "нет"}</td>
+                <td style={{ whiteSpace: "nowrap" }}><button className={styles.actionBtn} disabled={adminBusy} onClick={() => resetAdmin(a.id)}>Сбросить пароль</button>{" "}<button className={styles.actionBtn} disabled={adminBusy} onClick={() => toggleAdmin(a)}>{a.is_active ? "Деактив." : "Актив."}</button>{" "}<button className={`${styles.actionBtn} ${styles.danger}`} disabled={adminBusy} onClick={() => removeAdmin(a.id, a.login)}>Удал.</button></td></tr>))}</tbody>
+            </table>
+            {admins && admins.length === 0 && <p className={styles.emptyState}>Пока нет администраторов.</p>}
+            {!admins && <p className={c.muted}>Загрузка…</p>}
+          </div>
+          <form onSubmit={addAdmin} className={styles.form} style={{ marginTop: 14 }}>
+            <h3 className={styles.cardTitle}>Добавить администратора</h3>
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}><label className={styles.label}>Email</label><input className={styles.input} value={newAdmin.email} onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} placeholder="zavuch@school.ru" required /></div>
+              <div className={styles.formGroup}><label className={styles.label}>Имя</label><input className={styles.input} value={newAdmin.name} onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })} placeholder="Иван Петров" /></div>
+            </div>
+            <div className={styles.formActions}><button className={styles.submitBtn} disabled={adminBusy}>Добавить администратора</button></div>
+          </form>
+        </Modal>
+      )}
+
+      {/* DOMAINS MODAL */}
+      {domainsFor && (
+        <Modal title={`Домены школы «${domainsFor.name}»`} onClose={() => setDomainsFor(null)}>
+          <p className={c.muted}>Кастомные домены школы. После привязки направьте DNS этого домена на сервер — TLS выпустится автоматически.</p>
+          <div className={styles.tableContainer}>
+            <table className={styles.table}>
+              <thead><tr><th>Домен</th><th>Тип</th><th>Статус</th><th></th></tr></thead>
+              <tbody>{domains?.map((d) => (<tr key={d.id}><td>{d.domain}</td><td>{d.type}</td><td><span className={statusBadge(d.status)}>{d.status}</span></td><td>{d.type === "custom" && <button className={`${styles.actionBtn} ${styles.danger}`} disabled={adminBusy} onClick={() => delDomain(d.id)}>Отвязать</button>}</td></tr>))}</tbody>
+            </table>
+            {domains && domains.length === 0 && <p className={styles.emptyState}>Доменов пока нет.</p>}
+          </div>
+          <form onSubmit={addDomain} className={styles.form} style={{ marginTop: 14 }}>
+            <div className={styles.formGroup}><label className={styles.label}>Новый домен</label><input className={styles.input} value={newDomain} onChange={(e) => setNewDomain(e.target.value)} placeholder="school.example.ru" required /></div>
+            <div className={styles.formActions}><button className={styles.submitBtn} disabled={adminBusy}>Привязать домен</button></div>
+          </form>
+        </Modal>
+      )}
+    </ConsoleShell>
+  );
+}
+
+function Kpi({ v, l, online }: { v: React.ReactNode; l: string; online?: boolean }) {
+  return (
+    <div className={c.kpiCard}>
+      <div className={c.kpiVal}>{online !== undefined ? <span className={online ? c.dotOnline : c.dotOffline}>{v}</span> : v}</div>
+      <div className={c.kpiLabel}>{l}</div>
     </div>
   );
 }
