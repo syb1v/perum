@@ -1,6 +1,6 @@
 /* ===== TypeScript types for ПЭРУМ ===== */
 
-export type UserRole = 'student' | 'teacher' | 'class_teacher' | 'admin' | 'homeroom_teacher' | 'school_admin' | 'system_admin' | 'parent';
+export type UserRole = 'student' | 'teacher' | 'class_teacher' | 'admin' | 'homeroom_teacher' | 'school_admin' | 'org_admin' | 'director' | 'parent';
 
 // ==========================================
 // Админ-панель

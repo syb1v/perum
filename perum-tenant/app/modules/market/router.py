@@ -6,16 +6,35 @@ user; purchases act on the caller's own balance and inventory.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+import os
+import re
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import User
 from app.modules.market import service
+from app.modules.market.admin import UPLOAD_DIR
 from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
+
+_SAFE_IMG = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+@router.get("/images/{filename}")
+async def market_image(filename: str):
+    """Публичная отдача картинок товаров: тег <img> не шлёт Bearer, поэтому без
+    auth. Путь под /api → Caddy маршрутит в стек школы. Защита от path traversal."""
+    if not _SAFE_IMG.match(filename) or "/" in filename or ".." in filename:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "bad filename")
+    path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(path):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+    return FileResponse(path)
 
 
 async def _school(user: User, db: AsyncSession) -> int:

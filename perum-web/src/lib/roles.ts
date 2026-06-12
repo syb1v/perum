@@ -6,7 +6,6 @@
  */
 
 export const ROLES = {
-    SYSTEM_ADMIN: 'system_admin',
     ORG_ADMIN: 'org_admin',
     ADMIN: 'admin',
     SCHOOL_ADMIN: 'school_admin',
@@ -25,7 +24,6 @@ export const ADMIN_ROLES: readonly Role[] = [
     ROLES.ADMIN,
     ROLES.SCHOOL_ADMIN,
     ROLES.DIRECTOR,
-    ROLES.SYSTEM_ADMIN,
 ];
 
 export const TEACHER_ROLES: readonly Role[] = [
@@ -41,7 +39,6 @@ export const STAFF_ROLES: readonly Role[] = [...ADMIN_ROLES, ...TEACHER_ROLES];
  * Возвращает clean-URL, middleware перепишет на внутренний роут.
  */
 export const ROLE_DASHBOARDS: Record<Role, string> = {
-    [ROLES.SYSTEM_ADMIN]: '/system-admin',
     [ROLES.ORG_ADMIN]: '/admin',
     [ROLES.ADMIN]: '/admin',
     [ROLES.SCHOOL_ADMIN]: '/admin',
@@ -77,7 +74,6 @@ export function isStaff(role: string | null | undefined): boolean {
 export function canAccessPath(role: string | null | undefined, pathname: string): boolean {
     if (!role) return false;
 
-    if (pathname.startsWith('/system-admin')) return role === ROLES.SYSTEM_ADMIN;
     if (pathname.startsWith('/admin')) return isAdmin(role);
     if (pathname.startsWith('/teacher')) return isTeacher(role) || isAdmin(role);
     if (pathname.startsWith('/student')) return role === ROLES.STUDENT;

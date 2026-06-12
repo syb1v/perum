@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import hash_password
-from app.models import EnrollmentToken, Invoice, OrgAdmin, Organization, OrganizationSecret, School
+from app.models import EnrollmentToken, Invoice, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
 from app.services.billing import (
     PLANS,
     billing_state,
@@ -38,7 +38,7 @@ from app.schemas.organization import (
     ProvisionResult,
 )
 from app.services.school_provisioner import deprovision_school, suspend_school, unsuspend_school
-from app.services.stats import rollup, schools_with_metrics
+from app.services.stats import rollup, school_stat, schools_with_metrics
 from app.services.tenant_provisioner import (
     ProvisioningError,
     ProvisionOutcome,
@@ -262,6 +262,35 @@ async def unsuspend_organization(slug: str, db: AsyncSession = Depends(get_db)) 
         raise HTTPException(status.HTTP_409_CONFLICT, f"организацию в статусе '{org.status}' нельзя разморозить")
     await _resume_org(org, db)
     return {"slug": org.slug, "status": org.status}
+
+
+@router.get("/{slug}/schools")
+async def organization_schools(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Сквозной список ВСЕХ школ организации для platform_admin (включая archived).
+    Не ломает org-скоуп: живёт под /api/organizations (require_platform_admin),
+    роутер /api/schools (org_admin) не трогается."""
+    from app.routers.schools import _school_dict
+
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    rows = (await db.execute(select(School).where(School.org_id == org.id).order_by(School.id))).scalars().all()
+    return {"org_slug": org.slug, "schools": [_school_dict(s) for s in rows]}
+
+
+@router.get("/{slug}/schools/{school_id}")
+async def organization_school(slug: str, school_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """Карточка одной школы любой орг для platform_admin: метаданные + телеметрия."""
+    from app.routers.schools import _school_dict
+
+    org = await _get_org(slug, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    school = await db.get(School, school_id)
+    if school is None or school.org_id != org.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "school not found")
+    metric = await db.get(SchoolMetric, school.id)
+    return {**_school_dict(school), "stat": school_stat(school, metric, datetime.utcnow())}
 
 
 @router.get("/{slug}/stats")

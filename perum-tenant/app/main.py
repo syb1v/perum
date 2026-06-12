@@ -58,6 +58,7 @@ from app.modules.exchange.router import router as exchange_router  # noqa: E402
 
 from app.modules.journal.router import router as journal_router  # noqa: E402
 from app.modules.leaderboard.router import router as leaderboard_router  # noqa: E402
+from app.modules.market.admin import router as market_admin_router  # noqa: E402
 from app.modules.market.router import router as market_router  # noqa: E402
 from app.modules.misc.router import admin_router as misc_admin_router  # noqa: E402
 from app.modules.misc.router import user_router as misc_user_router  # noqa: E402
@@ -81,6 +82,7 @@ app.include_router(student_router, prefix="/api/student", tags=["student"])
 app.include_router(parent_router, prefix="/api/parent", tags=["parent"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["leaderboard"])
 app.include_router(market_router, prefix="/api/market", tags=["market"])
+app.include_router(market_admin_router, prefix="/api/admin/market", tags=["market-admin"])
 app.include_router(quests_router, prefix="/api/quests", tags=["quests"])
 app.include_router(exchange_router, prefix="/api/exchange", tags=["exchange"])
 app.include_router(news_router, prefix="/api/news", tags=["news"])

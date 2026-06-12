@@ -51,6 +51,13 @@
 - UI: выбор плана при создании; биллинг-панель платформы (план, смена, «отметить оплату», счета, «проверить просрочки»); биллинг-строка + баннер просрочки в орг-консоли.
 - Hardening (по адверсариальному ревью): **оплата авто-размораживает** организацию, приостановленную за неоплату (цикл «просрочил→оплатил→работаю» замыкается); предупреждение о понижении плана теперь реально показывается (читалось из ответа PUT, а не GET); оплата бесплатного плана отклоняется (400); `months` ограничен 1..120; `get_or_create_subscription` устойчив к гонке двойного создания; панель биллинга не виснет на «Загрузке…» при ошибке.
 
+### Полнота R6 (геймификация) и зачистка мёртвого кода
+- **Admin-CRUD квестов** (`GET/POST/PUT/DELETE /api/quests`, под `require_admin`, скоуп школы) — раньше QuestManagement звал несуществующий бэкенд.
+- **Admin-биржа** (`/api/exchange/admin/*`: settings get/put, windows list/toggle, investments list/refund/refund-all, logs) — под `require_admin`.
+- **Admin-маркет** (`/api/admin/market/*`: items CRUD + archive/restore, загрузка картинки, transactions, inventory-stats) + публичная отдача картинок `/api/market/images/{file}` (через `/api`, защита от traversal). Пулы апгрейд-ассетов/бандлов подарков и ZIP-загрузка пока НЕ реализованы (нужны новые модели) — основной маркет функционален.
+- **Удалён мёртвый сегмент `/system-admin`** (звал несуществующий `/api/system/*`) и роль `system_admin` вычищена из roles/middleware/Header/AuthContext/types.
+- **Сквозной доступ platform_admin к школам:** `GET /api/organizations/{slug}/schools` и `/schools/{id}` (метаданные + телеметрия) — org-скоуп org_admin не затронут.
+
 ### Прочее (зачистка по аудиту)
 - Tenant: строгая проверка скоупа в `user_admin._get_scoped` (раньше пропускала `school_id IS NULL`); убран мёртвый `org_admin` из `_is_admin` в journal/teacher (латентный риск изоляции).
 

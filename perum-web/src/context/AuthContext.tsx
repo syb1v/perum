@@ -99,9 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
 
                     if (currentPath === '/dashboard') {
-                        if (userData.role === ROLES.SYSTEM_ADMIN) {
-                            router.replace('/system-admin');
-                        } else if (isAdmin(userData.role)) {
+                        if (isAdmin(userData.role)) {
                             router.replace('/admin');
                         }
                     }

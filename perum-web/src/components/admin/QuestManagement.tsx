@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import api from '@/lib/apiClient';
 import styles from '@/app/admin/page.module.css';
@@ -28,13 +27,11 @@ interface AdminQuest {
 }
 
 export default function QuestManagement() {
-    const { user } = useAuth();
     const { showSuccess, showError } = useToast();
     const [quests, setQuests] = useState<AdminQuest[]>([]);
     const [stats, setStats] = useState<QuestStats>({ total: 0, active: 0, taken: 0, completion_rate: 0 });
-    const [filter, setFilter] = useState('all'); 
+    const [filter, setFilter] = useState('all');
     const [loading, setLoading] = useState(false);
-    const [schools, setSchools] = useState<{ id: number; name: string }[]>([]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingQuest, setEditingQuest] = useState<AdminQuest | null>(null);
@@ -45,10 +42,7 @@ export default function QuestManagement() {
         type: 'daily_login',
         target: 1,
         expires_at: '',
-        school_id: '' as string
     });
-
-    const isSystemAdmin = user?.role === 'system_admin';
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -76,23 +70,9 @@ export default function QuestManagement() {
         }
     }, [filter, showError]);
 
-    const fetchSchools = useCallback(async () => {
-        if (!isSystemAdmin) return;
-        try {
-            const res = await api.get<{ id: number; name: string }[]>('/admin/system/schools');
-            setSchools(Array.isArray(res) ? res : []);
-        } catch (e) {
-            console.error('Failed to load schools', e);
-        }
-    }, [isSystemAdmin]);
-
     useEffect(() => {
         fetchData();
     }, [fetchData]);
-
-    useEffect(() => {
-        fetchSchools();
-    }, [fetchSchools]);
 
     const handleOpenModal = (quest: AdminQuest | null = null) => {
         setEditingQuest(quest);
@@ -114,7 +94,6 @@ export default function QuestManagement() {
                 type: quest.quest_type || 'daily_login',
                 target: parsedTarget,
                 expires_at: '',
-                school_id: quest.school_id != null ? String(quest.school_id) : ''
             });
         } else {
             setFormData({
@@ -124,7 +103,6 @@ export default function QuestManagement() {
                 type: 'daily_login',
                 target: 1,
                 expires_at: '',
-                school_id: ''
             });
         }
         setIsModalOpen(true);
@@ -144,10 +122,6 @@ export default function QuestManagement() {
             conditions: JSON.stringify({ target_count: formData.target }),
             status: 'available'
         };
-
-        if (isSystemAdmin && formData.school_id) {
-            payload.school_id = parseInt(formData.school_id);
-        }
 
         try {
             if (editingQuest) {
@@ -257,21 +231,6 @@ export default function QuestManagement() {
                             <option value="raise_avg">Повышение среднего балла</option>
                         </select>
                     </div>
-
-                    {isSystemAdmin && (
-                        <div className={styles.formGroup}>
-                            <label>Школа (оставьте пустым для всех школ)</label>
-                            <select
-                                value={formData.school_id}
-                                onChange={(e) => setFormData({ ...formData, school_id: e.target.value })}
-                            >
-                                <option value="">Все школы (глобально)</option>
-                                {schools.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
 
                     <div className={styles.registerActions} style={{ marginTop: '24px' }}>
                         <button className={styles.btnSecondary} onClick={() => setIsModalOpen(false)}>Отмена</button>

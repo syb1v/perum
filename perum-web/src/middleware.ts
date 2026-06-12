@@ -20,7 +20,6 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
         class_teacher: '/teacher',
         admin: '/admin',
         school_admin: '/admin',
-        system_admin: '/system-admin',
         parent: '/parent',
     },
     '/profile': {
@@ -30,7 +29,6 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
         class_teacher: '/teacher/profile',
         admin: '/admin',
         school_admin: '/admin',
-        system_admin: '/system-admin',
         parent: '/parent',
     },
 };
@@ -197,11 +195,6 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith('/admin')) {
         if (!role) return redirectToLogin(request);
         if (!isAdmin(role)) return redirectTo(request, '/dashboard');
-    }
-
-    if (pathname.startsWith('/system-admin')) {
-        if (!role) return redirectToLogin(request);
-        if (role !== ROLES.SYSTEM_ADMIN) return redirectTo(request, '/dashboard');
     }
 
     if (pathname.startsWith('/parent')) {
