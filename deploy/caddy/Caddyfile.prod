@@ -20,8 +20,13 @@
 
 # Корневой домен ЯДРА (апекс) — ЛЕНДИНГ платформы. /api → ядро (форма «Связаться»
 # = публичный POST /api/contact), остальное → веб (маркетинговая страница; middleware
-# рендерит лендинг только на апексе). Обычный ACME-сертификат (НЕ on-demand).
+# рендерит лендинг только на апексе). on_demand TLS (как admin/wildcard): берёт
+# существующий серт / выпускает по запросу через validate-domain (host == base) —
+# не упирается в rate-limit managed-ACME при «грязном» хранилище сертов.
 {$PERUM_BASE_DOMAIN} {
+    tls {
+        on_demand
+    }
     # Приём телеметрии — только по внутренней docker-сети (школы ходят в ядро
     # напрямую через CONTROL_PLANE_URL), наружу закрыт.
     @telemetry path /api/telemetry /api/telemetry/*
@@ -40,6 +45,9 @@
 
 # Портал платформы и орг: /api → ядро, остальное (UI) → веб.
 admin.{$PERUM_BASE_DOMAIN} {
+    tls {
+        on_demand
+    }
     @telemetry path /api/telemetry /api/telemetry/*
     handle @telemetry {
         respond "not found" 404
