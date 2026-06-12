@@ -30,6 +30,8 @@ yarn-error.log*
 # Prod env carries real secrets (SECRET_KEY, CONTROL_DB_PASSWORD, ...). NEVER commit.
 .env.prod
 deploy/.env.prod
+# Bearer-токен для скрейпа /metrics (создаётся на сервере из METRICS_TOKEN).
+deploy/observability/metrics_token
 *.pem
 *.key
 !**/*.key.example

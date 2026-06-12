@@ -116,6 +116,9 @@ services:
       - "9090:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # Bearer-токен для скрейпа /metrics (вне VCS; создаётся на сервере из
+      # METRICS_TOKEN). Файл может отсутствовать в dev — тогда токен пустой.
+      - ./observability/metrics_token:/etc/prometheus/metrics_token:ro
       - prometheus_data:/prometheus
     networks:
       - perum_internal

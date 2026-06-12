@@ -6,10 +6,13 @@ scrape_configs:
   # Ядро PERUM — метрики на /metrics (напрямую по внутренней сети, минуя Caddy).
   - job_name: perum_core
     metrics_path: /metrics
-    # Если в ядре задан METRICS_TOKEN — раскомментируйте (защита /metrics):
-    # authorization:
-    #   type: Bearer
-    #   credentials: "<METRICS_TOKEN>"
+    # /metrics защищён METRICS_TOKEN. Токен читается из файла (вне VCS), который
+    # монтируется в контейнер из deploy/observability/metrics_token (gitignored,
+    # создаётся на сервере из METRICS_TOKEN в .env.prod). Если токен в ядре пуст —
+    # файл можно не создавать, авторизация ниже просто не сработает (Bearer "").
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token
     static_configs:
       - targets: ["perum_core:3000"]
         labels:
