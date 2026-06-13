@@ -1,41 +1,77 @@
-name: Release (build & push images)
+name: Release (detect changes, build & push, register tenant release)
 
-# Публикация образов в GHCR по git-тегу vX.Y.Z. Затем platform_admin публикует
-# релиз в ядре (POST /api/releases с image=ghcr.io/<owner>/perum-tenant:X.Y.Z),
-# и организации обновляют школы «по кнопке» (OTA). См. docs/RUNBOOK.md.
+# Авто-релизы ПО КОМПОНЕНТАМ. На push в main определяется, ЧТО реально изменилось
+# (perum-core / perum-tenant / perum-web), и собираются + пушатся в GHCR ТОЛЬКО
+# изменённые образы (тег git-<sha> + latest). Так фронт, ядро и тенант обновляются
+# независимо, и образ появляется ТОЛЬКО при реальном изменении кода.
+#
+# Для perum-tenant дополнительно: авто-changelog из git log + регистрация релиза в
+# ядре (POST /api/ci/release), чтобы организации увидели обновление «по кнопке».
+# Ядро отклонит релиз, чей образ совпадает с текущим → «пустой» OTA невозможен.
+# Регистрация включается, только если задана переменная репозитория CORE_URL и
+# секрет RELEASE_PUBLISH_TOKEN. См. docs/RELEASING.md.
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch: {}
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build-push:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core: ${{ steps.filter.outputs.core }}
+      tenant: ${{ steps.filter.outputs.tenant }}
+      web: ${{ steps.filter.outputs.web }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            core:
+              - 'perum-core/**'
+            tenant:
+              - 'perum-tenant/**'
+            web:
+              - 'perum-web/**'
+
+  build:
+    needs: changes
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     strategy:
+      fail-fast: false
       matrix:
         include:
           - image: perum-core
             context: perum-core
+            changed: ${{ needs.changes.outputs.core }}
           - image: perum-tenant
             context: perum-tenant
+            changed: ${{ needs.changes.outputs.tenant }}
           - image: perum-web
             context: perum-web
+            changed: ${{ needs.changes.outputs.web }}
     steps:
-      - uses: actions/checkout@v4
+      - if: matrix.changed == 'true'
+        uses: actions/checkout@v4
 
-      - name: Derive version from tag
-        id: ver
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+      - name: Derive image tag from commit
+        if: matrix.changed == 'true'
+        id: meta
+        run: echo "tag=git-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - if: matrix.changed == 'true'
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: matrix.changed == 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -43,10 +79,59 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push ${{ matrix.image }}
+        if: matrix.changed == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           push: true
+          # NEXT_PUBLIC_BASE_DOMAIN вшивается только в perum-web; для остальных
+          # образов build-arg игнорируется. Домен берётся из переменной репозитория
+          # PUBLIC_BASE_DOMAIN (если не задана — дефолт из Dockerfile).
+          build-args: |
+            NEXT_PUBLIC_BASE_DOMAIN=${{ vars.PUBLIC_BASE_DOMAIN }}
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.ver.outputs.version }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.meta.outputs.tag }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
+
+  tenant-release:
+    # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.
+    needs: [changes, build]
+    if: needs.changes.outputs.tenant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # нужен git-лог для changelog
+
+      - name: Build changelog from tenant commits
+        id: cl
+        run: |
+          TAG="git-${GITHUB_SHA::12}"
+          RANGE="${{ github.event.before }}..${{ github.sha }}"
+          if ! git rev-parse "${{ github.event.before }}" >/dev/null 2>&1; then RANGE="HEAD~20..HEAD"; fi
+          CHANGELOG=$(git log --no-merges --pretty=format:'- %s' $RANGE -- perum-tenant | head -40)
+          [ -z "$CHANGELOG" ] && CHANGELOG="- обновление образа тенанта ($TAG)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          {
+            echo "changelog<<CL_EOF"
+            echo "$CHANGELOG"
+            echo "CL_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Register tenant release in core (if configured)
+        if: ${{ vars.CORE_URL != '' }}
+        env:
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/perum-tenant:${{ steps.cl.outputs.tag }}
+          TAG: ${{ steps.cl.outputs.tag }}
+          CHANGELOG: ${{ steps.cl.outputs.changelog }}
+          SHA: ${{ github.sha }}
+        run: |
+          jq -n --arg v "$TAG" --arg img "$IMAGE" --arg cl "$CHANGELOG" --arg sha "$SHA" \
+            '{version_tag:$v, image:$img, changelog:$cl, source_commit:$sha, make_current:true}' \
+          | curl -fsS -X POST "${CORE_URL%/}/api/ci/release" \
+              -H "Authorization: Bearer ${TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data @- && echo "tenant release registered: $TAG" \
+          || echo "release registration skipped/failed (core unreachable or no real change)"

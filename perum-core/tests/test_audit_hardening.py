@@ -32,6 +32,17 @@ def test_set_plan_requires_platform_admin():
     assert client.put("/api/organizations/acme/billing", json={"plan": "basic"}).status_code == 401
 
 
+def test_releases_publish_requires_platform_admin():
+    assert client.post("/api/releases", json={"version_tag": "9.9.9"}).status_code == 401
+
+
+def test_ci_release_disabled_without_token():
+    # RELEASE_PUBLISH_TOKEN не задан в тестовом окружении → CI-эндпоинт выключен (503),
+    # а не открыт. Само наличие маршрута подтверждает монтирование.
+    r = client.post("/api/ci/release", json={"version_tag": "9.9.9", "image": "x"})
+    assert r.status_code == 503
+
+
 def test_school_purge_requires_org_admin():
     # purge/confirm обрабатываются ПОСЛЕ auth — без токена остаётся 401.
     assert client.delete("/api/schools/1?purge=true&confirm=foo").status_code == 401

@@ -218,9 +218,24 @@ export default function OrgConsole() {
       )}
 
       {/* SCHOOLS */}
-      {section === "schools" && (
+      {section === "schools" && (() => {
+        // Все школы обновляются на один текущий релиз → ченджлог общий. Берём его
+        // из первой школы, где доступно обновление, и показываем баннером.
+        const upd = (schools || []).find((s) => statuses[s.id]?.update_available && s.status === "active");
+        const updInfo = upd ? statuses[upd.id] : null;
+        const updCount = (schools || []).filter((s) => statuses[s.id]?.update_available && s.status === "active").length;
+        return (
         <>
           <p className={c.muted} style={{ marginBottom: 14 }}>Вы управляете школами и их администраторами. Каждая школа — изолированный стек (свой контейнер и база). Внутреннюю работу школы (журнал, оценки) ведёт администратор школы.</p>
+          {updInfo && (
+            <div className={`${styles.card}`} style={{ borderColor: "var(--accent-primary)" }}>
+              <h2 className={styles.cardTitle}>Доступно обновление → {updInfo.latest_version || "новая версия"}</h2>
+              <p className={c.muted}>Готово к установке для {updCount} школ(ы). Обновление volume-preserving (данные сохраняются), при сбое — авто-откат. Жмите «Обновить» у нужной школы.</p>
+              {updInfo.changelog && (
+                <pre style={{ whiteSpace: "pre-wrap", margin: "8px 0 0", fontSize: "0.85rem", color: "var(--text-secondary)" }}>{updInfo.changelog}</pre>
+              )}
+            </div>
+          )}
           {created && (
             <div className={`${styles.card} ${c.okCard}`}>
               <b>Школа «{created.school?.slug}» создаётся…</b>
@@ -270,7 +285,8 @@ export default function OrgConsole() {
             </div>
           </div>
         </>
-      )}
+        );
+      })()}
 
       {/* BILLING */}
       {section === "billing" && (

@@ -392,6 +392,10 @@ class Release(Base):
     version_tag: Mapped[str] = mapped_column(String(64), nullable=False)
     image: Mapped[str | None] = mapped_column(String(255), nullable=True)
     changelog: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Git-SHA коммита, из которого CI собрал образ тенанта. Делает релиз
+    # привязанным к РЕАЛЬНОМУ изменению кода (нельзя выпустить OTA без нового
+    # коммита/образа — см. publish-гард). Пусто у ручных/легаси-релизов.
+    source_commit: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     published_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     published_by: Mapped[int | None] = mapped_column(

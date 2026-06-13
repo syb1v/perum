@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     # 0 — выключить планировщик (тогда только ручной POST /api/billing/enforce).
     BILLING_ENFORCE_INTERVAL_S: int = Field(default=3600)
 
+    # Токен для CI-публикации релизов (POST /api/ci/release). Пусто → CI-эндпоинт
+    # выключен (релизы только вручную через platform_admin). Задаётся в .env.prod
+    # и в секретах GitHub Actions (RELEASE_PUBLISH_TOKEN), чтобы пайплайн
+    # регистрировал релиз тенанта автоматически при реальном изменении кода.
+    RELEASE_PUBLISH_TOKEN: str = Field(default="")
+
     PUBLIC_BASE_DOMAIN: str = Field(
         default="perum.local",
         description="Used when composing org subdomains (acme + perum.local = acme.perum.local)",

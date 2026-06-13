@@ -363,7 +363,7 @@ export default function PlatformConsole() {
         <>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Опубликовать релиз</h2>
-            <p className={c.muted}>Релиз становится доступен организациям — они обновляют свои школы по кнопке (OTA, opt-in, volume-preserving).</p>
+            <p className={c.muted}>Релиз становится доступен организациям — они обновляют свои школы по кнопке (OTA, opt-in, volume-preserving). Обычно релиз тенанта публикует CI автоматически при реальном изменении кода (тег <code className={styles.code}>git-&lt;sha&gt;</code>, образ из GHCR). Ручная публикация ниже — резерв; ядро отклонит релиз, если образ совпадает с текущим (нет реального обновления).</p>
             <form onSubmit={publishRelease} className={styles.form}>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}><label className={styles.label}>Версия (тег)</label><input className={styles.input} value={rel.version_tag} onChange={(e) => setRel({ ...rel, version_tag: e.target.value })} placeholder="1.1.0" required /></div>
@@ -377,8 +377,8 @@ export default function PlatformConsole() {
             <h2 className={styles.cardTitle}>Релизы</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Версия</th><th>Образ</th><th>Что нового</th><th>Текущий</th><th>Опубликован</th></tr></thead>
-                <tbody>{releases?.map((r) => (<tr key={r.id}><td>{r.version_tag}</td><td><code className={styles.code}>{r.image}</code></td><td>{r.changelog || "—"}</td><td>{r.is_current ? <span className={`${styles.statusBadge} ${styles.success}`}>текущий</span> : ""}</td><td>{new Date(r.published_at).toLocaleString()}</td></tr>))}</tbody>
+                <thead><tr><th>Версия</th><th>Образ</th><th>Коммит</th><th>Что нового</th><th>Текущий</th><th>Опубликован</th></tr></thead>
+                <tbody>{releases?.map((r) => (<tr key={r.id}><td>{r.version_tag}</td><td><code className={styles.code}>{r.image}</code></td><td>{r.source_commit ? <code className={styles.code}>{String(r.source_commit).slice(0, 12)}</code> : "—"}</td><td style={{ maxWidth: 360, whiteSpace: "pre-wrap" }}>{r.changelog || "—"}</td><td>{r.is_current ? <span className={`${styles.statusBadge} ${styles.success}`}>текущий</span> : ""}</td><td>{new Date(r.published_at).toLocaleString()}</td></tr>))}</tbody>
               </table>
               {releases && releases.length === 0 && <p className={styles.emptyState}>Релизов пока нет.</p>}
             </div>

@@ -171,7 +171,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, org_self, organizations, releases, schools, stats, telemetry  # noqa: E402
+from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, org_self, organizations, releases, releases_ci, schools, stats, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -210,6 +210,9 @@ app.include_router(
     tags=["releases"],
     dependencies=[Depends(require_platform_admin)],
 )
+# CI-публикация релизов — отдельный bearer-токен (RELEASE_PUBLISH_TOKEN), НЕ
+# platform_admin. GitHub Actions регистрирует релиз тенанта при реальном изменении кода.
+app.include_router(releases_ci.router, prefix="/api/ci", tags=["ci"])
 # Школы — управляет org_admin (узел орг), скоуп по org_id из токена.
 app.include_router(
     schools.router,
