@@ -6,13 +6,24 @@ const TOKEN_KEY = "auth_token";
 
 export function getPlatformToken(): string | null {
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem(TOKEN_KEY);
+  return window.localStorage.getItem(TOKEN_KEY) || window.sessionStorage.getItem(TOKEN_KEY);
 }
-export function setPlatformToken(token: string): void {
-  window.localStorage.setItem(TOKEN_KEY, token);
+/**
+ * @param remember true → хранить в localStorage (переживает закрытие вкладки),
+ *                 false → sessionStorage (живёт только до закрытия вкладки).
+ */
+export function setPlatformToken(token: string, remember = true): void {
+  if (remember) {
+    window.localStorage.setItem(TOKEN_KEY, token);
+    window.sessionStorage.removeItem(TOKEN_KEY);
+  } else {
+    window.sessionStorage.setItem(TOKEN_KEY, token);
+    window.localStorage.removeItem(TOKEN_KEY);
+  }
 }
 export function clearPlatformToken(): void {
   window.localStorage.removeItem(TOKEN_KEY);
+  window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
 /** Декодирует payload JWT (без проверки подписи — только для UX-роутинга). */
