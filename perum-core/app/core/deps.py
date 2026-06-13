@@ -36,12 +36,12 @@ async def require_platform_admin(
     return admin
 
 
-async def require_org_admin(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
-    db: AsyncSession = Depends(get_db),
+async def _resolve_org_admin(
+    credentials: HTTPAuthorizationCredentials | None,
+    db: AsyncSession,
 ) -> OrgAdmin:
-    """Оператор узла орг. Токен несёт role=org_admin и org_id (скоуп). Управляет
-    только школами своей орг — внутрь школ не заходит."""
+    """Разобрать токен org_admin → запись (401 при отсутствии/inactive). Проверку
+    заморозки орг НЕ делает — это слой выше."""
     if credentials is None or not credentials.credentials:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing bearer token", _UNAUTH)
     try:
@@ -54,14 +54,34 @@ async def require_org_admin(
     org_admin = await db.get(OrgAdmin, int(sub)) if sub is not None else None
     if org_admin is None or not org_admin.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "org admin not found or inactive", _UNAUTH)
-    # Заморозка организации = полная блокировка её оператора (управлять нельзя,
-    # пока platform_admin не разморозит). Школы при этом тоже остановлены.
+    return org_admin
+
+
+async def require_org_admin(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> OrgAdmin:
+    """Оператор узла орг. Токен несёт role=org_admin и org_id (скоуп). Управляет
+    только школами своей орг — внутрь школ не заходит. Заморозка орг = полная
+    блокировка управления (403), пока platform_admin не разморозит."""
+    org_admin = await _resolve_org_admin(credentials, db)
     org = await db.get(Organization, org_admin.org_id)
     if org is not None and org.status == "suspended":
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "организация приостановлена — обратитесь в поддержку платформы"
         )
     return org_admin
+
+
+async def require_org_admin_billing(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> OrgAdmin:
+    """Как require_org_admin, но БЕЗ блокировки при заморозке орг — для read-only
+    просмотра биллинга. Приостановленная за неоплату орг должна видеть свой счёт,
+    чтобы оплатить (AUDIT, billing #8); управление при этом остаётся заблокировано
+    (висит на require_org_admin)."""
+    return await _resolve_org_admin(credentials, db)
 
 
 async def require_billing_ok(

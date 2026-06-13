@@ -25,6 +25,10 @@ export default function OrgConsole() {
   const [stats, setStats] = useState<any>(null);
   const [billing, setBilling] = useState<any>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Орг приостановлена за неоплату: управление заблокировано (403), но биллинг
+  // read-only доступен через /api/org/billing — показываем «оплатите» экран.
+  const [suspended, setSuspended] = useState(false);
+  const [selfBilling, setSelfBilling] = useState<any>(null);
 
   // create school
   const [form, setForm] = useState({ slug: "", name: "", email: "" });
@@ -56,6 +60,12 @@ export default function OrgConsole() {
       try { setBilling(await papi("/api/schools/billing")); } catch { /* non-fatal */ }
     } catch (e: any) {
       if (e.status === 401) { router.push("/platform/login"); return; }
+      if (e.status === 403) {
+        // Орг приостановлена: управление недоступно, но счёт показать можно.
+        setSuspended(true);
+        try { setSelfBilling(await papi("/api/org/billing")); } catch { /* non-fatal */ }
+        return;
+      }
       setErr(e.message);
     }
   }
@@ -87,9 +97,14 @@ export default function OrgConsole() {
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
   async function removeSchool(id: number, slug: string) {
-    if (!confirm(`Удалить школу «${slug}» вместе со стеком и данными? Перед удалением снимается бэкап.`)) return;
+    // Необратимое удаление: требуем ввести slug (бэкап БД и вложений снимается).
+    const typed = prompt(
+      `БЕЗВОЗВРАТНОЕ удаление школы «${slug}»: все данные стека будут стёрты (перед удалением снимается бэкап БД и вложений).\n\nДля подтверждения введите slug школы:`,
+    );
+    if (typed == null) return;
+    if (typed.trim() !== slug) { alert("slug не совпал — удаление отменено"); return; }
     setBusyId(id);
-    try { await papi(`/api/schools/${id}?purge=true`, { method: "DELETE" }); load(); }
+    try { await papi(`/api/schools/${id}?purge=true&confirm=${encodeURIComponent(slug)}`, { method: "DELETE" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
 
@@ -130,7 +145,32 @@ export default function OrgConsole() {
       onLogout={() => { clearPlatformToken(); router.push("/platform/login"); }}
     >
       {err && <p className={styles.errorBanner}>{err}</p>}
-      {delinquent && <p className={styles.errorBanner}>Подписка просрочена — создание и изменение школ заблокировано. Обратитесь в поддержку платформы для оплаты.</p>}
+      {delinquent && !suspended && <p className={styles.errorBanner}>Подписка просрочена — создание и изменение школ заблокировано. Обратитесь в поддержку платформы для оплаты.</p>}
+
+      {/* SUSPENDED: орг приостановлена за неоплату — только просмотр счёта */}
+      {suspended && (
+        <div className={styles.card}>
+          <h2 className={styles.cardTitle}>Организация приостановлена</h2>
+          <p className={styles.errorBanner} style={{ marginTop: 0 }}>
+            Доступ к управлению школами заблокирован из-за неоплаты. Школы остановлены, данные сохранены.
+          </p>
+          {selfBilling ? (
+            <>
+              <div className={c.kpiGrid}>
+                <Kpi v={selfBilling.plan} l={`План (${selfBilling.price_rub_month} ₽/мес)`} />
+                <Kpi v={`${selfBilling.outstanding_rub} ₽`} l="К оплате" />
+                <Kpi v={selfBilling.subscription?.status} l="Подписка" />
+                <Kpi v={`${selfBilling.schools_used} / ${selfBilling.school_limit}`} l="Школ" />
+              </div>
+              <p className={c.muted} style={{ marginTop: 12 }}>
+                Чтобы возобновить работу — оплатите подписку через администрацию платформы. После оплаты школы поднимутся автоматически.
+              </p>
+            </>
+          ) : <p className={c.muted}>Загрузка счёта…</p>}
+        </div>
+      )}
+
+      {!suspended && (<>
 
       {/* DASHBOARD */}
       {section === "dashboard" && (
@@ -239,6 +279,8 @@ export default function OrgConsole() {
           </>
         ) : <p className={c.muted}>Загрузка…</p>
       )}
+
+      </>)}
 
       {/* ADMINS MODAL */}
       {adminsFor && (

@@ -292,6 +292,30 @@ class DockerClient:
 
         return await asyncio.to_thread(_start)
 
+    async def backup_volume_tar(self, volume: str, image: str) -> bytes:
+        """Снять tar.gz содержимого тома (для бэкапа вложений школы перед purge).
+        Запускает одноразовый контейнер с томом, смонтированным RO в /data, и tar'ит
+        его в stdout; возвращает gzip-байты. Пустой том → валидный пустой архив."""
+
+        def _run() -> bytes:
+            # БЕЗ `|| true`: ненулевой выход tar (ошибка чтения/места/OOM) должен
+            # поднять docker.errors.ContainerError, иначе бэкап «успешен» пустым и
+            # тома снесутся с потерей вложений (AUDIT-fix review). stderr НЕ
+            # подмешиваем в stdout (нам нужен чистый gzip), но ошибку контейнер
+            # сигналит кодом возврата.
+            return self.client.containers.run(
+                image=image,
+                command=["sh", "-c", "tar czf - -C /data ."],
+                volumes={volume: {"bind": "/data", "mode": "ro"}},
+                remove=True,
+                detach=False,
+                stdout=True,
+                stderr=False,
+                network_disabled=True,
+            )
+
+        return await asyncio.to_thread(_run)
+
     async def remove_container(self, name: str) -> bool:
         """Remove a SINGLE container by name (keep volumes). Used for OTA-обновления:
         свап app-контейнера на новый образ, не трогая БД и её том."""

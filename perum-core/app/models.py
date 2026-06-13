@@ -225,6 +225,13 @@ class SchoolSecret(Base):
     db_password: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
     secret_key: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
     telemetry_token: Mapped[str] = mapped_column(EncryptedString(255), nullable=False)
+    # Отдельный токен для входящего /internal-RPC (управление учётками school_admin),
+    # чтобы он не совпадал с telemetry_token (которым тенант шлёт метрики наверх).
+    # Раньше один токен гейтил и телеметрию, и управление админами — утечка
+    # телеметрийного токена давала контроль над школой (AUDIT, isolation #6).
+    # nullable: у школ, заведённых до разведения, бэкфилится при следующем
+    # provision/update (до тех пор RPC падает обратно на telemetry_token).
+    internal_rpc_token: Mapped[str | None] = mapped_column(EncryptedString(255), nullable=True)
     redis_db_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 

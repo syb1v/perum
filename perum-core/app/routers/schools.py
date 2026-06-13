@@ -20,6 +20,7 @@ from datetime import datetime
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_billing_ok, require_org_admin
+from app.core.locks import keyed_lock, org_create_key, school_key
 from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
 from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
 from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
@@ -39,7 +40,11 @@ from app.services.tenant_provisioner import ProvisioningError
 
 logger = logging.getLogger("perum.schools")
 
-router = APIRouter()
+# Defense-in-depth (#10): гард висит на самом роутере, а не только на include_router
+# в main.py. Если kwarg при монтировании потеряют, весь жизненный цикл школ всё
+# равно останется за require_org_admin. FastAPI кеширует под-зависимость в рамках
+# запроса, поэтому повтор гарда не делает лишних обращений к БД.
+router = APIRouter(dependencies=[Depends(require_org_admin)])
 
 BLOCKING = {"active", "provisioning", "suspended"}
 
@@ -138,33 +143,40 @@ async def create_school(
     admin: OrgAdmin = Depends(require_billing_ok),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    existing = (await db.execute(select(School).where(School.slug == payload.slug))).scalar_one_or_none()
-    if existing is not None and existing.status in BLOCKING:
-        raise HTTPException(status.HTTP_409_CONFLICT, f"школа '{payload.slug}' уже существует (status={existing.status})")
+    # Лок орг делает «проверку лимита плана + вставку строки» атомарными: иначе два
+    # параллельных create могли оба пройти проверку (used<limit) до вставки и
+    # превысить оплаченный лимит (AUDIT, lifecycle-low).
+    async with keyed_lock(org_create_key(admin.org_id)):
+        existing = (await db.execute(select(School).where(School.slug == payload.slug))).scalar_one_or_none()
+        if existing is not None and existing.status in BLOCKING:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"школа '{payload.slug}' уже существует (status={existing.status})")
 
-    if existing is not None and existing.org_id == admin.org_id:
-        # Возрождение archived-школы увеличивает число активных → проверяем лимит.
-        if existing.status == "archived":
+        if existing is not None and existing.org_id == admin.org_id:
+            # Возрождение archived-школы увеличивает число активных → проверяем лимит.
+            if existing.status == "archived":
+                await _enforce_school_limit(db, admin.org_id)
+            school = existing
+            school.name = payload.name
+            school.admin_email = payload.admin_email
+        elif existing is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
+        else:
             await _enforce_school_limit(db, admin.org_id)
-        school = existing
-        school.name = payload.name
-        school.admin_email = payload.admin_email
-    elif existing is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
-    else:
-        await _enforce_school_limit(db, admin.org_id)
-        school = School(
-            org_id=admin.org_id, slug=payload.slug, name=payload.name,
-            admin_email=payload.admin_email, status="provisioning",
-        )
-        db.add(school)
-    await db.commit()
-    await db.refresh(school)
+            school = School(
+                org_id=admin.org_id, slug=payload.slug, name=payload.name,
+                admin_email=payload.admin_email, status="provisioning",
+            )
+            db.add(school)
+        await db.commit()
+        await db.refresh(school)
 
-    try:
-        outcome = await provision_school(school, db)
-    except ProvisioningError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"провижининг школы '{school.slug}' не удался: {exc}")
+    # Провижининг (длинная docker-цепочка) — под локом конкретной школы, чтобы
+    # параллельные операции над тем же стеком не интерливились.
+    async with keyed_lock(school_key(school.id)):
+        try:
+            outcome = await provision_school(school, db)
+        except ProvisioningError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"провижининг школы '{school.slug}' не удался: {exc}")
     return _result(outcome)
 
 
@@ -217,13 +229,14 @@ async def reprovision_school(school_id: int, admin: OrgAdmin = Depends(require_b
     school = await _get_school(school_id, admin, db)
     if school.status == "suspended":
         raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
-    # Возрождение archived-школы через reprovision тоже увеличивает число активных.
-    if school.status == "archived":
-        await _enforce_school_limit(db, admin.org_id)
-    try:
-        outcome = await provision_school(school, db)
-    except ProvisioningError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"reprovision школы '{school.slug}' не удался: {exc}")
+    async with keyed_lock(school_key(school.id)):
+        # Возрождение archived-школы через reprovision тоже увеличивает число активных.
+        if school.status == "archived":
+            await _enforce_school_limit(db, admin.org_id)
+        try:
+            outcome = await provision_school(school, db)
+        except ProvisioningError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"reprovision школы '{school.slug}' не удался: {exc}")
     return _result(outcome)
 
 
@@ -251,10 +264,11 @@ async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(requi
     school = await _get_school(school_id, admin, db)
     if school.status == "suspended":
         raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
-    try:
-        outcome = await update_school(school, db)
-    except ProvisioningError as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"обновление школы '{school.slug}' не удалось: {exc}")
+    async with keyed_lock(school_key(school.id)):
+        try:
+            outcome = await update_school(school, db)
+        except ProvisioningError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"обновление школы '{school.slug}' не удалось: {exc}")
     return {
         "school": _school_dict(outcome.school),
         "from_image": outcome.from_image,
@@ -291,10 +305,11 @@ async def suspend_school_endpoint(
     school = await _get_school(school_id, admin, db)
     if school.status not in ("active", "suspended"):
         raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя заморозить")
-    try:
-        await suspend_school(school, db)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось заморозить школу: {exc}")
+    async with keyed_lock(school_key(school.id)):
+        try:
+            await suspend_school(school, db)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось заморозить школу: {exc}")
     return _school_dict(school)
 
 
@@ -306,10 +321,11 @@ async def unsuspend_school_endpoint(
     school = await _get_school(school_id, admin, db)
     if school.status not in ("suspended", "active"):
         raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя разморозить")
-    try:
-        await unsuspend_school(school, db)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось разморозить школу: {exc}")
+    async with keyed_lock(school_key(school.id)):
+        try:
+            await unsuspend_school(school, db)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось разморозить школу: {exc}")
     return _school_dict(school)
 
 
@@ -338,9 +354,15 @@ async def _school_admin_rpc(method: str, school: School, db: AsyncSession, path:
     if secret is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "школа не запровижинена (нет секретов)")
     url = f"http://{school_container_name(school.slug, 'app')}:3000/internal{path}"
+    # Шлём ОБА токена: telemetry — для старого образа тенанта, internal — для нового.
+    # Тенант с заданным INTERNAL_RPC_TOKEN примет только его (изоляция, AUDIT #6).
+    headers = {"X-Telemetry-Token": secret.telemetry_token}
+    rpc_token = getattr(secret, "internal_rpc_token", None)
+    if rpc_token:
+        headers["X-Internal-Token"] = rpc_token
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.request(method, url, headers={"X-Telemetry-Token": secret.telemetry_token}, json=json)
+            resp = await client.request(method, url, headers=headers, json=json)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"школа недоступна: {exc}")
     if resp.status_code == status.HTTP_401_UNAUTHORIZED:
@@ -459,23 +481,32 @@ async def remove_domain(
 @router.delete("/{school_id}")
 async def delete_school(
     school_id: int,
-    purge: bool = Query(False, description="Также удалить запись школы + секреты"),
+    purge: bool = Query(False, description="Также удалить запись школы + секреты (НЕОБРАТИМО)"),
+    confirm: str | None = Query(None, description="Для purge: точный slug школы (защита от опечатки)"),
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     school = await _get_school(school_id, admin, db)
-    # purge=True: pg_dump → снос стека вместе с томами → удаление записи.
-    # purge=False: архивация (контейнеры долой, тома данных сохранены — обратимо).
-    try:
-        await deprovision_school(school, db, purge=purge)
-    except ProvisioningError as exc:
-        # Бэкап не удался → тома сохранены, запись НЕ удаляем (защита от потери данных).
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
-    if purge:
-        secret = await db.get(SchoolSecret, school.id)
-        if secret is not None:
-            await db.delete(secret)
-        await db.delete(school)
-        await db.commit()
-        return {"id": school_id, "purged": True}
-    return {"id": school_id, "status": school.status}
+    # purge — необратимое уничтожение томов: требуем явного подтверждения slug-ом,
+    # чтобы случайный DELETE?purge=true не стёр данные школы (AUDIT, lifecycle #3).
+    if purge and (confirm or "").strip() != school.slug:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"для безвозвратного удаления повторите slug школы в ?confirm={school.slug}",
+        )
+    async with keyed_lock(school_key(school.id)):
+        # purge=True: pg_dump + бэкап вложений → снос стека вместе с томами → удаление записи.
+        # purge=False: архивация (контейнеры долой, тома данных сохранены — обратимо).
+        try:
+            await deprovision_school(school, db, purge=purge)
+        except ProvisioningError as exc:
+            # Бэкап не удался → тома сохранены, запись НЕ удаляем (защита от потери данных).
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
+        if purge:
+            secret = await db.get(SchoolSecret, school.id)
+            if secret is not None:
+                await db.delete(secret)
+            await db.delete(school)
+            await db.commit()
+            return {"id": school_id, "purged": True}
+        return {"id": school_id, "status": school.status}

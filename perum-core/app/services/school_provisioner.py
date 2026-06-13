@@ -80,17 +80,34 @@ class SchoolProvisionOutcome:
 async def _get_or_create_secret(school: School, db: AsyncSession) -> SchoolSecret:
     existing = await db.get(SchoolSecret, school.id)
     if existing is not None:
+        # Бэкфилл отдельного RPC-токена для школ, заведённых до его появления
+        # (AUDIT, isolation #6). До бэкфилла RPC ходит по telemetry_token.
+        if not getattr(existing, "internal_rpc_token", None):
+            existing.internal_rpc_token = secrets_mod.token_urlsafe(24)
+            await db.flush()
         return existing
     secret = SchoolSecret(
         school_id=school.id,
         db_password=secrets_mod.token_urlsafe(24),
         secret_key=secrets_mod.token_urlsafe(36),
         telemetry_token=secrets_mod.token_urlsafe(24),
+        internal_rpc_token=secrets_mod.token_urlsafe(24),
         redis_db_index=school.id % REDIS_DB_COUNT,
     )
     db.add(secret)
     await db.flush()
     return secret
+
+
+def _rpc_headers(spec: StackSpec) -> dict[str, str]:
+    """Заголовки авторизации для /internal-RPC. Шлём ОБА токена (ядро знает оба):
+    telemetry — чтобы работал старый образ тенанта (проверяет только его), internal
+    — для нового образа. Тенант с заданным INTERNAL_RPC_TOKEN принимает ТОЛЬКО его
+    (telemetry на /internal не пускает → изоляция). См. perum-tenant/internal/router."""
+    h = {"X-Telemetry-Token": spec.telemetry_token}
+    if spec.internal_rpc_token:
+        h["X-Internal-Token"] = spec.internal_rpc_token
+    return h
 
 
 async def _bootstrap_admin(spec: StackSpec, admin_email: str | None) -> tuple[str | None, str | None]:
@@ -99,7 +116,7 @@ async def _bootstrap_admin(spec: StackSpec, admin_email: str | None) -> tuple[st
     url = f"http://{spec.app_container}:3000/internal/bootstrap-school-admin"
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.post(
-            url, headers={"X-Telemetry-Token": spec.telemetry_token}, json={"email": admin_email}
+            url, headers=_rpc_headers(spec), json={"email": admin_email}
         )
     if resp.status_code == 409:
         return None, None
@@ -265,6 +282,37 @@ async def backup_school_db(school: School, settings: Settings | None = None) -> 
         return None
 
 
+async def backup_school_appdata(school: School, settings: Settings | None = None) -> str | None:
+    """Бэкап тома вложений школы (appdata: файлы ДЗ и т.п.) в tar.gz перед
+    безвозвратным удалением. До этого бэкапился только pg_dump БД, а файлы при
+    purge терялись навсегда (AUDIT, lifecycle #3/partial).
+
+    Возвращает путь к архиву; None — если тома нет (вложений не было). Бросает
+    исключение, если том ЕСТЬ, но снять архив не удалось (вызывающий не сносит тома)."""
+    settings = settings or get_settings()
+    docker = get_docker_client()
+    appdata_vol = school_appdata_volume_name(school.slug)
+    if not await docker.volume_exists(appdata_vol):
+        return None  # вложений не было — бэкапить нечего
+    # postgres-образ стека уже локально присутствует и содержит tar (alpine).
+    tar_image = f"{settings.IMAGE_REGISTRY}/library/postgres:15-alpine"
+    data = await docker.backup_volume_tar(appdata_vol, tar_image)
+    # Валидируем результат: непустой и валидный gzip (magic 1f 8b). Пустой/битый
+    # вывод = сбой бэкапа → бросаем (deprovision деградирует до архивации, тома
+    # НЕ сносятся). Даже tar пустого тома даёт валидный gzip-поток (~32 байта).
+    if not data or data[:2] != b"\x1f\x8b":
+        raise ProvisioningError(
+            f"бэкап вложений школы '{school.slug}' пуст или повреждён ({len(data) if data else 0} байт)"
+        )
+    os.makedirs(settings.BACKUP_DIR, exist_ok=True)
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(settings.BACKUP_DIR, f"school_{school.slug}_appdata_{ts}.tar.gz")
+    with open(path, "wb") as fh:
+        fh.write(data)
+    logger.info("school %s: appdata backup written to %s (%d bytes)", school.slug, path, len(data))
+    return path
+
+
 async def _archive_only(school: School, db: AsyncSession, docker: DockerClient, caddy: CaddyAdmin) -> None:
     """Снять контейнеры+маршрут, СОХРАНИТЬ тома, пометить школу archived."""
     label_slug = school_label_slug(school.slug)
@@ -312,6 +360,16 @@ async def deprovision_school(school: School, db: AsyncSession, *, purge: bool = 
         raise ProvisioningError(
             "не удалось снять бэкап БД школы перед удалением — тома сохранены, "
             "школа архивирована; поднимите её (reprovision/unsuspend) и повторите удаление"
+        )
+    # Бэкап файлов-вложений (appdata) — тоже ДО сноса. Если том есть, но архив снять
+    # не удалось, не уничтожаем данные: деградируем до архивации.
+    try:
+        await backup_school_appdata(school, settings)
+    except Exception as exc:  # noqa: BLE001
+        await _archive_only(school, db, docker, caddy)
+        raise ProvisioningError(
+            f"не удалось снять бэкап вложений школы перед удалением ({exc}) — тома "
+            f"сохранены, школа архивирована; повторите удаление"
         )
     await _safe_cleanup(label_slug, docker, caddy)  # сносит контейнеры И тома
     result = await db.execute(select(SchoolDomain).where(SchoolDomain.school_id == school.id))
@@ -409,6 +467,12 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     secret = await db.get(SchoolSecret, school.id)
     if secret is None:
         raise ProvisioningError("school secret missing — школа не была запровижинена")
+    # OTA-обновление — момент бэкфилла отдельного RPC-токена для старых школ:
+    # новый app-контейнер получит INTERNAL_RPC_TOKEN в env (build_school_stack_spec).
+    if not getattr(secret, "internal_rpc_token", None):
+        secret.internal_rpc_token = secrets_mod.token_urlsafe(24)
+        await db.commit()
+        await db.refresh(secret)
     spec = build_school_stack_spec(school, secret, settings, image=to_image)
 
     school.status = "updating"

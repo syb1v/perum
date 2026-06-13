@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -40,6 +41,14 @@ async def _sync_caddy_routes() -> None:
                 .join(School, SchoolDomain.school_id == School.id)
                 .where(School.status == "active", SchoolDomain.status == "active")
             )).all()
+            # Замороженные школы: восстановить maintenance-маршрут (503), иначе после
+            # рестарта Caddy хост замороженной школы проваливался в catch-all
+            # вместо «приостановлено» (AUDIT, lifecycle #11).
+            suspended_rows = (await db.execute(
+                select(SchoolDomain, School)
+                .join(School, SchoolDomain.school_id == School.id)
+                .where(School.status == "suspended", SchoolDomain.status == "active")
+            )).all()
     except Exception as exc:  # noqa: BLE001
         logger.warning("caddy route sync skipped (DB not ready?): %s", exc)
         return
@@ -62,6 +71,14 @@ async def _sync_caddy_routes() -> None:
             logger.info("route sync (school): %s -> %s", domain.domain, upstream)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for school %s: %s", domain.domain, exc)
+
+    for domain, school in suspended_rows:
+        try:
+            rid = school_label_slug(school.slug) if domain.domain_type == "subdomain" else f"dom-{domain.id}"
+            await caddy.add_maintenance_route(rid, domain.domain)
+            logger.info("route sync (suspended school): %s -> 503", domain.domain)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("maintenance route sync failed for school %s: %s", domain.domain, exc)
 
 
 async def _seed_bootstrap_admin() -> None:
@@ -91,8 +108,29 @@ async def _seed_bootstrap_admin() -> None:
         logger.warning("bootstrap admin seeding skipped: %s", exc)
 
 
+async def _billing_enforcement_loop() -> None:
+    """Фоновый свип просроченных подписок (#4): раз в BILLING_ENFORCE_INTERVAL_S
+    замораживает delinquent-орг и фиксирует дебиторку. Сбой итерации не валит
+    петлю. Раньше enforce был только ручным — просроченные орг работали бессрочно."""
+    from app.core.db import SessionLocal
+    from app.services.billing import run_billing_enforcement
+
+    interval = settings.BILLING_ENFORCE_INTERVAL_S
+    await asyncio.sleep(min(interval, 30))  # дать БД прогреться, не бить сразу на старте
+    while True:
+        try:
+            async with SessionLocal() as db:
+                result = await run_billing_enforcement(db)
+            if result.get("suspended"):
+                logger.info("billing scheduler: suspended %s", result["suspended"])
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("billing scheduler iteration failed: %s", exc)
+        await asyncio.sleep(interval)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    tasks: list[asyncio.Task] = []
     if settings.ROLE == "org_agent":
         # Узел орг: подключиться к ядру по enrollment-токену (платформенные сидинг
         # и Caddy-синк тут не нужны).
@@ -102,7 +140,16 @@ async def lifespan(app: FastAPI):
     else:
         await _seed_bootstrap_admin()
         await _sync_caddy_routes()
-    yield
+        if settings.BILLING_ENFORCE_INTERVAL_S > 0:
+            tasks.append(asyncio.create_task(_billing_enforcement_loop()))
+    try:
+        yield
+    finally:
+        for t in tasks:
+            t.cancel()
+        # Дать задачам корректно свернуться (подавляем CancelledError).
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 app = FastAPI(
@@ -124,7 +171,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, organizations, releases, schools, stats, telemetry  # noqa: E402
+from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, org_self, organizations, releases, schools, stats, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -170,6 +217,10 @@ app.include_router(
     tags=["schools"],
     dependencies=[Depends(require_org_admin)],
 )
+# Self-service орг: read-only биллинг, доступный даже при заморозке за неоплату
+# (управление школами заблокировано require_org_admin, биллинг — нет). Гард — на
+# уровне эндпоинта (require_org_admin_billing).
+app.include_router(org_self.router, prefix="/api/org", tags=["org"])
 
 
 @app.get("/")

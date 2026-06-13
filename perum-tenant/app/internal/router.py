@@ -29,9 +29,36 @@ class BootstrapAdminRequest(BaseModel):
     full_name: str | None = None
 
 
-async def _require_telemetry_token(x_telemetry_token: str | None = Header(default=None)) -> None:
-    if not settings.TELEMETRY_TOKEN or x_telemetry_token != settings.TELEMETRY_TOKEN:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid telemetry token")
+def _ct_eq(a: str | None, b: str | None) -> bool:
+    """Constant-time сравнение токенов (защита от timing-side-channel; ядро уже
+    использует compare_digest на приёме телеметрии — здесь симметрично)."""
+    if not a or not b:
+        return False
+    return secrets.compare_digest(a, b)
+
+
+async def _require_internal_token(
+    x_internal_token: str | None = Header(default=None),
+    x_telemetry_token: str | None = Header(default=None),
+) -> None:
+    """Авторизация входящего /internal-RPC от ядра.
+
+    Если задан отдельный INTERNAL_RPC_TOKEN — принимаем ТОЛЬКО его (telemetry-токен
+    на /internal больше не пускает → настоящая изоляция: утечка telemetry_token не
+    даёт управления учётками, AUDIT isolation #6). Если INTERNAL_RPC_TOKEN не задан
+    (легаси-стек, ещё не обновлён) — fallback на TELEMETRY_TOKEN."""
+    if settings.INTERNAL_RPC_TOKEN:
+        if _ct_eq(x_internal_token, settings.INTERNAL_RPC_TOKEN):
+            return
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid internal token")
+    # Легаси-стек без разведённого токена: ядро шлёт X-Telemetry-Token.
+    if settings.TELEMETRY_TOKEN and _ct_eq(x_telemetry_token, settings.TELEMETRY_TOKEN):
+        return
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid internal token")
+
+
+# Имя-алиас сохранено: на нём висят dependencies всех /internal-эндпоинтов ниже.
+_require_telemetry_token = _require_internal_token
 
 
 async def _do_bootstrap(payload: BootstrapAdminRequest, db: AsyncSession) -> dict:

@@ -76,6 +76,10 @@ class Settings(BaseSettings):
     # В проде это смонтированный том perum_backups (см. docker-compose.core.yml).
     BACKUP_DIR: str = Field(default="/backups")
 
+    # Период фонового свипа просроченных подписок (заморозка + дебиторка), сек.
+    # 0 — выключить планировщик (тогда только ручной POST /api/billing/enforce).
+    BILLING_ENFORCE_INTERVAL_S: int = Field(default=3600)
+
     PUBLIC_BASE_DOMAIN: str = Field(
         default="perum.local",
         description="Used when composing org subdomains (acme + perum.local = acme.perum.local)",

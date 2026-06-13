@@ -20,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
+from app.core.deps import require_platform_admin
+from app.core.locks import keyed_lock, school_key
 from app.core.security import hash_password
 from app.models import EnrollmentToken, Invoice, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
 from app.services.billing import (
@@ -48,7 +50,11 @@ from app.services.tenant_provisioner import (
 
 logger = logging.getLogger("perum.organizations")
 
-router = APIRouter()
+# Defense-in-depth (#10): весь жизненный цикл орг (создание/удаление/заморозка/
+# биллинг/смена плана/enrollment) держится на этом гарде НА САМОМ роутере, а не
+# только на dependencies= в main.py. Потеря kwarg при include_router больше не
+# раскроет управление организациями.
+router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
 # Statuses from which a fresh POST may reuse the existing row and (re)provision.
 REPROVISIONABLE = {"failed", "archived"}
@@ -150,12 +156,20 @@ async def reprovision_organization(
 @router.delete("/{slug}")
 async def delete_organization(
     slug: str,
-    purge: bool = Query(False, description="Also delete the control-DB row + secrets"),
+    purge: bool = Query(False, description="Also delete the control-DB row + secrets (IRREVERSIBLE)"),
+    confirm: str | None = Query(None, description="For purge: the exact org slug (typo guard)"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     org = await _get_org(slug, db)
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="organization not found")
+    # purge каскадно сносит тома ВСЕХ школ орг (необратимо) — требуем подтверждения
+    # slug-ом, чтобы опечатка не уничтожила целую организацию (AUDIT, lifecycle #3).
+    if purge and (confirm or "").strip() != org.slug:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"для безвозвратного удаления организации повторите её slug в ?confirm={org.slug}",
+        )
 
     # КАСКАД: сначала снять стеки ВСЕХ школ орг (они помечены лейблом sch-<slug>,
     # которого нет у орг-стека com.perum.org=<slug> — без этого школы остаются
@@ -168,7 +182,8 @@ async def delete_organization(
         if school.status == "archived" and not purge:
             continue
         try:
-            await deprovision_school(school, db, purge=purge)
+            async with keyed_lock(school_key(school.id)):
+                await deprovision_school(school, db, purge=purge)
         except Exception as exc:  # noqa: BLE001
             logger.error("org %s: deprovision school %s failed: %s", org.slug, school.slug, exc)
 
@@ -226,7 +241,8 @@ async def suspend_organization(slug: str, db: AsyncSession = Depends(get_db)) ->
     for school in schools:
         if school.status == "active":
             try:
-                await suspend_school(school, db, reason="org")
+                async with keyed_lock(school_key(school.id)):
+                    await suspend_school(school, db, reason="org")
             except Exception as exc:  # noqa: BLE001
                 logger.error("org %s: suspend school %s failed: %s", org.slug, school.slug, exc)
     org.status = "suspended"
@@ -246,7 +262,8 @@ async def _resume_org(org: Organization, db: AsyncSession) -> None:
     for school in schools:
         if school.status == "suspended" and school.suspended_by == "org":
             try:
-                await unsuspend_school(school, db)
+                async with keyed_lock(school_key(school.id)):
+                    await unsuspend_school(school, db)
             except Exception as exc:  # noqa: BLE001
                 logger.error("org %s: unsuspend school %s failed: %s", org.slug, school.slug, exc)
 
@@ -460,7 +477,12 @@ async def get_billing(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
 
 
 @router.put("/{slug}/billing")
-async def set_plan(slug: str, payload: PlanUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+async def set_plan(
+    slug: str,
+    payload: PlanUpdate,
+    force: bool = Query(False, description="Разрешить понижение плана ниже текущего использования"),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     if payload.plan not in PLANS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"неизвестный план; допустимо: {', '.join(PLANS)}")
     org = await _get_org(slug, db)
@@ -468,13 +490,24 @@ async def set_plan(slug: str, payload: PlanUpdate, db: AsyncSession = Depends(ge
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     used = await _active_school_count(db, org.id)
     new_limit = school_limit(payload.plan)
+    # Понижение ниже текущего использования по умолчанию ЗАПРЕЩЕНО: иначе орг могла
+    # бы уйти на дешёвый план, сохранив все сверхлимитные школы работающими бесплатно
+    # (AUDIT, billing #9). Оператор платформы может продавить через ?force=true,
+    # но тогда обязан сам решить судьбу лишних школ (заморозить/архивировать).
+    if used > new_limit and not force:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"нельзя понизить план: используется {used} школ при лимите {new_limit}. "
+            f"Сначала заморозьте/архивируйте лишние школы или повторите с force=true.",
+        )
     org.plan = payload.plan
     await db.commit()
     out = await _billing_payload(db, org)
     if used > new_limit:
-        # Понижение ниже текущего использования: не рвём существующие школы, но
-        # явно предупреждаем (создание новых заблокируется лимитом).
-        out["warning"] = f"использовано {used} школ при лимите {new_limit} нового плана"
+        out["warning"] = (
+            f"план понижен принудительно: используется {used} школ при лимите {new_limit}; "
+            f"сверхлимитные школы продолжают работать, новые создать нельзя"
+        )
     return out
 
 

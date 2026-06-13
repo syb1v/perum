@@ -78,6 +78,7 @@ class StackSpec:
     database_url: str
     redis_url: str
     control_plane_url: str
+    internal_rpc_token: str | None = None
     app_env: dict[str, str] = field(default_factory=dict)
 
 
@@ -151,6 +152,11 @@ def build_school_stack_spec(
         "TELEMETRY_TOKEN": secret.telemetry_token,
         "SECRET_KEY": secret.secret_key,
     }
+    # Отдельный токен управления /internal (если у секрета он уже есть — новые школы
+    # и обновлённые получают его; легаси-школы без него ходят по telemetry_token).
+    internal_rpc_token = getattr(secret, "internal_rpc_token", None)
+    if internal_rpc_token:
+        app_env["INTERNAL_RPC_TOKEN"] = internal_rpc_token
 
     return StackSpec(
         slug=slug,
@@ -165,6 +171,7 @@ def build_school_stack_spec(
         db_password=secret.db_password,
         secret_key=secret.secret_key,
         telemetry_token=secret.telemetry_token,
+        internal_rpc_token=internal_rpc_token,
         redis_db_index=secret.redis_db_index,
         database_url=database_url,
         redis_url=redis_url,
@@ -192,7 +199,8 @@ services:
       REDIS_URL: {{ redis_url }}
       CONTROL_PLANE_URL: {{ control_plane_url }}
       TELEMETRY_TOKEN: {{ telemetry_token }}
-      SECRET_KEY: {{ secret_key }}
+{% if internal_rpc_token %}      INTERNAL_RPC_TOKEN: {{ internal_rpc_token }}
+{% endif %}      SECRET_KEY: {{ secret_key }}
     networks: [{{ network }}]
     depends_on:
       db:
@@ -241,6 +249,10 @@ def render_compose(spec: StackSpec, *, redact_secrets: bool = False) -> str:
         "db_password": _REDACTED if redact_secrets else spec.db_password,
         "secret_key": _REDACTED if redact_secrets else spec.secret_key,
         "telemetry_token": _REDACTED if redact_secrets else spec.telemetry_token,
+        "internal_rpc_token": (
+            None if not spec.internal_rpc_token
+            else (_REDACTED if redact_secrets else spec.internal_rpc_token)
+        ),
     }
     if redact_secrets:
         # also redact the password embedded in DATABASE_URL

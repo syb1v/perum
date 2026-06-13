@@ -35,13 +35,20 @@ async def login(payload: LoginRequest, request: Request, db: AsyncSession = Depe
     org_admin = result.scalar_one_or_none()
     if org_admin is not None and org_admin.is_active and verify_password(payload.password, org_admin.password_hash):
         org = await db.get(Organization, org_admin.org_id)
-        if org is not None and org.status == "suspended":
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "организация приостановлена")
+        # Приостановленная за неоплату орг ВСЁ ЖЕ логинится: иначе она не увидит свой
+        # счёт, чтобы оплатить (AUDIT, billing #8). Управление заблокировано на уровне
+        # require_org_admin (403); доступен только read-only биллинг /api/org/billing.
         org_admin.last_login_at = datetime.utcnow()
         await db.commit()
         token = create_access_token(
             subject=str(org_admin.id),
-            extra={"login": org_admin.login, "role": "org_admin", "org_id": org_admin.org_id},
+            extra={
+                "login": org_admin.login, "role": "org_admin", "org_id": org_admin.org_id,
+                # ТОЛЬКО информационный (для UI-подсказки). НЕ источник истины для
+                # авторизации: claim застывает на момент логина. Блок управления
+                # делает require_org_admin свежей проверкой Organization.status.
+                "org_suspended": bool(org is not None and org.status == "suspended"),
+            },
         )
         return TokenResponse(access_token=token)
 

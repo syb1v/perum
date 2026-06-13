@@ -27,6 +27,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
     JWT_ALGORITHM: str = "HS256"
     TELEMETRY_TOKEN: str = ""
+    # Отдельный токен для входящего /internal-RPC от ядра (управление учётками
+    # school_admin). Раздельно с TELEMETRY_TOKEN (исходящий bearer метрик), чтобы
+    # утечка одного не давала прав другого (AUDIT, isolation #6). Пусто → гард
+    # падает обратно на TELEMETRY_TOKEN (совместимость со старым ядром).
+    INTERNAL_RPC_TOKEN: str = ""
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
     # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
     TELEMETRY_INTERVAL_S: int = 60

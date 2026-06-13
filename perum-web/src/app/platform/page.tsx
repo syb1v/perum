@@ -50,11 +50,13 @@ export default function PlatformConsole() {
   const [billing, setBilling] = useState<any>(null);
   const [invoices, setInvoices] = useState<any[]>([]);
   const [months, setMonths] = useState(1);
+  const [receivables, setReceivables] = useState<any>(null); // дебиторка: кто и сколько должен
 
   async function load() {
     try {
       setOrgs(await papi("/api/organizations"));
       try { setStats(await papi("/api/platform/stats")); } catch { /* non-fatal */ }
+      try { setReceivables(await papi("/api/billing/receivables")); } catch { /* non-fatal */ }
       const r = await papi("/api/releases");
       setReleases(r.releases || []);
     } catch (e: any) {
@@ -82,6 +84,18 @@ export default function PlatformConsole() {
     if (confirmMsg && !confirm(confirmMsg)) return;
     setBusy(o.slug); setErr("");
     try { await papi(`/api/organizations/${o.slug}${path}`, { method }); load(); if (billOrg === o.slug) reloadBilling(o.slug); }
+    catch (e: any) { setErr(e.message); } finally { setBusy(null); }
+  }
+
+  async function removeOrg(o: any) {
+    // Необратимое удаление орг со всеми школами: требуем ввести slug (бэкап снимается).
+    const typed = prompt(
+      `БЕЗВОЗВРАТНОЕ удаление организации «${o.name}» (${o.slug}) вместе со ВСЕМИ её школами и данными. Перед удалением снимается бэкап БД школ.\n\nДля подтверждения введите slug организации:`,
+    );
+    if (typed == null) return;
+    if (typed.trim() !== o.slug) { alert("slug не совпал — удаление отменено"); return; }
+    setBusy(o.slug); setErr("");
+    try { await papi(`/api/organizations/${o.slug}?purge=true&confirm=${encodeURIComponent(o.slug)}`, { method: "DELETE" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
 
@@ -130,10 +144,21 @@ export default function PlatformConsole() {
       setInvoices((await papi(`/api/organizations/${slug}/billing/invoices`)).invoices || []);
     } catch (e: any) { setErr(e.message); }
   }
-  async function changePlan(slug: string, plan: string) {
+  async function changePlan(slug: string, plan: string, force = false) {
     setBusy("bill"); setErr("");
-    try { const r = await papi(`/api/organizations/${slug}/billing`, { method: "PUT", body: JSON.stringify({ plan }) }); if (r?.warning) setErr(r.warning); await reloadBilling(slug); load(); }
-    catch (e: any) { setErr(e.message); } finally { setBusy(null); }
+    try {
+      const r = await papi(`/api/organizations/${slug}/billing${force ? "?force=true" : ""}`, { method: "PUT", body: JSON.stringify({ plan }) });
+      if (r?.warning) setErr(r.warning);
+      await reloadBilling(slug); load();
+    } catch (e: any) {
+      // Понижение ниже текущего использования бэкенд блокирует (400). Даём оператору
+      // явный выбор продавить через force (сверхлимитные школы остаются работать).
+      if (e.status === 400 && !force && confirm(`${e.message}\n\nПонизить план ПРИНУДИТЕЛЬНО?`)) {
+        setBusy(null);
+        return changePlan(slug, plan, true);
+      }
+      setErr(e.message);
+    } finally { setBusy(null); }
   }
   async function charge(slug: string) {
     setBusy("bill"); setErr("");
@@ -256,7 +281,7 @@ export default function PlatformConsole() {
                         <button className={styles.actionBtn} onClick={() => openAdmins(o)}>Орг-админы</button>{" "}
                         <button className={styles.actionBtn} onClick={() => openBilling(o.slug)}>Биллинг</button>{" "}
                         <button className={styles.actionBtn} disabled={busy === o.slug || !["active", "suspended"].includes(o.status)} onClick={() => orgAction(o, o.status === "suspended" ? "/unsuspend" : "/suspend", "POST", o.status === "suspended" ? undefined : `Заморозить «${o.name}»? Школы будут остановлены.`)}>{o.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
-                        <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busy === o.slug || o.status === "provisioning"} onClick={() => orgAction(o, "?purge=true", "DELETE", `Удалить «${o.name}» со всеми школами и данными? Перед удалением снимается бэкап БД школ.`)}>Удал.</button>
+                        <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busy === o.slug || o.status === "provisioning"} onClick={() => removeOrg(o)}>Удал.</button>
                       </td>
                     </tr>
                   ))}
@@ -279,6 +304,23 @@ export default function PlatformConsole() {
             <span className={c.spacer} />
             <button className={styles.btnSecondary} onClick={enforce}>Проверить просрочки</button>
           </div>
+          {receivables && receivables.organizations?.length > 0 && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Дебиторка — кто и сколько должен ({receivables.total_rub} ₽)</h2>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead><tr><th>Организация</th><th>План</th><th>Сумма</th><th>Статус орг</th><th>Период до</th></tr></thead>
+                  <tbody>{receivables.organizations.map((r: any) => (
+                    <tr key={r.invoice_id}>
+                      <td><b>{r.org_name}</b><br /><span className={c.muted}>{r.org_slug}</span></td>
+                      <td>{r.plan}</td><td>{r.amount_rub} ₽</td>
+                      <td><span className={statusBadge(r.org_status)}>{r.org_status}</span></td>
+                      <td>{r.period_end ? new Date(r.period_end).toLocaleDateString() : "—"}</td>
+                    </tr>))}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
           {!billOrg ? <p className={c.muted}>Выберите организацию, чтобы управлять её планом, оплатой и счетами.</p>
             : !billing ? <p className={c.muted}>Загрузка…</p> : (
               <>
