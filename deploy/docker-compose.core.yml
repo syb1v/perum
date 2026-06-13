@@ -20,6 +20,10 @@ services:
       IMAGE_REGISTRY: ${IMAGE_REGISTRY:-docker.io}
       SHARED_REDIS_URL: redis://shared_redis:6379
       DOCKER_NETWORK: perum_internal
+      # #7: ядро НЕ монтирует сырой docker.sock. Все docker-операции идут через
+      # фильтрующий docker_proxy по TCP (docker.from_env() honor-ит DOCKER_HOST).
+      # Компрометация ядра больше не даёт прямого root-доступа к демону хоста.
+      DOCKER_HOST: tcp://docker_proxy:2375
       PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
       # First platform admin, seeded on startup if no admins exist yet.
       # Dev default is admin/admin — OVERRIDE in prod via .env.
@@ -34,14 +38,14 @@ services:
         condition: service_healthy
       shared_redis:
         condition: service_started
+      docker_proxy:
+        condition: service_started
     networks:
       - perum_internal
     volumes:
-      # Control plane provisions per-org stacks by talking to the host Docker
-      # daemon. This grants perum_core root-equivalent control over Docker on
-      # the host — inherent to the silo-per-org architecture.
-      - /var/run/docker.sock:/var/run/docker.sock
-      # Авто-бэкап БД школы (pg_dump) перед безвозвратным удалением (purge).
+      # #7: docker.sock больше НЕ монтируется в ядро — доступ к демону только через
+      # фильтрующий docker_proxy (см. DOCKER_HOST выше). Остаётся только том бэкапов.
+      # Авто-бэкап БД/вложений школы перед безвозвратным удалением (purge).
       - perum_backups:/backups
     command:
       - sh
@@ -49,6 +53,41 @@ services:
       - |
         alembic upgrade head &&
         exec uvicorn app.main:app --host 0.0.0.0 --port 3000 --proxy-headers --forwarded-allow-ips=*
+
+  # #7: единственный сервис с доступом к docker.sock хоста. Фильтрует Docker API
+  # (haproxy): ядру разрешены только контейнеры/образы/тома/сети/exec, остальные
+  # ручки демона (swarm/secrets/system/…) закрыты. Сокет смонтирован read-only.
+  # На прод-сервере образ предзагружен (docker save|load) — pull не требуется.
+  docker_proxy:
+    image: tecnativa/docker-socket-proxy:0.3
+    pull_policy: missing
+    container_name: perum_docker_proxy
+    restart: unless-stopped
+    environment:
+      # Нужные ядру ручки (provision/suspend/update/backup школьных стеков):
+      CONTAINERS: 1
+      IMAGES: 1
+      VOLUMES: 1
+      NETWORKS: 1
+      EXEC: 1
+      POST: 1          # без этого прокси read-only (create/start/exec невозможны)
+      VERSION: 1       # docker-py согласует версию API при подключении
+      PING: 1
+      # Явно закрытое (и так закрыто по умолчанию, фиксируем намерение):
+      INFO: 0
+      SWARM: 0
+      SECRETS: 0
+      CONFIGS: 0
+      SERVICES: 0
+      NODES: 0
+      SYSTEM: 0
+      AUTH: 0
+      DISTRIBUTION: 0
+      PLUGINS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - perum_internal
 
   perum_control_db:
     image: ${IMAGE_REGISTRY:-docker.io}/library/postgres:15-alpine

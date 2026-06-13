@@ -7,6 +7,7 @@ org_admin провижинит/останавливает школы СВОЕЙ 
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 import httpx
@@ -18,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
 from app.core.config import get_settings
-from app.core.db import get_db
+from app.core.db import SessionLocal, get_db
 from app.core.deps import require_billing_ok, require_org_admin
 from app.core.locks import keyed_lock, org_create_key, school_key
 from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
@@ -28,7 +29,6 @@ from app.services.stats import rollup, school_stat, schools_with_metrics
 from app.services.caddy_admin import get_caddy_admin
 from app.services.stack_spec import school_container_name
 from app.services.school_provisioner import (
-    SchoolProvisionOutcome,
     current_release_image,
     deprovision_school,
     provision_school,
@@ -95,21 +95,50 @@ class SchoolPatch(BaseModel):
     admin_email: str | None = None
 
 
-def _result(outcome: SchoolProvisionOutcome) -> dict:
-    out = {"school": _school_dict(outcome.school), "host": outcome.host}
-    if outcome.admin_login and outcome.admin_temp_password:
-        out["school_admin"] = {
-            "login": outcome.admin_login,
-            "temporary_password": outcome.admin_temp_password,
-        }
-    return out
-
-
 async def _get_school(school_id: int, admin: OrgAdmin, db: AsyncSession) -> School:
     s = await db.get(School, school_id)
     if s is None or s.org_id != admin.org_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "школа не найдена")
     return s
+
+
+# ---------------------------------------------------------------------------
+# Async-провижининг (#1): create/reprovision/update возвращают 202 сразу, а
+# долгая docker-цепочка (pull → health → миграции → seed) идёт ФОНОВОЙ задачей со
+# своей сессией БД под per-school локом. Раньше запрос висел десятки секунд–минуты
+# под риском таймаута прокси (AUDIT, lifecycle #1). Статус школы (provisioning →
+# active/failed) фронт отслеживает поллингом; одноразовый пароль администратора
+# больше не возвращается в ответе create — его выдаёт раздел «Админы» (reset-
+# password) после активации школы.
+# ---------------------------------------------------------------------------
+_bg_tasks: set[asyncio.Task] = set()
+
+
+async def _run_lifecycle(school_id: int, action: str) -> None:
+    async with keyed_lock(school_key(school_id)):
+        async with SessionLocal() as bg_db:
+            school = await bg_db.get(School, school_id)
+            if school is None:
+                logger.error("background %s: school %s исчезла", action, school_id)
+                return
+            try:
+                if action == "update":
+                    await update_school(school, bg_db)
+                else:
+                    await provision_school(school, bg_db)
+            except ProvisioningError as exc:
+                # provision_school/update_school уже выставили status='failed' и
+                # закоммитили — здесь только лог.
+                logger.warning("background %s school %s failed: %s", action, school.slug, exc)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("background %s school %s crashed: %s", action, school.slug, exc)
+
+
+def _schedule_lifecycle(school_id: int, action: str) -> None:
+    """Запустить фоновую docker-операцию, удержав ссылку на задачу (иначе GC)."""
+    t = asyncio.create_task(_run_lifecycle(school_id, action))
+    _bg_tasks.add(t)
+    t.add_done_callback(_bg_tasks.discard)
 
 
 @router.get("")
@@ -137,7 +166,7 @@ async def _enforce_school_limit(db: AsyncSession, org_id: int) -> None:
         )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_202_ACCEPTED)
 async def create_school(
     payload: SchoolCreate,
     admin: OrgAdmin = Depends(require_billing_ok),
@@ -158,6 +187,7 @@ async def create_school(
             school = existing
             school.name = payload.name
             school.admin_email = payload.admin_email
+            school.status = "provisioning"
         elif existing is not None:
             raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
         else:
@@ -170,14 +200,14 @@ async def create_school(
         await db.commit()
         await db.refresh(school)
 
-    # Провижининг (длинная docker-цепочка) — под локом конкретной школы, чтобы
-    # параллельные операции над тем же стеком не интерливились.
-    async with keyed_lock(school_key(school.id)):
-        try:
-            outcome = await provision_school(school, db)
-        except ProvisioningError as exc:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"провижининг школы '{school.slug}' не удался: {exc}")
-    return _result(outcome)
+    # Провижининг (десятки секунд–минуты) уходит в фон → отвечаем 202 сразу.
+    _schedule_lifecycle(school.id, "provision")
+    return {
+        "school": _school_dict(school),
+        "status": "provisioning",
+        "message": "школа создаётся в фоне; следите за статусом. Пароль администратора "
+                   "выдайте после активации в разделе «Админы» (сбросить пароль).",
+    }
 
 
 @router.get("/billing")
@@ -224,20 +254,21 @@ async def school_stats_endpoint(school_id: int, admin: OrgAdmin = Depends(requir
     return school_stat(school, metric, datetime.utcnow())
 
 
-@router.post("/{school_id}/reprovision")
+@router.post("/{school_id}/reprovision", status_code=status.HTTP_202_ACCEPTED)
 async def reprovision_school(school_id: int, admin: OrgAdmin = Depends(require_billing_ok), db: AsyncSession = Depends(get_db)) -> dict:
     school = await _get_school(school_id, admin, db)
     if school.status == "suspended":
         raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
-    async with keyed_lock(school_key(school.id)):
-        # Возрождение archived-школы через reprovision тоже увеличивает число активных.
+    # Проверку лимита (для возрождения archived) и пометку статуса делаем синхронно
+    # под локом орг — чтобы клиент сразу получил 402 при превышении, а не «в фоне».
+    async with keyed_lock(org_create_key(admin.org_id)):
         if school.status == "archived":
             await _enforce_school_limit(db, admin.org_id)
-        try:
-            outcome = await provision_school(school, db)
-        except ProvisioningError as exc:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"reprovision школы '{school.slug}' не удался: {exc}")
-    return _result(outcome)
+        school.status = "provisioning"
+        await db.commit()
+        await db.refresh(school)
+    _schedule_lifecycle(school.id, "provision")
+    return {"school": _school_dict(school), "status": "provisioning", "message": "переустановка запущена в фоне"}
 
 
 @router.get("/{school_id}/update-status")
@@ -258,27 +289,17 @@ async def update_status(school_id: int, admin: OrgAdmin = Depends(require_org_ad
     }
 
 
-@router.post("/{school_id}/update")
+@router.post("/{school_id}/update", status_code=status.HTTP_202_ACCEPTED)
 async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
-    """Обновление школьного стека «по кнопке» на текущий релиз (volume-preserving)."""
+    """Обновление школьного стека «по кнопке» на текущий релиз (volume-preserving).
+    Идёт в фоне (#1): статус 'updating' → 'active'/'failed', фронт отслеживает поллингом."""
     school = await _get_school(school_id, admin, db)
     if school.status == "suspended":
         raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
-    async with keyed_lock(school_key(school.id)):
-        try:
-            outcome = await update_school(school, db)
-        except ProvisioningError as exc:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"обновление школы '{school.slug}' не удалось: {exc}")
-    return {
-        "school": _school_dict(outcome.school),
-        "from_image": outcome.from_image,
-        "to_image": outcome.to_image,
-        "rolled_back": outcome.rolled_back,
-        "message": (
-            "откат на прежнюю версию (обновление не удалось)" if outcome.rolled_back
-            else ("уже на актуальной версии" if outcome.from_image == outcome.to_image else "обновлено")
-        ),
-    }
+    if school.status != "active":
+        raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя обновлять")
+    _schedule_lifecycle(school.id, "update")
+    return {"school": _school_dict(school), "status": "updating", "message": "обновление запущено в фоне"}
 
 
 @router.patch("/{school_id}")

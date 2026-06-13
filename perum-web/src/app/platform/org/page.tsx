@@ -77,6 +77,16 @@ export default function OrgConsole() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Поллинг статуса (#1): провижининг/обновление идут в фоне — пока есть школы в
+  // переходном статусе, обновляем список каждые 4с, чтобы статус «доехал» до active.
+  const hasTransitional = (schools || []).some((s) => ["provisioning", "updating"].includes(s.status));
+  useEffect(() => {
+    if (!hasTransitional) return;
+    const t = setInterval(() => { load(); }, 4000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasTransitional]);
+
   const delinquent = billing?.subscription?.delinquent;
 
   async function createSchool(e: React.FormEvent) {
@@ -86,7 +96,7 @@ export default function OrgConsole() {
   }
   async function updateSchool(id: number) {
     setBusyId(id); setErr("");
-    try { const r = await papi(`/api/schools/${id}/update`, { method: "POST" }); alert(r.message + (r.rolled_back ? "" : ` (→ ${r.to_image})`)); load(); }
+    try { await papi(`/api/schools/${id}/update`, { method: "POST" }); load(); }  // 202: статус 'updating' → поллинг
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
   async function toggleSuspend(s: any) {
@@ -213,8 +223,8 @@ export default function OrgConsole() {
           <p className={c.muted} style={{ marginBottom: 14 }}>Вы управляете школами и их администраторами. Каждая школа — изолированный стек (свой контейнер и база). Внутреннюю работу школы (журнал, оценки) ведёт администратор школы.</p>
           {created && (
             <div className={`${styles.card} ${c.okCard}`}>
-              <b>Школа создана: {created.school?.slug}</b>
-              {created.school_admin ? <p>Администратор: <code className={styles.code}>{created.school_admin.login}</code> · временный пароль: <code className={styles.code}>{created.school_admin.temporary_password}</code><br /><span className={c.muted}>Адрес: {created.host}</span></p> : <p className={c.muted}>Админ школы не создан (не указан email).</p>}
+              <b>Школа «{created.school?.slug}» создаётся…</b>
+              <p className={c.muted}>{created.message || "Идёт провижининг стека (поднимается контейнер, БД, миграции). Статус обновится автоматически."} После активации откройте «Админы» и задайте пароль администратора кнопкой «Сбросить пароль».</p>
             </div>
           )}
           <div className={styles.card}>
