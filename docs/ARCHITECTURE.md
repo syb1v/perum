@@ -1,10 +1,13 @@
 # Архитектура PERUM (v2)
 
-> ⚠️ **Целевое направление пересмотрено (2026-05-25): «узел организации», silo = ШКОЛА.**
-> Каждая школа — свой контейнер+БД; `org_admin` провижинит школы и обновляет их «по
-> воздуху» по кнопке. См. **[ARCH_ORG_NODE.md](ARCH_ORG_NODE.md)** — это актуальная
-> цель. Текст ниже описывает реализованную на сегодня модель «silo = организация»
-> (схлопывается в школьные стеки по плану из ARCH_ORG_NODE).
+> ⚠️ **Актуальная модель (с 2026-05-25): «узел организации», silo = ШКОЛА.**
+> Каждая ШКОЛА — отдельный docker-стек (контейнер `app` + БД + volume); `School` —
+> ребёнок `Organization` (`School.org_id`). Провижинит и обновляет школы «по воздуху»
+> по кнопке `org_admin` (узел орг); ядро держит только метаданные и внутрь школьных
+> данных не лезет. См. **[ARCH_ORG_NODE.md](ARCH_ORG_NODE.md)**.
+> Часть текста ниже ещё описывает прежнюю модель «silo = организация» (несколько школ
+> в одном инстансе орг) — это **устарело**; ориентируйся на ARCH_ORG_NODE.md и на
+> дату-секцию «Обновление 2026-06-13» в конце файла.
 
 > Этот документ описывает общую структуру системы. Подробности изоляции — в [TENANT_ISOLATION.md](TENANT_ISOLATION.md). Подробности провижининга — в [PROVISIONING.md](PROVISIONING.md). RBAC — в [ROLES.md](ROLES.md).
 
@@ -34,7 +37,7 @@
                 │  Своя БД: perum_control_db                       │
                 └────────────┬─────────────────────────────────────┘
                              │
-                             │  Docker SDK / Caddy admin API
+                             │  Docker API (через docker_proxy) / Caddy admin API
                              ▼
        ┌──────────────────────────────────────────────────────────────┐
        │  Central Caddy (front-proxy)                                 │
@@ -65,11 +68,11 @@
 Отдельный FastAPI-сервис. Не содержит ни одной строки бизнес-логики школ. Отвечает за:
 
 - **Организации.** CRUD сущности `Organization` (slug, name, plan, status, deployment_mode, custom_domain). См. [PROVISIONING.md](PROVISIONING.md).
-- **Провижининг.** Генерация и запуск per-org docker-compose стека через Docker SDK. Применение Alembic-миграций. Сидинг дефолтных данных. Регистрация маршрута в central Caddy.
+- **Провижининг.** Генерация и запуск per-school docker-стека через Docker API. **Ядро НЕ монтирует `/var/run/docker.sock`** — сокет (RO) есть только у сервиса `docker_proxy` (tecnativa/docker-socket-proxy, фильтрует разрешённые методы API), ядро ходит к демону по `DOCKER_HOST=tcp://docker_proxy:2375` (см. #7 в дату-секции). Применение Alembic-миграций. Сидинг дефолтных данных. Регистрация маршрута в central Caddy.
 - **Домены.** Endpoint `GET /internal/validate-domain` для Caddy on-demand TLS. См. [DOMAINS.md](DOMAINS.md).
 - **Биллинг.** Подписки, инвойсы, интеграция с платёжным провайдером. (Phase 9.)
 - **Observability.** Приём heartbeat от `org_*_app` каждые 30 секунд, агрегация в Prometheus. Список и health всех орг.
-- **Rolling deploy.** Раскатывание новой версии `ghcr.io/syb1v/perum-tenant:X.Y.Z` на все живые стеки (с canary).
+- **Релизы и обновления.** Релиз тенанта привязан к **реальному коду**: `Release.source_commit` (миграция 0014), publish отклоняет релиз, чей образ/коммит совпадает с текущим (нет реального обновления). CI авто-регистрирует релиз и changelog; обновления школ — opt-in по кнопке `org_admin`. Полный процесс — в **[RELEASING.md](RELEASING.md)** (не дублируем здесь).
 
 Своя БД `perum_control_db` (PostgreSQL). НЕ содержит данных школ.
 
@@ -83,8 +86,14 @@ ORG_NAME="Acme Education"
 DATABASE_URL=postgresql://perum:...@org_acme_db:5432/perum
 SECRET_KEY=...
 CONTROL_PLANE_URL=http://perum_core:3000
-TELEMETRY_TOKEN=...
+TELEMETRY_TOKEN=...        # heartbeat/телеметрия → ядро
+INTERNAL_RPC_TOKEN=...     # RPC ядро→тенант на /internal (отдельный секрет, см. #6)
 ```
+
+> **Изоляция токенов (#6).** `internal_rpc_token` и `telemetry_token` — разные секреты
+> (`SchoolSecret`, миграция 0013). Ядро шлёт оба заголовка; тенант с заданным
+> `INTERNAL_RPC_TOKEN` принимает на `/internal` ТОЛЬКО его (telemetry-токен туда больше
+> не пускает). Сравнение — constant-time.
 
 Внутри одного инстанса:
 - Одна `Organization` (мета-сущность для этого стека).
@@ -202,3 +211,46 @@ Phase 9 добавляет поддержку `dedicated_vm`. До этого в
 - [DOMAINS.md](DOMAINS.md) — wildcard и custom domains.
 - [ROLES.md](ROLES.md) — RBAC матрица.
 - [DEPLOYMENT.md](DEPLOYMENT.md) — раскатывание новых версий и rollback.
+- [RELEASING.md](RELEASING.md) — релизы (CI → GHCR), привязка релиза к коммиту, opt-in обновления.
+- [AUDIT_2026-06-12.md](AUDIT_2026-06-12.md) — аудит иерархии ядро→орг→школа и закрытые находки.
+
+## Обновление 2026-06-13
+
+Сводка изменений, расходящихся с устаревшим текстом выше (он описывает прежнюю модель
+«silo = организация»). Актуальная архитектура и детали — в перечисленных документах.
+
+1. **silo = ШКОЛА.** Каждая ШКОЛА = отдельный docker-стек (контейнер `app` + БД +
+   volume), а не «несколько школ в одном инстансе орг». `School` — ребёнок
+   `Organization` (`School.org_id`). Школы провижинит и обновляет `org_admin` (узел орг);
+   ядро держит только метаданные и внутрь школьных данных не лезет. (См. ARCH_ORG_NODE.md.)
+2. **docker_proxy (#7).** Ядро БОЛЬШЕ НЕ монтирует `/var/run/docker.sock`. Сокет (RO)
+   только у сервиса `docker_proxy` (tecnativa/docker-socket-proxy, фильтр API); ядро
+   ходит к демону по `DOCKER_HOST=tcp://docker_proxy:2375`. Полный вынос в отдельный
+   org-agent — будущий этап мульти-сервера.
+3. **Разведение токенов (#6).** `internal_rpc_token` отделён от `telemetry_token`
+   (`SchoolSecret`, миграция 0013). Ядро шлёт оба заголовка; тенант с заданным
+   `INTERNAL_RPC_TOKEN` принимает на `/internal` ТОЛЬКО его (telemetry-токен туда больше
+   не пускает). Сравнение токенов — constant-time.
+4. **Релизы привязаны к реальному коду.** `Release.source_commit` (миграция 0014);
+   publish отклоняет релиз, чей образ/коммит == текущему (нет реального обновления). CI
+   (`release.yml`) по push в `main` собирает и пушит в GHCR ТОЛЬКО изменённые образы
+   (`perum-core` / `perum-tenant` / `perum-web`, тег `git-<sha>` + `latest`),
+   авто-регистрирует релиз тенанта (`POST /api/ci/release`) и авто-changelog из git log.
+   Ченджлоги видны в консоли ядра и в баннере орг «Доступно обновление». Обновления школ —
+   opt-in по кнопке. Полностью — в [RELEASING.md](RELEASING.md).
+5. **Async-провижининг (#1).** create/reprovision/update школы → `202` + фоновая
+   asyncio-задача (своя сессия, school-лок из `app/core/locks.py`). Пароль админа школы
+   НЕ возвращается в ответе create — задаётся через «Админы» → сбросить пароль.
+   Орг-консоль поллит статус.
+6. **Hardening (аудит, [AUDIT_2026-06-12.md](AUDIT_2026-06-12.md)).** RBAC
+   defense-in-depth — гарды на самих роутерах (`organizations`/`billing` →
+   `require_platform_admin`, `schools` → `require_org_admin`), не только в
+   `include_router`. Keyed asyncio-локи на жизненный цикл школы (`app/core/locks.py`).
+   `purge` школы/орг требует `?confirm=<slug>`; перед purge бэкапятся БД (`pg_dump`) И
+   вложения (appdata tar с валидацией gzip) — при сбое бэкапа тома НЕ сносятся. Биллинг:
+   авто-enforce по расписанию (`BILLING_ENFORCE_INTERVAL_S`), дебиторка
+   (`GET /api/billing/receivables`), блок понижения плана ниже использования
+   (`?force=true`), read-only биллинг приостановленной орг. Caddy: `_sync_caddy_routes`
+   восстанавливает maintenance-503 для замороженных школ после рестарта.
+7. **Миграции / CI.** Control-БД доходит до `0014`. `ci.yml`: pytest core +
+   pytest tenant `tests/unit` + `tsc` web.

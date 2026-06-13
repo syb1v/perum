@@ -88,21 +88,26 @@ volume-preserving апдейт. Опирается на те же примити
 Docker. Вместо SSH+docker — лёгкий **агент-контейнер** на каждой VM (модель
 Remnawave panel↔node): ставится одним bootstrap-скриптом, слушает команды
 control plane по защищённому каналу (mTLS/токен) и выполняет provisioning /
-update / health локально. `shared_host` (по умолчанию) агента не требует —
-control plane управляет Docker хоста напрямую через сокет.
+update / health локально. На одном хосте (по умолчанию) отдельного агента не
+требуется, но и тогда ядро ходит к демону **не напрямую**, а через фильтрующий
+сервис `docker_proxy` (см. секцию «Обновление 2026-06-13» / #7) — сырой
+`docker.sock` в ядро не монтируется.
 
 ## Релиз control plane
 
-Control plane обновляется через стандартный `docker compose up -d` после `docker compose pull`:
+Прод-команды compose запускаются из `/opt/perum/deploy` с прод-наложением и
+`.env.prod`:
 
 ```bash
-cd /opt/perum
-docker compose -f deploy/docker-compose.core.yml pull perum_core
-docker compose -f deploy/docker-compose.core.yml up -d perum_core
-docker compose -f deploy/docker-compose.core.yml exec perum_core alembic upgrade head
+cd /opt/perum/deploy
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml pull perum_core
+# миграции control-БД ДО пересоздания (если есть новые) — схема доходит до 0014:
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml run --rm perum_core alembic upgrade head
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml up -d --force-recreate perum_core
 ```
 
-В будущем — автоматизировано через GitHub Actions при push в `main`.
+CI собирает образы и регистрирует релиз тенанта автоматически на push в `main` —
+канон по релизам и обновлению сервисов по отдельности в **[RELEASING.md](RELEASING.md)**.
 
 ## Rollback
 
@@ -115,9 +120,13 @@ docker compose -f deploy/docker-compose.core.yml exec perum_core alembic upgrade
 
 ### Control plane
 
+Откат на предыдущий образ (`:git-<sha>` из GHCR) — переопределить тег в
+`.env.prod` (`CORE_IMAGE`) и пересоздать:
+
 ```bash
-docker compose -f deploy/docker-compose.core.yml pull perum_core --version=<previous_sha>
-docker compose -f deploy/docker-compose.core.yml up -d perum_core
+cd /opt/perum/deploy
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml pull perum_core
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml up -d --force-recreate perum_core
 ```
 
 ## Миграции БД и rollback
@@ -160,3 +169,56 @@ deploy/scripts/restore-org.sh acme 2026-04-15.sql.gz
 - **Phase 7-8:** CI/CD pipeline в `.github/workflows/`.
 - **Phase 9:** скрипты бэкапа/восстановления, rollback automation.
 - **Phase 11:** прод-деплой и runbook.
+
+## Обновление 2026-06-13
+
+Точечные уточнения под текущее состояние (silo = школа; узел орг управляет
+школьными стеками; ядро держит только метаданные).
+
+### Сервис `docker_proxy` — ядро без сырого сокета
+
+Ядро (`perum_core`) **больше не монтирует** `/var/run/docker.sock`. Единственный
+сервис с доступом к сокету хоста (смонтирован read-only) — `docker_proxy`
+(`tecnativa/docker-socket-proxy`), фильтрующий Docker API (haproxy): ядру открыты
+только нужные ручки (containers/images/volumes/networks/exec + POST/version/ping),
+а `swarm/secrets/services/system/…` закрыты. Ядро ходит к демону по
+`DOCKER_HOST=tcp://docker_proxy:2375` (см. `deploy/docker-compose.core.yml`).
+Компрометация ядра больше не даёт прямого root-доступа к демону. На прод-сервере
+образ прокси предзагружен (`docker save|load`), pull не требуется
+(`pull_policy: missing`). Полный вынос docker-операций в отдельный `org-agent` —
+будущий этап мульти-сервера.
+
+### Прод-команды compose
+
+Все compose-команды на прод-сервере — из `/opt/perum/deploy`, с прод-наложением и
+`.env.prod`:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml <cmd>
+```
+
+Базовый домен прод-стенда задаётся в `deploy/.env.prod` (`PUBLIC_BASE_DOMAIN`):
+платформа на `admin.<домен>`, школы на `*.<домен>`.
+
+### Миграции control-БД — до 0014
+
+Схема control plane доходит до ревизии **0014** (`0013` — изоляция токенов
+`SchoolSecret.internal_rpc_token` от `telemetry_token`; `0014` —
+`Release.source_commit` для привязки релиза тенанта к реальному коду). Применять
+**до** пересоздания контейнера ядра:
+
+```bash
+docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml run --rm perum_core alembic upgrade head
+```
+
+Миграции tenant-БД (`perum-tenant/migrations/`) — отдельная линия (до tenant-0013),
+накатываются при провижининге школы и OTA-обновлении её стека.
+
+### Обновление сервисов по отдельности и публикация релизов
+
+Три сервиса (perum-core, perum-tenant, perum-web) релизятся независимо: CI на push
+в `main` (paths-filter) собирает и пушит в GHCR **только изменённые** образы
+(`:git-<sha>` + `:latest`) и авто-регистрирует релиз тенанта (по `source_commit`,
+с авто-changelog из git log; no-op релиз отклоняется). Канон по релизам,
+интегрити и пошаговому обновлению каждого сервиса — **[RELEASING.md](RELEASING.md)**.
+Дублировать процедуры здесь не нужно.
