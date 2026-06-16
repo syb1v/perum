@@ -1,5 +1,6 @@
 'use client';
 
+import type { ScriptableContext } from 'chart.js';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -7,8 +8,10 @@ import {
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Bar } from 'react-chartjs-2';
 import { GradeRow, AnalyticsResponse } from '@/hooks/useSchedule';
 import styles from '../page.module.css';
@@ -19,7 +22,9 @@ ChartJS.register(
     BarElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
+    Filler,
+    annotationPlugin
 );
 
 interface AnalyticsDashboardProps {
@@ -58,14 +63,15 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
 
     const subjectsList = Object.entries(subjectMap)
         .map(([id, data]) => ({ id: Number(id), ...data }))
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => b.avg - a.avg);
 
     const sortedDates = Array.from(allDatesSet).sort().reverse();
 
-    const globalAvg = gradesData.length > 0 ? (
+    const globalAvgNum = gradesData.length > 0 ? (
         gradesData.reduce((s, g) => s + g.value * (g.weight || 1), 0) /
         gradesData.reduce((s, g) => s + (g.weight || 1), 0)
-    ).toFixed(2) : '—';
+    ) : null;
+    const globalAvg = globalAvgNum !== null ? globalAvgNum.toFixed(2) : '—';
 
     const getAvgColor = (avg: number) => {
         if (avg >= 4.5) return '#10b981';
@@ -155,38 +161,128 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
             </div>
 
             {/* Bar chart */}
-            <div className={styles.card} style={{ marginBottom: 0 }}>
-                <h4 className={styles.sectionTitle} style={{ marginBottom: '16px' }}>📊 Средний балл по предметам</h4>
-                <div style={{ position: 'relative', height: `${Math.max(250, subjectsList.length * 40)}px`, width: '100%' }}>
+            <div className={styles.card} style={{
+                marginBottom: 0,
+                background: 'linear-gradient(180deg, var(--bg-card) 0%, rgba(var(--bg-card-rgb, 18,22,33), 0.97) 100%)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 8px 32px rgba(0,0,0,0.06)',
+                borderColor: 'rgba(255,255,255,0.06)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '20px' }}>
+                    <h4 className={styles.sectionTitle} style={{ margin: 0 }}>📊 Средний балл по предметам</h4>
+                    {globalAvgNum !== null && (
+                        <span style={{
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            background: 'var(--bg-tertiary)',
+                            padding: '3px 10px',
+                            borderRadius: '20px',
+                        }}>
+                            общий {globalAvg}
+                        </span>
+                    )}
+                </div>
+                <div style={{ position: 'relative', height: `${Math.max(280, subjectsList.length * 44)}px`, width: '100%' }}>
                     <Bar
                         options={{
                             indexAxis: 'y',
                             responsive: true,
                             maintainAspectRatio: false,
+                            animation: {
+                                duration: 800,
+                                easing: 'easeOutQuart',
+                            },
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                                    titleFont: { size: 13 },
+                                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                    titleFont: { size: 14, weight: 'bold' as const },
                                     bodyFont: { size: 13 },
-                                    padding: 12,
-                                    cornerRadius: 8,
-                                }
+                                    padding: 14,
+                                    cornerRadius: 10,
+                                    displayColors: false,
+                                    callbacks: {
+                                        label: (ctx: { raw: number }) => {
+                                            const val = typeof ctx.raw === 'number' ? ctx.raw : 0;
+                                            const diff = globalAvgNum !== null ? (val - globalAvgNum).toFixed(2) : null;
+                                            const diffStr = diff ? (Number(diff) >= 0 ? `+${diff}` : diff) : '';
+                                            return [
+                                                `Средний балл: ${val.toFixed(2)}`,
+                                                diff ? `Отклонение: ${diffStr}` : '',
+                                            ].filter(Boolean).join('  ');
+                                        },
+                                    },
+                                },
+                                annotation: globalAvgNum !== null ? {
+                                    annotations: {
+                                        avgLine: {
+                                            type: 'line' as const,
+                                            xMin: globalAvgNum,
+                                            xMax: globalAvgNum,
+                                            borderColor: 'rgba(245, 158, 11, 0.7)',
+                                            borderWidth: 2,
+                                            borderDash: [8, 4],
+                                            label: {
+                                                display: true,
+                                                content: `Общий ср. ${globalAvgNum.toFixed(2)}`,
+                                                position: 'start' as const,
+                                                backgroundColor: 'rgba(245, 158, 11, 0.9)',
+                                                color: '#fff',
+                                                font: { size: 11, weight: 'bold' as const },
+                                                padding: { top: 4, bottom: 4, left: 8, right: 8 },
+                                                borderRadius: 6,
+                                            },
+                                        },
+                                    },
+                                } : {},
                             },
                             scales: {
-                                x: { min: 2, max: 5, grid: { color: 'rgba(0,0,0,0.05)' } },
-                                y: { grid: { display: false } }
-                            }
-                        }}
+                                x: {
+                                    min: 2,
+                                    max: 5,
+                                    grid: {
+                                        color: 'rgba(128,128,128,0.08)',
+                                    },
+                                    ticks: {
+                                        callback: (v: string | number) => (typeof v === 'number' ? v.toFixed(1) : v),
+                                    },
+                                },
+                                y: {
+                                    grid: { display: false },
+                                    ticks: {
+                                        font: { size: 12, weight: 'bold' as const },
+                                    },
+                                },
+                            },
+                        } as Record<string, unknown>}
                         data={{
                             labels: subjectsList.map(s => s.name),
                             datasets: [{
                                 label: 'Средний балл',
                                 data: subjectsList.map(s => s.avg),
-                                backgroundColor: subjectsList.map(s => getAvgColor(s.avg)),
-                                borderRadius: 6,
-                                barThickness: 20,
-                            }]
+                                backgroundColor: (ctx: ScriptableContext<'bar'>) => {
+                                    const val = (ctx.raw as number) ?? 0;
+                                    const chartCtx = ctx.chart.ctx;
+                                    const gradient = chartCtx.createLinearGradient(0, 0, 400, 0);
+                                    if (val >= 4.5) {
+                                        gradient.addColorStop(0, 'rgba(16,185,129,0.7)');
+                                        gradient.addColorStop(1, 'rgba(16,185,129,1)');
+                                    } else if (val >= 3.5) {
+                                        gradient.addColorStop(0, 'rgba(139,92,246,0.7)');
+                                        gradient.addColorStop(1, 'rgba(139,92,246,1)');
+                                    } else if (val >= 2.5) {
+                                        gradient.addColorStop(0, 'rgba(245,158,11,0.7)');
+                                        gradient.addColorStop(1, 'rgba(245,158,11,1)');
+                                    } else {
+                                        gradient.addColorStop(0, 'rgba(239,68,68,0.7)');
+                                        gradient.addColorStop(1, 'rgba(239,68,68,1)');
+                                    }
+                                    return gradient;
+                                },
+                                borderRadius: 8,
+                                barThickness: 22,
+                                borderSkipped: false,
+                            }],
                         }}
                     />
                 </div>
