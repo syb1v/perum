@@ -20,3 +20,11 @@ class UpdateGradeRequest(BaseModel):
     grade_type: str | None = None
     attendance_mark: str | None = None
     comment: str | None = None
+
+
+class TopicCreate(BaseModel):
+    name: str
+
+
+class TopicUpdate(BaseModel):
+    name: str

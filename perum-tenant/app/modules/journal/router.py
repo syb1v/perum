@@ -12,7 +12,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.grade_import import service as import_service
 from app.modules.journal import service
-from app.modules.journal.schemas import AddGradeRequest, UpdateGradeRequest
+from app.modules.journal.schemas import AddGradeRequest, TopicCreate, TopicUpdate, UpdateGradeRequest
 from app.modules.school_admin.service import resolve_school_id
 from app.services.parsers.dtos import (
     ImportExecutionRequest,
@@ -48,6 +48,35 @@ async def subject_topics(
     subject_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return {"topics": await service.list_topics(db, await _school(user, db), subject_id)}
+
+
+@router.post("/subjects/{subject_id}/topics")
+async def create_topic(
+    subject_id: int,
+    payload: TopicCreate,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.create_topic(db, await _school(user, db), subject_id, payload.name)
+
+
+@router.put("/topics/{topic_id}")
+async def update_topic(
+    topic_id: int,
+    payload: TopicUpdate,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.update_topic(db, topic_id, payload.name)
+
+
+@router.delete("/topics/{topic_id}")
+async def delete_topic(
+    topic_id: int,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.delete_topic(db, topic_id)
 
 
 @router.post("/grades")

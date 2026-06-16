@@ -139,6 +139,36 @@ async def list_topics(db: AsyncSession, school_id: int, subject_id: int) -> list
     return [{"id": t.id, "name": t.name, "order_num": t.order_num} for t in rows]
 
 
+async def create_topic(db: AsyncSession, school_id: int, subject_id: int, name: str) -> dict:
+    max_order = await db.scalar(
+        select(func.max(Topic.order_num)).where(Topic.subject_id == subject_id)
+    ) or 0
+    topic = Topic(school_id=school_id, subject_id=subject_id, name=name, order_num=max_order + 1)
+    db.add(topic)
+    await db.commit()
+    await db.refresh(topic)
+    return {"id": topic.id, "name": topic.name, "order_num": topic.order_num}
+
+
+async def update_topic(db: AsyncSession, topic_id: int, name: str) -> dict:
+    topic = await db.get(Topic, topic_id)
+    if not topic:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
+    topic.name = name
+    await db.commit()
+    await db.refresh(topic)
+    return {"id": topic.id, "name": topic.name, "order_num": topic.order_num}
+
+
+async def delete_topic(db: AsyncSession, topic_id: int) -> dict:
+    topic = await db.get(Topic, topic_id)
+    if not topic:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
+    await db.delete(topic)
+    await db.commit()
+    return {"detail": "ok"}
+
+
 # ---- periods ----
 async def _list_periods(db: AsyncSession, school_id: int) -> list[SchoolPeriod]:
     year_ids = (

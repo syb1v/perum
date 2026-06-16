@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -35,6 +36,48 @@ async def subjects(user: User = Depends(require_teacher), db: AsyncSession = Dep
     return {"subjects": await service.teacher_subjects(db, await _school(user, db), user)}
 
 
+@router.get("/diary")
+async def diary(
+    week_offset: int = 0,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.teacher_diary(db, await _school(user, db), user, week_offset)
+
+
+@router.get("/my-class")
+async def my_class(user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)) -> dict:
+    return await service.my_class(db, await _school(user, db), user)
+
+
+class BulkBalancePayload(BaseModel):
+    student_ids: list[int]
+    amount: int
+    comment: str | None = None
+
+
+@router.post("/my-class/bulk-balance")
+async def bulk_balance(
+    payload: BulkBalancePayload,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.bulk_balance(
+        db, await _school(user, db), user,
+        payload.student_ids, payload.amount, payload.comment or "",
+    )
+
+
+@router.get("/works")
+async def works(
+    class_id: int | None = None,
+    subject_id: int | None = None,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return {"works": []}
+
+
 @router.get("/homework")
 async def homework(
     class_id: int | None = None,
@@ -42,7 +85,6 @@ async def homework(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    # Homework CRUD is a later slice; the list is empty for now.
     return {"homework": []}
 
 

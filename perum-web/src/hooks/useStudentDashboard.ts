@@ -108,7 +108,7 @@ export function useStudentDashboard() {
 
     const fetchSubjects = useCallback(async () => {
         try {
-            const res = await api.get<{ subjects: Subject[] }>('/journal/subjects');
+            const res = await api.get<{ subjects: Subject[] }>('/subjects');
             const subList = res.subjects || [];
             setSubjects(subList);
             if (subList.length > 0 && selectedSubject === 0) {
