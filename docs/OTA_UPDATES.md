@@ -24,7 +24,7 @@ PERUM использует **OTA (Over-The-Air) обновления** для д
 
 2. **Platform admin деплоит вручную**:
    ```bash
-   ssh root@94.125.102.167
+    ssh root@87.232.119.17
    cd /opt/perum
    docker compose pull
    docker compose up -d
