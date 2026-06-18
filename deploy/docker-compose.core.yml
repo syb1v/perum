@@ -4,9 +4,8 @@ services:
   perum_core:
     build:
       context: ../perum-core
-    image: perum-core:dev
-    # Build locally; never try to pull this image from a registry.
-    pull_policy: build
+    image: ${CORE_IMAGE:-perum-core:dev}
+    pull_policy: ${CORE_PULL_POLICY:-build}
     container_name: perum_core
     restart: unless-stopped
     environment:
@@ -114,8 +113,8 @@ services:
         NODE_IMAGE: ${IMAGE_REGISTRY:-docker.io}/library/node:20-alpine
         # Апекс-домен ядра (лендинг) vs кастомный домен школы — middleware/host.ts.
         NEXT_PUBLIC_BASE_DOMAIN: ${PUBLIC_BASE_DOMAIN:-perum.local}
-    image: perum-web:dev
-    pull_policy: build
+    image: ${WEB_IMAGE:-perum-web:dev}
+    pull_policy: ${WEB_PULL_POLICY:-build}
     container_name: perum_web
     restart: unless-stopped
     environment:
