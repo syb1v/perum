@@ -47,6 +47,11 @@ export default function OrgConsole() {
   const [domains, setDomains] = useState<any[] | null>(null);
   const [newDomain, setNewDomain] = useState("");
 
+  // infrastructure
+  const [orgNodes, setOrgNodes] = useState<any[] | null>(null);
+  const [orgNodeUtil, setOrgNodeUtil] = useState<Record<number, any>>({});
+  const [availUpdates, setAvailUpdates] = useState<any>(null);
+
   async function load() {
     try {
       const r = await papi("/api/schools");
@@ -70,12 +75,31 @@ export default function OrgConsole() {
     }
   }
 
+  async function loadOrgInfra() {
+    try {
+      const nodesR = await papi("/api/org/nodes");
+      setOrgNodes(nodesR.nodes || []);
+      const utils: Record<number, any> = {};
+      for (const n of nodesR.nodes || []) {
+        try { utils[n.id] = await papi(`/api/org/nodes/${n.id}/utilization`); } catch { /* skip */ }
+      }
+      setOrgNodeUtil(utils);
+    } catch { /* non-fatal */ }
+    try {
+      setAvailUpdates(await papi("/api/schools/releases/available"));
+    } catch { /* non-fatal */ }
+  }
+
   useEffect(() => {
     if (!getPlatformToken()) { router.push("/platform/login"); return; }
     if (getTokenPayload()?.role !== "org_admin") { router.push("/platform"); return; }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (section === "infrastructure" && orgNodes === null) loadOrgInfra();
+  }, [section, orgNodes]);
 
   // Поллинг статуса (#1): провижининг/обновление идут в фоне — пока есть школы в
   // переходном статусе, обновляем список каждые 4с, чтобы статус «доехал» до active.
@@ -143,9 +167,10 @@ export default function OrgConsole() {
   const nav: NavItem[] = [
     { id: "dashboard", label: "Дашборд", icon: <Icon.Dashboard /> },
     { id: "schools", label: "Школы", icon: <Icon.School /> },
+    { id: "infrastructure", label: "Инфраструктура", icon: <Icon.Server /> },
     { id: "billing", label: "Биллинг", icon: <Icon.Billing /> },
   ];
-  const titles: Record<string, string> = { dashboard: "Дашборд организации", schools: "Школы организации", billing: "Биллинг" };
+  const titles: Record<string, string> = { dashboard: "Дашборд организации", schools: "Школы организации", infrastructure: "Моя инфраструктура", billing: "Биллинг" };
 
   return (
     <ConsoleShell
@@ -304,6 +329,69 @@ export default function OrgConsole() {
             </div>
           </>
         ) : <p className={c.muted}>Загрузка…</p>
+      )}
+
+      {/* INFRASTRUCTURE */}
+      {section === "infrastructure" && (
+        <>
+          {availUpdates?.available && (
+            <div className={`${styles.card}`} style={{ borderColor: "var(--accent-primary)" }}>
+              <h2 className={styles.cardTitle}>Доступно обновление → {availUpdates.current_version}</h2>
+              <p className={c.muted}>Готово к установке для {availUpdates.total_updatable} школ(ы). Обновляйте школы в разделе «Школы».</p>
+            </div>
+          )}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Мои серверы (ноды) ({orgNodes ? orgNodes.length : 0})</h2>
+            {orgNodes && orgNodes.length > 0 && (
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead><tr><th>Нода</th><th>IP</th><th>Ресурсы</th><th>Статус</th><th>Школ</th><th>Загрузка</th><th>Агент</th></tr></thead>
+                  <tbody>
+                    {orgNodes.map((n) => {
+                      const u = orgNodeUtil[n.id];
+                      const pct = u ? u.capacity_percent : 0;
+                      const barColor = pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
+                      return (
+                        <tr key={n.id}>
+                          <td><b>{n.name}</b></td>
+                          <td><code className={styles.code}>{n.hostname}</code></td>
+                          <td>{n.cpu_cores} CPU / {n.ram_gb} GB RAM</td>
+                          <td><span className={statusBadge(n.status)}>{n.status}</span></td>
+                          <td>{u ? `${u.schools_count}/${u.max_schools}` : "—"}</td>
+                          <td style={{minWidth:120}}><div style={{height:6, background:"#eee", borderRadius:3, overflow:"hidden"}}><div style={{height:6, width:`${Math.min(pct,100)}%`, background:barColor, borderRadius:3}} /></div><small style={{color:"var(--text-secondary)"}}>{u ? `${Math.round(pct)}%` : "?"}</small></td>
+                          <td>{n.agent_version || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {orgNodes && orgNodes.length === 0 && <p className={styles.emptyState}>Нет привязанных серверов (нод). Все ваши школы пока на сервере платформы.</p>}
+            {orgNodes === null && <p className={c.muted} onClick={() => { loadOrgInfra(); }} style={{cursor:"pointer", textDecoration:"underline"}}>Нажмите чтобы загрузить информацию о серверах…</p>}
+          </div>
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Где крутятся ваши школы</h2>
+            <p className={c.muted}>Каждая школа — изолированный Docker-стек (свой контейнер + БД). Школы размещаются на нодах — физических или виртуальных серверах. Система автоматически распределяет школы по наиболее свободным нодам.</p>
+            {orgNodes && orgNodes.length > 0 && (
+              <div className={styles.tableContainer} style={{ marginTop: 10 }}>
+                <table className={styles.table}>
+                  <thead><tr><th>Школа</th><th>Домен</th><th>Статус</th><th>Нода (IP)</th></tr></thead>
+                  <tbody>
+                    {schools?.map((s) => (
+                      <tr key={s.id}>
+                        <td><b>{s.name}</b></td>
+                        <td><code className={styles.code}>{s.slug}.avari-land.ru</code></td>
+                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
+                        <td><code className={styles.code}>{orgNodes[0]?.hostname || "—"}</code></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       </>)}

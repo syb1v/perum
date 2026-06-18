@@ -52,6 +52,14 @@ export default function PlatformConsole() {
   const [months, setMonths] = useState(1);
   const [receivables, setReceivables] = useState<any>(null); // дебиторка: кто и сколько должен
 
+  // infrastructure
+  const [nodes, setNodes] = useState<any[] | null>(null);
+  const [nodeUtil, setNodeUtil] = useState<Record<number, any>>({});
+  const [capacityRec, setCapacityRec] = useState<any>(null);
+  const [capacityCount, setCapacityCount] = useState(10);
+  const [showNodeForm, setShowNodeForm] = useState(false);
+  const [nodeForm, setNodeForm] = useState({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
+
   async function load() {
     try {
       setOrgs(await papi("/api/organizations"));
@@ -181,16 +189,51 @@ export default function PlatformConsole() {
   async function loadLeads() { try { setLeads((await papi("/api/contact")).leads || []); } catch (e: any) { setErr(e.message); } }
   async function toggleLead(id: number) { try { await papi(`/api/contact/${id}/status`, { method: "PATCH" }); loadLeads(); } catch (e: any) { setErr(e.message); } }
 
-  function go(id: string) { setSection(id); if (id === "leads" && leads === null) loadLeads(); }
+  async function loadInfra() {
+    try {
+      const data = await papi("/api/platform/nodes");
+      setNodes(data.nodes || []);
+      const utils: Record<number, any> = {};
+      for (const n of data.nodes || []) {
+        try { utils[n.id] = await papi(`/api/platform/nodes/${n.id}/utilization`); } catch { /* skip */ }
+      }
+      setNodeUtil(utils);
+    } catch (e: any) { setErr(e.message); }
+  }
+  async function createNode(e: React.FormEvent) {
+    e.preventDefault(); setErr(""); setBusy("node");
+    try {
+      const payload: any = { ...nodeForm };
+      if (!payload.org_id) delete payload.org_id;
+      await papi("/api/platform/nodes", { method: "POST", body: JSON.stringify(payload) });
+      setShowNodeForm(false); setNodeForm({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
+      loadInfra();
+    } catch (e: any) { setErr(e.message); } finally { setBusy(null); }
+  }
+  async function drainNode(id: number) { if (!confirm("Перевести ноду в draining?")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
+  async function deleteNode(id: number) { if (!confirm("Удалить ноду?")) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
+  async function getBootstrap(id: number, name: string) {
+    try {
+      const s = await papi(`/api/platform/nodes/${id}/bootstrap-script`, { method: "POST" });
+      const blob = new Blob([s.content], { type: "text/x-shellscript" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = s.filename; a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) { setErr(e.message); }
+  }
+  async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); } catch (e: any) { setErr(e.message); } }
+
+  function go(id: string) { setSection(id); if (id === "leads" && leads === null) loadLeads(); if (id === "infrastructure" && nodes === null) loadInfra(); }
 
   const nav: NavItem[] = [
     { id: "dashboard", label: "Дашборд", icon: <Icon.Dashboard /> },
     { id: "orgs", label: "Организации", icon: <Icon.Org /> },
+    { id: "infrastructure", label: "Инфраструктура", icon: <Icon.Server /> },
     { id: "billing", label: "Биллинг", icon: <Icon.Billing /> },
     { id: "releases", label: "Релизы", icon: <Icon.Release /> },
     { id: "leads", label: "Заявки", icon: <Icon.Mail />, badge: leads ? leads.filter((l) => l.status === "new").length : undefined },
   ];
-  const titles: Record<string, string> = { dashboard: "Дашборд платформы", orgs: "Организации", billing: "Биллинг", releases: "Релизы (обновления)", leads: "Заявки с лендинга" };
+  const titles: Record<string, string> = { dashboard: "Дашборд платформы", orgs: "Организации", infrastructure: "Инфраструктура (ноды)", billing: "Биллинг", releases: "Релизы (обновления)", leads: "Заявки с лендинга" };
 
   return (
     <ConsoleShell
@@ -293,7 +336,86 @@ export default function PlatformConsole() {
         </>
       )}
 
-      {/* ===================== BILLING ===================== */}
+      {/* ===================== INFRASTRUCTURE ===================== */}
+      {section === "infrastructure" && (
+        <>
+          <div className={c.toolbar}>
+            <button className={styles.submitBtn} onClick={() => setShowNodeForm(!showNodeForm)}>+ Добавить ноду</button>
+            <span className={c.spacer} />
+            <div className={styles.formGroup} style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+              <label className={styles.label} style={{ marginBottom: 0 }}>Сколько школ?</label>
+              <input className={styles.input} type="number" min={1} max={1000} value={capacityCount} onChange={(e) => setCapacityCount(Number(e.target.value) || 10)} style={{ width: 80 }} />
+              <button className={styles.btnSecondary} onClick={getRecommendation}>Рекомендация</button>
+            </div>
+          </div>
+          {showNodeForm && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Новая нода</h2>
+              <form onSubmit={createNode} className={styles.form}>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}><label className={styles.label}>Имя</label><input className={styles.input} value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} placeholder="node-01" required /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>IP / хост</label><input className={styles.input} value={nodeForm.hostname} onChange={(e) => setNodeForm({ ...nodeForm, hostname: e.target.value })} placeholder="192.168.1.100" required /></div>
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}><label className={styles.label}>CPU (ядер)</label><input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>RAM (GB)</label><input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>Диск (GB)</label><input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} /></div>
+                </div>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}><label className={styles.label}>Макс. школ</label><input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>Org ID (или 0)</label><input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} /></div>
+                </div>
+                <div className={styles.formActions}><button className={styles.submitBtn} disabled={busy === "node"}>Создать</button></div>
+              </form>
+            </div>
+          )}
+          {capacityRec && (
+            <div className={`${styles.card} ${c.okCard}`}>
+              <b>{capacityRec.summary}</b>
+              <div className={styles.tableContainer} style={{ marginTop: 10 }}>
+                <table className={styles.table}>
+                  <thead><tr><th>Конфигурация</th><th>Школ на ноду</th><th>Нужно нод</th></tr></thead>
+                  <tbody>{capacityRec.recommendations?.map((r: any, i: number) => (
+                    <tr key={i}><td>{r.cpu_cores} CPU / {r.ram_gb} GB RAM / {r.disk_gb} GB Disk</td><td>{r.schools_per_node}</td><td>{r.nodes_needed}</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Ноды ({nodes ? nodes.length : 0})</h2>
+            <div className={styles.tableContainer}>
+              <table className={styles.table}>
+                <thead><tr><th>Имя</th><th>Хост</th><th>Ресурсы</th><th>Статус</th><th>Школ</th><th>Загрузка</th><th>Действия</th></tr></thead>
+                <tbody>
+                  {nodes?.map((n) => {
+                    const u = nodeUtil[n.id];
+                    const pct = u ? u.capacity_percent : 0;
+                    const barColor = pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
+                    return (
+                      <tr key={n.id}>
+                        <td><b>{n.name}</b></td>
+                        <td><code className={styles.code}>{n.hostname}</code></td>
+                        <td>{n.cpu_cores} CPU / {n.ram_gb} GB RAM / {n.disk_gb} GB Disk</td>
+                        <td><span className={statusBadge(n.status)}>{n.status}</span></td>
+                        <td>{u ? `${u.schools_count}/${u.max_schools}` : "—"}</td>
+                        <td style={{minWidth:120}}><div style={{height:6, background:"#eee", borderRadius:3, overflow:"hidden"}}><div style={{height:6, width:`${Math.min(pct,100)}%`, background:barColor, borderRadius:3}} /></div><small style={{color:"var(--text-secondary)"}}>{u ? `${Math.round(pct)}%` : "?"}</small></td>
+                        <td style={{whiteSpace:"nowrap"}}>
+                          {n.status === "pending_bootstrap" && <button className={styles.actionBtn} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
+                          {n.status === "active" && <button className={styles.actionBtn} onClick={() => drainNode(n.id)}>Drain</button>}
+                          <button className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id)}>Удал.</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Добавьте ноду — это сервер, на котором крутятся школы организаций.</p>}
+              {nodes === null && <p className={c.muted}>Загрузка…</p>}
+            </div>
+          </div>
+        </>
+      )}
       {section === "billing" && (
         <>
           <div className={c.toolbar}>
