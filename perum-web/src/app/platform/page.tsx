@@ -58,6 +58,7 @@ export default function PlatformConsole() {
   const [capacityRec, setCapacityRec] = useState<any>(null);
   const [capacityCount, setCapacityCount] = useState(10);
   const [showNodeForm, setShowNodeForm] = useState(false);
+  const [nodeCreated, setNodeCreated] = useState<any>(null);
   const [nodeForm, setNodeForm] = useState({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
 
   async function load() {
@@ -198,7 +199,10 @@ export default function PlatformConsole() {
         try { utils[n.id] = await papi(`/api/platform/nodes/${n.id}/utilization`); } catch { /* skip */ }
       }
       setNodeUtil(utils);
-    } catch (e: any) { setErr(e.message); }
+    } catch (e: any) { 
+      if (e.status === 401) return; 
+      setErr("Ошибка загрузки нод: " + (e.message || "неизвестная ошибка")); 
+    }
   }
   async function createNode(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setBusy("node");
@@ -207,18 +211,18 @@ export default function PlatformConsole() {
       if (!payload.org_id) delete payload.org_id;
       await papi("/api/platform/nodes", { method: "POST", body: JSON.stringify(payload) });
       setShowNodeForm(false); setNodeForm({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
+      setNodeCreated({ node: nodeForm.name });
       loadInfra();
-    } catch (e: any) { setErr(e.message); } finally { setBusy(null); }
+    } catch (e: any) { setErr("Ошибка создания ноды: " + (e.message || "неизвестная ошибка")); } finally { setBusy(null); }
   }
-  async function drainNode(id: number) { if (!confirm("Перевести ноду в draining?")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
-  async function deleteNode(id: number) { if (!confirm("Удалить ноду?")) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
+  async function drainNode(id: number) { if (!confirm("Перевести ноду в draining? Новые школы не будут на неё назначаться.")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
+  async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
   async function getBootstrap(id: number, name: string) {
     try {
       const s = await papi(`/api/platform/nodes/${id}/bootstrap-script`, { method: "POST" });
       const blob = new Blob([s.content], { type: "text/x-shellscript" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = s.filename; a.click();
-      URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = s.filename; a.click();
+      URL.revokeObjectURL(url); alert("Скрипт скачан! Запустите на целевом сервере:\n\n  bash " + s.filename);
     } catch (e: any) { setErr(e.message); }
   }
   async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); } catch (e: any) { setErr(e.message); } }
@@ -339,51 +343,106 @@ export default function PlatformConsole() {
       {/* ===================== INFRASTRUCTURE ===================== */}
       {section === "infrastructure" && (
         <>
+          <div className={`${styles.card} ${c.okCard}`} style={{ background: "var(--surface-secondary, #f0f7ff)", borderColor: "var(--accent-primary, #06c)" }}>
+            <b style={{ fontSize: "1.1rem" }}>Инфраструктура — управление серверами (нодами)</b>
+            <p className={c.muted} style={{ marginTop: 8 }}>
+              <b>Нода</b> — это физический или виртуальный сервер, на котором крутятся школы. Система автоматически распределяет школы по наиболее свободным нодам.
+            </p>
+            <p className={c.muted}>
+              <b>Как добавить новую ноду:</b><br />
+              1. Зарегистрируйте ноду ниже → появится статус <span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span><br />
+              2. Нажмите «Скачать скрипт» — получите bash-скрипт для автоматической установки<br />
+              3. Запустите скрипт на целевом сервере: <code className={styles.code}>bash perum-node-*.sh</code><br />
+              4. Через 1-2 минуты нода подключится и статус сменится на <span className={statusBadge("active")}>active</span>
+            </p>
+          </div>
+
+          {nodeCreated && (
+            <div className={`${styles.card} ${c.okCard}`}>
+              <b>Нода «{nodeCreated.node}» зарегистрирована</b>
+              <p className={c.muted}>Нода появится в таблице ниже со статусом pending_bootstrap. Нажмите «Скачать скрипт» чтобы получить bash-скрипт для автоматической установки Docker и агента на сервере.</p>
+              <button type="button" className={styles.submitBtn} style={{marginTop:8}} onClick={() => setNodeCreated(null)}>OK</button>
+            </div>
+          )}
+
           <div className={c.toolbar}>
-            <button className={styles.submitBtn} onClick={() => setShowNodeForm(!showNodeForm)}>+ Добавить ноду</button>
+            <button className={styles.submitBtn} type="button" onClick={() => setShowNodeForm(!showNodeForm)}>{showNodeForm ? "— Скрыть форму" : "+ Добавить ноду"}</button>
             <span className={c.spacer} />
-            <div className={styles.formGroup} style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
               <label className={styles.label} style={{ marginBottom: 0 }}>Сколько школ?</label>
               <input className={styles.input} type="number" min={1} max={1000} value={capacityCount} onChange={(e) => setCapacityCount(Number(e.target.value) || 10)} style={{ width: 80 }} />
-              <button className={styles.btnSecondary} onClick={getRecommendation}>Рекомендация</button>
+              <button className={styles.btnSecondary} type="button" onClick={getRecommendation}>Рекомендация</button>
             </div>
           </div>
+
           {showNodeForm && (
             <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Новая нода</h2>
+              <h2 className={styles.cardTitle}>Зарегистрировать новую ноду</h2>
               <form onSubmit={createNode} className={styles.form}>
                 <div className={styles.formRow}>
-                  <div className={styles.formGroup}><label className={styles.label}>Имя</label><input className={styles.input} value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} placeholder="node-01" required /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>IP / хост</label><input className={styles.input} value={nodeForm.hostname} onChange={(e) => setNodeForm({ ...nodeForm, hostname: e.target.value })} placeholder="192.168.1.100" required /></div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Имя ноды <span className={c.muted}>— например node-01</span></label>
+                    <input className={styles.input} value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} placeholder="node-01" required />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>IP-адрес или хост <span className={c.muted}>— публичный адрес сервера</span></label>
+                    <input className={styles.input} value={nodeForm.hostname} onChange={(e) => setNodeForm({ ...nodeForm, hostname: e.target.value })} placeholder="87.232.119.17" required />
+                  </div>
                 </div>
                 <div className={styles.formRow}>
-                  <div className={styles.formGroup}><label className={styles.label}>CPU (ядер)</label><input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>RAM (GB)</label><input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>Диск (GB)</label><input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} /></div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>CPU (ядер)</label>
+                    <input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>RAM (GB)</label>
+                    <input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Диск (GB)</label>
+                    <input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} />
+                  </div>
                 </div>
                 <div className={styles.formRow}>
-                  <div className={styles.formGroup}><label className={styles.label}>Макс. школ</label><input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>Org ID (или 0)</label><input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} /></div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Макс. школ <span className={c.muted}>— сколько школ можно разместить</span></label>
+                    <input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>Org ID <span className={c.muted}>— 0 = общий пул</span></label>
+                    <input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} />
+                  </div>
                 </div>
-                <div className={styles.formActions}><button className={styles.submitBtn} disabled={busy === "node"}>Создать</button></div>
+                <div className={styles.formActions}>
+                  <button type="submit" className={styles.submitBtn} disabled={busy === "node"}>
+                    {busy === "node" ? "Создаётся…" : "Зарегистрировать ноду"}
+                  </button>
+                </div>
               </form>
             </div>
           )}
+
           {capacityRec && (
-            <div className={`${styles.card} ${c.okCard}`}>
-              <b>{capacityRec.summary}</b>
-              <div className={styles.tableContainer} style={{ marginTop: 10 }}>
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Рекомендации по sizing</h2>
+              <p className={c.muted} style={{ marginBottom: 12 }}><b>{capacityRec.summary}</b></p>
+              <div className={styles.tableContainer}>
                 <table className={styles.table}>
-                  <thead><tr><th>Конфигурация</th><th>Школ на ноду</th><th>Нужно нод</th></tr></thead>
+                  <thead><tr><th>Конфигурация сервера</th><th>Школ на ноду</th><th>Нужно нод для {capacityRec.total_schools} школ</th></tr></thead>
                   <tbody>{capacityRec.recommendations?.map((r: any, i: number) => (
-                    <tr key={i}><td>{r.cpu_cores} CPU / {r.ram_gb} GB RAM / {r.disk_gb} GB Disk</td><td>{r.schools_per_node}</td><td>{r.nodes_needed}</td></tr>
+                    <tr key={i}>
+                      <td><b>{r.cpu_cores} CPU</b> / <b>{r.ram_gb} GB RAM</b> / {r.disk_gb} GB Disk</td>
+                      <td>{r.schools_per_node}</td>
+                      <td>{r.nodes_needed}</td>
+                    </tr>
                   ))}</tbody>
                 </table>
               </div>
             </div>
           )}
+
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Ноды ({nodes ? nodes.length : 0})</h2>
+            <h2 className={styles.cardTitle}>Зарегистрированные ноды ({nodes ? nodes.length : 0})</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
                 <thead><tr><th>Имя</th><th>Хост</th><th>Ресурсы</th><th>Статус</th><th>Школ</th><th>Загрузка</th><th>Действия</th></tr></thead>
@@ -401,17 +460,17 @@ export default function PlatformConsole() {
                         <td>{u ? `${u.schools_count}/${u.max_schools}` : "—"}</td>
                         <td style={{minWidth:120}}><div style={{height:6, background:"#eee", borderRadius:3, overflow:"hidden"}}><div style={{height:6, width:`${Math.min(pct,100)}%`, background:barColor, borderRadius:3}} /></div><small style={{color:"var(--text-secondary)"}}>{u ? `${Math.round(pct)}%` : "?"}</small></td>
                         <td style={{whiteSpace:"nowrap"}}>
-                          {n.status === "pending_bootstrap" && <button className={styles.actionBtn} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
-                          {n.status === "active" && <button className={styles.actionBtn} onClick={() => drainNode(n.id)}>Drain</button>}
-                          <button className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id)}>Удал.</button>
+                          {n.status === "pending_bootstrap" && <button type="button" className={styles.actionBtn} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
+                          {n.status === "active" && <button type="button" className={styles.actionBtn} onClick={() => drainNode(n.id)}>Drain</button>}
+                          <button type="button" className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id, n.name)}>Удал.</button>
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Добавьте ноду — это сервер, на котором крутятся школы организаций.</p>}
-              {nodes === null && <p className={c.muted}>Загрузка…</p>}
+              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «+ Добавить ноду» чтобы зарегистрировать сервер.</p>}
+              {nodes === null && <p className={c.muted} onClick={() => { loadInfra(); }} style={{cursor:"pointer", textDecoration:"underline"}}>Нажмите для загрузки списка нод…</p>}
             </div>
           </div>
         </>
