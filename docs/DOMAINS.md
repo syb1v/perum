@@ -2,6 +2,21 @@
 
 > Документ описывает, как организация получает свой URL — поддомен `<org>.perum.ru` или кастомный домен (`kuban-edu.ru`, `school45.ru`, и т.п.). Реализация — `deploy/caddy/Caddyfile.tmpl` + `perum-core/app/services/caddy_admin.py` + endpoint `perum-core/app/routers/domains.py`.
 
+## Тарифные лимиты
+
+| План | Поддомены | Кастомные домены | Лендинги |
+|------|-----------|------------------|----------|
+| Trial | ∞ | 0 | Нет |
+| Basic | ∞ | 1 | Нет |
+| Pro | ∞ | 5 | Да |
+| Enterprise | ∞ | 20 | Да |
+
+**Поддомены** (e.g., `school1.perum.ru`) не лимитируются — каждая школа получает поддомен автоматически.
+
+**Кастомные домены** лимитируются полем `organizations.max_custom_domains`. Проверка при `POST /api/schools/{id}/domains`.
+
+**Лендинги** — кастомный HTML на домене школы с формой обратной связи. Доступно только если `organizations.custom_landing_enabled = true`.
+
 ## Поддомен `<org_slug>.perum.ru` (по умолчанию)
 
 При создании организации (см. [PROVISIONING.md](PROVISIONING.md)) автоматически назначается `<org_slug>.perum.ru`. Это работает прозрачно благодаря:

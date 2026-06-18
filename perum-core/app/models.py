@@ -10,7 +10,7 @@ described by SQLAlchemy models inside `perum-tenant/app/models/`.
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
 
 from app.core.crypto import EncryptedString
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -88,9 +88,16 @@ class Organization(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    # Заморозка (suspend): статус становится 'suspended', стеки школ останавливаются,
-    # org_admin теряет доступ. Разморозка возвращает в 'active'.
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    plan_tier: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="starter", server_default="starter",
+        comment="free | starter | pro | enterprise",
+    )
+    max_schools: Mapped[int] = mapped_column(Integer, nullable=False, default=5, server_default="5")
+    max_custom_domains: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    custom_landing_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    max_nodes: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
     domains: Mapped[list["OrganizationDomain"]] = relationship(
         back_populates="organization",
@@ -102,6 +109,10 @@ class Organization(Base):
         uselist=False,
     )
     schools: Mapped[list["School"]] = relationship(
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+    nodes: Mapped[list["Node"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
     )
@@ -210,6 +221,12 @@ class School(Base):
         back_populates="school", cascade="all, delete-orphan", uselist=False
     )
     domains: Mapped[list["SchoolDomain"]] = relationship(
+        back_populates="school", cascade="all, delete-orphan"
+    )
+    node_assignments: Mapped[list["NodeAssignment"]] = relationship(
+        back_populates="school", cascade="all, delete-orphan"
+    )
+    update_history: Mapped[list["UpdateHistory"]] = relationship(
         back_populates="school", cascade="all, delete-orphan"
     )
 
@@ -401,3 +418,95 @@ class Release(Base):
     published_by: Mapped[int | None] = mapped_column(
         ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True
     )
+
+
+# ============================================================================
+# Инфраструктура: ноды (серверы), распределение школ, история обновлений.
+# См. docs/INFRASTRUCTURE_PLAN.md.
+# ============================================================================
+
+
+class Node(Base):
+    """Серверная нода — физический или виртуальный сервер, на котором крутятся
+    школы организации. Управляется агентом (ROLE=org_agent)."""
+
+    __tablename__ = "nodes"
+    __table_args__ = (UniqueConstraint("hostname", name="uq_nodes_hostname"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    hostname: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    ssh_port: Mapped[int] = mapped_column(Integer, nullable=False, default=22, server_default="22")
+
+    cpu_cores: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    ram_gb: Mapped[float] = mapped_column(Float, nullable=False, default=2.0)
+    disk_gb: Mapped[float] = mapped_column(Float, nullable=False, default=20.0)
+
+    status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="pending_bootstrap", server_default="pending_bootstrap",
+        comment="pending_bootstrap | active | draining | offline | decommissioned",
+    )
+
+    org_id: Mapped[int | None] = mapped_column(
+        ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    enrollment_token_id: Mapped[int | None] = mapped_column(
+        ForeignKey("enrollment_tokens.id", ondelete="SET NULL"), nullable=True
+    )
+
+    agent_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    max_schools: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    organization: Mapped[Organization | None] = relationship(back_populates="nodes")
+    assignments: Mapped[list["NodeAssignment"]] = relationship(
+        back_populates="node", cascade="all, delete-orphan"
+    )
+
+
+class NodeAssignment(Base):
+    """Привязка школы к ноде — на каком сервере крутится школа."""
+
+    __tablename__ = "node_assignments"
+    __table_args__ = (
+        UniqueConstraint("school_id", name="uq_node_assignments_school"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_id: Mapped[int] = mapped_column(
+        ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    node: Mapped[Node] = relationship(back_populates="assignments")
+    school: Mapped[School] = relationship(back_populates="node_assignments")
+
+
+class UpdateHistory(Base):
+    """История OTA-обновлений школы. Записывается при каждом update_school."""
+
+    __tablename__ = "update_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    from_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    to_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default="pending",
+        comment="pending | success | failed | rolled_back",
+    )
+    started_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    school: Mapped[School] = relationship(back_populates="update_history")

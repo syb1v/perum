@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
 from app.core.docker_client import DockerClient, HealthSpec, get_docker_client
-from app.models import Release, School, SchoolDomain, SchoolSecret
+from app.models import Release, School, SchoolDomain, SchoolSecret, UpdateHistory
 from app.services.caddy_admin import CaddyAdmin, get_caddy_admin
 from app.services.stack_spec import (
     StackSpec,
@@ -464,11 +464,18 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     if to_image == from_image:
         return UpdateOutcome(school=school, from_image=from_image, to_image=to_image)
 
+    history = UpdateHistory(
+        school_id=school.id,
+        from_version=from_image,
+        to_version=to_image,
+        status="pending",
+    )
+    db.add(history)
+    await db.flush()
+
     secret = await db.get(SchoolSecret, school.id)
     if secret is None:
         raise ProvisioningError("school secret missing — школа не была запровижинена")
-    # OTA-обновление — момент бэкфилла отдельного RPC-токена для старых школ:
-    # новый app-контейнер получит INTERNAL_RPC_TOKEN в env (build_school_stack_spec).
     if not getattr(secret, "internal_rpc_token", None):
         secret.internal_rpc_token = secrets_mod.token_urlsafe(24)
         await db.commit()
@@ -486,14 +493,22 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
         except Exception as rb:  # noqa: BLE001
             logger.error("school %s: ROLLBACK to %s also failed: %s", school.slug, from_image, rb)
             school.status = "failed"
+            history.status = "failed"
+            history.error_message = f"update and rollback failed: {exc}; rollback: {rb}"
+            history.completed_at = datetime.utcnow()
             await db.commit()
             raise ProvisioningError(f"update and rollback failed: {exc}; rollback: {rb}") from exc
         school.status = "active"
+        history.status = "rolled_back"
+        history.error_message = str(exc)
+        history.completed_at = datetime.utcnow()
         await db.commit()
         return UpdateOutcome(school=school, from_image=from_image, to_image=from_image, rolled_back=True)
 
     school.release_tag = to_image
     school.status = "active"
+    history.status = "success"
+    history.completed_at = datetime.utcnow()
     await db.commit()
     await db.refresh(school)
     logger.info("school %s: updated %s -> %s", school.slug, from_image, to_image)

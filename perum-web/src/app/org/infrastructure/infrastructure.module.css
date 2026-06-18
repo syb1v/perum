@@ -1,0 +1,178 @@
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.container h1 {
+    font-size: 1.75rem;
+    margin-bottom: 2rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 4rem;
+    color: #666;
+}
+
+.error {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.section {
+    margin-bottom: 2.5rem;
+}
+
+.section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+}
+
+.releaseCard {
+    background: #f0f7ff;
+    border: 1px solid #cce5ff;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.releaseVersion {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0066cc;
+    margin-bottom: 0.5rem;
+}
+
+.releaseChangelog {
+    color: #555;
+    margin: 0.5rem 0;
+    white-space: pre-wrap;
+}
+
+.releaseMeta {
+    font-size: 0.85rem;
+    color: #888;
+    margin-top: 0.5rem;
+}
+
+.updatesList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.updateItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+}
+
+.schoolSlug {
+    font-weight: 600;
+}
+
+.versionArrow {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.nodesGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.nodeCard {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.nodeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.nodeHeader h3 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.statusBadge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.statusActive {
+    background: #d4edda;
+    color: #155724;
+}
+
+.statusPending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.statusDraining {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.statusOffline {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.nodeInfo {
+    font-size: 0.9rem;
+    line-height: 1.8;
+}
+
+.nodeInfo strong {
+    color: #555;
+}
+
+.capacityBar {
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.capacityFill {
+    height: 100%;
+    background: linear-gradient(90deg, #4caf50, #ff9800);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.capacityText {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.empty {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    grid-column: 1 / -1;
+}

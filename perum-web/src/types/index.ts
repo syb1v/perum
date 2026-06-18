@@ -708,3 +708,131 @@ export interface ApiSuccess {
 export interface ApiError {
     detail: string;
 }
+
+/* ==========================================
+ * Infrastructure types (nodes, capacity, updates)
+ * ========================================== */
+
+export type NodeStatus = 'pending_bootstrap' | 'active' | 'draining' | 'offline' | 'decommissioned';
+
+export interface Node {
+    id: number;
+    name: string;
+    hostname: string;
+    ssh_port: number;
+    cpu_cores: number;
+    ram_gb: number;
+    disk_gb: number;
+    status: NodeStatus;
+    org_id: number | null;
+    agent_version: string | null;
+    last_heartbeat: string | null;
+    max_schools: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface NodeListResponse {
+    nodes: Node[];
+    total: number;
+}
+
+export interface NodeUtilization {
+    node_id: number;
+    schools_count: number;
+    max_schools: number;
+    capacity_percent: number;
+    ram_used_gb: number | null;
+    cpu_used_percent: number | null;
+    disk_used_gb: number | null;
+}
+
+export interface NodeConfig {
+    cpu_cores: number;
+    ram_gb: number;
+    disk_gb: number;
+    schools_per_node: number;
+    nodes_needed: number;
+}
+
+export interface CapacityRecommendation {
+    recommendations: NodeConfig[];
+    total_schools: number;
+    summary: string;
+}
+
+export interface BootstrapScript {
+    filename: string;
+    content: string;
+    instructions: string;
+}
+
+export interface UpdateHistoryEntry {
+    id: number;
+    school_id: number;
+    from_version: string | null;
+    to_version: string;
+    status: 'pending' | 'success' | 'failed' | 'rolled_back';
+    started_at: string;
+    completed_at: string | null;
+    error_message: string | null;
+}
+
+export interface UpdateHistoryResponse {
+    school_id: number;
+    school_slug: string;
+    history: UpdateHistoryEntry[];
+    total: number;
+}
+
+export interface CurrentRelease {
+    version_tag: string;
+    image: string | null;
+    changelog: string | null;
+    source_commit: string | null;
+    published_at: string | null;
+}
+
+export interface AvailableUpdates {
+    available: boolean;
+    current_version: string | null;
+    updatable_schools: Array<{
+        school_id: number;
+        school_slug: string;
+        current_version: string | null;
+        available_version: string;
+    }>;
+    total_updatable: number;
+}
+
+export interface OrgLimits {
+    schools: {
+        used: number;
+        limit: number;
+        plan_limit: number;
+        org_limit: number;
+        exceeded: boolean;
+    };
+    nodes: {
+        used: number;
+        limit: number;
+        exceeded: boolean;
+    };
+    custom_domains: {
+        used: number;
+        limit: number;
+        exceeded: boolean;
+    };
+    custom_landing: {
+        enabled: boolean;
+    };
+    plan_tier: string;
+}
+
+export interface NodeSchool {
+    school_id: number;
+    school_slug: string;
+    school_name: string;
+    status: string;
+    assigned_at: string;
+}

@@ -171,7 +171,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, org_self, organizations, releases, releases_ci, schools, stats, telemetry  # noqa: E402
+from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, nodes, org_self, organizations, releases, releases_ci, schools, stats, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -224,6 +224,11 @@ app.include_router(
 # (управление школами заблокировано require_org_admin, биллинг — нет). Гард — на
 # уровне эндпоинта (require_org_admin_billing).
 app.include_router(org_self.router, prefix="/api/org", tags=["org"])
+# Node management: platform_admin CRUD + capacity planning.
+app.include_router(nodes.platform_router, prefix="/api", tags=["nodes"])
+app.include_router(nodes.capacity_router, prefix="/api", tags=["capacity"])
+# Org admin: view own nodes.
+app.include_router(nodes.org_nodes_router, prefix="/api", tags=["org-nodes"])
 
 
 @app.get("/")

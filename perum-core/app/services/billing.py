@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Invoice, Organization, School, Subscription
+from app.models import Invoice, Node, Organization, School, SchoolDomain, Subscription
 
 logger = logging.getLogger("perum.billing")
 
@@ -251,3 +251,47 @@ async def run_billing_enforcement(db: AsyncSession) -> dict:
             suspended.append(org.slug)
             logger.info("billing enforce: suspended org %s (delinquent)", org.slug)
     return {"checked": len(orgs), "suspended": suspended}
+
+
+async def check_org_limits(db: AsyncSession, org: Organization) -> dict:
+    """Полная проверка лимитов организации: школы, ноды, домены, лендинги."""
+    schools_count = int(await db.scalar(
+        select(func.count(School.id)).where(School.org_id == org.id, School.status != "archived")
+    ) or 0)
+
+    nodes_count = int(await db.scalar(
+        select(func.count(Node.id)).where(Node.org_id == org.id, Node.status != "decommissioned")
+    ) or 0)
+
+    custom_domains_count = int(await db.scalar(
+        select(func.count(SchoolDomain.id))
+        .join(School, SchoolDomain.school_id == School.id)
+        .where(School.org_id == org.id, SchoolDomain.domain_type == "custom", SchoolDomain.status != "removed")
+    ) or 0)
+
+    plan_limit = school_limit(org.plan)
+    effective_school_limit = min(plan_limit, org.max_schools)
+
+    return {
+        "schools": {
+            "used": schools_count,
+            "limit": effective_school_limit,
+            "plan_limit": plan_limit,
+            "org_limit": org.max_schools,
+            "exceeded": schools_count >= effective_school_limit,
+        },
+        "nodes": {
+            "used": nodes_count,
+            "limit": org.max_nodes,
+            "exceeded": nodes_count >= org.max_nodes,
+        },
+        "custom_domains": {
+            "used": custom_domains_count,
+            "limit": org.max_custom_domains,
+            "exceeded": custom_domains_count >= org.max_custom_domains,
+        },
+        "custom_landing": {
+            "enabled": org.custom_landing_enabled,
+        },
+        "plan_tier": org.plan_tier,
+    }

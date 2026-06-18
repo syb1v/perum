@@ -150,19 +150,22 @@ async def list_schools(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSe
 
 
 async def _enforce_school_limit(db: AsyncSession, org_id: int) -> None:
-    """402, если число активных (не-archived) школ орг уже на лимите плана.
+    """402, если число активных (не-archived) школ орг уже на лимите.
+    Проверяет оба лимита: из плана (PLAN_SCHOOL_LIMITS) и из org.max_schools.
     Вызывается при ЛЮБОЙ операции, увеличивающей число активных школ: создание
     новой, возрождение archived-школы, reprovision archived. Закрывает обход
     лимита через delete-без-purge → reuse (AUDIT_2026-06-12)."""
     org = await db.get(Organization, org_id)
-    limit = school_limit(org.plan if org else "trial")
+    plan_limit = school_limit(org.plan if org else "trial")
+    org_limit = org.max_schools if org else 5
+    limit = min(plan_limit, org_limit)
     used = int(await db.scalar(
         select(func.count(School.id)).where(School.org_id == org_id, School.status != "archived")
     ) or 0)
     if used >= limit:
         raise HTTPException(
             status.HTTP_402_PAYMENT_REQUIRED,
-            f"достигнут лимит школ для плана '{org.plan if org else 'trial'}' ({limit}). Повысьте план.",
+            f"достигнут лимит школ ({used}/{limit}). Повысьте план или обратитесь к администратору.",
         )
 
 
@@ -463,6 +466,19 @@ async def add_domain(
     host = (payload.domain or "").strip().lower().split("/")[0]
     if not host or "." not in host or " " in host:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "некорректный домен")
+
+    org = await db.get(Organization, admin.org_id)
+    custom_domains_count = int(await db.scalar(
+        select(func.count(SchoolDomain.id))
+        .join(School, SchoolDomain.school_id == School.id)
+        .where(School.org_id == admin.org_id, SchoolDomain.domain_type == "custom", SchoolDomain.status != "removed")
+    ) or 0)
+    if org and custom_domains_count >= org.max_custom_domains:
+        raise HTTPException(
+            status.HTTP_402_PAYMENT_REQUIRED,
+            f"достигнут лимит кастомных доменов ({custom_domains_count}/{org.max_custom_domains}). Повысьте план.",
+        )
+
     taken = (await db.execute(select(SchoolDomain).where(SchoolDomain.domain == host))).scalar_one_or_none()
     if taken is not None and taken.status != "removed":
         raise HTTPException(status.HTTP_409_CONFLICT, "домен уже занят")
@@ -531,3 +547,99 @@ async def delete_school(
             await db.commit()
             return {"id": school_id, "purged": True}
         return {"id": school_id, "status": school.status}
+
+
+# ---------------------------------------------------------------------------
+# OTA Update History
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{school_id}/update-history")
+async def get_update_history(
+    school_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    admin: OrgAdmin = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """История OTA-обновлений школы: когда, откуда, куда, статус."""
+    from app.models import UpdateHistory
+
+    school = await _get_school(school_id, admin, db)
+    rows = (
+        await db.execute(
+            select(UpdateHistory)
+            .where(UpdateHistory.school_id == school.id)
+            .order_by(UpdateHistory.started_at.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+
+    history = [
+        {
+            "id": h.id,
+            "from_version": h.from_version,
+            "to_version": h.to_version,
+            "status": h.status,
+            "started_at": h.started_at.isoformat() if h.started_at else None,
+            "completed_at": h.completed_at.isoformat() if h.completed_at else None,
+            "error_message": h.error_message,
+        }
+        for h in rows
+    ]
+    return {"school_id": school.id, "school_slug": school.slug, "history": history, "total": len(history)}
+
+
+@router.get("/releases/current")
+async def get_current_release(
+    admin: OrgAdmin = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Текущая версия tenant-образа (активный релиз)."""
+    release = await db.scalar(
+        select(Release).where(Release.is_current == True).order_by(Release.id.desc())
+    )
+    if not release:
+        return {"current": None, "message": "No releases published yet"}
+    return {
+        "current": {
+            "version_tag": release.version_tag,
+            "image": release.image,
+            "changelog": release.changelog,
+            "source_commit": release.source_commit,
+            "published_at": release.published_at.isoformat() if release.published_at else None,
+        }
+    }
+
+
+@router.get("/releases/available")
+async def get_available_updates(
+    admin: OrgAdmin = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Проверка доступности обновлений для школ организации."""
+    current = await db.scalar(
+        select(Release).where(Release.is_current == True).order_by(Release.id.desc())
+    )
+    if not current:
+        return {"available": False, "current_version": None, "latest_version": None}
+
+    schools = (
+        await db.execute(select(School).where(School.org_id == admin.org_id, School.status == "active"))
+    ).scalars().all()
+
+    updatable = []
+    for school in schools:
+        if school.release_tag != current.version_tag:
+            updatable.append({
+                "school_id": school.id,
+                "school_slug": school.slug,
+                "current_version": school.release_tag,
+                "available_version": current.version_tag,
+            })
+
+    return {
+        "available": len(updatable) > 0,
+        "current_version": current.version_tag,
+        "updatable_schools": updatable,
+        "total_updatable": len(updatable),
+    }
