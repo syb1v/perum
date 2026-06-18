@@ -11,11 +11,11 @@
 
 | Каталог | Назначение |
 |---|---|
-| `perum-core/` | Control Plane. Один экземпляр на `admin.<домен>`. Управляет организациями и их школами, провижинит docker-стеки (через `docker_proxy`, не сырой сокет), валидирует кастомные домены для Caddy, собирает метрики, ведёт биллинг, публикует релизы. Тот же образ работает узлом организации (`ROLE=org_agent`). |
+| `perum-core/` | Control Plane. Один экземпляр на `admin.<домен>`. Управляет организациями и их школами, провижинит docker-стеки (через `docker_proxy`, не сырой сокет), валидирует кастомные домены для Caddy, собирает метрики, ведёт биллинг, публикует релизы. **Управляет нодами** (серверами организаций) через Agent API, capacity planning, тарифные лимиты. Тот же образ работает узлом организации (`ROLE=org_agent`). |
 | `perum-tenant/` | Tenant App. Единый Docker-образ; **silo=SCHOOL** — запускается по одному инстансу на КАЖДУЮ школу (свой контейнер + БД + volume). Журнал, оценки, геймификация. Обновляется по кнопке (OTA, volume-preserving). |
-| `perum-web/` | Next.js фронтенд. Один билд, multi-tenant: знает свою орг из subdomain или кастомного домена. Маршрутизирует UI: control plane (`admin.perum.ru`) vs tenant (`*.perum.ru` и кастомные домены). |
-| `deploy/` | Caddy-шаблоны, docker-compose шаблоны per-org, Prometheus/Grafana конфиги, скрипты бэкапа. |
-| `docs/` | Архитектура, изоляция тенантов, провижининг, RBAC, доменная политика. Стартовая точка для любого нового контрибьютора. |
+| `perum-web/` | Next.js фронтенд. Один билд, multi-tenant: знает свою орг из subdomain или кастомного домена. Маршрутизирует UI: control plane (`admin.perum.ru`) vs tenant (`*.perum.ru` и кастомные домены). **Дашборды инфраструктуры** для platform_admin и org_admin. |
+| `deploy/` | Caddy-шаблоны, docker-compose шаблоны per-org, Prometheus/Grafana конфиги, скрипты бэкапа, **bootstrap-скрипты для развёртывания нод**. |
+| `docs/` | Архитектура, изоляция тенантов, провижининг, RBAC, доменная политика, **инфраструктура, OTA-обновления, тарифы и лимиты**. Стартовая точка для любого нового контрибьютора. |
 
 ## С чего начать
 
@@ -26,8 +26,12 @@
 3. [docs/ROLES.md](docs/ROLES.md) — иерархия ролей (platform_admin → org_admin → school_admin → teacher/student/parent) и матрица прав.
 4. [docs/PROVISIONING.md](docs/PROVISIONING.md) — как создаётся новая организация и её стек.
 5. [docs/DOMAINS.md](docs/DOMAINS.md) — поток subdomain и кастомного домена через Caddy on-demand TLS.
-6. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — как раскатывать новую версию tenant-образа на все живые орг.
-7. [docs/RELEASING.md](docs/RELEASING.md) — **CI/CD, релизы и обновления**: что делает GitHub Actions, как публиковать реальные релизы тенантов и обновлять фронт/ядро/тенанты по отдельности.
+6. [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) — **управление нодами**: архитектура multi-server, Agent API, capacity planning, распределение школ по нодам.
+7. [docs/NODE_DEPLOYMENT.md](docs/NODE_DEPLOYMENT.md) — **развёртывание ноды**: требования к серверу, bootstrap-скрипт, troubleshooting.
+8. [docs/OTA_UPDATES.md](docs/OTA_UPDATES.md) — **OTA-обновления**: как обновляются ядро и tenant, история обновлений, rollback.
+9. [docs/TARIFFS_AND_LIMITS.md](docs/TARIFFS_AND_LIMITS.md) — **тарифы и лимиты**: планы (trial/basic/pro/enterprise), enforcement, billing.
+10. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — как раскатывать новую версию tenant-образа на все живые орг.
+11. [docs/RELEASING.md](docs/RELEASING.md) — **CI/CD, релизы и обновления**: что делает GitHub Actions, как публиковать реальные релизы тенантов и обновлять фронт/ядро/тенанты по отдельности.
 
 ## Работа с репозиторием и релизы
 
@@ -44,9 +48,10 @@
 
 - **[docs/PLAN.md](docs/PLAN.md)** — полный план редизайна: архитектура, все 11 фаз, критические файлы, зафиксированные решения.
 - **[docs/PROGRESS.md](docs/PROGRESS.md)** — где мы сейчас, что сделано, следующие шаги, как поднять стенд. **Точка возобновления для новой сессии — начни отсюда.**
+- **[docs/PROGRESS_INFRA.md](docs/PROGRESS_INFRA.md)** — прогресс реализации инфраструктурного управления (ноды, capacity planning, тарифы).
 - **[CHANGELOG.md](CHANGELOG.md)** — журнал изменений по версиям (с `0.0.1`), понятным языком.
 
-Система переведена на архитектуру **v2: silo=SCHOOL** (каждая школа — отдельный стек) с control plane, узлами организаций, биллингом, телеметрией, OTA-обновлениями, кастомными доменами (Caddy on-demand TLS) и observability. Прошёл сквозной аудит иерархии ядро→организация→школа; закрыты находки по RBAC, конкурентному провижинингу, удалению/бэкапам, изоляции токенов, биллингу, асинхронному провижинингу и выносу docker.sock из ядра. Прод развёрнут. **Полная карта статуса — в [docs/PROGRESS.md](docs/PROGRESS.md); аудит и его закрытие — в [docs/AUDIT_2026-06-12.md](docs/AUDIT_2026-06-12.md).**
+Система переведена на архитектуру **v2: silo=SCHOOL** (каждая школа — отдельный стек) с control plane, узлами организаций, биллингом, телеметрией, OTA-обновлениями, кастомными доменами (Caddy on-demand TLS) и observability. **Добавлено управление инфраструктурой**: multi-server архитектура с Agent API на нодах, capacity planning (рекомендации по sizing), тарифные лимиты (max_schools, max_custom_domains, max_nodes), OTA-прозрачность (история обновлений), UI-дашборды для platform_admin и org_admin, bootstrap-скрипты для развёртывания нод. Прошёл сквозной аудит иерархии ядро→организация→школа; закрыты находки по RBAC, конкурентному провижинингу, удалению/бэкапам, изоляции токенов, биллингу, асинхронному провижинингу и выносу docker.sock из ядра. Прод развёрнут. **Полная карта статуса — в [docs/PROGRESS.md](docs/PROGRESS.md); аудит и его закрытие — в [docs/AUDIT_2026-06-12.md](docs/AUDIT_2026-06-12.md).**
 
 Параллельно продолжает работать **legacy PERUM** на `пэрум.рф` для существующих школ. Эта система — только для новых организаций; миграция legacy данных — опциональный шаг через ~6 месяцев.
 
