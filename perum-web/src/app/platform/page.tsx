@@ -223,11 +223,19 @@ export default function PlatformConsole() {
   async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); toast.showInfo(`Нода «${name}» удалена`); } catch (e: any) { toast.showError(e.message); } }
   async function getBootstrap(id: number, name: string) {
     try {
+      toast.showInfo(`Генерирую скрипт для ${name}...`);
       const s = await papi(`/api/platform/nodes/${id}/bootstrap-script`, { method: "POST" });
-      const blob = new Blob([s.content], { type: "text/x-shellscript" });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = s.filename; a.click();
-      URL.revokeObjectURL(url); toast.showSuccess(`Скрипт для ${name} скачан. Запустите: bash ${s.filename}`);
-    } catch (e: any) { toast.showError(e.message); }
+      const blob = new Blob([s.content], { type: "application/x-sh" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = s.filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 200);
+      toast.showSuccess(`Скрипт ${s.filename} скачан. Запустите на сервере: bash ${s.filename}`);
+    } catch (e: any) { toast.showError("Ошибка скачивания: " + (e.message || "неизвестная")); }
   }
   async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); setShowCapacity(true); } catch (e: any) { toast.showError(e.message); } }
 
@@ -390,34 +398,46 @@ export default function PlatformConsole() {
 
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Зарегистрированные ноды ({nodes ? nodes.length : 0})</h2>
-            <div className={styles.tableContainer}>
-              <table className={styles.table}>
-                <thead><tr><th>Имя</th><th>Хост</th><th>Ресурсы</th><th>Статус</th><th>Школ</th><th>Загрузка</th><th>Действия</th></tr></thead>
-                <tbody>
-                  {nodes?.map((n) => {
-                    const u = nodeUtil[n.id];
-                    const pct = u ? u.capacity_percent : 0;
-                    const barColor = pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
-                    return (
-                      <tr key={n.id}>
-                        <td><b>{n.name}</b></td>
-                        <td><code className={styles.code}>{n.hostname}</code></td>
-                        <td>{n.cpu_cores} CPU / {n.ram_gb} GB RAM / {n.disk_gb} GB Disk</td>
-                        <td><span className={statusBadge(n.status)}>{n.status}</span></td>
-                        <td>{u ? `${u.schools_count}/${u.max_schools}` : "—"}</td>
-                        <td style={{minWidth:120}}><div style={{height:6, background:"#eee", borderRadius:3, overflow:"hidden"}}><div style={{height:6, width:`${Math.min(pct,100)}%`, background:barColor, borderRadius:3}} /></div><small style={{color:"var(--text-secondary)"}}>{u ? `${Math.round(pct)}%` : "?"}</small></td>
-                        <td style={{whiteSpace:"nowrap"}}>
-                          {n.status === "pending_bootstrap" && <button type="button" className={styles.actionBtn} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
-                          {n.status === "active" && <button type="button" className={styles.actionBtn} onClick={() => drainNode(n.id)}>Drain</button>}
-                          <button type="button" className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id, n.name)}>Удал.</button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «Добавить ноду» чтобы зарегистрировать сервер.</p>}
-              {nodes === null && <p className={c.muted} onClick={() => { loadInfra(); }} style={{cursor:"pointer", textDecoration:"underline"}}>Нажмите для загрузки списка нод…</p>}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+              {nodes?.map((n) => {
+                const u = nodeUtil[n.id];
+                const isOnline = n.last_heartbeat && (Date.now() - new Date(n.last_heartbeat).getTime() < 300_000);
+                const ramTotal = n.ram_gb || 1;
+                const ramUsed = (u?.ram_used_gb != null && u.ram_used_gb > 0) ? u.ram_used_gb : 0;
+                const cpuPct = (u?.cpu_used_percent != null && u.cpu_used_percent > 0) ? u.cpu_used_percent : 0;
+                const diskTotal = n.disk_gb || 1;
+                const diskUsed = (u?.disk_used_gb != null && u.disk_used_gb > 0) ? u.disk_used_gb : 0;
+                const schoolsPct = u ? u.capacity_percent : 0;
+                return (
+                  <div key={n.id} className={styles.card} style={{ padding: 16, margin: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div>
+                        <b style={{ fontSize: "1.05rem" }}>{n.name}</b>
+                        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{n.hostname}</div>
+                      </div>
+                      <span className={statusBadge(n.status)}>{n.status}</span>
+                    </div>
+                    {n.status === "active" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: "0.8rem" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 4, background: isOnline ? "#28a745" : "#dc3545" }} />
+                        <span style={{ color: isOnline ? "#28a745" : "#dc3545", fontWeight: 600 }}>{isOnline ? "онлайн" : "оффлайн"}</span>
+                        {n.last_heartbeat && <span style={{ color: "var(--text-secondary)", marginLeft: "auto" }}>{Math.round((Date.now() - new Date(n.last_heartbeat).getTime()) / 1000)}с назад</span>}
+                      </div>
+                    )}
+                    <ResourceBar label="CPU" pct={cpuPct} detail={n.cpu_cores ? `${n.cpu_cores} ядер` : ""} dimmed={n.status !== "active"} />
+                    <ResourceBar label="RAM" pct={ramUsed > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0} detail={ramUsed > 0 ? `${ramUsed.toFixed(1)} / ${ramTotal.toFixed(0)} GB` : `${ramTotal.toFixed(0)} GB`} dimmed={n.status !== "active"} />
+                    <ResourceBar label="Диск" pct={diskUsed > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0} detail={diskUsed > 0 ? `${diskUsed.toFixed(1)} / ${diskTotal.toFixed(0)} GB` : `${diskTotal.toFixed(0)} GB`} dimmed={n.status !== "active"} />
+                    <ResourceBar label="Школы" pct={schoolsPct} detail={u ? `${u.schools_count} / ${u.max_schools}` : `0 / ${n.max_schools}`} />
+                    <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
+                      {n.status === "pending_bootstrap" && <button type="button" className={styles.actionBtn} style={{ flex: 1 }} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
+                      {n.status === "active" && <button type="button" className={styles.actionBtn} style={{ flex: 1 }} onClick={() => drainNode(n.id)}>Drain</button>}
+                      <button type="button" className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id, n.name)}>Удалить</button>
+                    </div>
+                  </div>
+                );
+              })}
+              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «+ Добавить ноду».</p>}
+              {nodes === null && <p className={c.muted} onClick={() => { loadInfra(); }} style={{ cursor: "pointer", textDecoration: "underline", gridColumn: "1/-1" }}>Нажмите для загрузки списка нод…</p>}
             </div>
           </div>
 
@@ -610,6 +630,22 @@ export default function PlatformConsole() {
         </Modal>
       )}
     </ConsoleShell>
+  );
+}
+
+function ResourceBar({ label, pct, detail, dimmed }: { label: string; pct: number; detail?: string; dimmed?: boolean }) {
+  const color = dimmed ? "#9e9e9e" : pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
+  const width = Math.max(0, Math.min(100, pct || 0));
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: 2 }}>
+        <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+        <span style={{ fontWeight: 600, color: dimmed ? "var(--text-secondary)" : "var(--text-primary)" }}>{detail || `${Math.round(width)}%`}</span>
+      </div>
+      <div style={{ height: 6, background: "var(--surface-tertiary, #eee)", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ height: 6, width: `${width}%`, background: color, borderRadius: 3, transition: "width 0.5s ease" }} />
+      </div>
+    </div>
   );
 }
 

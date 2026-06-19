@@ -341,52 +341,52 @@ export default function OrgConsole() {
             </div>
           )}
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Мои серверы (ноды) ({orgNodes ? orgNodes.length : 0})</h2>
-            {orgNodes && orgNodes.length > 0 && (
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead><tr><th>Нода</th><th>IP</th><th>Ресурсы</th><th>Статус</th><th>Школ</th><th>Загрузка</th><th>Агент</th></tr></thead>
-                  <tbody>
-                    {orgNodes.map((n) => {
-                      const u = orgNodeUtil[n.id];
-                      const pct = u ? u.capacity_percent : 0;
-                      const barColor = pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
-                      return (
-                        <tr key={n.id}>
-                          <td><b>{n.name}</b></td>
-                          <td><code className={styles.code}>{n.hostname}</code></td>
-                          <td>{n.cpu_cores} CPU / {n.ram_gb} GB RAM</td>
-                          <td><span className={statusBadge(n.status)}>{n.status}</span></td>
-                          <td>{u ? `${u.schools_count}/${u.max_schools}` : "—"}</td>
-                          <td style={{minWidth:120}}><div style={{height:6, background:"#eee", borderRadius:3, overflow:"hidden"}}><div style={{height:6, width:`${Math.min(pct,100)}%`, background:barColor, borderRadius:3}} /></div><small style={{color:"var(--text-secondary)"}}>{u ? `${Math.round(pct)}%` : "?"}</small></td>
-                          <td>{n.agent_version || "—"}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {orgNodes && orgNodes.length === 0 && <p className={styles.emptyState}>Нет привязанных серверов (нод). Все ваши школы пока на сервере платформы.</p>}
-            {orgNodes === null && <p className={c.muted} onClick={() => { loadOrgInfra(); }} style={{cursor:"pointer", textDecoration:"underline"}}>Нажмите чтобы загрузить информацию о серверах…</p>}
+            <h2 className={styles.cardTitle}>Мои серверы ({orgNodes ? orgNodes.length : 0})</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
+              {orgNodes?.map((n) => {
+                const u = orgNodeUtil[n.id];
+                const isOnline = n.last_heartbeat && (Date.now() - new Date(n.last_heartbeat).getTime() < 300_000);
+                const schoolsPct = u ? u.capacity_percent : 0;
+                const ramTotal = n.ram_gb || 1;
+                const ramUsed = (u?.ram_used_gb != null && u.ram_used_gb > 0) ? u.ram_used_gb : 0;
+                const cpuPct = (u?.cpu_used_percent != null && u.cpu_used_percent > 0) ? u.cpu_used_percent : 0;
+                return (
+                  <div key={n.id} className={styles.card} style={{ padding: 16, margin: 0 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <div>
+                        <b style={{ fontSize: "1rem" }}>{n.name}</b>
+                        <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>{n.hostname}</div>
+                      </div>
+                      <span className={statusBadge(n.status)}>{n.status}</span>
+                    </div>
+                    {n.status === "active" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: "0.78rem" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 4, background: isOnline ? "#28a745" : "#dc3545" }} />
+                        <span style={{ color: isOnline ? "#28a745" : "#dc3545", fontWeight: 600 }}>{isOnline ? "онлайн" : "оффлайн"}</span>
+                        {n.last_heartbeat && <span style={{ color: "var(--text-secondary)", marginLeft: "auto" }}>{Math.round((Date.now() - new Date(n.last_heartbeat).getTime()) / 1000)}с</span>}
+                      </div>
+                    )}
+                    <OrgResourceBar label="CPU" pct={cpuPct} detail={n.cpu_cores ? `${n.cpu_cores} ядер` : ""} dimmed={n.status !== "active"} />
+                    <OrgResourceBar label="RAM" pct={ramUsed > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0} detail={ramUsed > 0 ? `${ramUsed.toFixed(1)} / ${ramTotal.toFixed(0)} GB` : `${ramTotal.toFixed(0)} GB`} dimmed={n.status !== "active"} />
+                    <OrgResourceBar label="Школы" pct={schoolsPct} detail={u ? `${u.schools_count} / ${u.max_schools}` : `0 / ${n.max_schools}`} />
+                    {n.agent_version && <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: 6 }}>Агент: {n.agent_version}</div>}
+                  </div>
+                );
+              })}
+              {orgNodes && orgNodes.length === 0 && <p className={styles.emptyState} style={{ gridColumn: "1/-1" }}>Нет привязанных серверов. Все школы пока на сервере платформы.</p>}
+              {orgNodes === null && <p className={c.muted} onClick={() => { loadOrgInfra(); }} style={{ cursor: "pointer", textDecoration: "underline", gridColumn: "1/-1" }}>Нажмите для загрузки…</p>}
+            </div>
           </div>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Где крутятся ваши школы</h2>
-            <p className={c.muted}>Каждая школа — изолированный Docker-стек (свой контейнер + БД). Школы размещаются на нодах — физических или виртуальных серверах. Система автоматически распределяет школы по наиболее свободным нодам.</p>
+            <p className={c.muted}>Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам.</p>
             {orgNodes && orgNodes.length > 0 && (
               <div className={styles.tableContainer} style={{ marginTop: 10 }}>
                 <table className={styles.table}>
                   <thead><tr><th>Школа</th><th>Домен</th><th>Статус</th><th>Нода (IP)</th></tr></thead>
-                  <tbody>
-                    {schools?.map((s) => (
-                      <tr key={s.id}>
-                        <td><b>{s.name}</b></td>
-                        <td><code className={styles.code}>{s.slug}.avari-land.ru</code></td>
-                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
-                        <td><code className={styles.code}>{orgNodes[0]?.hostname || "—"}</code></td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  <tbody>{schools?.map((s) => (
+                    <tr key={s.id}><td><b>{s.name}</b></td><td><code className={styles.code}>{s.slug}.avari-land.ru</code></td><td><span className={statusBadge(s.status)}>{s.status}</span></td><td><code className={styles.code}>{orgNodes[0]?.hostname || "—"}</code></td></tr>
+                  ))}</tbody>
                 </table>
               </div>
             )}
@@ -439,6 +439,22 @@ export default function OrgConsole() {
         </Modal>
       )}
     </ConsoleShell>
+  );
+}
+
+function OrgResourceBar({ label, pct, detail, dimmed }: { label: string; pct: number; detail?: string; dimmed?: boolean }) {
+  const color = dimmed ? "#9e9e9e" : pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
+  const width = Math.max(0, Math.min(100, pct || 0));
+  return (
+    <div style={{ marginBottom: 5 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: 1 }}>
+        <span style={{ color: "var(--text-secondary)" }}>{label}</span>
+        <span style={{ fontWeight: 600, color: dimmed ? "var(--text-secondary)" : "var(--text-primary)" }}>{detail || `${Math.round(width)}%`}</span>
+      </div>
+      <div style={{ height: 5, background: "var(--surface-tertiary, #eee)", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ height: 5, width: `${width}%`, background: color, borderRadius: 3, transition: "width 0.5s ease" }} />
+      </div>
+    </div>
   );
 }
 
