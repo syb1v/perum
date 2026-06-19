@@ -1,5 +1,7 @@
-// Консоли платформы/орг сами рендерят app-shell (ConsoleShell). Логин — свой
-// центрированный экран. Поэтому layout — прозрачный контейнер.
+"use client";
+
+import { ToastProvider } from "@/context/ToastContext";
+
 export default function PlatformLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return <ToastProvider>{children}</ToastProvider>;
 }

@@ -7,6 +7,7 @@ import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell"
 import Modal from "@/components/platform/Modal";
 import styles from "@/app/admin/page.module.css";
 import c from "@/components/platform/console.module.css";
+import { useToast } from "@/context/ToastContext";
 
 const PLANS = ["trial", "basic", "pro", "enterprise"];
 
@@ -21,6 +22,7 @@ function statusBadge(s: string): string {
 
 export default function PlatformConsole() {
   const router = useRouter();
+  const toast = useToast();
   const [section, setSection] = useState("dashboard");
   const [err, setErr] = useState("");
   const [orgs, setOrgs] = useState<any[] | null>(null);
@@ -58,6 +60,8 @@ export default function PlatformConsole() {
   const [capacityRec, setCapacityRec] = useState<any>(null);
   const [capacityCount, setCapacityCount] = useState(10);
   const [showNodeForm, setShowNodeForm] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
+  const [showCapacity, setShowCapacity] = useState(false);
   const [nodeCreated, setNodeCreated] = useState<any>(null);
   const [nodeForm, setNodeForm] = useState({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
 
@@ -211,21 +215,21 @@ export default function PlatformConsole() {
       if (!payload.org_id) delete payload.org_id;
       await papi("/api/platform/nodes", { method: "POST", body: JSON.stringify(payload) });
       setShowNodeForm(false); setNodeForm({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
-      setNodeCreated({ node: nodeForm.name });
+      toast.showSuccess(`Нода «${nodeForm.name}» зарегистрирована. Скачайте bootstrap-скрипт для развёртывания.`);
       loadInfra();
-    } catch (e: any) { setErr("Ошибка создания ноды: " + (e.message || "неизвестная ошибка")); } finally { setBusy(null); }
+    } catch (e: any) { toast.showError("Ошибка создания ноды: " + (e.message || "неизвестная")); } finally { setBusy(null); }
   }
-  async function drainNode(id: number) { if (!confirm("Перевести ноду в draining? Новые школы не будут на неё назначаться.")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
-  async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); } catch (e: any) { setErr(e.message); } }
+  async function drainNode(id: number) { if (!confirm("Перевести ноду в draining? Новые школы не будут на неё назначаться.")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); toast.showInfo("Нода переведена в draining"); } catch (e: any) { toast.showError(e.message); } }
+  async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); toast.showInfo(`Нода «${name}» удалена`); } catch (e: any) { toast.showError(e.message); } }
   async function getBootstrap(id: number, name: string) {
     try {
       const s = await papi(`/api/platform/nodes/${id}/bootstrap-script`, { method: "POST" });
       const blob = new Blob([s.content], { type: "text/x-shellscript" });
       const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = s.filename; a.click();
-      URL.revokeObjectURL(url); alert("Скрипт скачан! Запустите на целевом сервере:\n\n  bash " + s.filename);
-    } catch (e: any) { setErr(e.message); }
+      URL.revokeObjectURL(url); toast.showSuccess(`Скрипт для ${name} скачан. Запустите: bash ${s.filename}`);
+    } catch (e: any) { toast.showError(e.message); }
   }
-  async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); } catch (e: any) { setErr(e.message); } }
+  async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); setShowCapacity(true); } catch (e: any) { toast.showError(e.message); } }
 
   function go(id: string) { setSection(id); if (id === "leads" && leads === null) loadLeads(); if (id === "infrastructure" && nodes === null) loadInfra(); }
 
@@ -343,30 +347,9 @@ export default function PlatformConsole() {
       {/* ===================== INFRASTRUCTURE ===================== */}
       {section === "infrastructure" && (
         <>
-          <div className={`${styles.card} ${c.okCard}`} style={{ background: "var(--surface-secondary, #f0f7ff)", borderColor: "var(--accent-primary, #06c)" }}>
-            <b style={{ fontSize: "1.1rem" }}>Инфраструктура — управление серверами (нодами)</b>
-            <p className={c.muted} style={{ marginTop: 8 }}>
-              <b>Нода</b> — это физический или виртуальный сервер, на котором крутятся школы. Система автоматически распределяет школы по наиболее свободным нодам.
-            </p>
-            <p className={c.muted}>
-              <b>Как добавить новую ноду:</b><br />
-              1. Зарегистрируйте ноду ниже → появится статус <span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span><br />
-              2. Нажмите «Скачать скрипт» — получите bash-скрипт для автоматической установки<br />
-              3. Запустите скрипт на целевом сервере: <code className={styles.code}>bash perum-node-*.sh</code><br />
-              4. Через 1-2 минуты нода подключится и статус сменится на <span className={statusBadge("active")}>active</span>
-            </p>
-          </div>
-
-          {nodeCreated && (
-            <div className={`${styles.card} ${c.okCard}`}>
-              <b>Нода «{nodeCreated.node}» зарегистрирована</b>
-              <p className={c.muted}>Нода появится в таблице ниже со статусом pending_bootstrap. Нажмите «Скачать скрипт» чтобы получить bash-скрипт для автоматической установки Docker и агента на сервере.</p>
-              <button type="button" className={styles.submitBtn} style={{marginTop:8}} onClick={() => setNodeCreated(null)}>OK</button>
-            </div>
-          )}
-
           <div className={c.toolbar}>
             <button className={styles.submitBtn} type="button" onClick={() => setShowNodeForm(!showNodeForm)}>{showNodeForm ? "— Скрыть форму" : "+ Добавить ноду"}</button>
+            <button className={styles.btnSecondary} type="button" onClick={() => setShowFaq(true)}>FAQ</button>
             <span className={c.spacer} />
             <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
               <label className={styles.label} style={{ marginBottom: 0 }}>Сколько школ?</label>
@@ -390,54 +373,18 @@ export default function PlatformConsole() {
                   </div>
                 </div>
                 <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>CPU (ядер)</label>
-                    <input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>RAM (GB)</label>
-                    <input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Диск (GB)</label>
-                    <input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} />
-                  </div>
+                  <div className={styles.formGroup}><label className={styles.label}>CPU (ядер)</label><input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>RAM (GB)</label><input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>Диск (GB)</label><input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} /></div>
                 </div>
                 <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Макс. школ <span className={c.muted}>— сколько школ можно разместить</span></label>
-                    <input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Org ID <span className={c.muted}>— 0 = общий пул</span></label>
-                    <input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} />
-                  </div>
+                  <div className={styles.formGroup}><label className={styles.label}>Макс. школ <span className={c.muted}>— лимит</span></label><input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} /></div>
+                  <div className={styles.formGroup}><label className={styles.label}>Org ID <span className={c.muted}>— 0 = общий пул</span></label><input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} /></div>
                 </div>
                 <div className={styles.formActions}>
-                  <button type="submit" className={styles.submitBtn} disabled={busy === "node"}>
-                    {busy === "node" ? "Создаётся…" : "Зарегистрировать ноду"}
-                  </button>
+                  <button type="submit" className={styles.submitBtn} disabled={busy === "node"}>{busy === "node" ? "Создаётся…" : "Зарегистрировать ноду"}</button>
                 </div>
               </form>
-            </div>
-          )}
-
-          {capacityRec && (
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Рекомендации по sizing</h2>
-              <p className={c.muted} style={{ marginBottom: 12 }}><b>{capacityRec.summary}</b></p>
-              <div className={styles.tableContainer}>
-                <table className={styles.table}>
-                  <thead><tr><th>Конфигурация сервера</th><th>Школ на ноду</th><th>Нужно нод для {capacityRec.total_schools} школ</th></tr></thead>
-                  <tbody>{capacityRec.recommendations?.map((r: any, i: number) => (
-                    <tr key={i}>
-                      <td><b>{r.cpu_cores} CPU</b> / <b>{r.ram_gb} GB RAM</b> / {r.disk_gb} GB Disk</td>
-                      <td>{r.schools_per_node}</td>
-                      <td>{r.nodes_needed}</td>
-                    </tr>
-                  ))}</tbody>
-                </table>
-              </div>
             </div>
           )}
 
@@ -469,10 +416,49 @@ export default function PlatformConsole() {
                   })}
                 </tbody>
               </table>
-              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «+ Добавить ноду» чтобы зарегистрировать сервер.</p>}
+              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «Добавить ноду» чтобы зарегистрировать сервер.</p>}
               {nodes === null && <p className={c.muted} onClick={() => { loadInfra(); }} style={{cursor:"pointer", textDecoration:"underline"}}>Нажмите для загрузки списка нод…</p>}
             </div>
           </div>
+
+          {showFaq && (
+            <Modal title="FAQ — управление серверами (нодами)" onClose={() => setShowFaq(false)} width={700}>
+              <p className={c.muted}><b>Нода</b> — это физический или виртуальный сервер, на котором крутятся школы организации. Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам.</p>
+              <p className={c.muted} style={{marginTop:12}}><b>Как добавить новую ноду:</b></p>
+              <ol className={c.muted} style={{paddingLeft:20}}>
+                <li>Зарегистрируйте ноду — появится статус <span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span></li>
+                <li>Нажмите «Скачать скрипт» — получите bash-скрипт для автоматической установки</li>
+                <li>Запустите скрипт на целевом сервере: <code className={styles.code}>bash perum-node-*.sh</code></li>
+                <li>Через 1-2 минуты нода подключится и статус сменится на <span className={statusBadge("active")}>active</span></li>
+              </ol>
+              <p className={c.muted} style={{marginTop:12}}><b>Статусы нод:</b></p>
+              <ul className={c.muted} style={{paddingLeft:20}}>
+                <li><span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span> — нода зарегистрирована, ждёт установки агента</li>
+                <li><span className={statusBadge("active")}>active</span> — агент подключён, принимает школы</li>
+                <li><span className={statusBadge("draining")}>draining</span> — новые школы не назначаются, существующие мигрируют</li>
+                <li><span className="badgeMuted" style={{background:"#e2e3e5", color:"#383d41", padding:"2px 8px", borderRadius:10, fontSize:"0.75rem"}}>offline</span> — агент недоступен</li>
+              </ul>
+              <p className={c.muted} style={{marginTop:12}}><b>Рекомендации sizing (на одну школу ~200MB RAM, ~0.15 CPU):</b></p>
+              <table className={styles.table} style={{marginTop:8}}>
+                <thead><tr><th>Конфигурация</th><th>S (2/2/20)</th><th>M (4/4/50)</th><th>L (8/8/100)</th><th>XL (16/16/200)</th></tr></thead>
+                <tbody><tr><td>Школ</td><td>5</td><td>15</td><td>35</td><td>75</td></tr></tbody>
+              </table>
+            </Modal>
+          )}
+
+          {showCapacity && capacityRec && (
+            <Modal title={`Рекомендации sizing для ${capacityRec.total_schools} школ`} onClose={() => setShowCapacity(false)} width={700}>
+              <p className={c.muted}><b>{capacityRec.summary}</b></p>
+              <div className={styles.tableContainer} style={{marginTop:12}}>
+                <table className={styles.table}>
+                  <thead><tr><th>Конфигурация сервера</th><th>Школ на ноду</th><th>Нужно нод</th></tr></thead>
+                  <tbody>{capacityRec.recommendations?.map((r: any, i: number) => (
+                    <tr key={i}><td><b>{r.cpu_cores} CPU</b> / <b>{r.ram_gb} GB RAM</b> / {r.disk_gb} GB Disk</td><td>{r.schools_per_node}</td><td>{r.nodes_needed}</td></tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            </Modal>
+          )}
         </>
       )}
       {section === "billing" && (
