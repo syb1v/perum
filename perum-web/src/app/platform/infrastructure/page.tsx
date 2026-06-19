@@ -5,6 +5,42 @@ import { infrastructureApi } from '@/lib/infrastructureApi';
 import type { Node, NodeListResponse, CapacityRecommendation } from '@/types';
 import styles from './infrastructure.module.css';
 
+function statusLabel(status: string): string {
+    switch (status) {
+        case 'active': return 'Онлайн';
+        case 'pending_bootstrap': return 'Не установлена';
+        case 'draining': return 'Вывод';
+        case 'offline': return 'Оффлайн';
+        case 'decommissioned': return 'Выведена';
+        default: return status;
+    }
+}
+
+function isOnline(node: Node): boolean {
+    return node.status === 'active';
+}
+
+function barColor(pct: number): string {
+    if (pct >= 90) return '#e53e3e';
+    if (pct >= 70) return '#ed8936';
+    return '#48bb78';
+}
+
+function ResourceBar({ label, used, total, unit }: { label: string; used: number; total: number; unit: string }) {
+    const pct = total > 0 ? Math.min((used / total) * 100, 100) : 0;
+    return (
+        <div className={styles.resourceBar}>
+            <div className={styles.resourceBarLabel}>
+                <span>{label}</span>
+                <span className={styles.resourceBarValue}>{used.toFixed(0)}/{total}{unit}</span>
+            </div>
+            <div className={styles.resourceBarTrack}>
+                <div className={styles.resourceBarFill} style={{ width: `${pct}%`, background: barColor(pct) }} />
+            </div>
+        </div>
+    );
+}
+
 export default function InfrastructurePage() {
     const [nodes, setNodes] = useState<Node[]>([]);
     const [loading, setLoading] = useState(true);
@@ -12,6 +48,7 @@ export default function InfrastructurePage() {
     const [recommendation, setRecommendation] = useState<CapacityRecommendation | null>(null);
     const [schoolCount, setSchoolCount] = useState(10);
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [scriptLoading, setScriptLoading] = useState<number | null>(null);
 
     useEffect(() => {
         loadNodes();
@@ -24,7 +61,7 @@ export default function InfrastructurePage() {
             setNodes(data.nodes);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load nodes');
+            setError(err instanceof Error ? err.message : 'Не удалось загрузить ноды');
         } finally {
             setLoading(false);
         }
@@ -35,31 +72,32 @@ export default function InfrastructurePage() {
             const rec = await infrastructureApi.getCapacityRecommendation(schoolCount);
             setRecommendation(rec);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to get recommendation');
+            setError(err instanceof Error ? err.message : 'Не удалось получить рекомендацию');
         }
     }
 
     async function handleDrainNode(nodeId: number) {
-        if (!confirm('Mark this node for draining? New schools will not be assigned.')) return;
+        if (!confirm('Пометить ноду для вывода из ротации? Новые школы не будут назначаться.')) return;
         try {
             await infrastructureApi.drainNode(nodeId);
             loadNodes();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to drain node');
+            setError(err instanceof Error ? err.message : 'Ошибка вывода ноды');
         }
     }
 
     async function handleDeleteNode(nodeId: number) {
-        if (!confirm('Delete this node? This cannot be undone.')) return;
+        if (!confirm('Удалить ноду? Это действие необратимо.')) return;
         try {
             await infrastructureApi.deleteNode(nodeId);
             loadNodes();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to delete node');
+            setError(err instanceof Error ? err.message : 'Ошибка удаления ноды');
         }
     }
 
-    async function handleDownloadScript(nodeId: number, nodeName: string) {
+    async function handleDownloadScript(nodeId: number) {
+        setScriptLoading(nodeId);
         try {
             const script = await infrastructureApi.generateBootstrapScript(nodeId);
             const blob = new Blob([script.content], { type: 'text/x-shellscript' });
@@ -70,111 +108,134 @@ export default function InfrastructurePage() {
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to generate script');
-        }
-    }
-
-    function getStatusColor(status: string): string {
-        switch (status) {
-            case 'active': return styles.statusActive;
-            case 'pending_bootstrap': return styles.statusPending;
-            case 'draining': return styles.statusDraining;
-            case 'offline': return styles.statusOffline;
-            case 'decommissioned': return styles.statusDecommissioned;
-            default: return '';
+            setError(err instanceof Error ? err.message : 'Не удалось сгенерировать скрипт');
+        } finally {
+            setScriptLoading(null);
         }
     }
 
     if (loading) {
-        return <div className={styles.loading}>Loading infrastructure...</div>;
+        return <div className={styles.loading}>Загрузка инфраструктуры...</div>;
     }
 
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1>Infrastructure Management</h1>
+                <h1>Инфраструктура</h1>
                 <button className={styles.btnPrimary} onClick={() => setShowCreateModal(true)}>
-                    + Add Node
+                    + Добавить ноду
                 </button>
             </div>
 
-            {error && <div className={styles.error}>{error}</div>}
+            {error && <div className={styles.errorBanner}>{error}</div>}
 
             <section className={styles.section}>
-                <h2>Nodes ({nodes.length})</h2>
-                <div className={styles.nodesGrid}>
-                    {nodes.map(node => (
-                        <div key={node.id} className={styles.nodeCard}>
-                            <div className={styles.nodeHeader}>
-                                <h3>{node.name}</h3>
-                                <span className={`${styles.statusBadge} ${getStatusColor(node.status)}`}>
-                                    {node.status}
-                                </span>
-                            </div>
-                            <div className={styles.nodeInfo}>
-                                <div><strong>Hostname:</strong> {node.hostname}</div>
-                                <div><strong>Resources:</strong> {node.cpu_cores} CPU / {node.ram_gb}GB RAM / {node.disk_gb}GB Disk</div>
-                                <div><strong>Capacity:</strong> {node.max_schools} schools max</div>
-                                <div><strong>Organization:</strong> {node.org_id || 'Pool'}</div>
-                                <div><strong>Agent:</strong> {node.agent_version || 'Not connected'}</div>
-                                <div><strong>Last heartbeat:</strong> {node.last_heartbeat ? new Date(node.last_heartbeat).toLocaleString() : 'Never'}</div>
-                            </div>
-                            <div className={styles.nodeActions}>
-                                {node.status === 'pending_bootstrap' && (
-                                    <button className={styles.btnSecondary} onClick={() => handleDownloadScript(node.id, node.name)}>
-                                        Download Bootstrap Script
+                <div className={styles.sectionHeader}>
+                    <h2>Ноды <span className={styles.countBadge}>{nodes.length}</span></h2>
+                </div>
+                <div className={styles.nodeList}>
+                    {nodes.map(node => {
+                        const online = isOnline(node);
+                        return (
+                            <div key={node.id} className={styles.nodeRow}>
+                                <div className={styles.nodeRowLeft}>
+                                    <span className={`${styles.onlineDot} ${online ? styles.dotOnline : styles.dotOffline}`} title={statusLabel(node.status)} />
+                                    <div className={styles.nodeMain}>
+                                        <span className={styles.nodeName}>{node.name}</span>
+                                        <span className={styles.nodeHost}>{node.hostname}</span>
+                                    </div>
+                                    <span className={`${styles.statusPill} ${styles['status_' + node.status]}`}>
+                                        {statusLabel(node.status)}
+                                    </span>
+                                </div>
+
+                                <div className={styles.nodeRowBars}>
+                                    <ResourceBar label="CPU" used={node.cpu_cores} total={node.cpu_cores} unit=" ядер" />
+                                    <ResourceBar label="RAM" used={node.ram_gb} total={node.ram_gb} unit=" ГБ" />
+                                    <ResourceBar label="Диск" used={node.disk_gb} total={node.disk_gb} unit=" ГБ" />
+                                </div>
+
+                                <div className={styles.nodeRowMeta}>
+                                    <span className={styles.metaItem}>
+                                        <span className={styles.metaIcon}>🏫</span>
+                                        {node.max_schools} школ макс
+                                    </span>
+                                    <span className={styles.metaItem}>
+                                        <span className={styles.metaIcon}>⚙</span>
+                                        {node.agent_version ?? 'агент не подключён'}
+                                    </span>
+                                    {node.last_heartbeat && (
+                                        <span className={styles.metaItem}>
+                                            <span className={styles.metaIcon}>♡</span>
+                                            {new Date(node.last_heartbeat).toLocaleString('ru')}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className={styles.nodeRowActions}>
+                                    {(node.status === 'pending_bootstrap' || node.status === 'offline') && (
+                                        <button
+                                            className={styles.btnInstall}
+                                            onClick={() => handleDownloadScript(node.id)}
+                                            disabled={scriptLoading === node.id}
+                                        >
+                                            {scriptLoading === node.id ? '...' : '↓ Скрипт установки'}
+                                        </button>
+                                    )}
+                                    {node.status === 'active' && (
+                                        <button className={styles.btnWarn} onClick={() => handleDrainNode(node.id)}>
+                                            Вывод
+                                        </button>
+                                    )}
+                                    <button className={styles.btnDanger} onClick={() => handleDeleteNode(node.id)}>
+                                        ✕
                                     </button>
-                                )}
-                                {node.status === 'active' && (
-                                    <button className={styles.btnWarning} onClick={() => handleDrainNode(node.id)}>
-                                        Drain
-                                    </button>
-                                )}
-                                <button className={styles.btnDanger} onClick={() => handleDeleteNode(node.id)}>
-                                    Delete
-                                </button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {nodes.length === 0 && (
-                        <div className={styles.empty}>No nodes registered. Add a node to get started.</div>
+                        <div className={styles.emptyState}>
+                            Нод нет. Добавьте первую ноду для размещения школ.
+                        </div>
                     )}
                 </div>
             </section>
 
             <section className={styles.section}>
-                <h2>Capacity Planning</h2>
+                <h2>Планировщик ёмкости</h2>
                 <div className={styles.capacityForm}>
-                    <label>
-                        How many schools do you need to host?
+                    <label className={styles.capacityLabel}>
+                        Сколько школ нужно разместить?
                         <input
                             type="number"
                             value={schoolCount}
                             onChange={(e) => setSchoolCount(Number(e.target.value))}
                             min={1}
                             max={1000}
+                            className={styles.capacityInput}
                         />
                     </label>
                     <button className={styles.btnPrimary} onClick={handleGetRecommendation}>
-                        Get Recommendation
+                        Рассчитать
                     </button>
                 </div>
 
                 {recommendation && (
                     <div className={styles.recommendation}>
-                        <p className={styles.summary}>{recommendation.summary}</p>
-                        <table className={styles.table}>
+                        <p className={styles.recSummary}>{recommendation.summary}</p>
+                        <table className={styles.recTable}>
                             <thead>
                                 <tr>
-                                    <th>Configuration</th>
-                                    <th>Schools/Node</th>
-                                    <th>Nodes Needed</th>
+                                    <th>Конфигурация</th>
+                                    <th>Школ/нода</th>
+                                    <th>Нод нужно</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {recommendation.recommendations.map((rec, i) => (
                                     <tr key={i}>
-                                        <td>{rec.cpu_cores} CPU / {rec.ram_gb}GB RAM / {rec.disk_gb}GB Disk</td>
+                                        <td>{rec.cpu_cores} CPU / {rec.ram_gb} ГБ RAM / {rec.disk_gb} ГБ Диск</td>
                                         <td>{rec.schools_per_node}</td>
                                         <td>{rec.nodes_needed}</td>
                                     </tr>
@@ -218,46 +279,51 @@ function CreateNodeModal({ onClose, onCreated }: { onClose: () => void; onCreate
             onCreated();
             onClose();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create node');
+            setError(err instanceof Error ? err.message : 'Ошибка создания ноды');
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <div className={styles.modal}>
-            <div className={styles.modalContent}>
-                <h2>Add New Node</h2>
-                {error && <div className={styles.error}>{error}</div>}
-                <form onSubmit={handleSubmit}>
-                    <label>
-                        Name
-                        <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+        <div className={styles.modalOverlay}>
+            <div className={styles.modal}>
+                <div className={styles.modalHeader}>
+                    <h2>Добавить ноду</h2>
+                    <button className={styles.modalClose} onClick={onClose}>✕</button>
+                </div>
+                {error && <div className={styles.errorBanner}>{error}</div>}
+                <form onSubmit={handleSubmit} className={styles.modalForm}>
+                    <label className={styles.formLabel}>
+                        Имя ноды
+                        <input className={styles.formInput} type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="node-01" />
                     </label>
-                    <label>
-                        Hostname (IP or FQDN)
-                        <input type="text" value={hostname} onChange={(e) => setHostname(e.target.value)} required />
+                    <label className={styles.formLabel}>
+                        Хост (IP или FQDN)
+                        <input className={styles.formInput} type="text" value={hostname} onChange={(e) => setHostname(e.target.value)} required placeholder="192.168.1.100" />
                     </label>
-                    <label>
-                        CPU Cores
-                        <input type="number" value={cpuCores} onChange={(e) => setCpuCores(Number(e.target.value))} min={1} />
-                    </label>
-                    <label>
-                        RAM (GB)
-                        <input type="number" value={ramGb} onChange={(e) => setRamGb(Number(e.target.value))} min={1} step={0.5} />
-                    </label>
-                    <label>
-                        Disk (GB)
-                        <input type="number" value={diskGb} onChange={(e) => setDiskGb(Number(e.target.value))} min={10} />
-                    </label>
-                    <label>
-                        Max Schools
-                        <input type="number" value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value))} min={1} />
+                    <div className={styles.formRow}>
+                        <label className={styles.formLabel}>
+                            CPU (ядра)
+                            <input className={styles.formInput} type="number" value={cpuCores} onChange={(e) => setCpuCores(Number(e.target.value))} min={1} />
+                        </label>
+                        <label className={styles.formLabel}>
+                            RAM (ГБ)
+                            <input className={styles.formInput} type="number" value={ramGb} onChange={(e) => setRamGb(Number(e.target.value))} min={1} step={0.5} />
+                        </label>
+                        <label className={styles.formLabel}>
+                            Диск (ГБ)
+                            <input className={styles.formInput} type="number" value={diskGb} onChange={(e) => setDiskGb(Number(e.target.value))} min={10} />
+                        </label>
+                    </div>
+                    <label className={styles.formLabel}>
+                        Максимум школ
+                        <input className={styles.formInput} type="number" value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value))} min={1} />
                     </label>
                     <div className={styles.modalActions}>
-                        <button type="button" className={styles.btnSecondary} onClick={onClose}>Cancel</button>
+                        <button type="button" className={styles.btnSecondary} onClick={onClose}>Отмена</button>
                         <button type="submit" className={styles.btnPrimary} disabled={loading}>
-                            {loading ? 'Creating...' : 'Create Node'}
+                            {loading ? 'Создание...' : 'Создать'}
                         </button>
                     </div>
                 </form>

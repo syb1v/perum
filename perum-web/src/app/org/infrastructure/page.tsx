@@ -5,6 +5,41 @@ import { infrastructureApi, updateHistoryApi } from '@/lib/infrastructureApi';
 import type { Node, NodeListResponse, NodeUtilization, AvailableUpdates, CurrentRelease } from '@/types';
 import styles from './infrastructure.module.css';
 
+function statusLabel(status: string): string {
+    switch (status) {
+        case 'active': return 'Онлайн';
+        case 'pending_bootstrap': return 'Не установлена';
+        case 'draining': return 'Вывод';
+        case 'offline': return 'Оффлайн';
+        case 'decommissioned': return 'Выведена';
+        default: return status;
+    }
+}
+
+function isOnline(node: Node): boolean {
+    return node.status === 'active';
+}
+
+function barColor(pct: number): string {
+    if (pct >= 90) return '#e53e3e';
+    if (pct >= 70) return '#ed8936';
+    return '#48bb78';
+}
+
+function ResourceBar({ label, pct, text }: { label: string; pct: number; text: string }) {
+    return (
+        <div className={styles.resourceBar}>
+            <div className={styles.resourceBarLabel}>
+                <span>{label}</span>
+                <span className={styles.resourceBarValue}>{text}</span>
+            </div>
+            <div className={styles.resourceBarTrack}>
+                <div className={styles.resourceBarFill} style={{ width: `${Math.min(pct, 100)}%`, background: barColor(pct) }} />
+            </div>
+        </div>
+    );
+}
+
 export default function OrgInfrastructurePage() {
     const [nodes, setNodes] = useState<Node[]>([]);
     const [utilizations, setUtilizations] = useState<Record<number, NodeUtilization>>({});
@@ -25,49 +60,40 @@ export default function OrgInfrastructurePage() {
                 updateHistoryApi.getCurrentRelease(),
                 updateHistoryApi.getAvailableUpdates(),
             ]);
-            setNodes(nodesData.nodes);
+            const typedNodes: NodeListResponse = nodesData;
+            setNodes(typedNodes.nodes);
             setCurrentRelease(releaseData.current);
             setAvailableUpdates(updatesData);
 
             const utils: Record<number, NodeUtilization> = {};
-            for (const node of nodesData.nodes) {
+            for (const node of typedNodes.nodes) {
                 try {
                     utils[node.id] = await infrastructureApi.getOrgNodeUtilization(node.id);
                 } catch {
-                    // ignore individual utilization fetch errors
+                    // игнорируем ошибку утилизации отдельной ноды
                 }
             }
             setUtilizations(utils);
             setError(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to load infrastructure data');
+            setError(err instanceof Error ? err.message : 'Не удалось загрузить данные');
         } finally {
             setLoading(false);
         }
     }
 
-    function getStatusColor(status: string): string {
-        switch (status) {
-            case 'active': return styles.statusActive;
-            case 'pending_bootstrap': return styles.statusPending;
-            case 'draining': return styles.statusDraining;
-            case 'offline': return styles.statusOffline;
-            default: return '';
-        }
-    }
-
     if (loading) {
-        return <div className={styles.loading}>Loading infrastructure...</div>;
+        return <div className={styles.loading}>Загрузка инфраструктуры...</div>;
     }
 
     return (
         <div className={styles.container}>
-            <h1>My Infrastructure</h1>
+            <h1>Инфраструктура</h1>
 
-            {error && <div className={styles.error}>{error}</div>}
+            {error && <div className={styles.errorBanner}>{error}</div>}
 
             <section className={styles.section}>
-                <h2>Current Release</h2>
+                <h2>Текущий релиз</h2>
                 {currentRelease ? (
                     <div className={styles.releaseCard}>
                         <div className={styles.releaseVersion}>{currentRelease.version_tag}</div>
@@ -75,23 +101,23 @@ export default function OrgInfrastructurePage() {
                             <p className={styles.releaseChangelog}>{currentRelease.changelog}</p>
                         )}
                         <div className={styles.releaseMeta}>
-                            Published: {currentRelease.published_at ? new Date(currentRelease.published_at).toLocaleDateString() : 'N/A'}
+                            Опубликован: {currentRelease.published_at ? new Date(currentRelease.published_at).toLocaleDateString('ru') : 'N/A'}
                         </div>
                     </div>
                 ) : (
-                    <p className={styles.empty}>No releases published yet</p>
+                    <p className={styles.emptyText}>Релизов нет</p>
                 )}
             </section>
 
-            {availableUpdates && availableUpdates.available && (
+            {availableUpdates?.available && (
                 <section className={styles.section}>
-                    <h2>Available Updates ({availableUpdates.total_updatable} schools)</h2>
+                    <h2>Доступные обновления ({availableUpdates.total_updatable} школ)</h2>
                     <div className={styles.updatesList}>
                         {availableUpdates.updatable_schools.map(school => (
                             <div key={school.school_id} className={styles.updateItem}>
                                 <span className={styles.schoolSlug}>{school.school_slug}</span>
                                 <span className={styles.versionArrow}>
-                                    {school.current_version || 'none'} → {school.available_version}
+                                    {school.current_version ?? 'нет'} → {school.available_version}
                                 </span>
                             </div>
                         ))}
@@ -100,45 +126,78 @@ export default function OrgInfrastructurePage() {
             )}
 
             <section className={styles.section}>
-                <h2>My Nodes ({nodes.length})</h2>
-                <div className={styles.nodesGrid}>
+                <h2>Мои ноды <span className={styles.countBadge}>{nodes.length}</span></h2>
+                <div className={styles.nodeList}>
                     {nodes.map(node => {
+                        const online = isOnline(node);
                         const util = utilizations[node.id];
+                        const schoolPct = util ? (util.schools_count / Math.max(util.max_schools, 1)) * 100 : 0;
                         return (
-                            <div key={node.id} className={styles.nodeCard}>
-                                <div className={styles.nodeHeader}>
-                                    <h3>{node.name}</h3>
-                                    <span className={`${styles.statusBadge} ${getStatusColor(node.status)}`}>
-                                        {node.status}
+                            <div key={node.id} className={styles.nodeRow}>
+                                <div className={styles.nodeRowLeft}>
+                                    <span className={`${styles.onlineDot} ${online ? styles.dotOnline : styles.dotOffline}`} title={statusLabel(node.status)} />
+                                    <div className={styles.nodeMain}>
+                                        <span className={styles.nodeName}>{node.name}</span>
+                                        <span className={styles.nodeHost}>{node.hostname}</span>
+                                    </div>
+                                    <span className={`${styles.statusPill} ${styles['status_' + node.status]}`}>
+                                        {statusLabel(node.status)}
                                     </span>
                                 </div>
-                                <div className={styles.nodeInfo}>
-                                    <div><strong>IP:</strong> {node.hostname}</div>
-                                    <div><strong>Resources:</strong> {node.cpu_cores} CPU / {node.ram_gb}GB RAM</div>
-                                    {util && (
+
+                                <div className={styles.nodeRowBars}>
+                                    <ResourceBar
+                                        label="CPU"
+                                        pct={100}
+                                        text={`${node.cpu_cores} ядер`}
+                                    />
+                                    <ResourceBar
+                                        label="RAM"
+                                        pct={100}
+                                        text={`${node.ram_gb} ГБ`}
+                                    />
+                                    {util ? (
+                                        <ResourceBar
+                                            label="Школы"
+                                            pct={schoolPct}
+                                            text={`${util.schools_count}/${util.max_schools}`}
+                                        />
+                                    ) : (
+                                        <ResourceBar
+                                            label="Школы"
+                                            pct={0}
+                                            text={`макс ${node.max_schools}`}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className={styles.nodeRowMeta}>
+                                    {!online && (
+                                        <span className={styles.offlineHint}>
+                                            Нода не установлена — обратитесь к администратору платформы
+                                        </span>
+                                    )}
+                                    {online && (
                                         <>
-                                            <div><strong>Schools:</strong> {util.schools_count} / {util.max_schools}</div>
-                                            <div className={styles.capacityBar}>
-                                                <div
-                                                    className={styles.capacityFill}
-                                                    style={{ width: `${Math.min(util.capacity_percent, 100)}%` }}
-                                                />
-                                            </div>
-                                            <div className={styles.capacityText}>
-                                                {util.capacity_percent.toFixed(0)}% capacity used
-                                            </div>
+                                            <span className={styles.metaItem}>
+                                                <span className={styles.metaIcon}>⚙</span>
+                                                {node.agent_version ?? 'агент не подключён'}
+                                            </span>
+                                            {node.last_heartbeat && (
+                                                <span className={styles.metaItem}>
+                                                    <span className={styles.metaIcon}>♡</span>
+                                                    {new Date(node.last_heartbeat).toLocaleString('ru')}
+                                                </span>
+                                            )}
                                         </>
                                     )}
-                                    <div><strong>Agent:</strong> {node.agent_version || 'Not connected'}</div>
-                                    <div><strong>Last heartbeat:</strong> {node.last_heartbeat ? new Date(node.last_heartbeat).toLocaleString() : 'Never'}</div>
                                 </div>
                             </div>
                         );
                     })}
                     {nodes.length === 0 && (
-                        <div className={styles.empty}>
-                            No nodes assigned to your organization yet.
-                            Contact your platform administrator.
+                        <div className={styles.emptyState}>
+                            Нод нет. Обратитесь к администратору платформы для добавления нод.
                         </div>
                     )}
                 </div>

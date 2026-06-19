@@ -15,7 +15,7 @@ from app.models import EnrollmentToken, Node, Organization
 
 logger = logging.getLogger("perum.node_bootstrap")
 
-TEMPLATE_PATH = Path(__file__).parent.parent.parent.parent / "deploy" / "scripts" / "node-bootstrap.sh.tmpl"
+TEMPLATE_PATH = Path(__file__).parent.parent.parent / "deploy" / "scripts" / "node-bootstrap.sh.tmpl"
 
 
 async def generate_bootstrap_script(

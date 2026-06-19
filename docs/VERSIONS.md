@@ -177,3 +177,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 86 | 2026-06-18 16:20 | d02ab1f | docs — обновлён README с инфраструктурным управлением |
 | 87 | 2026-06-18 16:25 | 71b04ad | docs — обновлён IP прод-сервера на 87.232.119.17 |
 | 88 | 2026-06-18 17:00 | efc458e | feat(web) — инфраструктура интегрирована в админки: platform/infrastructure и org/infrastructure
+| 101 | 2026-06-20 | _______ | fix: 500 bootstrap-скрипта, nullable enrollment_token.org_id, редизайн нод (remnawave-стиль, offline-индикатор)

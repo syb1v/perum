@@ -19,6 +19,7 @@ RUN pip install -r requirements.txt
 
 COPY app ./app
 COPY migrations ./migrations
+COPY deploy ./deploy
 COPY alembic.ini ./alembic.ini
 
 EXPOSE 3000
