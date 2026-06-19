@@ -186,7 +186,7 @@ async def get_node_utilization(node_id: int, db: AsyncSession = Depends(get_db))
     return await planner.get_utilization(node)
 
 
-@platform_router.post("/{node_id}/bootstrap-script", response_model=BootstrapScriptResponse)
+@platform_router.api_route("/{node_id}/bootstrap-script", methods=["GET", "POST"], response_model=BootstrapScriptResponse, operation_id="generate_node_bootstrap_script")
 async def generate_node_bootstrap_script(node_id: int, db: AsyncSession = Depends(get_db)) -> BootstrapScriptResponse:
     node = await db.get(Node, node_id)
     if not node:
@@ -196,12 +196,14 @@ async def generate_node_bootstrap_script(node_id: int, db: AsyncSession = Depend
     if node.org_id:
         org = await db.get(Organization, node.org_id)
 
-    script_content = await generate_bootstrap_script(db, node, org)
+    result = await generate_bootstrap_script(db, node, org)
 
     return BootstrapScriptResponse(
         filename=f"perum-node-{node.name}-bootstrap.sh",
-        content=script_content,
+        content=result.script,
         instructions=f"Run on target server: bash perum-node-{node.name}-bootstrap.sh",
+        docker_compose=result.docker_compose,
+        enrollment_token=result.enrollment_token,
     )
 
 

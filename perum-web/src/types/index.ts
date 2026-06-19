@@ -765,6 +765,14 @@ export interface BootstrapScript {
     filename: string;
     content: string;
     instructions: string;
+    docker_compose: string;
+    enrollment_token: string;
+}
+
+export interface Organization {
+    id: number;
+    slug: string;
+    name: string;
 }
 
 export interface UpdateHistoryEntry {

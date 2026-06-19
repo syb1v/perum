@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { infrastructureApi } from '@/lib/infrastructureApi';
-import type { Node, NodeListResponse, CapacityRecommendation } from '@/types';
+import type { Node, NodeListResponse, CapacityRecommendation, BootstrapScript, Organization } from '@/types';
 import styles from './infrastructure.module.css';
 
 function statusLabel(status: string): string {
@@ -96,7 +96,7 @@ export default function InfrastructurePage() {
         }
     }
 
-    async function handleDownloadScript(nodeId: number) {
+    async function handleDownloadScript(nodeId: number, nodeName: string) {
         setScriptLoading(nodeId);
         try {
             const script = await infrastructureApi.generateBootstrapScript(nodeId);
@@ -104,7 +104,7 @@ export default function InfrastructurePage() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = script.filename;
+            a.download = `perum-node-${nodeName}-bootstrap.sh`;
             a.click();
             URL.revokeObjectURL(url);
         } catch (err) {
@@ -176,10 +176,10 @@ export default function InfrastructurePage() {
                                     {(node.status === 'pending_bootstrap' || node.status === 'offline') && (
                                         <button
                                             className={styles.btnInstall}
-                                            onClick={() => handleDownloadScript(node.id)}
+                                            onClick={() => handleDownloadScript(node.id, node.name)}
                                             disabled={scriptLoading === node.id}
                                         >
-                                            {scriptLoading === node.id ? '...' : '↓ Скрипт установки'}
+                                            {scriptLoading === node.id ? '...' : '↓ Скрипт'}
                                         </button>
                                     )}
                                     {node.status === 'active' && (
@@ -187,7 +187,7 @@ export default function InfrastructurePage() {
                                             Вывод
                                         </button>
                                     )}
-                                    <button className={styles.btnDanger} onClick={() => handleDeleteNode(node.id)}>
+                                    <button className={styles.btnDanger} onClick={() => handleDeleteNode(node.id)} title="Удалить ноду">
                                         ✕
                                     </button>
                                 </div>
@@ -247,37 +247,78 @@ export default function InfrastructurePage() {
             </section>
 
             {showCreateModal && (
-                <CreateNodeModal onClose={() => setShowCreateModal(false)} onCreated={loadNodes} />
+                <CreateNodeWizard
+                    onClose={() => setShowCreateModal(false)}
+                    onCreated={loadNodes}
+                />
             )}
         </div>
     );
 }
 
-function CreateNodeModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+// ─── 2-Step "Create Node" Wizard ─────────────────────────────────────────────
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+    const [copied, setCopied] = useState(false);
+
+    async function handleCopy() {
+        await navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
+
+    return (
+        <button type="button" className={styles.copyBtn} onClick={handleCopy}>
+            {copied ? '✓ Скопировано' : (label ?? 'Копировать')}
+        </button>
+    );
+}
+
+function CreateNodeWizard({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+    const [step, setStep] = useState<1 | 2>(1);
+
+    // Step 1 form state
     const [name, setName] = useState('');
     const [hostname, setHostname] = useState('');
-    const [cpuCores, setCpuCores] = useState(2);
-    const [ramGb, setRamGb] = useState(2);
-    const [diskGb, setDiskGb] = useState(20);
+    const [port, setPort] = useState(1337);
+    const [orgId, setOrgId] = useState<number | ''>('');
     const [maxSchools, setMaxSchools] = useState(5);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [cpuCores, setCpuCores] = useState(2);
+    const [ramGb, setRamGb] = useState(4);
+    const [diskGb, setDiskGb] = useState(40);
+    const [orgs, setOrgs] = useState<Organization[]>([]);
 
-    async function handleSubmit(e: React.FormEvent) {
+    // Step 2 state
+    const [bootstrap, setBootstrap] = useState<BootstrapScript | null>(null);
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        infrastructureApi.getOrganizations()
+            .then(setOrgs)
+            .catch(() => { /* org list is optional */ });
+    }, []);
+
+    async function handleNext(e: React.FormEvent) {
         e.preventDefault();
         setLoading(true);
         setError(null);
         try {
-            await infrastructureApi.createNode({
+            const node = await infrastructureApi.createNode({
                 name,
                 hostname,
+                ssh_port: port,
                 cpu_cores: cpuCores,
                 ram_gb: ramGb,
                 disk_gb: diskGb,
+                org_id: orgId !== '' ? orgId : undefined,
                 max_schools: maxSchools,
             });
+            const script = await infrastructureApi.generateBootstrapScript(node.id);
+            setBootstrap(script);
             onCreated();
-            onClose();
+            setStep(2);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Ошибка создания ноды');
         } finally {
@@ -286,47 +327,169 @@ function CreateNodeModal({ onClose, onCreated }: { onClose: () => void; onCreate
     }
 
     return (
-        <div className={styles.modalOverlay}>
-            <div className={styles.modal}>
+        <div className={styles.modalOverlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className={styles.wizardModal}>
+                {/* Progress bar */}
+                <div className={styles.wizardProgress}>
+                    <div className={`${styles.wizardStep} ${step >= 1 ? styles.wizardStepActive : ''}`}>
+                        <span className={styles.wizardStepNum}>1</span>
+                        <span className={styles.wizardStepLabel}>Настройка</span>
+                    </div>
+                    <div className={styles.wizardProgressLine} />
+                    <div className={`${styles.wizardStep} ${step >= 2 ? styles.wizardStepActive : ''}`}>
+                        <span className={styles.wizardStepNum}>2</span>
+                        <span className={styles.wizardStepLabel}>Установка</span>
+                    </div>
+                </div>
+
                 <div className={styles.modalHeader}>
-                    <h2>Добавить ноду</h2>
+                    <h2>{step === 1 ? 'Добавить ноду' : 'Установка ноды'}</h2>
                     <button className={styles.modalClose} onClick={onClose}>✕</button>
                 </div>
+
                 {error && <div className={styles.errorBanner}>{error}</div>}
-                <form onSubmit={handleSubmit} className={styles.modalForm}>
-                    <label className={styles.formLabel}>
-                        Имя ноды
-                        <input className={styles.formInput} type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="node-01" />
-                    </label>
-                    <label className={styles.formLabel}>
-                        Хост (IP или FQDN)
-                        <input className={styles.formInput} type="text" value={hostname} onChange={(e) => setHostname(e.target.value)} required placeholder="192.168.1.100" />
-                    </label>
-                    <div className={styles.formRow}>
+
+                {step === 1 ? (
+                    <form onSubmit={handleNext} className={styles.modalForm}>
                         <label className={styles.formLabel}>
-                            CPU (ядра)
-                            <input className={styles.formInput} type="number" value={cpuCores} onChange={(e) => setCpuCores(Number(e.target.value))} min={1} />
+                            Внутреннее имя
+                            <input
+                                className={styles.formInput}
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                                placeholder="US-NY-Node-01"
+                            />
                         </label>
+
                         <label className={styles.formLabel}>
-                            RAM (ГБ)
-                            <input className={styles.formInput} type="number" value={ramGb} onChange={(e) => setRamGb(Number(e.target.value))} min={1} step={0.5} />
+                            Организация
+                            <select
+                                className={styles.formInput}
+                                value={orgId}
+                                onChange={(e) => setOrgId(e.target.value === '' ? '' : Number(e.target.value))}
+                            >
+                                <option value="">— Пул (без организации) —</option>
+                                {orgs.map(org => (
+                                    <option key={org.id} value={org.id}>{org.name}</option>
+                                ))}
+                            </select>
                         </label>
+
+                        <div className={styles.formRow2}>
+                            <label className={styles.formLabel}>
+                                Домен или IP
+                                <input
+                                    className={styles.formInput}
+                                    type="text"
+                                    value={hostname}
+                                    onChange={(e) => setHostname(e.target.value)}
+                                    required
+                                    placeholder="node.example.com"
+                                />
+                            </label>
+                            <label className={styles.formLabel}>
+                                Node Port
+                                <input
+                                    className={styles.formInput}
+                                    type="number"
+                                    value={port}
+                                    onChange={(e) => setPort(Number(e.target.value))}
+                                    min={1}
+                                    max={65535}
+                                />
+                            </label>
+                        </div>
+
+                        <div className={styles.formRow3}>
+                            <label className={styles.formLabel}>
+                                CPU
+                                <input
+                                    className={styles.formInput}
+                                    type="number"
+                                    value={cpuCores}
+                                    onChange={(e) => setCpuCores(Number(e.target.value))}
+                                    min={1}
+                                />
+                            </label>
+                            <label className={styles.formLabel}>
+                                RAM (ГБ)
+                                <input
+                                    className={styles.formInput}
+                                    type="number"
+                                    value={ramGb}
+                                    onChange={(e) => setRamGb(Number(e.target.value))}
+                                    min={1}
+                                    step={0.5}
+                                />
+                            </label>
+                            <label className={styles.formLabel}>
+                                Диск (ГБ)
+                                <input
+                                    className={styles.formInput}
+                                    type="number"
+                                    value={diskGb}
+                                    onChange={(e) => setDiskGb(Number(e.target.value))}
+                                    min={10}
+                                />
+                            </label>
+                        </div>
+
                         <label className={styles.formLabel}>
-                            Диск (ГБ)
-                            <input className={styles.formInput} type="number" value={diskGb} onChange={(e) => setDiskGb(Number(e.target.value))} min={10} />
+                            Макс. школ на ноде
+                            <input
+                                className={styles.formInput}
+                                type="number"
+                                value={maxSchools}
+                                onChange={(e) => setMaxSchools(Number(e.target.value))}
+                                min={1}
+                            />
                         </label>
+
+                        <div className={styles.modalActions}>
+                            <button type="button" className={styles.btnSecondary} onClick={onClose}>Отмена</button>
+                            <button type="submit" className={styles.btnGreen} disabled={loading}>
+                                {loading ? 'Создание...' : 'Далее →'}
+                            </button>
+                        </div>
+                    </form>
+                ) : (
+                    <div className={styles.step2}>
+                        {bootstrap && (
+                            <>
+                                <div className={styles.tokenBlock}>
+                                    <div className={styles.tokenLabel}>ENROLLMENT_TOKEN</div>
+                                    <div className={styles.tokenRow}>
+                                        <code className={styles.tokenValue}>{bootstrap.enrollment_token}</code>
+                                        <CopyButton text={bootstrap.enrollment_token} />
+                                    </div>
+                                    <p className={styles.tokenHint}>Токен действителен 7 дней. Используется только при первом запуске агента.</p>
+                                </div>
+
+                                <div className={styles.composeBlock}>
+                                    <div className={styles.composeHeader}>
+                                        <span className={styles.composeTitle}>docker-compose.yml</span>
+                                        <CopyButton text={bootstrap.docker_compose} label="Скопировать" />
+                                    </div>
+                                    <pre className={styles.composeCode}>{bootstrap.docker_compose}</pre>
+                                </div>
+
+                                <p className={styles.step2Hint}>
+                                    Скопируйте <code>docker-compose.yml</code> на сервер и выполните:
+                                    <br />
+                                    <code>docker compose up -d</code>
+                                </p>
+                            </>
+                        )}
+
+                        <div className={styles.modalActions}>
+                            <button type="button" className={styles.btnGreen} onClick={onClose}>
+                                Готово
+                            </button>
+                        </div>
                     </div>
-                    <label className={styles.formLabel}>
-                        Максимум школ
-                        <input className={styles.formInput} type="number" value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value))} min={1} />
-                    </label>
-                    <div className={styles.modalActions}>
-                        <button type="button" className={styles.btnSecondary} onClick={onClose}>Отмена</button>
-                        <button type="submit" className={styles.btnPrimary} disabled={loading}>
-                            {loading ? 'Создание...' : 'Создать'}
-                        </button>
-                    </div>
-                </form>
+                )}
             </div>
         </div>
     );

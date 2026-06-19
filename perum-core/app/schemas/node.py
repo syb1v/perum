@@ -77,6 +77,8 @@ class BootstrapScriptResponse(BaseModel):
     filename: str
     content: str
     instructions: str
+    docker_compose: str
+    enrollment_token: str
 
 
 class NodeAssignmentResponse(BaseModel):

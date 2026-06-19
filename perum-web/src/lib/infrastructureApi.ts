@@ -7,6 +7,7 @@ import type {
     NodeListResponse,
     NodeSchool,
     NodeUtilization,
+    Organization,
     UpdateHistoryResponse,
 } from '@/types';
 
@@ -62,6 +63,10 @@ export const infrastructureApi = {
 
     async generateBootstrapScript(nodeId: number): Promise<BootstrapScript> {
         return api.post(`/platform/nodes/${nodeId}/bootstrap-script`);
+    },
+
+    async getOrganizations(): Promise<Organization[]> {
+        return api.get('/organizations');
     },
 
     async getCapacityRecommendation(schoolCount: number): Promise<CapacityRecommendation> {

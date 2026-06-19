@@ -393,6 +393,7 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    padding: 1rem;
 }
 
 .modal {
@@ -404,6 +405,71 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
+/* ── Wizard modal (wider for docker-compose display) ── */
+.wizardModal {
+    background: var(--card-bg, #fff);
+    border-radius: 12px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Wizard progress ── */
+.wizardProgress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.wizardStep {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.wizardStepActive {
+    opacity: 1;
+}
+
+.wizardStepNum {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent, #0066cc);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.wizardStep:not(.wizardStepActive) .wizardStepNum {
+    background: var(--border, #d1d5db);
+    color: var(--text-muted, #888);
+}
+
+.wizardStepLabel {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary, #555);
+}
+
+.wizardProgressLine {
+    flex: 1;
+    height: 2px;
+    background: var(--border, #e5e7eb);
+    border-radius: 1px;
+}
+
+/* ── Modal header ── */
 .modalHeader {
     display: flex;
     justify-content: space-between;
@@ -442,6 +508,18 @@
     gap: 0.75rem;
 }
 
+.formRow2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.75rem;
+}
+
+.formRow3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+}
+
 .formLabel {
     display: flex;
     flex-direction: column;
@@ -455,6 +533,7 @@
     border: 1px solid var(--border, #e5e7eb);
     border-radius: 6px;
     font-size: 0.9rem;
+    background: #fff;
 }
 
 .formInput:focus {
@@ -468,4 +547,141 @@
     gap: 0.75rem;
     justify-content: flex-end;
     margin-top: 0.5rem;
+}
+
+/* ── Step 2: token + docker-compose ── */
+.step2 {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.tokenBlock {
+    background: #fffbeb;
+    border: 1px solid #f6e05e;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.tokenLabel {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #b7791f;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.tokenRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.tokenValue {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    color: #744210;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.tokenHint {
+    margin: 0.6rem 0 0;
+    font-size: 0.78rem;
+    color: #b7791f;
+}
+
+.composeBlock {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.composeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding: 0.55rem 1rem;
+}
+
+.composeTitle {
+    font-family: monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #555);
+}
+
+.composeCode {
+    margin: 0;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    background: #1a1a2e;
+    color: #e2e8f0;
+    overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
+    white-space: pre;
+}
+
+.step2Hint {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #555);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.step2Hint code {
+    font-family: monospace;
+    background: var(--bg-subtle, #f5f5f5);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+}
+
+/* ── Copy button ── */
+.copyBtn {
+    background: var(--bg-subtle, #f0f0f0);
+    color: var(--text-secondary, #555);
+    border: 1px solid var(--border, #ddd);
+    padding: 0.3rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.copyBtn:hover {
+    background: var(--border, #e0e0e0);
+}
+
+/* ── Green action button ── */
+.btnGreen {
+    background: #38a169;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+
+.btnGreen:hover {
+    background: #2f855a;
+}
+
+.btnGreen:disabled {
+    background: #999;
+    cursor: not-allowed;
 }
