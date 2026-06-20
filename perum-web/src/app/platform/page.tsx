@@ -503,22 +503,31 @@ export default function PlatformConsole() {
 
           {showFaq && (
             <Modal title="FAQ — управление серверами (нодами)" onClose={() => setShowFaq(false)} width={700}>
-              <p className={c.muted}><b>Нода</b> — это физический или виртуальный сервер, на котором крутятся школы организации. Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам.</p>
+              <p className={c.muted}><b>Нода</b> — физический или виртуальный сервер, на котором крутятся школы. Каждая школа — изолированный Docker-стек (контейнер + БД). Система сама распределяет школы по наиболее свободным включённым нодам.</p>
               <p className={c.muted} style={{marginTop:12}}><b>Как добавить новую ноду:</b></p>
               <ol className={c.muted} style={{paddingLeft:20}}>
-                <li>Нажмите «+ Создать ноду» — укажите имя, страну, организацию, домен/IP и порт</li>
-                <li>Скопируйте <code className={styles.code}>docker-compose.yml</code> из мастера установки</li>
-                <li>На целевом сервере создайте файл и выполните: <code className={styles.code}>docker compose up -d</code></li>
-                <li>Через 1-2 минуты нода подключится и статус сменится на <span className={statusBadge("active")}>active</span></li>
+                <li>Нажмите «+ Создать ноду» — укажите имя, страну, организацию, домен/IP и Node Port. Железо (CPU/RAM/диск) вводить не нужно — воркер определит его сам и пришлёт ядру.</li>
+                <li>Нажмите «Скачать скрипт установки» — это <code className={styles.code}>.sh</code> с вшитым токеном подключения (вводить ничего вручную не надо).</li>
+                <li>На целевом сервере выполните под root: <code className={styles.code}>bash perum-node-*.sh</code>. Скрипт сам поставит Docker, поднимет воркера ноды (<code className={styles.code}>ROLE=org_agent</code>) и выполнит enroll-подключение к ядру.</li>
+                <li>Через 1-2 минуты нода подключится, ядро снимет с неё реальное железо и статус сам сменится на <span className={statusBadge("active")}>active</span>.</li>
               </ol>
-              <p className={c.muted} style={{marginTop:12}}><b>Статусы нод:</b></p>
+              <p className={c.muted} style={{marginTop:12}}><b>Статусы нод (ставятся автоматически — вручную не задаются):</b></p>
               <ul className={c.muted} style={{paddingLeft:20}}>
-                <li><span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span> — нода зарегистрирована, ждёт установки агента</li>
-                <li><span className={statusBadge("active")}>active</span> — агент подключён, принимает школы</li>
-                <li><span className={statusBadge("draining")}>draining</span> — новые школы не назначаются, существующие мигрируют</li>
-                <li><span className="badgeMuted" style={{background:"#e2e3e5", color:"#383d41", padding:"2px 8px", borderRadius:10, fontSize:"0.75rem"}}>offline</span> — агент недоступен</li>
+                <li><span className={statusBadge("pending_bootstrap")}>не установлена</span> — нода создана, ждёт запуска скрипта установки на сервере</li>
+                <li><span className={statusBadge("active")}>active</span> — воркер на связи (heartbeat), принимает школы</li>
+                <li><span className={statusBadge("draining")}>вывод</span> — новые школы не назначаются (нода выводится из эксплуатации)</li>
+                <li><span className={c.badgeMuted} style={{padding:"2px 8px", borderRadius:10, fontSize:"0.75rem", border:"1px solid"}}>offline</span> — воркер не отвечает (ядро пингует каждую ~минуту)</li>
               </ul>
-              <p className={c.muted} style={{marginTop:12}}><b>Рекомендации sizing (на одну школу ~200MB RAM, ~0.15 CPU):</b></p>
+              <p className={c.muted} style={{marginTop:12}}><b>Что можно делать со строкой ноды:</b></p>
+              <ul className={c.muted} style={{paddingLeft:20}}>
+                <li><b>Питание (вкл/выкл).</b> Выключенная нода (<span className={c.badgeMuted} style={{padding:"1px 7px", borderRadius:10, fontSize:"0.72rem", border:"1px solid"}}>выключена</span>) физически работает, но новые школы на неё не назначаются.</li>
+                <li><b>Перезагрузка</b> (только для online-нод) — перезапускает Docker-контейнеры школ на ноде; сам сервер не трогается.</li>
+                <li><b>Скрипт установки</b> — доступен для не установленных и offline-нод (повторно скачать и запустить).</li>
+                <li><b>Редактирование</b> (карандаш) — имя, страна, домен/IP, порт, лимит школ. Статус правкой не меняется.</li>
+                <li><b>Школы на ноде</b> (глаз) — какие школы крутятся: поддомен, домены, версия, организация, статус.</li>
+              </ul>
+              <p className={c.muted} style={{marginTop:12}}><b>Массовые действия</b> (кнопка «Действия ▾») — включить / выключить / перезагрузить сразу: все ноды, только общий пул (без организации) или по конкретной организации.</p>
+              <p className={c.muted} style={{marginTop:12}}><b>Подбор сервера (на одну школу ~200MB RAM, ~0.15 CPU).</b> Кнопка «Рекомендация» в тулбаре посчитает, сколько нод нужного размера нужно под N школ. Ориентир по конфигурации (CPU/RAM ГБ/диск ГБ):</p>
               <table className={styles.table} style={{marginTop:8}}>
                 <thead><tr><th>Конфигурация</th><th>S (2/2/20)</th><th>M (4/4/50)</th><th>L (8/8/100)</th><th>XL (16/16/200)</th></tr></thead>
                 <tbody><tr><td>Школ</td><td>5</td><td>15</td><td>35</td><td>75</td></tr></tbody>
