@@ -69,6 +69,15 @@ class DockerClient:
     async def ping(self) -> bool:
         return await asyncio.to_thread(self.client.ping)
 
+    async def list_containers(self, all: bool = False) -> list[dict]:
+        """Список контейнеров в низкоуровневом формате Docker API (dict с ключами
+        Names/Labels/State/Status). Используется агентом ноды для /health и /schools.
+        Через docker_proxy открыт ручкой CONTAINERS=1."""
+        def _list() -> list[dict]:
+            return self.client.api.containers(all=all)
+
+        return await asyncio.to_thread(_list)
+
     async def ensure_network(self, name: str) -> None:
         def _check() -> None:
             try:
