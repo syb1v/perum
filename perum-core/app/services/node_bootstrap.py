@@ -143,6 +143,9 @@ services:
       WATCHTOWER_LABEL_ENABLE: "true"
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_POLL_INTERVAL: "120"
+      # Образ watchtower использует старую версию Docker API client (1.25); на свежем
+      # демоне (≥API 1.40) без этого падает «client version too old».
+      DOCKER_API_VERSION: "1.44"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
