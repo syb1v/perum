@@ -108,7 +108,10 @@ async def generate_bootstrap_script(
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Колонка enrollment_tokens.expires_at — DateTime БЕЗ таймзоны (как везде в проекте,
+    # ср. enroll.py: `row.expires_at < datetime.utcnow()`). Передать сюда aware-datetime
+    # нельзя — asyncpg падает «can't subtract offset-naive and offset-aware datetimes».
+    expires_at = datetime.utcnow() + timedelta(days=7)
 
     enrollment_token = EnrollmentToken(
         org_id=org.id if org else None,

@@ -18,6 +18,7 @@
 - **OTA тенанта — без «пустых» релизов от доки.** В детекторе изменений `release.yml` для тенанта исключены не-кодовые пути (`*.md`, `perum-tenant/docs/**`, `CHANGELOG*`): правка документации больше не порождает OTA-релиз с новым git-sha тегом, но тем же кодом.
 
 ### Исправления инфраструктуры
+- **Фикс 500 на bootstrap-скрипт (aware/naive datetime).** `node_bootstrap` создавал `expires_at` токена как timezone-aware (`datetime.now(timezone.utc)`), а колонка `enrollment_tokens.expires_at` — `DateTime` без таймзоны → asyncpg падал «can't subtract offset-naive and offset-aware datetimes». Заменено на naive `datetime.utcnow()` (как везде в проекте).
 - **Фикс длины ID миграции.** Ревизия `0018_nullable_enrollment_token_org` (34 симв.) не влезала в `alembic_version.version_num` (`varchar(32)`) — ломала `alembic upgrade` на чистом деплое (и проде). Переименована в `0018_nullable_token_org`.
 - **Фикс 500 на генерацию bootstrap-скрипта.** `enrollment_tokens.org_id` сделан nullable (миграция `0018_nullable_token_org`) — pool-ноды без организации больше не вызывают IntegrityError.
 - **Фикс пути шаблона в Docker.** Шаблон `node-bootstrap.sh.tmpl` скопирован в `perum-core/deploy/scripts/` (в Docker build context). `TEMPLATE_PATH` исправлен — теперь 3 уровня вверх от сервиса, а не 4. Dockerfile дополнен `COPY deploy ./deploy`.
