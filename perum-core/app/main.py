@@ -22,7 +22,7 @@ async def _sync_caddy_routes() -> None:
     the control plane must still come up if Caddy is briefly unreachable.
     """
     from app.core.db import SessionLocal
-    from app.models import Organization, OrganizationDomain, School, SchoolDomain
+    from app.models import Node, NodeAssignment, Organization, OrganizationDomain, School, SchoolDomain
     from app.services.caddy_admin import get_caddy_admin
     from app.services.stack_spec import school_container_name, school_label_slug
 
@@ -49,6 +49,16 @@ async def _sync_caddy_routes() -> None:
                 .join(School, SchoolDomain.school_id == School.id)
                 .where(School.status == "suspended", SchoolDomain.status == "active")
             )).all()
+            # Школы на нодах: маршрут должен идти на нода:80, а не на локальный
+            # контейнер. Без этого после рестарта ядра route перетирался на
+            # несуществующий локальный апстрим → 502 для школ на нодах.
+            node_map = {
+                sid: host
+                for sid, host in (await db.execute(
+                    select(NodeAssignment.school_id, Node.hostname)
+                    .join(Node, Node.id == NodeAssignment.node_id)
+                )).all()
+            }
     except Exception as exc:  # noqa: BLE001
         logger.warning("caddy route sync skipped (DB not ready?): %s", exc)
         return
@@ -62,7 +72,12 @@ async def _sync_caddy_routes() -> None:
 
     for domain, school in school_rows:
         try:
-            upstream = f"{school_container_name(school.slug, 'app')}:3000"
+            # Школа на ноде → апстрим нода:80 (там Caddy ноды раздаёт по Host на
+            # контейнер школы). Локальная школа → её контейнер на хосте платформы.
+            if school.id in node_map:
+                upstream = f"{node_map[school.id]}:80"
+            else:
+                upstream = f"{school_container_name(school.slug, 'app')}:3000"
             # Уникальный route-id на КАЖДЫЙ домен: основной поддомен — sch-<slug>
             # (как у провижинера), кастомные домены — dom-<id> (как у add_domain).
             # Иначе несколько доменов одной школы перетирали бы друг друга.
