@@ -514,3 +514,17 @@ class UpdateHistory(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     school: Mapped[School] = relationship(back_populates="update_history")
+
+
+class PlatformSetting(Base):
+    """Key-value настройки платформы (источник OTA-обновлений и т.п.). Значение
+    шифруется at-rest (EncryptedString) — подходит и для секретов (GH-токен реестра)."""
+
+    __tablename__ = "platform_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    value: Mapped[str | None] = mapped_column(EncryptedString(1024), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )

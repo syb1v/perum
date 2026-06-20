@@ -42,6 +42,12 @@ export default function PlatformConsole() {
   const [rel, setRel] = useState({ version_tag: "", image: "", changelog: "" });
   const [publishing, setPublishing] = useState(false);
 
+  // OTA source config (источник обновлений)
+  const [ota, setOta] = useState<any>(null);
+  const [otaForm, setOtaForm] = useState({ image_registry: "ghcr.io", image_repository: "", registry_username: "", private: false });
+  const [otaToken, setOtaToken] = useState("");
+  const [otaBusy, setOtaBusy] = useState(false);
+
   // modals
   const [editOrg, setEditOrg] = useState<any>(null);
   const [adminsOrg, setAdminsOrg] = useState<any>(null);
@@ -228,7 +234,36 @@ export default function PlatformConsole() {
   }
   async function getRecommendation() { try { setCapacityRec(await papi(`/api/platform/capacity/recommendation?school_count=${capacityCount}`)); setShowCapacity(true); } catch (e: any) { toast.showError(e.message); } }
 
-  function go(id: string) { setSection(id); if (id === "leads" && leads === null) loadLeads(); if (id === "infrastructure" && nodes === null) loadInfra(); }
+  async function loadOta() {
+    try {
+      const cfg = await papi("/api/platform/ota-config");
+      setOta(cfg);
+      setOtaForm({
+        image_registry: cfg.image_registry || "ghcr.io",
+        image_repository: cfg.image_repository || "",
+        registry_username: cfg.registry_username || "",
+        private: !!cfg.private,
+      });
+    } catch (e: any) { /* non-fatal */ }
+  }
+  async function saveOta(e: React.FormEvent) {
+    e.preventDefault(); setOtaBusy(true); setErr("");
+    try {
+      const body: any = { ...otaForm };
+      if (otaToken) body.registry_token = otaToken;
+      const cfg = await papi("/api/platform/ota-config", { method: "PUT", body: JSON.stringify(body) });
+      setOta(cfg); setOtaToken("");
+      toast.showSuccess("Источник обновлений сохранён");
+    } catch (e: any) { toast.showError(e.message || "Ошибка сохранения"); } finally { setOtaBusy(false); }
+  }
+  async function clearOtaToken() {
+    if (!confirm("Удалить сохранённый токен реестра?")) return;
+    setOtaBusy(true);
+    try { const cfg = await papi("/api/platform/ota-config", { method: "PUT", body: JSON.stringify({ clear_token: true }) }); setOta(cfg); toast.showInfo("Токен удалён"); }
+    catch (e: any) { toast.showError(e.message); } finally { setOtaBusy(false); }
+  }
+
+  function go(id: string) { setSection(id); if (id === "leads" && leads === null) loadLeads(); if (id === "infrastructure" && nodes === null) loadInfra(); if (id === "releases" && ota === null) loadOta(); }
 
   const nav: NavItem[] = [
     { id: "dashboard", label: "Дашборд", icon: <Icon.Dashboard /> },
@@ -486,6 +521,46 @@ export default function PlatformConsole() {
       {/* ===================== RELEASES ===================== */}
       {section === "releases" && (
         <>
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Источник обновлений (OTA)</h2>
+            <p className={c.muted}>Откуда берутся образы тенанта для обновления школ. Обычно это GHCR-репозиторий, куда CI пушит образ при изменении кода. Если репозиторий/реестр <b>приватный</b> — укажите логин и токен (GitHub PAT с правом <code className={styles.code}>read:packages</code>), чтобы хосты могли тянуть образ.</p>
+            <form onSubmit={saveOta} className={styles.form}>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}><label className={styles.label}>Реестр</label><input className={styles.input} value={otaForm.image_registry} onChange={(e) => setOtaForm({ ...otaForm, image_registry: e.target.value })} placeholder="ghcr.io" /></div>
+                <div className={styles.formGroup}><label className={styles.label}>Репозиторий/образ</label><input className={styles.input} value={otaForm.image_repository} onChange={(e) => setOtaForm({ ...otaForm, image_repository: e.target.value })} placeholder="syb1v/perum-tenant" /></div>
+              </div>
+              <div className={styles.formRow} style={{ alignItems: "center" }}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input type="checkbox" checked={otaForm.private} onChange={(e) => setOtaForm({ ...otaForm, private: e.target.checked })} style={{ width: "auto" }} />
+                    Приватный реестр
+                  </label>
+                </div>
+                {otaForm.private && (
+                  <div className={styles.formGroup}><label className={styles.label}>Логин реестра</label><input className={styles.input} value={otaForm.registry_username} onChange={(e) => setOtaForm({ ...otaForm, registry_username: e.target.value })} placeholder="github-username" /></div>
+                )}
+              </div>
+              {otaForm.private && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>GitHub-токен (PAT, <code className={styles.code}>read:packages</code>) {ota?.token_set && <span className={c.muted}>— токен сохранён, оставьте пустым чтобы не менять</span>}</label>
+                  <input className={styles.input} type="password" value={otaToken} onChange={(e) => setOtaToken(e.target.value)} placeholder={ota?.token_set ? "•••••••• (сохранён)" : "ghp_…"} autoComplete="off" />
+                </div>
+              )}
+              <div className={styles.formActions}>
+                <button className={styles.submitBtn} disabled={otaBusy}>{otaBusy ? "…" : "Сохранить источник"}</button>{" "}
+                {ota?.token_set && <button type="button" className={styles.btnSecondary} disabled={otaBusy} onClick={clearOtaToken}>Удалить токен</button>}
+              </div>
+            </form>
+            <details style={{ marginTop: 6 }}>
+              <summary style={{ cursor: "pointer", color: "var(--text-secondary)", fontWeight: 600 }}>Как настроить (приватный репозиторий)</summary>
+              <div className={c.muted} style={{ fontSize: "0.85rem", marginTop: 8, lineHeight: 1.6 }}>
+                <p style={{ margin: "0 0 6px" }}>1. В GitHub → Settings → Developer settings → Personal access tokens создайте токен с областью <code className={styles.code}>read:packages</code>.</p>
+                <p style={{ margin: "0 0 6px" }}>2. Укажите выше реестр (<code className={styles.code}>ghcr.io</code>), репозиторий/образ (<code className={styles.code}>owner/perum-tenant</code>), отметьте «Приватный», впишите логин и токен.</p>
+                <p style={{ margin: "0 0 6px" }}>3. На хостах, где тянутся образы школ, выполните <code className={styles.code}>docker login ghcr.io -u &lt;логин&gt; -p &lt;токен&gt;</code> (или это сделает агент). Токен хранится в ядре зашифрованным и наружу не отдаётся.</p>
+                <p style={{ margin: 0 }}>4. CI (<code className={styles.code}>release.yml</code>) при изменении кода тенанта сам соберёт образ и зарегистрирует релиз — школы увидят обновление по кнопке.</p>
+              </div>
+            </details>
+          </div>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Опубликовать релиз</h2>
             <p className={c.muted}>Релиз становится доступен организациям — они обновляют свои школы по кнопке (OTA, opt-in, volume-preserving). Обычно релиз тенанта публикует CI автоматически при реальном изменении кода (тег <code className={styles.code}>git-&lt;sha&gt;</code>, образ из GHCR). Ручная публикация ниже — резерв; ядро отклонит релиз, если образ совпадает с текущим (нет реального обновления).</p>
