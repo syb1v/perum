@@ -106,6 +106,12 @@ class Settings(BaseSettings):
         default="",
         description="Одноразовый токен подключения узла орг (выдаёт platform_admin)",
     )
+    # Общий секрет для аутентификации запросов ядро↔воркер ноды (/api/agent/*).
+    # Ядро шлёт его в Authorization: Bearer; воркер проверяет. Пусто → проверка
+    # выключена (dev). Задаётся одинаковым в .env ядра и в compose ноды.
+    AGENT_TOKEN: str = Field(default="")
+    # Порт, на котором воркер ноды слушает API (публикуется compose'ом ноды).
+    AGENT_PORT: int = Field(default=3001)
 
 
 @lru_cache(maxsize=1)

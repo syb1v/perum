@@ -190,14 +190,15 @@ async def _upsert_subdomain(school: School, host: str, db: AsyncSession) -> None
         domain.activated_at = now
 
 
-async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None) -> SchoolProvisionOutcome:
+async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None, image: str | None = None) -> SchoolProvisionOutcome:
     settings = settings or get_settings()
     docker = get_docker_client()
     caddy = get_caddy_admin()
     label_slug = school_label_slug(school.slug)
 
     secret = await _get_or_create_secret(school, db)
-    target_image = await current_release_image(db, settings)
+    # На ноде нет таблицы релизов — ядро передаёт целевой образ явно (image).
+    target_image = image or await current_release_image(db, settings)
     school.status = "provisioning"
     await db.commit()
     await db.refresh(school)
@@ -451,7 +452,7 @@ async def _swap_app(spec: StackSpec, label_slug: str, image: str, settings: Sett
         raise ProvisioningError(f"alembic upgrade failed (exit {code}):\n{out[-2000:]}")
 
 
-async def update_school(school: School, db: AsyncSession, settings: Settings | None = None) -> UpdateOutcome:
+async def update_school(school: School, db: AsyncSession, settings: Settings | None = None, to_image: str | None = None) -> UpdateOutcome:
     """OTA-обновление школьного стека на текущий релиз: pull нового образа +
     пересоздание app-контейнера (том сохраняется) + миграции. При сбое — откат на
     прежний образ. Это и есть «обновление по кнопке» (опт-ин, без принуждения)."""
@@ -460,7 +461,8 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     label_slug = school_label_slug(school.slug)
 
     from_image = school.release_tag or settings.TENANT_IMAGE
-    to_image = await current_release_image(db, settings)
+    # На ноде нет таблицы релизов — целевой образ передаёт ядро (to_image).
+    to_image = to_image or await current_release_image(db, settings)
     if to_image == from_image:
         # Нечего обновлять. Эндпоинт мог уже выставить 'updating' синхронно — вернём
         # школу в 'active', иначе статус «залипнет». Логируем, чтобы был след.
@@ -520,3 +522,125 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     await db.refresh(school)
     logger.info("school %s: updated %s -> %s", school.slug, from_image, to_image)
     return UpdateOutcome(school=school, from_image=from_image, to_image=to_image)
+
+
+# ============================================================================
+# Оркестрация (только на ХОСТЕ ПЛАТФОРМЫ): развернуть/обновить школу ЛОКАЛЬНО или
+# УДАЛЁННО на ноде через воркора. Школа едет на ноду, если у неё есть назначение
+# (NodeAssignment) или планировщик выбрал активную ноду орг. Иначе — локально.
+# ============================================================================
+
+
+async def _assigned_node(school: School, db: AsyncSession):
+    from app.models import Node, NodeAssignment
+    a = await db.scalar(select(NodeAssignment).where(NodeAssignment.school_id == school.id))
+    return await db.get(Node, a.node_id) if a is not None else None
+
+
+async def provision_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:
+    settings = settings or get_settings()
+    from app.models import NodeAssignment
+    from app.services.node_planner import NodePlanner
+    from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
+
+    node = await _assigned_node(school, db)
+    if node is None:
+        node = await NodePlanner(db).find_best_node(school.org_id)
+        if node is not None:
+            db.add(NodeAssignment(node_id=node.id, school_id=school.id))
+            await db.commit()
+
+    if node is None:
+        await provision_school(school, db)  # локально на хосте платформы
+        return
+
+    # --- Удалённо на ноде ---
+    school.status = "provisioning"
+    await db.commit()
+    secret = await _get_or_create_secret(school, db)
+    await db.commit()
+    await db.refresh(secret)
+    image = await current_release_image(db, settings)
+    req = {
+        "school_slug": school.slug, "school_name": school.name, "release_tag": image,
+        "db_password": secret.db_password, "secret_key": secret.secret_key,
+        "telemetry_token": secret.telemetry_token, "internal_rpc_token": secret.internal_rpc_token,
+        "redis_db_index": secret.redis_db_index, "admin_email": school.admin_email,
+    }
+    try:
+        resp = await RemoteNodeClient().provision_school(node, req)
+    except RemoteNodeError as exc:
+        school.status = "failed"
+        await db.commit()
+        raise ProvisioningError(f"нода недоступна: {exc}") from exc
+    if not resp.get("success"):
+        school.status = "failed"
+        await db.commit()
+        raise ProvisioningError(resp.get("message") or "провижининг на ноде не удался")
+
+    # Маршрут на платформе: <slug>.<base> → /api на воркор ноды (:80), остальное → web.
+    # Платформа терминирует TLS (wildcard), нода отдаёт API по plain-HTTP внутри.
+    host = f"{school.slug}.{settings.PUBLIC_BASE_DOMAIN}"
+    try:
+        await get_caddy_admin().add_route(school_label_slug(school.slug), host, f"{node.hostname}:80")
+    except Exception as exc:  # noqa: BLE001
+        logger.error("school %s: platform route to node failed: %s", school.slug, exc)
+
+    school.status = "active"
+    school.activated_at = datetime.utcnow()
+    school.release_tag = image
+    await _upsert_subdomain(school, host, db)
+    await db.commit()
+    await db.refresh(school)
+    logger.info("school %s: provisioned on node %s (%s)", school.slug, node.name, node.hostname)
+
+
+async def update_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:
+    settings = settings or get_settings()
+    from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
+
+    node = await _assigned_node(school, db)
+    if node is None:
+        await update_school(school, db)  # локально
+        return
+
+    image = await current_release_image(db, settings)
+    from_image = school.release_tag or settings.TENANT_IMAGE
+    if image == from_image:
+        logger.info("school %s: уже на текущем релизе (%s)", school.slug, image)
+        if school.status != "active":
+            school.status = "active"
+            await db.commit()
+        return
+
+    school.status = "updating"
+    history = UpdateHistory(school_id=school.id, from_version=from_image, to_version=image, status="pending")
+    db.add(history)
+    await db.commit()
+
+    try:
+        resp = await RemoteNodeClient().update_school(node, {
+            "school_slug": school.slug, "image": image,
+            "from_version": from_image, "to_version": image,
+        })
+    except RemoteNodeError as exc:
+        school.status = "active"
+        history.status = "failed"
+        history.error_message = f"нода недоступна: {exc}"
+        history.completed_at = datetime.utcnow()
+        await db.commit()
+        return
+
+    rolled_back = bool(resp.get("rolled_back"))
+    if resp.get("success") and not rolled_back:
+        school.release_tag = image
+        school.status = "active"
+        history.status = "success"
+    else:
+        school.status = "active"
+        history.status = "rolled_back" if rolled_back else "failed"
+        history.error_message = resp.get("message")
+    history.completed_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(school)
+    logger.info("school %s: node update -> %s (%s)", school.slug, image, history.status)

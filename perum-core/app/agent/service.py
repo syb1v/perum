@@ -170,6 +170,21 @@ async def get_agent_schools(db: AsyncSession) -> AgentSchoolListResponse:
     return AgentSchoolListResponse(schools=list(schools_map.values()), total=len(schools_map))
 
 
+async def _ensure_local_org(db: AsyncSession, state: AgentState) -> int:
+    """На ноде нужна строка организации (School.org_id NOT NULL). Заводим/находим
+    её по slug из enroll. Ядро остаётся источником истины — это лишь локальная
+    привязка для стека на ноде."""
+    from sqlalchemy import select as _select
+    from app.models import Organization
+    org = await db.scalar(_select(Organization).where(Organization.slug == state.org_slug))
+    if org is None:
+        org = Organization(slug=state.org_slug, name=state.org_name or state.org_slug, status="active")
+        db.add(org)
+        await db.commit()
+        await db.refresh(org)
+    return org.id
+
+
 async def provision_school_on_node(
     db: AsyncSession, req: AgentProvisionSchoolRequest
 ) -> AgentProvisionSchoolResponse:
@@ -180,17 +195,33 @@ async def provision_school_on_node(
                 success=False, school_slug=req.school_slug, message="Agent not enrolled"
             )
 
-        from app.models import School
-        school = School(
-            org_id=state.org_id if hasattr(state, 'org_id') else None,
-            slug=req.school_slug,
-            name=req.school_name,
-            status="provisioning",
-        )
-        db.add(school)
-        await db.commit()
-        await db.refresh(school)
-        await provision_school(school, db)
+        from sqlalchemy import select as _select
+        from app.models import School, SchoolSecret
+
+        org_id = await _ensure_local_org(db, state)
+        school = await db.scalar(_select(School).where(School.slug == req.school_slug))
+        if school is None:
+            school = School(org_id=org_id, slug=req.school_slug, name=req.school_name, status="provisioning")
+            db.add(school)
+            await db.commit()
+            await db.refresh(school)
+
+        # Секреты школы генерирует ЯДРО и передаёт сюда — чтобы db_password/токены на
+        # ноде совпадали с записью ядра (бэкапы, управление). Кладём их в локальную БД.
+        secret = await db.get(SchoolSecret, school.id)
+        if secret is None:
+            db.add(SchoolSecret(
+                school_id=school.id,
+                db_password=req.db_password,
+                secret_key=req.secret_key,
+                telemetry_token=req.telemetry_token,
+                internal_rpc_token=req.internal_rpc_token,
+                redis_db_index=req.redis_db_index,
+            ))
+            await db.commit()
+
+        # Образ передаёт ядро (req.release_tag) — на ноде таблица релизов пустая.
+        await provision_school(school, db, image=req.release_tag)
         return AgentProvisionSchoolResponse(
             success=True, school_slug=req.school_slug, message="School provisioned successfully"
         )
@@ -212,7 +243,7 @@ async def update_school_on_node(
             return AgentUpdateSchoolResponse(
                 success=False, school_slug=req.school_slug, message="School not found"
             )
-        outcome = await update_school(school, db)
+        outcome = await update_school(school, db, to_image=req.image)
         return AgentUpdateSchoolResponse(
             success=True,
             school_slug=req.school_slug,

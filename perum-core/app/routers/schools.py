@@ -32,9 +32,11 @@ from app.services.school_provisioner import (
     current_release_image,
     deprovision_school,
     provision_school,
+    provision_school_orchestrated,
     suspend_school,
     unsuspend_school,
     update_school,
+    update_school_orchestrated,
 )
 from app.services.tenant_provisioner import ProvisioningError
 
@@ -123,9 +125,9 @@ async def _run_lifecycle(school_id: int, action: str) -> None:
                 return
             try:
                 if action == "update":
-                    await update_school(school, bg_db)
+                    await update_school_orchestrated(school, bg_db)
                 else:
-                    await provision_school(school, bg_db)
+                    await provision_school_orchestrated(school, bg_db)
             except ProvisioningError as exc:
                 # provision_school/update_school уже выставили status='failed' и
                 # закоммитили — здесь только лог.

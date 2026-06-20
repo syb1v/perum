@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+import secrets as _secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agent.schemas import (
@@ -37,6 +39,20 @@ from app.core.db import get_db
 router = APIRouter()
 
 
+async def require_agent_token(authorization: str | None = Header(default=None)) -> None:
+    """Аутентификация запросов ядро→воркер по общему секрету AGENT_TOKEN. Если токен
+    в настройках не задан (dev) — проверка пропускается. Вешается на мутирующие
+    эндпоинты управления школами; /whoami и /health остаются открытыми (liveness)."""
+    token = get_settings().AGENT_TOKEN
+    if not token:
+        return
+    presented = ""
+    if authorization and authorization.lower().startswith("bearer "):
+        presented = authorization[7:]
+    if not _secrets.compare_digest(presented, token):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid agent token")
+
+
 @router.get("/whoami")
 async def whoami(db: AsyncSession = Depends(get_db)) -> dict:
     settings = get_settings()
@@ -65,7 +81,7 @@ async def list_schools(db: AsyncSession = Depends(get_db)) -> AgentSchoolListRes
     return await get_agent_schools(db)
 
 
-@router.post("/schools/provision", response_model=AgentProvisionSchoolResponse)
+@router.post("/schools/provision", response_model=AgentProvisionSchoolResponse, dependencies=[Depends(require_agent_token)])
 async def provision_school(
     req: AgentProvisionSchoolRequest,
     db: AsyncSession = Depends(get_db),
@@ -75,7 +91,7 @@ async def provision_school(
     return await provision_school_on_node(db, req)
 
 
-@router.post("/schools/{school_slug}/update", response_model=AgentUpdateSchoolResponse)
+@router.post("/schools/{school_slug}/update", response_model=AgentUpdateSchoolResponse, dependencies=[Depends(require_agent_token)])
 async def update_school(
     school_slug: str,
     req: AgentUpdateSchoolRequest,
@@ -87,7 +103,7 @@ async def update_school(
     return await update_school_on_node(db, req)
 
 
-@router.post("/schools/{school_slug}/suspend", response_model=AgentSchoolActionResponse)
+@router.post("/schools/{school_slug}/suspend", response_model=AgentSchoolActionResponse, dependencies=[Depends(require_agent_token)])
 async def suspend_school(
     school_slug: str,
     db: AsyncSession = Depends(get_db),
@@ -97,7 +113,7 @@ async def suspend_school(
     return await suspend_school_on_node(db, school_slug)
 
 
-@router.post("/schools/{school_slug}/unsuspend", response_model=AgentSchoolActionResponse)
+@router.post("/schools/{school_slug}/unsuspend", response_model=AgentSchoolActionResponse, dependencies=[Depends(require_agent_token)])
 async def unsuspend_school(
     school_slug: str,
     db: AsyncSession = Depends(get_db),
@@ -107,7 +123,7 @@ async def unsuspend_school(
     return await unsuspend_school_on_node(db, school_slug)
 
 
-@router.post("/schools/{school_slug}/deprovision", response_model=AgentSchoolActionResponse)
+@router.post("/schools/{school_slug}/deprovision", response_model=AgentSchoolActionResponse, dependencies=[Depends(require_agent_token)])
 async def deprovision_school(
     school_slug: str,
     req: AgentDeprovisionSchoolRequest,

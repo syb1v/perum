@@ -6,19 +6,26 @@ import logging
 
 import httpx
 
+from app.core.config import get_settings
 from app.models import Node
 
 logger = logging.getLogger("perum.remote_node")
 
 
 class RemoteNodeClient:
-    """Клиент для отправки команд агенту на удалённой ноде."""
+    """Клиент для отправки команд воркеру на удалённой ноде (ROLE=org_agent).
 
-    def __init__(self, timeout: float = 30.0):
+    Воркер слушает API на порту AGENT_PORT (публикуется compose'ом ноды), роуты
+    смонтированы под /api/agent. Аутентификация — общим секретом AGENT_TOKEN."""
+
+    def __init__(self, timeout: float = 120.0):
         self.timeout = timeout
+        s = get_settings()
+        self.port = s.AGENT_PORT
+        self.token = s.AGENT_TOKEN
 
     def _get_agent_url(self, node: Node, path: str) -> str:
-        return f"http://{node.hostname}:3000/agent/{path.lstrip('/')}"
+        return f"http://{node.hostname}:{self.port}/api/agent/{path.lstrip('/')}"
 
     async def _request(
         self,
@@ -28,8 +35,9 @@ class RemoteNodeClient:
         json: dict | None = None,
     ) -> dict:
         url = self._get_agent_url(node, path)
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            resp = await client.request(method, url, json=json)
+            resp = await client.request(method, url, json=json, headers=headers)
             if resp.status_code >= 300:
                 raise RemoteNodeError(
                     f"Node {node.hostname} returned {resp.status_code}: {resp.text[:200]}"
