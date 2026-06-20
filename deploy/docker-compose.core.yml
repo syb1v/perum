@@ -32,6 +32,9 @@ services:
       # Пусто (dev) → плейнтекст/открыто; в проде задать через .env.
       SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
       METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # Токен для авто-публикации релизов тенанта из CI (GitHub Actions →
+      # POST /api/ci/release). Пусто → CI-публикация выключена (503). См. docs/RELEASING.md.
+      RELEASE_PUBLISH_TOKEN: ${RELEASE_PUBLISH_TOKEN:-}
     depends_on:
       perum_control_db:
         condition: service_healthy
