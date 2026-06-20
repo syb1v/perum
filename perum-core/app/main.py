@@ -149,55 +149,32 @@ async def _node_monitor_loop() -> None:
     латентность ядро→воркер (whoami) и тянем /health воркера (cpu/ram/disk через
     psutil). Доступна → active + свежий last_heartbeat + снимок метрик + ping_ms;
     недоступна → offline. Lifecycle (pending_bootstrap, decommissioned) и drain не трогаем."""
-    import time as _time
-    from datetime import datetime, timezone
-
     from sqlalchemy import select
 
     from app.core.db import SessionLocal
     from app.models import Node
+    from app.services.node_monitor import MONITORABLE, refresh_node_metrics
     from app.services.remote_node_client import RemoteNodeClient
 
     interval = settings.NODE_MONITOR_INTERVAL_S
     client = RemoteNodeClient(timeout=8.0)
     await asyncio.sleep(min(interval, 20))
+
+    async def _one(node_id: int) -> None:
+        # Своя сессия на ноду: параллельные коммиты не конфликтуют, медленная нода
+        # не тормозит остальные.
+        async with SessionLocal() as ndb:
+            n = await ndb.get(Node, node_id)
+            if n is not None:
+                await refresh_node_metrics(n, ndb, client)
+
     while True:
         try:
             async with SessionLocal() as db:
-                nodes = (
-                    await db.execute(select(Node).where(Node.status.in_(("active", "offline", "draining"))))
+                node_ids = (
+                    await db.execute(select(Node.id).where(Node.status.in_(MONITORABLE)))
                 ).scalars().all()
-                for node in nodes:
-                    now = datetime.now(timezone.utc).replace(tzinfo=None)
-                    # 1) Латентность + liveness — лёгкий whoami (без psutil).
-                    t0 = _time.monotonic()
-                    alive = await client.ping(node)
-                    ping_ms = int((_time.monotonic() - t0) * 1000)
-                    if not alive:
-                        if node.status == "active":
-                            node.status = "offline"
-                            logger.info("node monitor: %s недоступна → offline", node.name)
-                        node.last_ping_ms = None
-                        continue
-                    node.last_heartbeat = now
-                    node.last_ping_ms = ping_ms
-                    if node.status == "offline":
-                        node.status = "active"
-                        logger.info("node monitor: %s снова online", node.name)
-                    # 2) Реальные метрики загрузки — /health воркера (cpu/ram/disk).
-                    try:
-                        h = await client.get_health(node)
-                        node.last_cpu_percent = h.get("cpu_percent")
-                        node.last_ram_used_mb = h.get("ram_used_mb")
-                        node.last_ram_total_mb = h.get("ram_total_mb")
-                        node.last_disk_used_gb = h.get("disk_used_gb")
-                        node.last_disk_total_gb = h.get("disk_total_gb")
-                        node.metrics_at = now
-                        if h.get("agent_version"):
-                            node.agent_version = h["agent_version"]
-                    except Exception as exc:  # noqa: BLE001
-                        logger.debug("node monitor: %s health недоступен: %s", node.name, exc)
-                await db.commit()
+            await asyncio.gather(*(_one(nid) for nid in node_ids), return_exceptions=True)
         except Exception as exc:  # noqa: BLE001
             logger.warning("node monitor iteration failed: %s", exc)
         await asyncio.sleep(interval)
@@ -231,7 +208,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PERUM Control Plane",
-    version="0.5.2",
+    version="0.5.3",
     description="Manages organizations, provisioning, billing and observability for PERUM tenant stacks.",
     lifespan=lifespan,
 )

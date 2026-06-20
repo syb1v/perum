@@ -116,7 +116,7 @@ function CopyBtn({ text, className, okClassName, children }: { text: string; cla
 // ──────────────────────────────────────────────────────────────────────────
 // NodeRow — строка ноды в стиле Remnawave
 // ──────────────────────────────────────────────────────────────────────────
-export interface NodeUtil { schools_count: number; max_schools: number; capacity_percent: number; ram_used_gb: number | null; cpu_used_percent: number | null; disk_used_gb: number | null; }
+export interface NodeUtil { schools_count: number; max_schools: number; recommended_max?: number | null; capacity_percent: number; ram_used_gb: number | null; cpu_used_percent: number | null; disk_used_gb: number | null; }
 
 const STATUS_META: Record<string, { row: string; pill: string; label: string }> = {
     active: { row: s.rowOnline, pill: s.pillOnline, label: "Онлайн" },
@@ -143,16 +143,19 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
     const meta = STATUS_META[node.status] ?? STATUS_META.offline;
     const online = node.status === "active" && node.enabled !== false;
 
-    // Реальная загрузка — снимок монитор-петли (node.last_*). util — ёмкость по школам.
-    const cpuPct = node.last_cpu_percent != null ? node.last_cpu_percent : null;
+    // Живые метрики берём из util (обновляется каждые ~2с), фолбэк — снимок из
+    // списка нод (node.last_*). Тоталы ОЗУ/ПЗУ — из снимка либо из спеки ноды.
+    const cpuPct = util?.cpu_used_percent ?? (node.last_cpu_percent ?? null);
     const ramTotalGb = node.last_ram_total_mb ? node.last_ram_total_mb / 1024 : (node.ram_gb || null);
-    const ramUsedGb = node.last_ram_used_mb != null ? node.last_ram_used_mb / 1024 : null;
+    const ramUsedGb = util?.ram_used_gb ?? (node.last_ram_used_mb != null ? node.last_ram_used_mb / 1024 : null);
     const ramPct = ramUsedGb != null && ramTotalGb ? Math.min(100, (ramUsedGb / ramTotalGb) * 100) : null;
     const diskTotalGb = node.last_disk_total_gb || node.disk_gb || null;
-    const diskUsedGb = node.last_disk_used_gb != null ? node.last_disk_used_gb : null;
+    const diskUsedGb = util?.disk_used_gb ?? (node.last_disk_used_gb ?? null);
     const diskPct = diskUsedGb != null && diskTotalGb ? Math.min(100, (diskUsedGb / diskTotalGb) * 100) : null;
     const pingMs = node.last_ping_ms != null ? node.last_ping_ms : null;
     const schoolsPct = util ? util.capacity_percent : 0;
+    // Ресурсная оценка ниже операторского лимита → подсказка «рекомендуется N».
+    const recHint = util?.recommended_max != null && util.recommended_max < util.max_schools ? util.recommended_max : null;
     const fillClass = schoolsPct > 85 ? s.storageFillCrit : schoolsPct > 60 ? s.storageFillWarn : s.storageFill;
     const uptime = online ? humanUptime(node.created_at) : null;
 
@@ -211,7 +214,7 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
                         <MetricBar label="CPU" pct={cpuPct} detail={cpuPct != null ? `${cpuPct.toFixed(0)}%` : "—"} />
                         <MetricBar label="ОЗУ" pct={ramPct} detail={ramUsedGb != null && ramTotalGb ? `${ramUsedGb.toFixed(1)}/${ramTotalGb.toFixed(0)} ГБ` : "—"} />
                         <MetricBar label="ПЗУ" pct={diskPct} detail={diskUsedGb != null && diskTotalGb ? `${diskUsedGb.toFixed(0)}/${diskTotalGb.toFixed(0)} ГБ` : "—"} />
-                        <MetricBar label="Школы" pct={schoolsPct} detail={util ? `${util.schools_count}/${util.max_schools}` : `0/${node.max_schools}`} fill={fillClass} />
+                        <MetricBar label="Школы" pct={schoolsPct} detail={util ? `${util.schools_count}/${util.max_schools}${recHint != null ? ` (рек. ${recHint})` : ""}` : `0/${node.max_schools}`} fill={fillClass} />
                     </div>
                 ) : (
                     <div className={s.storageTop}>

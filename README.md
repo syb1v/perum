@@ -28,6 +28,7 @@
 5. [docs/DOMAINS.md](docs/DOMAINS.md) — поток subdomain и кастомного домена через Caddy on-demand TLS.
 6. [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) — **управление нодами**: архитектура multi-server, Agent API, capacity planning, распределение школ по нодам.
 7. [docs/NODE_DEPLOYMENT.md](docs/NODE_DEPLOYMENT.md) — **развёртывание ноды**: требования к серверу, bootstrap-скрипт, troubleshooting.
+7a. [docs/WORKER.md](docs/WORKER.md) — **воркор ноды (org_agent)**: как работает прослойка ядро↔школы↔ноды, API воркора, enroll, жизненный цикл школ на ноде, авто-обновление, мониторинг.
 8. [docs/OTA_UPDATES.md](docs/OTA_UPDATES.md) — **OTA-обновления**: как обновляются ядро и tenant, история обновлений, rollback.
 9. [docs/TARIFFS_AND_LIMITS.md](docs/TARIFFS_AND_LIMITS.md) — **тарифы и лимиты**: планы (trial/basic/pro/enterprise), enforcement, billing.
 10. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — как раскатывать новую версию tenant-образа на все живые орг.
@@ -43,6 +44,18 @@
 4. Если изменился **`perum-tenant/**`**, CI авто-собирает changelog из git-лога и регистрирует релиз в ядре (`POST /api/ci/release`). Организации видят обновление с ченджлогом и ставят его по кнопке (OTA).
 
 **Ключевое правило:** релиз тенанта нельзя выкатить без реального изменения кода — ядро отклоняет релиз, чей образ/коммит совпадает с текущим. Полное руководство (секреты CI, ручная публикация, обновление каждого сервиса) — **[docs/RELEASING.md](docs/RELEASING.md)**.
+
+### Обновление воркора на нодах (автоматически)
+
+Воркор на ноде — тот же образ `perum-core` (`ROLE=org_agent`). Он **обновляется сам**, без SSH и без участия ядра:
+
+1. CI (`release.yml`) при изменении `perum-core/**` собирает и пушит `ghcr.io/<owner>/perum-core:latest` (+ `git-<sha>`).
+2. На каждой ноде в стеке есть **Watchtower** (`perum_watchtower`): раз в ~2 минуты сверяет образ воркора с реестром. Появился новый `:latest` → **сам пуллит и пересоздаёт `perum_agent`** (только контейнеры с label `com.centurylinklabs.watchtower.enable=true` — школы не трогает).
+3. На время пересоздания связь ядро→воркор кратко пропадает; монитор ядра покажет ноду `offline`, затем снова `active`. Школьные стеки продолжают работать.
+
+То есть после `git push` в `main` с изменением ядра обновятся и платформа (через `deploy`-job по SSH), и все ноды (через Watchtower) — автоматически.
+
+**Ручное обновление воркора** (немедленно): на ноде `cd /opt/perum-node && docker compose pull perum_agent && docker compose up -d perum_agent`. Полное описание воркора — его API, мониторинг, жизненный цикл школ на ноде — **[docs/WORKER.md](docs/WORKER.md)**.
 
 ## Статус и план
 

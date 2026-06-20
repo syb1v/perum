@@ -118,7 +118,7 @@ export default function OrgConsole() {
   // Реал-тайм: пока открыт раздел инфраструктуры — обновляем ноды и метрики каждые 10с.
   useEffect(() => {
     if (section !== "infrastructure") return;
-    const t = setInterval(() => { loadOrgInfra(); }, 10_000);
+    const t = setInterval(() => { loadOrgInfra(); }, 2_000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);

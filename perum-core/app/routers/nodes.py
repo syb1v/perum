@@ -388,6 +388,13 @@ async def get_node_utilization(node_id: int, db: AsyncSession = Depends(get_db))
     if not node:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
 
+    # Живое обновление: UI поллит этот эндпоинт каждые ~2с → метрики реально свежие
+    # (ping + health воркера), а не только из фоновой петли. Best-effort.
+    from app.services.node_monitor import refresh_node_metrics
+    try:
+        await refresh_node_metrics(node, db)
+    except Exception:  # noqa: BLE001
+        pass
     planner = NodePlanner(db)
     return await planner.get_utilization(node)
 
@@ -470,5 +477,10 @@ async def get_org_node_utilization(
     if not node or node.org_id != org.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
 
+    from app.services.node_monitor import refresh_node_metrics
+    try:
+        await refresh_node_metrics(node, db)
+    except Exception:  # noqa: BLE001
+        pass
     planner = NodePlanner(db)
     return await planner.get_utilization(node)

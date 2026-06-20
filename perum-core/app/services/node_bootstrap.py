@@ -39,6 +39,10 @@ services:
     container_name: perum_agent
     restart: unless-stopped
     pull_policy: always
+    labels:
+      # Watchtower авто-обновляет ТОЛЬКО воркор при выходе нового образа ядра
+      # (CI пушит ghcr .../perum-core:latest при каждом изменении ядра).
+      com.centurylinklabs.watchtower.enable: "true"
     environment:
       ROLE: "org_agent"
       ENROLLMENT_TOKEN: "${ENROLLMENT_TOKEN}"
@@ -124,6 +128,23 @@ services:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - perum_internal
+
+  # Авто-обновление воркора: следит за реестром и при выходе нового образа ядра
+  # сам пуллит его и пересоздаёт perum_agent (только контейнеры с label
+  # watchtower.enable=true — школы он не трогает). Так нода обновляется без SSH,
+  # сразу после того как CI (GitHub Actions) опубликует новый perum-core.
+  watchtower:
+    image: ghcr.io/containrrr/watchtower:latest
+    container_name: perum_watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: "120"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - perum_internal
 

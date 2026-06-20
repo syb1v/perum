@@ -109,7 +109,7 @@ export default function PlatformConsole() {
   // переход online→offline→online.
   useEffect(() => {
     if (section !== "infrastructure") return;
-    const t = setInterval(() => { loadInfra(); }, 10_000);
+    const t = setInterval(() => { loadInfra(); }, 2_000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
