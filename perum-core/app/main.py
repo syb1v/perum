@@ -154,7 +154,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PERUM Control Plane",
-    version="0.2.0",
+    version="0.3.0",
     description="Manages organizations, provisioning, billing and observability for PERUM tenant stacks.",
     lifespan=lifespan,
 )
