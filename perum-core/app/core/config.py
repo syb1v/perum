@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     AGENT_TOKEN: str = Field(default="")
     # Порт, на котором воркер ноды слушает API (публикуется compose'ом ноды).
     AGENT_PORT: int = Field(default=3001)
+    # Образ ядра, который ставится на ноде как воркер (ROLE=org_agent). Тот же
+    # perum-core, что и платформа. Bootstrap-скрипт ноды подставляет его в compose.
+    AGENT_IMAGE: str = Field(default="ghcr.io/syb1v/perum-core:latest")
+    # Публичный URL ядра, по которому нода делает enroll и куда школы шлют телеметрию.
+    # Пусто → выводится как https://admin.<PUBLIC_BASE_DOMAIN>.
+    PUBLIC_CORE_URL: str = Field(default="")
 
 
 @lru_cache(maxsize=1)
