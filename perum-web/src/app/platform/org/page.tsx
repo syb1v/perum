@@ -296,7 +296,7 @@ export default function OrgConsole() {
             <h2 className={styles.cardTitle}>Школы</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Школа</th><th>Статус</th><th>Ученики</th><th>Онлайн</th><th>Версия</th><th>Действия</th></tr></thead>
+                <thead><tr><th>Школа</th><th>Состояние</th><th>Нода</th><th>Ученики</th><th>Версия</th><th>Действия</th></tr></thead>
                 <tbody>
                   {schools?.map((s) => {
                     const st = statuses[s.id];
@@ -304,9 +304,9 @@ export default function OrgConsole() {
                     return (
                       <tr key={s.id}>
                         <td><b>{s.name}</b><br /><span className={c.muted}>{s.slug}</span></td>
-                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
+                        <td><SchoolStatus status={s.status} online={!!statById[s.id]?.online} /></td>
+                        <td>{s.node_name ? <span title={s.node_hostname || ""}><code className={styles.code}>{s.node_name}</code></span> : <span className={c.muted} style={{ fontSize: "0.8rem" }}>платформа</span>}</td>
                         <td>{statById[s.id]?.students ?? "—"}</td>
-                        <td><span className={statById[s.id]?.online ? c.dotOnline : c.dotOffline}>●</span></td>
                         <td><code className={styles.code}>{s.release_tag || "—"}</code></td>
                         <td style={{ whiteSpace: "nowrap" }}>
                           <button className={styles.actionBtn} disabled={busyId === s.id} onClick={() => openAdmins(s)}>Админы</button>{" "}
@@ -550,6 +550,36 @@ function Kpi({ v, l, online }: { v: React.ReactNode; l: string; online?: boolean
       <div className={c.kpiVal}>{online !== undefined ? <span className={online ? c.dotOnline : c.dotOffline}>{v}</span> : v}</div>
       <div className={c.kpiLabel}>{l}</div>
     </div>
+  );
+}
+
+// Живой индикатор состояния школы: цвет + подпись, с учётом heartbeat (онлайн/офлайн)
+// и переходных статусов (разворачивается/обновляется).
+function SchoolStatus({ status, online }: { status: string; online: boolean }) {
+  let color = "#9e9e9e";
+  let label = status;
+  let pulse = false;
+  switch (status) {
+    case "provisioning": color = "#ffc107"; label = "разворачивается"; pulse = true; break;
+    case "updating": color = "#3b82f6"; label = "обновляется"; pulse = true; break;
+    case "suspended": color = "#9e9e9e"; label = "заморожена"; break;
+    case "archived": color = "#6e7681"; label = "архив"; break;
+    case "failed": color = "#dc3545"; label = "ошибка"; break;
+    case "active":
+      color = online ? "#28a745" : "#dc3545";
+      label = online ? "онлайн" : "офлайн";
+      break;
+  }
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+      <span style={{
+        width: 9, height: 9, borderRadius: "50%", background: color, flexShrink: 0,
+        boxShadow: `0 0 0 3px ${color}33`,
+        animation: pulse ? "perumPulse 1.2s ease-in-out infinite" : undefined,
+      }} />
+      <span style={{ fontWeight: 600, fontSize: "0.82rem", color }}>{label}</span>
+      <style>{`@keyframes perumPulse { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }`}</style>
+    </span>
   );
 }
 

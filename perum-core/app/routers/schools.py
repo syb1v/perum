@@ -146,7 +146,27 @@ async def list_schools(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSe
     rows = (
         await db.execute(select(School).where(School.org_id == admin.org_id).order_by(School.id))
     ).scalars().all()
-    return {"schools": [_school_dict(s) for s in rows]}
+
+    # Связка с нодами из ядра: какая школа на каком сервере (одним запросом).
+    node_map: dict[int, tuple[str, str]] = {}
+    if rows:
+        node_rows = (
+            await db.execute(
+                select(NodeAssignment.school_id, Node.name, Node.hostname)
+                .join(Node, Node.id == NodeAssignment.node_id)
+                .where(NodeAssignment.school_id.in_([s.id for s in rows]))
+            )
+        ).all()
+        node_map = {sid: (nname, nhost) for sid, nname, nhost in node_rows}
+
+    out = []
+    for s in rows:
+        d = _school_dict(s)
+        nm = node_map.get(s.id)
+        d["node_name"] = nm[0] if nm else None
+        d["node_hostname"] = nm[1] if nm else None
+        out.append(d)
+    return {"schools": out}
 
 
 async def _enforce_school_limit(db: AsyncSession, org_id: int) -> None:
