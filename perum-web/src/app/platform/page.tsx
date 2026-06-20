@@ -44,9 +44,11 @@ export default function PlatformConsole() {
 
   // OTA source config (источник обновлений)
   const [ota, setOta] = useState<any>(null);
-  const [otaForm, setOtaForm] = useState({ image_registry: "ghcr.io", image_repository: "", registry_username: "", private: false });
+  const [otaForm, setOtaForm] = useState({ image_registry: "ghcr.io", image_repository: "", registry_username: "", private: false, source_repo: "", tenant_path: "perum-tenant" });
   const [otaToken, setOtaToken] = useState("");
   const [otaBusy, setOtaBusy] = useState(false);
+  const [otaHelp, setOtaHelp] = useState(false);
+  const [relLinks, setRelLinks] = useState<{ commit_url?: string; tree_url?: string; source_commit?: string } | null>(null);
 
   // modals
   const [editOrg, setEditOrg] = useState<any>(null);
@@ -196,7 +198,7 @@ export default function PlatformConsole() {
 
   async function publishRelease(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setPublishing(true);
-    try { await papi("/api/releases", { method: "POST", body: JSON.stringify({ version_tag: rel.version_tag, image: rel.image || null, changelog: rel.changelog || null }) }); setRel({ version_tag: "", image: "", changelog: "" }); load(); }
+    try { await papi("/api/releases", { method: "POST", body: JSON.stringify({ version_tag: rel.version_tag, image: rel.image || null, changelog: rel.changelog || null, source_commit: relLinks?.source_commit || null }) }); setRel({ version_tag: "", image: "", changelog: "" }); setRelLinks(null); load(); }
     catch (e: any) { setErr(e.message); } finally { setPublishing(false); }
   }
 
@@ -259,8 +261,19 @@ export default function PlatformConsole() {
         image_repository: cfg.image_repository || "",
         registry_username: cfg.registry_username || "",
         private: !!cfg.private,
+        source_repo: cfg.source_repo || "",
+        tenant_path: cfg.tenant_path || "perum-tenant",
       });
     } catch (e: any) { /* non-fatal */ }
+  }
+  async function fetchLatestVersion() {
+    setOtaBusy(true); setErr("");
+    try {
+      const v = await papi("/api/platform/ota-config/fetch-latest", { method: "POST" });
+      setRel({ version_tag: v.version_tag, image: v.image, changelog: v.changelog || "" });
+      setRelLinks({ commit_url: v.commit_url, tree_url: v.tree_url, source_commit: v.source_commit });
+      toast.showSuccess(`Подтянута версия ${v.version_tag}`);
+    } catch (e: any) { toast.showError("Не удалось подтянуть: " + (e.message || "проверьте source_repo/токен")); } finally { setOtaBusy(false); }
   }
   async function saveOta(e: React.FormEvent) {
     e.preventDefault(); setOtaBusy(true); setErr("");
@@ -583,6 +596,10 @@ export default function PlatformConsole() {
                 <div className={styles.formGroup}><label className={styles.label}>Реестр</label><input className={styles.input} value={otaForm.image_registry} onChange={(e) => setOtaForm({ ...otaForm, image_registry: e.target.value })} placeholder="ghcr.io" /></div>
                 <div className={styles.formGroup}><label className={styles.label}>Репозиторий/образ</label><input className={styles.input} value={otaForm.image_repository} onChange={(e) => setOtaForm({ ...otaForm, image_repository: e.target.value })} placeholder="syb1v/perum-tenant" /></div>
               </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}><label className={styles.label}>GitHub-репозиторий <span className={c.muted}>— для автоподтягивания версии</span></label><input className={styles.input} value={otaForm.source_repo} onChange={(e) => setOtaForm({ ...otaForm, source_repo: e.target.value })} placeholder="syb1v/perum" /></div>
+                <div className={styles.formGroup}><label className={styles.label}>Папка тенанта</label><input className={styles.input} value={otaForm.tenant_path} onChange={(e) => setOtaForm({ ...otaForm, tenant_path: e.target.value })} placeholder="perum-tenant" /></div>
+              </div>
               <div className={styles.formRow} style={{ alignItems: "center" }}>
                 <div className={styles.formGroup}>
                   <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -602,18 +619,10 @@ export default function PlatformConsole() {
               )}
               <div className={styles.formActions}>
                 <button className={styles.submitBtn} disabled={otaBusy}>{otaBusy ? "…" : "Сохранить источник"}</button>{" "}
+                <button type="button" className={styles.btnSecondary} onClick={() => setOtaHelp(true)}>Инструкция</button>{" "}
                 {ota?.token_set && <button type="button" className={styles.btnSecondary} disabled={otaBusy} onClick={clearOtaToken}>Удалить токен</button>}
               </div>
             </form>
-            <details style={{ marginTop: 6 }}>
-              <summary style={{ cursor: "pointer", color: "var(--text-secondary)", fontWeight: 600 }}>Как настроить (приватный репозиторий)</summary>
-              <div className={c.muted} style={{ fontSize: "0.85rem", marginTop: 8, lineHeight: 1.6 }}>
-                <p style={{ margin: "0 0 6px" }}>1. В GitHub → Settings → Developer settings → Personal access tokens создайте токен с областью <code className={styles.code}>read:packages</code>.</p>
-                <p style={{ margin: "0 0 6px" }}>2. Укажите выше реестр (<code className={styles.code}>ghcr.io</code>), репозиторий/образ (<code className={styles.code}>owner/perum-tenant</code>), отметьте «Приватный», впишите логин и токен.</p>
-                <p style={{ margin: "0 0 6px" }}>3. На хостах, где тянутся образы школ, выполните <code className={styles.code}>docker login ghcr.io -u &lt;логин&gt; -p &lt;токен&gt;</code> (или это сделает агент). Токен хранится в ядре зашифрованным и наружу не отдаётся.</p>
-                <p style={{ margin: 0 }}>4. CI (<code className={styles.code}>release.yml</code>) при изменении кода тенанта сам соберёт образ и зарегистрирует релиз — школы увидят обновление по кнопке.</p>
-              </div>
-            </details>
           </div>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Опубликовать релиз</h2>
@@ -624,7 +633,18 @@ export default function PlatformConsole() {
                 <div className={styles.formGroup}><label className={styles.label}>Docker-образ</label><input className={styles.input} value={rel.image} onChange={(e) => setRel({ ...rel, image: e.target.value })} placeholder="ghcr.io/syb1v/perum-tenant:1.1.0" /></div>
               </div>
               <div className={styles.formGroup}><label className={styles.label}>Что нового</label><input className={styles.input} value={rel.changelog} onChange={(e) => setRel({ ...rel, changelog: e.target.value })} placeholder="Описание изменений" /></div>
-              <div className={styles.formActions}><button className={styles.submitBtn} disabled={publishing}>{publishing ? "…" : "Опубликовать (сделать текущим)"}</button></div>
+              {relLinks && (relLinks.commit_url || relLinks.tree_url) && (
+                <p className={c.muted} style={{ fontSize: "0.85rem", margin: "0 0 8px" }}>
+                  Источник:{" "}
+                  {relLinks.commit_url && <a href={relLinks.commit_url} target="_blank" rel="noreferrer" style={{ color: "var(--accent-primary)" }}>коммит ↗</a>}
+                  {relLinks.commit_url && relLinks.tree_url && " · "}
+                  {relLinks.tree_url && <a href={relLinks.tree_url} target="_blank" rel="noreferrer" style={{ color: "var(--accent-primary)" }}>папка тенанта в репозитории ↗</a>}
+                </p>
+              )}
+              <div className={styles.formActions}>
+                <button className={styles.submitBtn} disabled={publishing}>{publishing ? "…" : "Опубликовать (сделать текущим)"}</button>{" "}
+                <button type="button" className={styles.btnSecondary} disabled={otaBusy} onClick={fetchLatestVersion} title="Спросить у GitHub последний коммит по папке тенанта и заполнить поля">{otaBusy ? "…" : "⟳ Подтянуть последнюю версию"}</button>
+              </div>
             </form>
           </div>
           <div className={styles.card}>
@@ -632,7 +652,21 @@ export default function PlatformConsole() {
             <div className={styles.tableContainer}>
               <table className={styles.table}>
                 <thead><tr><th>Версия</th><th>Образ</th><th>Коммит</th><th>Что нового</th><th>Текущий</th><th>Опубликован</th></tr></thead>
-                <tbody>{releases?.map((r) => (<tr key={r.id}><td>{r.version_tag}</td><td><code className={styles.code}>{r.image}</code></td><td>{r.source_commit ? <code className={styles.code}>{String(r.source_commit).slice(0, 12)}</code> : "—"}</td><td style={{ maxWidth: 360, whiteSpace: "pre-wrap" }}>{r.changelog || "—"}</td><td>{r.is_current ? <span className={`${styles.statusBadge} ${styles.success}`}>текущий</span> : ""}</td><td>{new Date(r.published_at).toLocaleString()}</td></tr>))}</tbody>
+                <tbody>{releases?.map((r) => {
+                  const repo = ota?.source_repo;
+                  const commitUrl = repo && r.source_commit ? `https://github.com/${repo}/commit/${r.source_commit}` : null;
+                  const treeUrl = repo && r.source_commit ? `https://github.com/${repo}/tree/${r.source_commit}/${ota?.tenant_path || "perum-tenant"}` : null;
+                  return (
+                    <tr key={r.id}>
+                      <td>{r.version_tag}{treeUrl && <> · <a href={treeUrl} target="_blank" rel="noreferrer" style={{ color: "var(--accent-primary)", fontSize: "0.8rem" }}>код ↗</a></>}</td>
+                      <td><code className={styles.code}>{r.image}</code></td>
+                      <td>{r.source_commit ? (commitUrl ? <a href={commitUrl} target="_blank" rel="noreferrer"><code className={styles.code}>{String(r.source_commit).slice(0, 12)}</code></a> : <code className={styles.code}>{String(r.source_commit).slice(0, 12)}</code>) : "—"}</td>
+                      <td style={{ maxWidth: 360, whiteSpace: "pre-wrap" }}>{r.changelog || "—"}</td>
+                      <td>{r.is_current ? <span className={`${styles.statusBadge} ${styles.success}`}>текущий</span> : ""}</td>
+                      <td>{new Date(r.published_at).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}</tbody>
               </table>
               {releases && releases.length === 0 && <p className={styles.emptyState}>Релизов пока нет.</p>}
             </div>
@@ -662,6 +696,17 @@ export default function PlatformConsole() {
       )}
 
       {/* ===================== MODALS ===================== */}
+      {otaHelp && (
+        <Modal title="Как настроить источник обновлений" onClose={() => setOtaHelp(false)} width={680}>
+          <p className={c.muted} style={{ marginTop: 0 }}><b>Как это работает:</b> CI (<code className={styles.code}>release.yml</code>) при изменении кода в папке тенанта сам собирает образ, пушит в GHCR и регистрирует релиз в ядре. Организации видят обновление и ставят его по кнопке у школы. Здесь вы задаёте, ОТКУДА брать образ и версию.</p>
+          <ol className={c.muted} style={{ paddingLeft: 20, lineHeight: 1.7 }}>
+            <li><b>Реестр и образ.</b> Обычно <code className={styles.code}>ghcr.io</code> и <code className={styles.code}>owner/perum-tenant</code> — куда CI пушит образ тенанта.</li>
+            <li><b>GitHub-репозиторий + папка тенанта.</b> Нужны для кнопки «⟳ Подтянуть последнюю версию» — ядро спросит у GitHub последний коммит, затронувший эту папку, и заполнит поля релиза + даст ссылки на коммит и код.</li>
+            <li><b>Приватный реестр.</b> Если образ/репо приватные — отметьте «Приватный», создайте в GitHub токен (PAT) с правом <code className={styles.code}>read:packages</code> (а для приватного репо ещё <code className={styles.code}>repo</code>), впишите логин и токен. Токен хранится в ядре <b>зашифрованным</b> и наружу не отдаётся.</li>
+            <li><b>На хостах школ</b> для приватного образа выполните <code className={styles.code}>docker login ghcr.io -u &lt;логин&gt; -p &lt;токен&gt;</code>, чтобы стек школы мог тянуть образ при обновлении.</li>
+          </ol>
+        </Modal>
+      )}
       {editOrg && (
         <Modal title={`Редактирование — ${editOrg.slug}`} onClose={() => setEditOrg(null)} footer={<><button className={styles.cancelBtn} onClick={() => setEditOrg(null)}>Отмена</button><button className={styles.submitBtn} disabled={busy === editOrg.slug} onClick={saveEdit}>Сохранить</button></>}>
           <div className={styles.formGroup}><label className={styles.label}>Название</label><input className={styles.input} value={editOrg.name || ""} onChange={(e) => setEditOrg({ ...editOrg, name: e.target.value })} /></div>

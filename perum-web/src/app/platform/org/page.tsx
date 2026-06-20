@@ -47,6 +47,7 @@ export default function OrgConsole() {
   const [domains, setDomains] = useState<any[] | null>(null);
   const [newDomain, setNewDomain] = useState("");
   const [dnsInfo, setDnsInfo] = useState<any>(null);
+  const [domFaq, setDomFaq] = useState(false);
 
   // infrastructure
   const [orgNodes, setOrgNodes] = useState<any[] | null>(null);
@@ -514,15 +515,21 @@ export default function OrgConsole() {
             <div className={styles.formActions}><button className={styles.submitBtn} disabled={adminBusy}>Привязать домен</button></div>
           </form>
 
-          <details style={{ marginTop: 14 }}>
-            <summary style={{ cursor: "pointer", color: "var(--text-secondary)", fontWeight: 600 }}>FAQ — домены и поддомены</summary>
-            <div className={c.muted} style={{ fontSize: "0.85rem", marginTop: 8, lineHeight: 1.6 }}>
-              <p style={{ margin: "0 0 6px" }}><b>Поддомен платформы</b> ({dnsInfo?.default_subdomain || "<школа>." + (dnsInfo?.base_domain || "домен")}) работает сразу — настройка не нужна.</p>
-              <p style={{ margin: "0 0 6px" }}><b>Свой домен:</b> добавьте его выше, создайте DNS-запись по таблице, подождите 5–60 минут (распространение DNS). Статус сменится <span className={statusBadge("pending_dns")}>ждёт DNS</span> → <span className={statusBadge("active")}>активен</span>, TLS выпустится сам.</p>
-              <p style={{ margin: "0 0 6px" }}><b>Wildcard</b> (<code className={styles.code}>*</code>) позволяет ловить любые поддомены вашего домена на школу — удобно для лендингов и разделов.</p>
-              <p style={{ margin: 0 }}><b>Лендинг по домену:</b> направьте корень домена (<code className={styles.code}>@</code>) на школу — главная страница откроется по вашему домену.</p>
-            </div>
-          </details>
+          <div style={{ marginTop: 14 }}>
+            <button type="button" className={styles.actionBtn} onClick={() => setDomFaq(true)}>FAQ — домены и поддомены</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* DOMAINS FAQ MODAL (по кнопке, не аккордеон) */}
+      {domFaq && (
+        <Modal title="FAQ — домены и поддомены" onClose={() => setDomFaq(false)} width={620}>
+          <div className={c.muted} style={{ fontSize: "0.9rem", lineHeight: 1.7 }}>
+            <p style={{ marginTop: 0 }}><b>Поддомен платформы</b> ({dnsInfo?.default_subdomain || "<школа>." + (dnsInfo?.base_domain || "домен")}) работает сразу — настройка DNS не нужна.</p>
+            <p><b>Свой домен:</b> добавьте его в модалке «Домены», создайте DNS-запись по таблице, подождите 5–60 минут (распространение DNS). Статус сменится <span className={statusBadge("pending_dns")}>ждёт DNS</span> → <span className={statusBadge("active")}>активен</span>, TLS-сертификат выпустится автоматически.</p>
+            <p><b>Wildcard</b> (<code className={styles.code}>*</code>) ловит любые поддомены вашего домена на школу — удобно для лендингов и разделов.</p>
+            <p style={{ marginBottom: 0 }}><b>Лендинг по домену:</b> направьте корень домена (<code className={styles.code}>@</code>) на школу — главная страница откроется по вашему домену.</p>
+          </div>
         </Modal>
       )}
     </ConsoleShell>
