@@ -38,13 +38,11 @@ jobs:
               - 'perum-web/**'
             tenant:
               # OTA-релиз тенанта публикуется ТОЛЬКО при изменении кода тенанта.
-              # Не-кодовые правки (доки/README/changelog внутри perum-tenant) НЕ
-              # должны порождать «пустой» OTA — образ функционально тот же, но git-sha
-              # тег другой, и бэкенд по тегу его бы не отсеял. Поэтому исключаем их.
+              # ВНИМАНИЕ: negation-паттерны (`!...`) тут НЕ использовать — у paths-filter
+              # OR-семантика, и `!perum-tenant/**/*.md` matchит почти любой файл (всё,
+              # что не tenant-md), из-за чего tenant=true на любом коммите. От «пустых»
+              # OTA защищает бэкенд (`publish_release_record` отклоняет тот же образ/коммит).
               - 'perum-tenant/**'
-              - '!perum-tenant/**/*.md'
-              - '!perum-tenant/docs/**'
-              - '!perum-tenant/**/CHANGELOG*'
 
   build:
     needs: changes

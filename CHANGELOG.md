@@ -16,7 +16,7 @@
 ### CI/CD — авто-деплой control plane + усиление OTA-гейтинга
 - **Авто-деплой ядра и веба на прод.** В `release.yml` добавлен job `deploy`: на push в `main`, меняющий `perum-core/**` или `perum-web/**`, по SSH делает `git pull` + `docker compose pull/up -d` control plane (ядро при старте само мигрирует БД). Гейтится переменной `DEPLOY_ENABLED=true` — без неё пропускается. Секреты: `DEPLOY_SSH_HOST/USER/KEY/PORT`, переменная `DEPLOY_PATH`.
 - **Фикс авто-обновления прода.** Убран хардкод `pull_policy: never` для `perum_core`/`perum_web` в `docker-compose.prod.yml` — он оверрайдил `*_PULL_POLICY=always` из `.env.prod` и физически не давал прод-стеку подтянуть свежий образ из GHCR.
-- **OTA тенанта — без «пустых» релизов от доки.** В детекторе изменений `release.yml` для тенанта исключены не-кодовые пути (`*.md`, `perum-tenant/docs/**`, `CHANGELOG*`): правка документации больше не порождает OTA-релиз с новым git-sha тегом, но тем же кодом.
+- **OTA тенанта — релиз только при изменении кода тенанта.** Детектор изменений `release.yml` гейтит публикацию релиза на путь `perum-tenant/**`. От «пустых» OTA (тот же образ/коммит) защищает бэкенд (`publish_release_record` отклоняет дубль). Negation-паттерны в paths-filter НЕ применяются — у него OR-семантика, из-за которой они ломают детекцию.
 
 ### Исправления инфраструктуры
 - **Фикс 500 на bootstrap-скрипт (aware/naive datetime).** `node_bootstrap` создавал `expires_at` токена как timezone-aware (`datetime.now(timezone.utc)`), а колонка `enrollment_tokens.expires_at` — `DateTime` без таймзоны → asyncpg падал «can't subtract offset-naive and offset-aware datetimes». Заменено на naive `datetime.utcnow()` (как везде в проекте).
