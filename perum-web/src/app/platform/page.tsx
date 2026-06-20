@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { clearPlatformToken, getPlatformToken, getTokenPayload, papi } from "@/lib/platformApi";
 import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell";
 import Modal from "@/components/platform/Modal";
-import { CreateNodeWizard, NodeRow } from "@/components/platform/InfraNodes";
+import { CreateNodeWizard, EditNodeModal, NodeRow } from "@/components/platform/InfraNodes";
 import styles from "@/app/admin/page.module.css";
 import c from "@/components/platform/console.module.css";
 import infra from "@/app/platform/infra.module.css";
@@ -68,6 +68,7 @@ export default function PlatformConsole() {
   const [capacityRec, setCapacityRec] = useState<any>(null);
   const [capacityCount, setCapacityCount] = useState(10);
   const [showWizard, setShowWizard] = useState(false);
+  const [editNode, setEditNode] = useState<any>(null);
   const [showFaq, setShowFaq] = useState(false);
   const [showCapacity, setShowCapacity] = useState(false);
 
@@ -400,6 +401,7 @@ export default function PlatformConsole() {
                 onInstall={() => getBootstrap(n.id, n.name)}
                 onDrain={() => drainNode(n.id)}
                 onDelete={() => deleteNode(n.id, n.name)}
+                onEdit={() => setEditNode(n)}
               />
             ))}
             {nodes && nodes.length === 0 && <p className={infra.empty}>Нод нет. Нажмите «+ Создать ноду», чтобы развернуть первый сервер.</p>}
@@ -411,6 +413,14 @@ export default function PlatformConsole() {
               orgs={orgs}
               onClose={() => setShowWizard(false)}
               onCreated={() => loadInfra()}
+            />
+          )}
+
+          {editNode && (
+            <EditNodeModal
+              node={editNode}
+              onClose={() => setEditNode(null)}
+              onSaved={() => loadInfra()}
             />
           )}
 

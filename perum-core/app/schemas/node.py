@@ -17,6 +17,9 @@ class NodeCreate(BaseModel):
 
 class NodeUpdate(BaseModel):
     name: str | None = None
+    hostname: str | None = Field(default=None, min_length=1, max_length=255)
+    ssh_port: int | None = Field(default=None, ge=1, le=65535)
+    country_code: str | None = Field(default=None, max_length=2)
     max_schools: int | None = Field(default=None, ge=1)
     status: str | None = None
 

@@ -105,6 +105,18 @@ async def update_node(node_id: int, payload: NodeUpdate, db: AsyncSession = Depe
 
     if payload.name is not None:
         node.name = payload.name
+    if payload.hostname is not None:
+        # hostname уникален — не дать «занять» адрес другой ноды.
+        clash = await db.scalar(
+            select(Node).where(Node.hostname == payload.hostname, Node.id != node.id)
+        )
+        if clash:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"хост '{payload.hostname}' уже занят другой нодой")
+        node.hostname = payload.hostname
+    if payload.ssh_port is not None:
+        node.ssh_port = payload.ssh_port
+    if payload.country_code is not None:
+        node.country_code = payload.country_code or None
     if payload.max_schools is not None:
         node.max_schools = payload.max_schools
     if payload.status is not None:
