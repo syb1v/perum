@@ -60,6 +60,10 @@ class RemoteNodeClient:
     async def get_health(self, node: Node) -> dict:
         return await self._request(node, "GET", "/health")
 
+    async def restart_node(self, node: Node) -> dict:
+        """Перезагрузить docker-стек ноды (рестарт контейнеров школ), не сервер."""
+        return await self._request(node, "POST", "/restart")
+
     async def ping(self, node: Node) -> bool:
         try:
             await self._request(node, "GET", "/whoami")

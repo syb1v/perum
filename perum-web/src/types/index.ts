@@ -724,6 +724,7 @@ export interface Node {
     ram_gb: number;
     disk_gb: number;
     status: NodeStatus;
+    enabled: boolean;
     org_id: number | null;
     agent_version: string | null;
     last_heartbeat: string | null;

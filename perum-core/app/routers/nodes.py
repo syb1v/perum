@@ -8,13 +8,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_org_admin, require_platform_admin
-from app.models import Node, NodeAssignment, Organization, School
+from app.models import Node, NodeAssignment, Organization, School, SchoolDomain
 from app.schemas.node import (
     BootstrapScriptResponse,
     CapacityRecommendationRequest,
     CapacityRecommendationResponse,
+    NodeActionResult,
+    NodeBulkActionRequest,
+    NodeBulkActionResponse,
     NodeCreate,
     NodeListResponse,
     NodeResponse,
@@ -25,6 +29,7 @@ from app.schemas.node import (
 )
 from app.services.node_bootstrap import generate_bootstrap_script
 from app.services.node_planner import NodePlanner
+from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 
 logger = logging.getLogger("perum.nodes")
 
@@ -119,6 +124,8 @@ async def update_node(node_id: int, payload: NodeUpdate, db: AsyncSession = Depe
         node.country_code = payload.country_code or None
     if payload.max_schools is not None:
         node.max_schools = payload.max_schools
+    if payload.enabled is not None:
+        node.enabled = payload.enabled
     if payload.status is not None:
         if payload.status not in ("pending_bootstrap", "active", "draining", "offline", "decommissioned"):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid status")
@@ -162,6 +169,98 @@ async def drain_node(node_id: int, db: AsyncSession = Depends(get_db)) -> dict:
     return {"id": node_id, "status": "draining", "message": "Node marked for draining"}
 
 
+# ============================================================================
+# Управление питанием/использованием нод: вкл/выкл (визуально) + рестарт стека
+# ============================================================================
+
+
+async def _set_node_enabled(node: Node, enabled: bool, db: AsyncSession) -> None:
+    node.enabled = enabled
+    await db.commit()
+
+
+async def _restart_node_stack(node: Node) -> tuple[bool, str]:
+    """Перезагрузить docker-стек школ на ноде через её воркер. Физический сервер не
+    трогаем. Возвращает (ok, message)."""
+    try:
+        result = await RemoteNodeClient().restart_node(node)
+        return True, result.get("message") or "перезагружено"
+    except RemoteNodeError as exc:
+        return False, str(exc)
+    except Exception as exc:  # noqa: BLE001
+        return False, f"нода недоступна: {exc}"
+
+
+@platform_router.post("/{node_id}/enable")
+async def enable_node(node_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    node = await db.get(Node, node_id)
+    if not node:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
+    await _set_node_enabled(node, True, db)
+    return {"id": node_id, "enabled": True, "message": "Нода включена — снова участвует в распределении"}
+
+
+@platform_router.post("/{node_id}/disable")
+async def disable_node(node_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    node = await db.get(Node, node_id)
+    if not node:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
+    await _set_node_enabled(node, False, db)
+    return {"id": node_id, "enabled": False, "message": "Нода выключена — новые школы на неё не назначаются"}
+
+
+@platform_router.post("/{node_id}/restart")
+async def restart_node(node_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    node = await db.get(Node, node_id)
+    if not node:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
+    ok, message = await _restart_node_stack(node)
+    if not ok:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"перезагрузка не удалась: {message}")
+    return {"id": node_id, "ok": True, "message": message}
+
+
+@platform_router.post("/bulk", response_model=NodeBulkActionResponse)
+async def bulk_node_action(payload: NodeBulkActionRequest, db: AsyncSession = Depends(get_db)) -> NodeBulkActionResponse:
+    """Массовая операция над нодами: action ∈ {enable, disable, restart},
+    scope ∈ {all (все), pool (без организации), org (ноды organization org_id)}."""
+    if payload.action not in ("enable", "disable", "restart"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "action: enable | disable | restart")
+
+    query = select(Node).where(Node.status != "decommissioned")
+    if payload.scope == "pool":
+        query = query.where(Node.org_id.is_(None))
+    elif payload.scope == "org":
+        if payload.org_id is None:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "scope=org требует org_id")
+        query = query.where(Node.org_id == payload.org_id)
+    elif payload.scope != "all":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "scope: all | pool | org")
+
+    nodes = (await db.execute(query.order_by(Node.id))).scalars().all()
+
+    results: list[NodeActionResult] = []
+    for node in nodes:
+        if payload.action == "enable":
+            node.enabled = True
+            results.append(NodeActionResult(node_id=node.id, node_name=node.name, ok=True, message="включена"))
+        elif payload.action == "disable":
+            node.enabled = False
+            results.append(NodeActionResult(node_id=node.id, node_name=node.name, ok=True, message="выключена"))
+        else:  # restart
+            ok, message = await _restart_node_stack(node)
+            results.append(NodeActionResult(node_id=node.id, node_name=node.name, ok=ok, message=message))
+
+    if payload.action in ("enable", "disable"):
+        await db.commit()
+
+    succeeded = sum(1 for r in results if r.ok)
+    return NodeBulkActionResponse(
+        action=payload.action, scope=payload.scope,
+        total=len(results), succeeded=succeeded, results=results,
+    )
+
+
 @platform_router.get("/{node_id}/schools")
 async def get_node_schools(node_id: int, db: AsyncSession = Depends(get_db)) -> dict:
     node = await db.get(Node, node_id)
@@ -169,24 +268,57 @@ async def get_node_schools(node_id: int, db: AsyncSession = Depends(get_db)) -> 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
 
     result = await db.execute(
-        select(NodeAssignment, School)
+        select(NodeAssignment, School, Organization)
         .join(School, NodeAssignment.school_id == School.id)
+        .join(Organization, School.org_id == Organization.id, isouter=True)
         .where(NodeAssignment.node_id == node.id)
         .order_by(NodeAssignment.assigned_at)
     )
     rows = result.all()
 
+    base = get_settings().PUBLIC_BASE_DOMAIN
+    school_ids = [s.id for _, s, _ in rows]
+    # Кастомные домены школ — одним запросом, чтобы показать рядом с поддоменом.
+    custom_map: dict[int, list[str]] = {}
+    if school_ids:
+        dom_rows = (
+            await db.execute(
+                select(SchoolDomain.school_id, SchoolDomain.domain)
+                .where(
+                    SchoolDomain.school_id.in_(school_ids),
+                    SchoolDomain.domain_type == "custom",
+                    SchoolDomain.status != "removed",
+                )
+            )
+        ).all()
+        for sid, dom in dom_rows:
+            custom_map.setdefault(sid, []).append(dom)
+
     schools = []
-    for assignment, school in rows:
+    for assignment, school, org in rows:
         schools.append({
             "school_id": school.id,
             "school_slug": school.slug,
             "school_name": school.name,
             "status": school.status,
+            "subdomain": f"{school.slug}.{base}",
+            "custom_domains": custom_map.get(school.id, []),
+            "node_ip": node.hostname,          # адрес/IP ноды, где лежит школа
+            "version": school.release_tag,     # версия образа тенанта
+            "org_id": org.id if org else None,
+            "org_name": org.name if org else None,
+            "org_slug": org.slug if org else None,
             "assigned_at": assignment.assigned_at.isoformat(),
         })
 
-    return {"node_id": node_id, "schools": schools, "total": len(schools)}
+    return {
+        "node_id": node_id,
+        "node_name": node.name,
+        "node_ip": node.hostname,
+        "org_id": node.org_id,
+        "schools": schools,
+        "total": len(schools),
+    }
 
 
 @platform_router.get("/{node_id}/utilization", response_model=NodeUtilizationResponse)

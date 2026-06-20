@@ -693,3 +693,40 @@
     font-size: 0.82rem;
     margin-bottom: 1rem;
 }
+
+/* ── Модалка «Школы на ноде» (прозрачность) ── */
+.schoolsTableWrap {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: auto;
+    max-height: 50vh;
+    margin-bottom: 1rem;
+}
+.schoolsTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+.schoolsTable th {
+    text-align: left;
+    font-weight: 600;
+    color: #8b949e;
+    padding: 0.55rem 0.8rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: sticky;
+    top: 0;
+}
+.schoolsTable td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: #e6edf3;
+    vertical-align: top;
+}
+.schoolsTable tr:last-child td { border-bottom: none; }
+.schoolSub {
+    font-size: 0.72rem;
+    color: #6e7681;
+    font-family: var(--mono);
+    margin-top: 2px;
+}

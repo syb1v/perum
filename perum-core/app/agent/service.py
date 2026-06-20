@@ -125,6 +125,22 @@ async def get_agent_health(db: AsyncSession) -> AgentHealthResponse:
     )
 
 
+async def restart_node_stack(db: AsyncSession) -> "AgentNodeActionResponse":
+    """Перезагрузить docker-стек ноды: рестарт всех управляемых контейнеров школ.
+    Физическая перезагрузка сервера не выполняется — только контейнеры."""
+    from app.agent.schemas import AgentNodeActionResponse
+
+    docker = DockerClient()
+    try:
+        restarted = await docker.restart_managed_containers()
+        return AgentNodeActionResponse(
+            success=True, restarted=restarted,
+            message=f"перезагружено контейнеров: {len(restarted)}",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return AgentNodeActionResponse(success=False, message=f"ошибка перезагрузки: {exc}")
+
+
 async def get_agent_schools(db: AsyncSession) -> AgentSchoolListResponse:
     docker = DockerClient()
     containers = await docker.list_containers(all=True)

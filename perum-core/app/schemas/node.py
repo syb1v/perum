@@ -21,6 +21,7 @@ class NodeUpdate(BaseModel):
     ssh_port: int | None = Field(default=None, ge=1, le=65535)
     country_code: str | None = Field(default=None, max_length=2)
     max_schools: int | None = Field(default=None, ge=1)
+    enabled: bool | None = None
     status: str | None = None
 
 
@@ -36,6 +37,7 @@ class NodeResponse(BaseModel):
     disk_gb: float
     country_code: str | None
     status: str
+    enabled: bool
     org_id: int | None
     agent_version: str | None
     last_heartbeat: datetime | None
@@ -76,6 +78,29 @@ class CapacityRecommendationResponse(BaseModel):
     recommendations: list[NodeConfig]
     total_schools: int
     summary: str
+
+
+class NodeBulkActionRequest(BaseModel):
+    # action: enable | disable | restart
+    action: str = Field(examples=["restart"])
+    # scope: all (все ноды) | pool (только без организации) | org (ноды организации org_id)
+    scope: str = Field(default="all", examples=["all"])
+    org_id: int | None = None
+
+
+class NodeActionResult(BaseModel):
+    node_id: int
+    node_name: str
+    ok: bool
+    message: str | None = None
+
+
+class NodeBulkActionResponse(BaseModel):
+    action: str
+    scope: str
+    total: int
+    succeeded: int
+    results: list[NodeActionResult]
 
 
 class BootstrapScriptResponse(BaseModel):

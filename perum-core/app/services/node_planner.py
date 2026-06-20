@@ -74,7 +74,8 @@ class NodePlanner:
         )
 
     async def find_best_node(self, org_id: int | None = None) -> Node | None:
-        query = select(Node).where(Node.status == "active")
+        # enabled=False — нода выключена оператором (визуально): не назначаем на неё школы.
+        query = select(Node).where(Node.status == "active", Node.enabled.is_(True))
         if org_id is not None:
             query = query.where((Node.org_id == org_id) | (Node.org_id.is_(None)))
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { clearPlatformToken, getPlatformToken, getTokenPayload, papi } from "@/lib/platformApi";
 import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell";
 import Modal from "@/components/platform/Modal";
-import { CreateNodeWizard, EditNodeModal, NodeRow } from "@/components/platform/InfraNodes";
+import { CreateNodeWizard, EditNodeModal, NodeRow, NodeSchoolsModal } from "@/components/platform/InfraNodes";
 import styles from "@/app/admin/page.module.css";
 import c from "@/components/platform/console.module.css";
 import infra from "@/app/platform/infra.module.css";
@@ -69,6 +69,8 @@ export default function PlatformConsole() {
   const [capacityCount, setCapacityCount] = useState(10);
   const [showWizard, setShowWizard] = useState(false);
   const [editNode, setEditNode] = useState<any>(null);
+  const [schoolsNode, setSchoolsNode] = useState<any>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showCapacity, setShowCapacity] = useState(false);
 
@@ -217,6 +219,19 @@ export default function PlatformConsole() {
   }
   async function drainNode(id: number) { if (!confirm("Перевести ноду в draining? Новые школы не будут на неё назначаться.")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); toast.showInfo("Нода переведена в draining"); } catch (e: any) { toast.showError(e.message); } }
   async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); toast.showInfo(`Нода «${name}» удалена`); } catch (e: any) { toast.showError(e.message); } }
+  async function restartNode(id: number, name: string) { if (!confirm(`Перезагрузить стек ноды «${name}»? Контейнеры школ перезапустятся (сервер не трогаем).`)) return; try { const r = await papi(`/api/platform/nodes/${id}/restart`, { method: "POST" }); toast.showSuccess(`Нода «${name}»: ${r.message || "перезагружена"}`); loadInfra(); } catch (e: any) { toast.showError("Перезагрузка не удалась: " + (e.message || "нода недоступна")); } }
+  async function toggleNodeEnabled(n: any) { const turnOff = n.enabled !== false; try { await papi(`/api/platform/nodes/${n.id}/${turnOff ? "disable" : "enable"}`, { method: "POST" }); toast.showInfo(`Нода «${n.name}» ${turnOff ? "выключена" : "включена"}`); loadInfra(); } catch (e: any) { toast.showError(e.message); } }
+  async function bulkNodeAction(action: string, scope: string, orgId?: number) {
+    setBulkOpen(false);
+    const labels: Record<string, string> = { enable: "Включить", disable: "Выключить", restart: "Перезагрузить" };
+    const scopes: Record<string, string> = { all: "все ноды", pool: "ноды общего пула", org: "ноды организации" };
+    if (!confirm(`${labels[action]} — ${scopes[scope]}?`)) return;
+    try {
+      const r = await papi("/api/platform/nodes/bulk", { method: "POST", body: JSON.stringify({ action, scope, org_id: orgId ?? null }) });
+      toast.showSuccess(`${labels[action]}: успешно ${r.succeeded}/${r.total}`);
+      loadInfra();
+    } catch (e: any) { toast.showError("Массовая операция не удалась: " + (e.message || "")); }
+  }
   async function getBootstrap(id: number, name: string) {
     try {
       toast.showInfo(`Генерирую скрипт для ${name}...`);
@@ -389,6 +404,28 @@ export default function PlatformConsole() {
               <button className={infra.ghostBtn} type="button" onClick={getRecommendation}>Рекомендация</button>
             </div>
             <button className={infra.ghostBtn} type="button" onClick={() => setShowFaq(true)}>FAQ</button>
+            <div style={{ position: "relative" }}>
+              <button className={infra.ghostBtn} type="button" onClick={() => setBulkOpen((v) => !v)}>Действия ▾</button>
+              {bulkOpen && (
+                <>
+                  <div onClick={() => setBulkOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+                  <div style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 50, minWidth: 270, background: "#0f1217", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: 6, boxShadow: "0 20px 50px rgba(0,0,0,0.5)" }}>
+                    {[
+                      { a: "restart", l: "Перезагрузить" },
+                      { a: "disable", l: "Выключить" },
+                      { a: "enable", l: "Включить" },
+                    ].map((act) => (
+                      <div key={act.a} style={{ padding: "4px 0" }}>
+                        <div style={{ fontSize: "0.7rem", color: "#6e7681", textTransform: "uppercase", letterSpacing: "0.04em", padding: "2px 10px" }}>{act.l}</div>
+                        <button style={menuItemStyle} onClick={() => bulkNodeAction(act.a, "all")}>· все ноды</button>
+                        <button style={menuItemStyle} onClick={() => bulkNodeAction(act.a, "pool")}>· общий пул (без орг)</button>
+                        <BulkOrgSubmenu orgs={orgs} onPick={(oid) => bulkNodeAction(act.a, "org", oid)} />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <button className={infra.addBtn} type="button" onClick={() => setShowWizard(true)}>+ Создать ноду</button>
           </div>
 
@@ -402,6 +439,9 @@ export default function PlatformConsole() {
                 onDrain={() => drainNode(n.id)}
                 onDelete={() => deleteNode(n.id, n.name)}
                 onEdit={() => setEditNode(n)}
+                onRestart={() => restartNode(n.id, n.name)}
+                onToggleEnabled={() => toggleNodeEnabled(n)}
+                onViewSchools={() => setSchoolsNode(n)}
               />
             ))}
             {nodes && nodes.length === 0 && <p className={infra.empty}>Нод нет. Нажмите «+ Создать ноду», чтобы развернуть первый сервер.</p>}
@@ -422,6 +462,10 @@ export default function PlatformConsole() {
               onClose={() => setEditNode(null)}
               onSaved={() => loadInfra()}
             />
+          )}
+
+          {schoolsNode && (
+            <NodeSchoolsModal node={schoolsNode} onClose={() => setSchoolsNode(null)} />
           )}
 
           {showFaq && (
@@ -653,6 +697,30 @@ export default function PlatformConsole() {
         </Modal>
       )}
     </ConsoleShell>
+  );
+}
+
+const menuItemStyle: React.CSSProperties = {
+  display: "block", width: "100%", textAlign: "left", padding: "5px 10px",
+  fontSize: "0.82rem", color: "#c9d1d9", background: "transparent", border: "none",
+  borderRadius: 6, cursor: "pointer",
+};
+
+// Подменю «по организации» для массовых действий над нодами.
+function BulkOrgSubmenu({ orgs, onPick }: { orgs: any[] | null; onPick: (orgId: number) => void }) {
+  const [open, setOpen] = useState(false);
+  if (!orgs || orgs.length === 0) return null;
+  return (
+    <div>
+      <button style={menuItemStyle} onClick={() => setOpen((v) => !v)}>· по организации {open ? "▴" : "▾"}</button>
+      {open && (
+        <div style={{ maxHeight: 180, overflowY: "auto", margin: "0 0 0 8px", borderLeft: "1px solid rgba(255,255,255,0.08)" }}>
+          {orgs.map((o) => (
+            <button key={o.id} style={{ ...menuItemStyle, fontSize: "0.78rem" }} onClick={() => onPick(o.id)}>{o.name}</button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

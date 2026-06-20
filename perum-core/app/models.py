@@ -448,7 +448,13 @@ class Node(Base):
 
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="pending_bootstrap", server_default="pending_bootstrap",
-        comment="pending_bootstrap | active | draining | offline | decommissioned",
+        comment="pending_bootstrap | active | draining | offline | decommissioned (ставит воркер)",
+    )
+    # Визуальный вкл/выкл оператором: выключенная нода не используется планировщиком
+    # (новые школы не назначаются), но физически продолжает работать. Статус ставит
+    # воркер автоматически — enabled задаёт человек.
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
     )
 
     org_id: Mapped[int | None] = mapped_column(

@@ -292,6 +292,22 @@ class DockerClient:
 
         return await asyncio.to_thread(_start)
 
+    async def restart_managed_containers(self) -> list[str]:
+        """Перезагрузить ВСЕ управляемые ПЭРУМ-контейнеры на этой ноде (стеки школ).
+        Используется при «перезагрузке ноды» — это рестарт docker-стека, а не сервера."""
+
+        def _restart() -> list[str]:
+            restarted: list[str] = []
+            for c in self.client.containers.list(all=True, filters={"label": f"{LABEL_MANAGED}=true"}):
+                try:
+                    c.restart(timeout=10)
+                    restarted.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            return restarted
+
+        return await asyncio.to_thread(_restart)
+
     async def backup_volume_tar(self, volume: str, image: str) -> bytes:
         """Снять tar.gz содержимого тома (для бэкапа вложений школы перед purge).
         Запускает одноразовый контейнер с томом, смонтированным RO в /data, и tar'ит

@@ -10,6 +10,7 @@ from app.agent.schemas import (
     AgentHealthResponse,
     AgentHeartbeatRequest,
     AgentHeartbeatResponse,
+    AgentNodeActionResponse,
     AgentProvisionSchoolRequest,
     AgentProvisionSchoolResponse,
     AgentSchoolActionResponse,
@@ -24,6 +25,7 @@ from app.agent.service import (
     get_agent_schools,
     get_agent_state,
     provision_school_on_node,
+    restart_node_stack,
     send_heartbeat,
     suspend_school_on_node,
     unsuspend_school_on_node,
@@ -115,6 +117,13 @@ async def deprovision_school(
         raise HTTPException(400, "deprovision only available in org_agent mode")
     req.school_slug = school_slug
     return await deprovision_school_on_node(db, req)
+
+
+@router.post("/restart", response_model=AgentNodeActionResponse)
+async def restart_node(db: AsyncSession = Depends(get_db)) -> AgentNodeActionResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "restart only available in org_agent mode")
+    return await restart_node_stack(db)
 
 
 @router.post("/heartbeat", response_model=AgentHeartbeatResponse)

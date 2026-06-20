@@ -49,6 +49,21 @@ const I = {
             <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
         </svg>
     ),
+    Restart: () => (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5" />
+        </svg>
+    ),
+    Power: () => (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0" />
+        </svg>
+    ),
+    Eye: () => (
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+        </svg>
+    ),
     Download: () => (
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -96,13 +111,16 @@ const STATUS_META: Record<string, { row: string; pill: string; label: string }> 
     decommissioned: { row: s.rowOffline, pill: s.pillDecom, label: "Выведена" },
 };
 
-export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit }: {
+export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRestart, onToggleEnabled, onViewSchools }: {
     node: any;
     util?: NodeUtil;
     onInstall: () => void;
     onDrain: () => void;
     onDelete: () => void;
     onEdit: () => void;
+    onRestart: () => void;
+    onToggleEnabled: () => void;
+    onViewSchools: () => void;
 }) {
     const meta = STATUS_META[node.status] ?? STATUS_META.offline;
     const heartbeatAlive = node.last_heartbeat && Date.now() - new Date(node.last_heartbeat).getTime() < 300_000;
@@ -135,6 +153,7 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit }: {
                     </span>
                 </div>
                 <span className={`${s.statusPill} ${meta.pill}`}>{meta.label}</span>
+                {node.enabled === false && <span className={`${s.statusPill} ${s.pillDecom}`} title="Выключена оператором — новые школы не назначаются">выключена</span>}
             </div>
 
             {/* ip */}
@@ -167,6 +186,14 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit }: {
                             <I.Download /> Скрипт
                         </button>
                     )}
+                    <button className={s.actBtn} onClick={onViewSchools} title="Школы на ноде"><I.Eye /></button>
+                    <button className={s.actBtn} onClick={onRestart} title="Перезагрузить стек ноды (контейнеры)"><I.Restart /></button>
+                    <button
+                        className={s.actBtn}
+                        onClick={onToggleEnabled}
+                        title={node.enabled === false ? "Включить ноду" : "Выключить ноду (не использовать)"}
+                        style={node.enabled === false ? { color: "#2dd4a7", borderColor: "rgba(45,212,167,0.4)" } : undefined}
+                    ><I.Power /></button>
                     {node.status === "active" && (
                         <button className={s.actBtn} onClick={onDrain} title="Вывод из ротации"><I.Drain /></button>
                     )}
@@ -477,6 +504,78 @@ export function EditNodeModal({ node, onClose, onSaved }: {
                     <button className={s.nextBtn} onClick={save} disabled={busy || !name.trim() || !hostname.trim()}>
                         {busy ? "Сохранение…" : "Сохранить"}
                     </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// NodeSchoolsModal — прозрачность ноды: школы (поддомен/IP/версия/орг), что на ней
+// ──────────────────────────────────────────────────────────────────────────
+export function NodeSchoolsModal({ node, onClose }: { node: any; onClose: () => void }) {
+    const [data, setData] = useState<any>(null);
+    const [err, setErr] = useState<string | null>(null);
+
+    useEffect(() => {
+        papi(`/api/platform/nodes/${node.id}/schools`)
+            .then(setData)
+            .catch((e: any) => setErr(e?.message || "Не удалось загрузить школы"));
+    }, [node.id]);
+
+    return (
+        <div className={s.overlay} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+            <div className={`${s.wizard} ${s.wizardWide}`}>
+                <div className={s.wizHead}>
+                    <span className={s.wizIcon}><I.Eye /></span>
+                    <h2 className={s.wizTitle}>Школы на ноде «{node.name}»</h2>
+                    <button className={s.wizClose} onClick={onClose}><I.X /></button>
+                </div>
+
+                <p className={s.hint}>
+                    Адрес ноды: <code className={s.codeChip}>{node.hostname}</code>
+                    {data?.org_id ? <> · организация ноды: id {data.org_id}</> : <> · нода в общем пуле</>}
+                </p>
+
+                {err && <div className={s.errBox}>{err}</div>}
+
+                {!data && !err && <p className={s.hint}>Загрузка…</p>}
+
+                {data && (
+                    data.schools.length === 0 ? (
+                        <p className={s.hint}>На этой ноде пока нет школ.</p>
+                    ) : (
+                        <div className={s.schoolsTableWrap}>
+                            <table className={s.schoolsTable}>
+                                <thead>
+                                    <tr>
+                                        <th>Школа</th><th>Организация</th><th>Адрес / поддомен</th><th>Версия</th><th>Статус</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.schools.map((sc: any) => (
+                                        <tr key={sc.school_id}>
+                                            <td><b>{sc.school_name}</b><div className={s.schoolSub}>{sc.school_slug}</div></td>
+                                            <td>{sc.org_name || <span className={s.schoolSub}>—</span>}</td>
+                                            <td>
+                                                <code className={s.codeChip}>{sc.subdomain}</code>
+                                                {sc.custom_domains?.length > 0 && (
+                                                    <div className={s.schoolSub}>{sc.custom_domains.join(", ")}</div>
+                                                )}
+                                                <div className={s.schoolSub}>IP: {sc.node_ip}</div>
+                                            </td>
+                                            <td><code className={s.codeChip}>{sc.version || "—"}</code></td>
+                                            <td><span className={`${s.statusPill} ${sc.status === "active" ? s.pillOnline : sc.status === "suspended" ? s.pillDecom : s.pillPending}`}>{sc.status}</span></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                )}
+
+                <div className={s.wizFoot}>
+                    <button className={s.nextBtn} onClick={onClose}>Закрыть</button>
                 </div>
             </div>
         </div>

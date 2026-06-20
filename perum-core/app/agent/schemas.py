@@ -45,6 +45,12 @@ class AgentSchoolActionResponse(BaseModel):
     message: str | None = None
 
 
+class AgentNodeActionResponse(BaseModel):
+    success: bool
+    restarted: list[str] = []
+    message: str | None = None
+
+
 class AgentDeprovisionSchoolRequest(BaseModel):
     school_slug: str
     mode: str = Field(default="archive", pattern="^(archive|purge)$")
