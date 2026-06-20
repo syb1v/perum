@@ -27,7 +27,8 @@ from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
 from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
 from app.services.stats import rollup, school_stat, schools_with_metrics
 from app.services.caddy_admin import get_caddy_admin
-from app.services.stack_spec import school_container_name
+from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
+from app.services.stack_spec import school_container_name, school_label_slug
 from app.services.school_provisioner import (
     current_release_image,
     deprovision_school,
@@ -95,6 +96,12 @@ def _school_dict(s: School) -> dict:
 class SchoolPatch(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=255)
     admin_email: str | None = None
+
+
+async def _node_for_school(school: School, db: AsyncSession) -> Node | None:
+    """Нода, на которой крутится школа (если есть назначение). None → школа на хосте платформы."""
+    a = await db.scalar(select(NodeAssignment).where(NodeAssignment.school_id == school.id))
+    return await db.get(Node, a.node_id) if a is not None else None
 
 
 async def _get_school(school_id: int, admin: OrgAdmin, db: AsyncSession) -> School:
@@ -379,7 +386,16 @@ async def suspend_school_endpoint(
         raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя заморозить")
     async with keyed_lock(school_key(school.id)):
         try:
-            await suspend_school(school, db)
+            node = await _node_for_school(school, db)
+            if node is not None:
+                await RemoteNodeClient().suspend_school(node, school.slug)
+                school.status = "suspended"
+                school.suspended_at = datetime.utcnow()
+                school.suspended_by = "manual"
+                await db.commit()
+                await db.refresh(school)
+            else:
+                await suspend_school(school, db)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось заморозить школу: {exc}")
     return _school_dict(school)
@@ -395,7 +411,16 @@ async def unsuspend_school_endpoint(
         raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя разморозить")
     async with keyed_lock(school_key(school.id)):
         try:
-            await unsuspend_school(school, db)
+            node = await _node_for_school(school, db)
+            if node is not None:
+                await RemoteNodeClient().unsuspend_school(node, school.slug)
+                school.status = "active"
+                school.suspended_at = None
+                school.suspended_by = None
+                await db.commit()
+                await db.refresh(school)
+            else:
+                await unsuspend_school(school, db)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось разморозить школу: {exc}")
     return _school_dict(school)
@@ -425,6 +450,21 @@ async def _school_admin_rpc(method: str, school: School, db: AsyncSession, path:
     secret = await db.get(SchoolSecret, school.id)
     if secret is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "школа не запровижинена (нет секретов)")
+
+    # Школа на ноде: контейнер недоступен ядру напрямую — проксируем RPC через воркер.
+    node = await _node_for_school(school, db)
+    if node is not None:
+        try:
+            r = await RemoteNodeClient().internal_rpc(node, school.slug, method, path, json)
+        except RemoteNodeError as exc:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"школа на ноде недоступна: {exc}")
+        sc = r.get("status_code", 502)
+        data = r.get("data") or {}
+        if sc >= 300:
+            detail = data.get("detail", data) if isinstance(data, dict) else str(data)
+            raise HTTPException(sc, detail)
+        return data
+
     url = f"http://{school_container_name(school.slug, 'app')}:3000/internal{path}"
     # Шлём ОБА токена: telemetry — для старого образа тенанта, internal — для нового.
     # Тенант с заданным INTERNAL_RPC_TOKEN примет только его (изоляция, AUDIT #6).
@@ -630,20 +670,32 @@ async def delete_school(
             f"для безвозвратного удаления повторите slug школы в ?confirm={school.slug}",
         )
     async with keyed_lock(school_key(school.id)):
+        node = await _node_for_school(school, db)
         # purge=True: pg_dump + бэкап вложений → снос стека вместе с томами → удаление записи.
         # purge=False: архивация (контейнеры долой, тома данных сохранены — обратимо).
         try:
-            await deprovision_school(school, db, purge=purge)
-        except ProvisioningError as exc:
-            # Бэкап не удался → тома сохранены, запись НЕ удаляем (защита от потери данных).
+            if node is not None:
+                await RemoteNodeClient().deprovision_school(node, school.slug, mode="purge" if purge else "archive")
+                # Снимаем маршрут на платформе, который проксировал на ноду.
+                try:
+                    await get_caddy_admin().remove_route(school_label_slug(school.slug))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("school %s: remove platform route failed: %s", school.slug, exc)
+            else:
+                await deprovision_school(school, db, purge=purge)
+        except (ProvisioningError, RemoteNodeError) as exc:
+            # Бэкап/снос не удался → запись НЕ удаляем (защита от потери данных).
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
         if purge:
             secret = await db.get(SchoolSecret, school.id)
             if secret is not None:
                 await db.delete(secret)
-            await db.delete(school)
+            await db.delete(school)  # каскадом удалит node_assignments
             await db.commit()
             return {"id": school_id, "purged": True}
+        if node is not None:
+            school.status = "archived"
+            await db.commit()
         return {"id": school_id, "status": school.status}
 
 

@@ -96,3 +96,17 @@ class AgentHeartbeatRequest(BaseModel):
 class AgentHeartbeatResponse(BaseModel):
     success: bool
     node_id: int | None = None
+
+
+class AgentInternalRpcRequest(BaseModel):
+    """Прокси внутреннего RPC школы на ноде: ядро не достаёт контейнер школы на ноде
+    напрямую (он в сети ноды), поэтому шлёт команду воркеру, а тот ходит локально в
+    /internal стека школы (управление админами школы и т.п.)."""
+    method: str
+    path: str
+    body: dict | None = None
+
+
+class AgentInternalRpcResponse(BaseModel):
+    status_code: int
+    data: dict | None = None

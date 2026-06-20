@@ -323,6 +323,37 @@ async def deprovision_school_on_node(
         )
 
 
+async def internal_rpc_on_node(db: AsyncSession, school_slug: str, req) -> "AgentInternalRpcResponse":
+    """Проксировать вызов во внутренний RPC стека школы на ноде. Воркер берёт секреты
+    школы из локальной БД и ходит в http://school_<slug>_app:3000/internal{path}."""
+    from app.agent.schemas import AgentInternalRpcResponse
+    from sqlalchemy import select as _select
+    from app.models import School, SchoolSecret
+    from app.services.stack_spec import school_container_name
+
+    school = await db.scalar(_select(School).where(School.slug == school_slug))
+    if not school:
+        return AgentInternalRpcResponse(status_code=404, data={"detail": "school not found on node"})
+    secret = await db.get(SchoolSecret, school.id)
+    if not secret:
+        return AgentInternalRpcResponse(status_code=409, data={"detail": "school secret missing on node"})
+
+    url = f"http://{school_container_name(school_slug, 'app')}:3000/internal{req.path}"
+    headers = {"X-Telemetry-Token": secret.telemetry_token}
+    if getattr(secret, "internal_rpc_token", None):
+        headers["X-Internal-Token"] = secret.internal_rpc_token
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.request(req.method, url, headers=headers, json=req.body)
+    except Exception as exc:  # noqa: BLE001
+        return AgentInternalRpcResponse(status_code=502, data={"detail": f"school unreachable on node: {exc}"})
+    try:
+        data = resp.json() if resp.content else {}
+    except Exception:  # noqa: BLE001
+        data = {"detail": resp.text[:300]}
+    return AgentInternalRpcResponse(status_code=resp.status_code, data=data)
+
+
 async def send_heartbeat(
     db: AsyncSession, req: AgentHeartbeatRequest
 ) -> AgentHeartbeatResponse:

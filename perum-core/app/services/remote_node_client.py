@@ -62,6 +62,14 @@ class RemoteNodeClient:
             node, "POST", f"/schools/{school_slug}/deprovision", json={"school_slug": school_slug, "mode": mode}
         )
 
+    async def internal_rpc(self, node: Node, school_slug: str, method: str, path: str, body: dict | None = None) -> dict:
+        """Проксировать внутренний RPC стека школы на ноде (управление админами и т.п.).
+        Возвращает {status_code, data}."""
+        return await self._request(
+            node, "POST", f"/schools/{school_slug}/internal-rpc",
+            json={"method": method, "path": path, "body": body},
+        )
+
     async def get_schools(self, node: Node) -> dict:
         return await self._request(node, "GET", "/schools")
 

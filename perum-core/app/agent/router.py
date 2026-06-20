@@ -12,6 +12,8 @@ from app.agent.schemas import (
     AgentHealthResponse,
     AgentHeartbeatRequest,
     AgentHeartbeatResponse,
+    AgentInternalRpcRequest,
+    AgentInternalRpcResponse,
     AgentNodeActionResponse,
     AgentProvisionSchoolRequest,
     AgentProvisionSchoolResponse,
@@ -26,6 +28,7 @@ from app.agent.service import (
     get_agent_health,
     get_agent_schools,
     get_agent_state,
+    internal_rpc_on_node,
     provision_school_on_node,
     restart_node_stack,
     send_heartbeat,
@@ -133,6 +136,17 @@ async def deprovision_school(
         raise HTTPException(400, "deprovision only available in org_agent mode")
     req.school_slug = school_slug
     return await deprovision_school_on_node(db, req)
+
+
+@router.post("/schools/{school_slug}/internal-rpc", response_model=AgentInternalRpcResponse, dependencies=[Depends(require_agent_token)])
+async def internal_rpc(
+    school_slug: str,
+    req: AgentInternalRpcRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AgentInternalRpcResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "internal-rpc only available in org_agent mode")
+    return await internal_rpc_on_node(db, school_slug, req)
 
 
 @router.post("/restart", response_model=AgentNodeActionResponse)
