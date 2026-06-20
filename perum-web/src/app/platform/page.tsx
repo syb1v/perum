@@ -52,6 +52,8 @@ export default function PlatformConsole() {
 
   // modals
   const [editOrg, setEditOrg] = useState<any>(null);
+  const [orgInfra, setOrgInfra] = useState<any>(null);
+  const [orgInfraData, setOrgInfraData] = useState<any>(null);
   const [adminsOrg, setAdminsOrg] = useState<any>(null);
   const [orgAdmins, setOrgAdmins] = useState<any[] | null>(null);
   const [newAdmin, setNewAdmin] = useState({ login: "", password: "", full_name: "", email: "" });
@@ -135,6 +137,10 @@ export default function PlatformConsole() {
   async function openAdmins(o: any) {
     setAdminsOrg(o); setOrgAdmins(null); setCred(null); setNewAdmin({ login: "", password: "", full_name: "", email: "" });
     try { setOrgAdmins((await papi(`/api/organizations/${o.slug}/org-admins`)).org_admins || []); } catch (e: any) { setErr(e.message); }
+  }
+  async function openOrgInfra(o: any) {
+    setOrgInfra(o); setOrgInfraData(null);
+    try { setOrgInfraData(await papi(`/api/platform/nodes/org-overview/${o.id}`)); } catch (e: any) { toast.showError(e.message); }
   }
   async function reloadAdmins() { if (adminsOrg) setOrgAdmins((await papi(`/api/organizations/${adminsOrg.slug}/org-admins`)).org_admins || []); }
   async function addAdmin(e: React.FormEvent) {
@@ -391,6 +397,7 @@ export default function PlatformConsole() {
                       <td style={{ whiteSpace: "nowrap" }}>
                         <button className={styles.actionBtn} onClick={() => setEditOrg({ ...o })}>Изм.</button>{" "}
                         <button className={styles.actionBtn} onClick={() => openAdmins(o)}>Орг-админы</button>{" "}
+                        <button className={styles.actionBtn} onClick={() => openOrgInfra(o)}>Инфраструктура</button>{" "}
                         <button className={styles.actionBtn} onClick={() => openBilling(o.slug)}>Биллинг</button>{" "}
                         <button className={styles.actionBtn} disabled={busy === o.slug || !["active", "suspended"].includes(o.status)} onClick={() => orgAction(o, o.status === "suspended" ? "/unsuspend" : "/suspend", "POST", o.status === "suspended" ? undefined : `Заморозить «${o.name}»? Школы будут остановлены.`)}>{o.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
                         <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busy === o.slug || o.status === "provisioning"} onClick={() => removeOrg(o)}>Удал.</button>
@@ -696,6 +703,52 @@ export default function PlatformConsole() {
       )}
 
       {/* ===================== MODALS ===================== */}
+      {orgInfra && (
+        <Modal title={`Инфраструктура — ${orgInfra.name}`} onClose={() => { setOrgInfra(null); setOrgInfraData(null); }} width={820}>
+          {!orgInfraData ? <p className={c.muted}>Загрузка…</p> : (
+            <>
+              <h3 className={styles.cardTitle} style={{ marginBottom: 6 }}>Ноды организации ({orgInfraData.total_nodes})</h3>
+              {orgInfraData.nodes.length === 0 ? (
+                <p className={c.muted}>Своих нод нет — школы размещаются на нодах общего пула.</p>
+              ) : (
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead><tr><th>Нода</th><th>Адрес/IP</th><th>Статус</th><th>Использование</th></tr></thead>
+                    <tbody>{orgInfraData.nodes.map((n: any) => (
+                      <tr key={n.id}>
+                        <td><b>{n.name}</b>{n.enabled === false && <span className={c.muted}> · выключена</span>}</td>
+                        <td><code className={styles.code}>{n.hostname}</code></td>
+                        <td><span className={statusBadge(n.status)}>{n.status}</span></td>
+                        <td>{n.cpu_cores} CPU · {n.ram_gb} ГБ · до {n.max_schools} школ</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+
+              <h3 className={styles.cardTitle} style={{ margin: "16px 0 6px" }}>Школы на нодах ({orgInfraData.total_schools})</h3>
+              {orgInfraData.schools.length === 0 ? (
+                <p className={styles.emptyState}>У организации пока нет школ.</p>
+              ) : (
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead><tr><th>Школа</th><th>Поддомен</th><th>Версия</th><th>Статус</th><th>Нода</th></tr></thead>
+                    <tbody>{orgInfraData.schools.map((s: any) => (
+                      <tr key={s.school_id}>
+                        <td><b>{s.school_name}</b><br /><span className={c.muted}>{s.school_slug}</span></td>
+                        <td><code className={styles.code}>{s.subdomain}</code></td>
+                        <td><code className={styles.code}>{s.version || "—"}</code></td>
+                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
+                        <td>{s.node_name ? <span><code className={styles.code}>{s.node_name}</code>{s.node_pool && <span className={c.muted} style={{ fontSize: "0.72rem" }}> (пул)</span>}<br /><span className={c.muted} style={{ fontSize: "0.72rem" }}>{s.node_ip}</span></span> : <span className={c.muted}>не назначена</span>}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </Modal>
+      )}
       {otaHelp && (
         <Modal title="Как настроить источник обновлений" onClose={() => setOtaHelp(false)} width={680}>
           <p className={c.muted} style={{ marginTop: 0 }}><b>Как это работает:</b> CI (<code className={styles.code}>release.yml</code>) при изменении кода в папке тенанта сам собирает образ, пушит в GHCR и регистрирует релиз в ядре. Организации видят обновление и ставят его по кнопке у школы. Здесь вы задаёте, ОТКУДА брать образ и версию.</p>

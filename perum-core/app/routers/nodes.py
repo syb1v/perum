@@ -321,6 +321,58 @@ async def get_node_schools(node_id: int, db: AsyncSession = Depends(get_db)) -> 
     }
 
 
+@platform_router.get("/org-overview/{org_id}")
+async def org_infrastructure_overview(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """Инфраструктура организации для платформенного админа: её ноды + таблица
+    школ с привязкой к нодам (включая школы на общих пул-нодах). Для раздела
+    «Организации» → «Инфраструктура»."""
+    org = await db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
+
+    base = get_settings().PUBLIC_BASE_DOMAIN
+
+    # Ноды, закреплённые за орг.
+    node_rows = (
+        await db.execute(select(Node).where(Node.org_id == org_id).order_by(Node.id))
+    ).scalars().all()
+    nodes = [NodeResponse.model_validate(n) for n in node_rows]
+
+    # Школы орг + на какой ноде каждая (нода может быть и из общего пула).
+    rows = (
+        await db.execute(
+            select(School, Node)
+            .join(NodeAssignment, NodeAssignment.school_id == School.id, isouter=True)
+            .join(Node, Node.id == NodeAssignment.node_id, isouter=True)
+            .where(School.org_id == org_id)
+            .order_by(School.id)
+        )
+    ).all()
+    schools = []
+    for school, node in rows:
+        schools.append({
+            "school_id": school.id,
+            "school_slug": school.slug,
+            "school_name": school.name,
+            "status": school.status,
+            "version": school.release_tag,
+            "subdomain": f"{school.slug}.{base}",
+            "node_id": node.id if node else None,
+            "node_name": node.name if node else None,
+            "node_ip": node.hostname if node else None,
+            "node_pool": (node.org_id is None) if node else None,
+        })
+
+    return {
+        "org_id": org_id,
+        "org_name": org.name,
+        "nodes": [n.model_dump() for n in nodes],
+        "schools": schools,
+        "total_nodes": len(nodes),
+        "total_schools": len(schools),
+    }
+
+
 @platform_router.get("/{node_id}/utilization", response_model=NodeUtilizationResponse)
 async def get_node_utilization(node_id: int, db: AsyncSession = Depends(get_db)) -> NodeUtilizationResponse:
     node = await db.get(Node, node_id)
