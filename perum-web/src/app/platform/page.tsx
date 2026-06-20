@@ -51,6 +51,7 @@ export default function PlatformConsole() {
   const [otaToken, setOtaToken] = useState("");
   const [otaBusy, setOtaBusy] = useState(false);
   const [otaHelp, setOtaHelp] = useState(false);
+  const [showOtaConfig, setShowOtaConfig] = useState(false); // настройки источника скрыты по умолчанию
   const [relLinks, setRelLinks] = useState<{ commit_url?: string; tree_url?: string; source_commit?: string } | null>(null);
 
   // modals
@@ -280,8 +281,14 @@ export default function PlatformConsole() {
     setOtaBusy(true); setErr("");
     try {
       const v = await papi("/api/platform/ota-config/fetch-latest", { method: "POST" });
+      // Дедуп: уже актуальная версия — не предлагаем публиковать дубликат.
+      if (v.up_to_date) {
+        toast.showInfo(`Уже актуальная версия (${v.current_version || v.version_tag}) — публиковать нечего. Бампните perum-tenant/VERSION для нового релиза.`);
+        return;
+      }
       setRel({ version_tag: v.version_tag, image: v.image, changelog: v.changelog || "" });
       setRelLinks({ commit_url: v.commit_url, tree_url: v.tree_url, source_commit: v.source_commit });
+      if (v.version_warning) toast.showWarning(v.version_warning);
       toast.showSuccess(`Подтянута версия ${v.version_tag}`);
     } catch (e: any) { toast.showError("Не удалось подтянуть: " + (e.message || "проверьте source_repo/токен")); } finally { setOtaBusy(false); }
   }
@@ -601,6 +608,11 @@ export default function PlatformConsole() {
       {/* ===================== RELEASES ===================== */}
       {section === "releases" && (
         <>
+          <div className={c.toolbar}>
+            <span className={c.spacer} />
+            <button className={styles.btnSecondary} onClick={() => setShowOtaConfig((v) => !v)}>{showOtaConfig ? "Скрыть настройки источника" : "⚙ Настройки источника обновлений"}</button>
+          </div>
+          {showOtaConfig && (
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Источник обновлений (OTA)</h2>
             <p className={c.muted}>Откуда берутся образы тенанта для обновления школ. Обычно это GHCR-репозиторий, куда CI пушит образ при изменении кода. Если репозиторий/реестр <b>приватный</b> — укажите логин и токен (GitHub PAT с правом <code className={styles.code}>read:packages</code>), чтобы хосты могли тянуть образ.</p>
@@ -637,6 +649,7 @@ export default function PlatformConsole() {
               </div>
             </form>
           </div>
+          )}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Опубликовать релиз</h2>
             <p className={c.muted}>Релиз становится доступен организациям — они обновляют свои школы по кнопке (OTA, opt-in, volume-preserving). Обычно релиз тенанта публикует CI автоматически при реальном изменении кода (тег <code className={styles.code}>git-&lt;sha&gt;</code>, образ из GHCR). Ручная публикация ниже — резерв; ядро отклонит релиз, если образ совпадает с текущим (нет реального обновления).</p>

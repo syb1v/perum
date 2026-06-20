@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from sqlalchemy import text
@@ -19,6 +20,21 @@ from app.core.db import engine
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("perum.tenant")
 settings = get_settings()
+
+
+def _read_version() -> str:
+    """Семантическая версия тенанта (x.y.z) — единый источник истины в файле VERSION
+    в корне perum-tenant. Её же CI кладёт в version_tag релиза (а образ остаётся на
+    git-<sha>). Фолбэк — на случай отсутствия файла в нестандартной сборке."""
+    for p in (Path(__file__).resolve().parent.parent / "VERSION", Path("/app/VERSION")):
+        try:
+            return p.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+    return "0.0.0"
+
+
+APP_VERSION = _read_version()
 
 
 @asynccontextmanager
@@ -42,7 +58,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=f"PERUM Tenant — {settings.ORG_SLUG}",
-    version="0.1.0",
+    version=APP_VERSION,
     description="Per-organization tenant application.",
     lifespan=lifespan,
 )

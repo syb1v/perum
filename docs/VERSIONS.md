@@ -217,3 +217,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 88 | 2026-06-18 17:00 | efc458e | feat(web) — инфраструктура интегрирована в админки: platform/infrastructure и org/infrastructure
 | 101 | 2026-06-20 | _______ | fix: 500 bootstrap-скрипта, nullable enrollment_token.org_id, редизайн нод (remnawave-стиль, offline-индикатор)
 | 102 | 2026-06-20 | _______ | feat(news/support): новости с таргетингом + колокол уведомлений у организатора + плавающий чат и тикеты поддержки (раздел «Поддержка» в ядре)
+| 103 | 2026-06-20 | _______ | feat(ota): версии x.y.z из perum-tenant/VERSION + дедуп fetch-latest (up_to_date) + скрытые настройки источника + fix наблюдаемости/диагностики апдейта школ

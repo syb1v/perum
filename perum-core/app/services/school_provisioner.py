@@ -462,6 +462,13 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     from_image = school.release_tag or settings.TENANT_IMAGE
     to_image = await current_release_image(db, settings)
     if to_image == from_image:
+        # Нечего обновлять. Эндпоинт мог уже выставить 'updating' синхронно — вернём
+        # школу в 'active', иначе статус «залипнет». Логируем, чтобы был след.
+        logger.info("school %s: уже на текущем релизе (%s) — обновление не требуется", school.slug, to_image)
+        if school.status != "active":
+            school.status = "active"
+            await db.commit()
+            await db.refresh(school)
         return UpdateOutcome(school=school, from_image=from_image, to_image=to_image)
 
     history = UpdateHistory(

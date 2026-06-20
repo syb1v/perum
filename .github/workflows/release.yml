@@ -138,15 +138,21 @@ jobs:
         with:
           fetch-depth: 0  # нужен git-лог для changelog
 
-      - name: Build changelog from tenant commits
+      - name: Build changelog + read semver from VERSION
         id: cl
         run: |
-          TAG="git-${GITHUB_SHA::12}"
+          # Образ остаётся на git-<sha> (immutable, реально пушится выше). Человеческая
+          # версия (version_tag) — из perum-tenant/VERSION (семвер x.y.z). Чтобы выкатить
+          # релиз, надо бампнуть VERSION: иначе ядро отклонит дубликат version_tag.
+          IMAGE_TAG="git-${GITHUB_SHA::12}"
+          VERSION="$(tr -d ' \t\n\r' < perum-tenant/VERSION 2>/dev/null || true)"
+          [ -z "$VERSION" ] && VERSION="$IMAGE_TAG"
           RANGE="${{ github.event.before }}..${{ github.sha }}"
           if ! git rev-parse "${{ github.event.before }}" >/dev/null 2>&1; then RANGE="HEAD~20..HEAD"; fi
           CHANGELOG=$(git log --no-merges --pretty=format:'- %s' $RANGE -- perum-tenant | head -40)
-          [ -z "$CHANGELOG" ] && CHANGELOG="- обновление образа тенанта ($TAG)"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          [ -z "$CHANGELOG" ] && CHANGELOG="- обновление тенанта ($VERSION)"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           {
             echo "changelog<<CL_EOF"
             echo "$CHANGELOG"
@@ -158,8 +164,8 @@ jobs:
         env:
           CORE_URL: ${{ vars.CORE_URL }}
           TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
-          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/perum-tenant:${{ steps.cl.outputs.tag }}
-          TAG: ${{ steps.cl.outputs.tag }}
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/perum-tenant:${{ steps.cl.outputs.image_tag }}
+          TAG: ${{ steps.cl.outputs.version }}
           CHANGELOG: ${{ steps.cl.outputs.changelog }}
           SHA: ${{ github.sha }}
         run: |
@@ -168,5 +174,5 @@ jobs:
           | curl -fsS -X POST "${CORE_URL%/}/api/ci/release" \
               -H "Authorization: Bearer ${TOKEN}" \
               -H "Content-Type: application/json" \
-              --data @- && echo "tenant release registered: $TAG" \
-          || echo "release registration skipped/failed (core unreachable or no real change)"
+              --data @- && echo "tenant release registered: $TAG (image $IMAGE)" \
+          || echo "release registration skipped/failed (core unreachable, dup version_tag, or no real change)"

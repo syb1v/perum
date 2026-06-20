@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal, get_db
 from app.core.deps import require_billing_ok, require_org_admin
 from app.core.locks import keyed_lock, org_create_key, school_key
-from app.models import Node, NodeAssignment, OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
+from app.models import Node, NodeAssignment, OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret, UpdateHistory
 from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
 from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
 from app.services.stats import rollup, school_stat, schools_with_metrics
@@ -302,13 +302,34 @@ async def update_status(school_id: int, admin: OrgAdmin = Depends(require_org_ad
     rel = (
         await db.execute(select(Release).where(Release.channel == "stable", Release.is_current.is_(True)).limit(1))
     ).scalar_one_or_none()
+    # Семвер текущей версии школы: ищем релиз по образу, на котором она крутится
+    # (release_tag хранит образ git-<sha>; version_tag — человеческая версия x.y.z).
+    cur_rel = None
+    if school.release_tag:
+        cur_rel = (
+            await db.execute(select(Release).where(Release.image == school.release_tag).limit(1))
+        ).scalar_one_or_none()
+    # Итог последней попытки обновления — чтобы org_admin видел, ПОЧЕМУ не обновилось
+    # (раньше при откате не было видно ничего: «вернулось в исходное, ни логов»).
+    last = (
+        await db.execute(
+            select(UpdateHistory).where(UpdateHistory.school_id == school.id).order_by(UpdateHistory.started_at.desc()).limit(1)
+        )
+    ).scalar_one_or_none()
     return {
         "school_id": school.id,
         "current_tag": school.release_tag,
+        "current_version": cur_rel.version_tag if cur_rel else None,
         "latest_image": latest,
         "latest_version": rel.version_tag if rel else None,
         "changelog": rel.changelog if rel else None,
         "update_available": bool(school.release_tag and school.release_tag != latest),
+        "last_update": {
+            "status": last.status,
+            "to_version": last.to_version,
+            "error": last.error_message,
+            "completed_at": last.completed_at.isoformat() if last.completed_at else None,
+        } if last else None,
     }
 
 
@@ -321,6 +342,11 @@ async def update_school_endpoint(school_id: int, admin: OrgAdmin = Depends(requi
         raise HTTPException(status.HTTP_409_CONFLICT, "школа заморожена — сначала разморозьте её")
     if school.status != "active":
         raise HTTPException(status.HTTP_409_CONFLICT, f"школу в статусе '{school.status}' нельзя обновлять")
+    # Помечаем 'updating' СИНХРОННО и коммитим — иначе фронт-поллинг не видит
+    # переходного статуса и кажется, что «ничего не произошло» (школа осталась active).
+    school.status = "updating"
+    await db.commit()
+    await db.refresh(school)
     _schedule_lifecycle(school.id, "update")
     return {"school": _school_dict(school), "status": "updating", "message": "обновление запущено в фоне"}
 

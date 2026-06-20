@@ -20,6 +20,7 @@ RUN pip install -r requirements.txt
 COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
+COPY VERSION ./VERSION
 
 EXPOSE 3000
 

@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
+import base64
 import logging
+import re
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -21,7 +23,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.models import PlatformSetting
+from app.models import PlatformSetting, Release
+
+# Семвер x.y.z (с опциональным суффиксом-меткой, напр. 1.2.3-rc1).
+_SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+([-+][0-9A-Za-z.\-]+)?$")
 
 logger = logging.getLogger("perum.ota_config")
 
@@ -103,11 +108,43 @@ async def update_ota_config(payload: OtaConfigUpdate, db: AsyncSession = Depends
     return await _config_response(db)
 
 
+async def _github_get(client: httpx.AsyncClient, url: str, headers: dict, **kwargs) -> httpx.Response:
+    try:
+        resp = await client.get(url, headers=headers, **kwargs)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"GitHub недоступен: {exc}")
+    if resp.status_code == 401:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "GitHub отклонил токен (нужен read доступ к репо)")
+    return resp
+
+
+async def _read_version_file(client: httpx.AsyncClient, source_repo: str, tenant_path: str, ref: str, headers: dict) -> str | None:
+    """Прочитать perum-tenant/VERSION в репо на коммите ref. Это источник семвера
+    (x.y.z). Возвращает None, если файла нет (старые коммиты / нет дисциплины версий)."""
+    url = f"https://api.github.com/repos/{source_repo}/contents/{tenant_path}/VERSION"
+    resp = await _github_get(client, url, headers, params={"ref": ref})
+    if resp.status_code == 404:
+        return None
+    if resp.status_code >= 300:
+        return None
+    data = resp.json()
+    content = data.get("content") or ""
+    try:
+        text = base64.b64decode(content).decode("utf-8").strip()
+    except Exception:  # noqa: BLE001
+        return None
+    return text or None
+
+
 @router.post("/fetch-latest")
 async def fetch_latest_version(db: AsyncSession = Depends(get_db)) -> dict:
-    """Автоподтягивание: спросить у GitHub последний коммит, затронувший папку тенанта,
-    и предложить поля релиза (версия/образ/коммит/changelog) + ссылки на репо. Источник —
-    настроенный source_repo (монорепо). Для приватного репо используется сохранённый токен."""
+    """Автоподтягивание релиза тенанта. Версия (x.y.z) берётся из файла
+    `perum-tenant/VERSION` в репозитории, а ОБРАЗ остаётся на `git-<sha>` последнего
+    коммита, затронувшего папку тенанта (этот образ реально пушит CI и его можно
+    запуллить). git-sha — «код версии», version_tag — человеческая версия.
+
+    Если версия из VERSION совпадает с текущим релизом ядра — возвращаем
+    `up_to_date: true`, чтобы UI не предлагал опубликовать дубликат."""
     source_repo = await get_setting(db, K_SOURCE_REPO)
     if not source_repo:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "не задан GitHub-репозиторий источника (source_repo)")
@@ -119,35 +156,54 @@ async def fetch_latest_version(db: AsyncSession = Depends(get_db)) -> dict:
     headers = {"Accept": "application/vnd.github+json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    url = f"https://api.github.com/repos/{source_repo}/commits"
-    params = {"path": tenant_path, "per_page": "5"}
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.get(url, headers=headers, params=params)
-    except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"GitHub недоступен: {exc}")
-    if resp.status_code == 404:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"репозиторий или папка не найдены ({source_repo}/{tenant_path})")
-    if resp.status_code == 401:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "GitHub отклонил токен (нужен read доступ к репо)")
-    if resp.status_code >= 300:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"GitHub вернул {resp.status_code}: {resp.text[:200]}")
 
-    commits = resp.json()
-    if not commits:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"нет коммитов, затрагивающих {tenant_path}")
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        resp = await _github_get(
+            client,
+            f"https://api.github.com/repos/{source_repo}/commits",
+            headers,
+            params={"path": tenant_path, "per_page": "5"},
+        )
+        if resp.status_code == 404:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"репозиторий или папка не найдены ({source_repo}/{tenant_path})")
+        if resp.status_code >= 300:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"GitHub вернул {resp.status_code}: {resp.text[:200]}")
+        commits = resp.json()
+        if not commits:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"нет коммитов, затрагивающих {tenant_path}")
 
-    top = commits[0]
-    sha = top.get("sha", "")
-    short = sha[:12]
-    tag = f"git-{short}"
-    image = f"{registry}/{repository}:{tag}"
-    # changelog — сообщения последних коммитов по папке тенанта
+        sha = commits[0].get("sha", "")
+        short = sha[:12]
+        image_tag = f"git-{short}"
+        version = await _read_version_file(client, source_repo, tenant_path, sha, headers)
+
+    # Версия — из VERSION (семвер). Если файла нет — деградируем на git-тег, но
+    # подсказываем добавить VERSION (иначе версии будут «как код», а не x.y.z).
+    version_warning = None
+    if version and _SEMVER_RE.match(version):
+        version_tag = version
+    else:
+        version_tag = image_tag
+        version_warning = f"в репозитории нет {tenant_path}/VERSION с версией x.y.z — версия показана как код коммита"
+
+    image = f"{registry}/{repository}:{image_tag}"
     changelog = "\n".join(
         f"- {ci.get('commit', {}).get('message', '').splitlines()[0]}" for ci in commits if ci.get("commit")
     )
+
+    # Дедуп: уже актуально, если такая версия — текущий релиз (или уже опубликована).
+    current = (
+        await db.execute(select(Release).where(Release.channel == "stable", Release.is_current.is_(True)).limit(1))
+    ).scalar_one_or_none()
+    existing = (
+        await db.execute(select(Release).where(Release.channel == "stable", Release.version_tag == version_tag).limit(1))
+    ).scalar_one_or_none()
+    up_to_date = existing is not None or (
+        current is not None and (current.version_tag == version_tag or current.source_commit == sha)
+    )
+
     return {
-        "version_tag": tag,
+        "version_tag": version_tag,
         "image": image,
         "source_commit": sha,
         "changelog": changelog,
@@ -155,4 +211,7 @@ async def fetch_latest_version(db: AsyncSession = Depends(get_db)) -> dict:
         "tree_url": f"https://github.com/{source_repo}/tree/{sha}/{tenant_path}",
         "tenant_path": tenant_path,
         "source_repo": source_repo,
+        "up_to_date": up_to_date,
+        "current_version": current.version_tag if current else None,
+        "version_warning": version_warning,
     }
