@@ -77,6 +77,7 @@ async def create_node(payload: NodeCreate, db: AsyncSession = Depends(get_db)) -
         cpu_cores=payload.cpu_cores,
         ram_gb=payload.ram_gb,
         disk_gb=payload.disk_gb,
+        country_code=payload.country_code,
         org_id=payload.org_id,
         max_schools=payload.max_schools,
         status="pending_bootstrap",

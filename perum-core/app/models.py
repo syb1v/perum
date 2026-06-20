@@ -442,6 +442,10 @@ class Node(Base):
     ram_gb: Mapped[float] = mapped_column(Float, nullable=False, default=2.0)
     disk_gb: Mapped[float] = mapped_column(Float, nullable=False, default=20.0)
 
+    country_code: Mapped[str | None] = mapped_column(
+        String(2), nullable=True, comment="ISO 3166-1 alpha-2 (RU, DE, US...) — для флага в UI"
+    )
+
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="pending_bootstrap", server_default="pending_bootstrap",
         comment="pending_bootstrap | active | draining | offline | decommissioned",

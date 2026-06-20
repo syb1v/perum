@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { clearPlatformToken, getPlatformToken, getTokenPayload, papi } from "@/lib/platformApi";
 import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell";
 import Modal from "@/components/platform/Modal";
+import { CreateNodeWizard, NodeRow } from "@/components/platform/InfraNodes";
 import styles from "@/app/admin/page.module.css";
 import c from "@/components/platform/console.module.css";
+import infra from "@/app/platform/infra.module.css";
 import { useToast } from "@/context/ToastContext";
 
 const PLANS = ["trial", "basic", "pro", "enterprise"];
@@ -59,11 +61,9 @@ export default function PlatformConsole() {
   const [nodeUtil, setNodeUtil] = useState<Record<number, any>>({});
   const [capacityRec, setCapacityRec] = useState<any>(null);
   const [capacityCount, setCapacityCount] = useState(10);
-  const [showNodeForm, setShowNodeForm] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [showFaq, setShowFaq] = useState(false);
   const [showCapacity, setShowCapacity] = useState(false);
-  const [nodeCreated, setNodeCreated] = useState<any>(null);
-  const [nodeForm, setNodeForm] = useState({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
 
   async function load() {
     try {
@@ -208,17 +208,6 @@ export default function PlatformConsole() {
       setErr("Ошибка загрузки нод: " + (e.message || "неизвестная ошибка")); 
     }
   }
-  async function createNode(e: React.FormEvent) {
-    e.preventDefault(); setErr(""); setBusy("node");
-    try {
-      const payload: any = { ...nodeForm };
-      if (!payload.org_id) delete payload.org_id;
-      await papi("/api/platform/nodes", { method: "POST", body: JSON.stringify(payload) });
-      setShowNodeForm(false); setNodeForm({ name: "", hostname: "", cpu_cores: 2, ram_gb: 2, disk_gb: 20, max_schools: 5, org_id: 0 });
-      toast.showSuccess(`Нода «${nodeForm.name}» зарегистрирована. Скачайте bootstrap-скрипт для развёртывания.`);
-      loadInfra();
-    } catch (e: any) { toast.showError("Ошибка создания ноды: " + (e.message || "неизвестная")); } finally { setBusy(null); }
-  }
   async function drainNode(id: number) { if (!confirm("Перевести ноду в draining? Новые школы не будут на неё назначаться.")) return; try { await papi(`/api/platform/nodes/${id}/drain`, { method: "POST" }); loadInfra(); toast.showInfo("Нода переведена в draining"); } catch (e: any) { toast.showError(e.message); } }
   async function deleteNode(id: number, name: string) { if (!confirm(`Удалить ноду «${name}»? Это нельзя отменить.`)) return; try { await papi(`/api/platform/nodes/${id}`, { method: "DELETE" }); loadInfra(); toast.showInfo(`Нода «${name}» удалена`); } catch (e: any) { toast.showError(e.message); } }
   async function getBootstrap(id: number, name: string) {
@@ -354,101 +343,50 @@ export default function PlatformConsole() {
 
       {/* ===================== INFRASTRUCTURE ===================== */}
       {section === "infrastructure" && (
-        <>
-          <div className={c.toolbar}>
-            <button className={styles.submitBtn} type="button" onClick={() => setShowNodeForm(!showNodeForm)}>{showNodeForm ? "— Скрыть форму" : "+ Добавить ноду"}</button>
-            <button className={styles.btnSecondary} type="button" onClick={() => setShowFaq(true)}>FAQ</button>
-            <span className={c.spacer} />
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-              <label className={styles.label} style={{ marginBottom: 0 }}>Сколько школ?</label>
-              <input className={styles.input} type="number" min={1} max={1000} value={capacityCount} onChange={(e) => setCapacityCount(Number(e.target.value) || 10)} style={{ width: 80 }} />
-              <button className={styles.btnSecondary} type="button" onClick={getRecommendation}>Рекомендация</button>
+        <div className={infra.wrap}>
+          <div className={infra.toolbar}>
+            <h2 className={infra.title}>Ноды <span className={infra.titleCount}>{nodes ? nodes.length : 0}</span></h2>
+            <span className={infra.spacer} />
+            <div className={infra.capacityInline}>
+              <span>Школ:</span>
+              <input className={infra.capacityInput} type="number" min={1} max={1000} value={capacityCount} onChange={(e) => setCapacityCount(Number(e.target.value) || 10)} />
+              <button className={infra.ghostBtn} type="button" onClick={getRecommendation}>Рекомендация</button>
             </div>
+            <button className={infra.ghostBtn} type="button" onClick={() => setShowFaq(true)}>FAQ</button>
+            <button className={infra.addBtn} type="button" onClick={() => setShowWizard(true)}>+ Создать ноду</button>
           </div>
 
-          {showNodeForm && (
-            <div className={styles.card}>
-              <h2 className={styles.cardTitle}>Зарегистрировать новую ноду</h2>
-              <form onSubmit={createNode} className={styles.form}>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Имя ноды <span className={c.muted}>— например node-01</span></label>
-                    <input className={styles.input} value={nodeForm.name} onChange={(e) => setNodeForm({ ...nodeForm, name: e.target.value })} placeholder="node-01" required />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>IP-адрес или хост <span className={c.muted}>— публичный адрес сервера</span></label>
-                    <input className={styles.input} value={nodeForm.hostname} onChange={(e) => setNodeForm({ ...nodeForm, hostname: e.target.value })} placeholder="87.232.119.17" required />
-                  </div>
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}><label className={styles.label}>CPU (ядер)</label><input className={styles.input} type="number" min={1} value={nodeForm.cpu_cores} onChange={(e) => setNodeForm({ ...nodeForm, cpu_cores: Number(e.target.value) || 2 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>RAM (GB)</label><input className={styles.input} type="number" min={1} step={0.5} value={nodeForm.ram_gb} onChange={(e) => setNodeForm({ ...nodeForm, ram_gb: Number(e.target.value) || 2 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>Диск (GB)</label><input className={styles.input} type="number" min={10} value={nodeForm.disk_gb} onChange={(e) => setNodeForm({ ...nodeForm, disk_gb: Number(e.target.value) || 20 })} /></div>
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}><label className={styles.label}>Макс. школ <span className={c.muted}>— лимит</span></label><input className={styles.input} type="number" min={1} value={nodeForm.max_schools} onChange={(e) => setNodeForm({ ...nodeForm, max_schools: Number(e.target.value) || 5 })} /></div>
-                  <div className={styles.formGroup}><label className={styles.label}>Org ID <span className={c.muted}>— 0 = общий пул</span></label><input className={styles.input} type="number" min={0} value={nodeForm.org_id} onChange={(e) => setNodeForm({ ...nodeForm, org_id: Number(e.target.value) || 0 })} /></div>
-                </div>
-                <div className={styles.formActions}>
-                  <button type="submit" className={styles.submitBtn} disabled={busy === "node"}>{busy === "node" ? "Создаётся…" : "Зарегистрировать ноду"}</button>
-                </div>
-              </form>
-            </div>
+          <div className={infra.list}>
+            {nodes?.map((n) => (
+              <NodeRow
+                key={n.id}
+                node={n}
+                util={nodeUtil[n.id]}
+                onInstall={() => getBootstrap(n.id, n.name)}
+                onDrain={() => drainNode(n.id)}
+                onDelete={() => deleteNode(n.id, n.name)}
+              />
+            ))}
+            {nodes && nodes.length === 0 && <p className={infra.empty}>Нод нет. Нажмите «+ Создать ноду», чтобы развернуть первый сервер.</p>}
+            {nodes === null && <p className={infra.loadHint} onClick={() => loadInfra()}>Нажмите для загрузки списка нод…</p>}
+          </div>
+
+          {showWizard && (
+            <CreateNodeWizard
+              orgs={orgs}
+              onClose={() => setShowWizard(false)}
+              onCreated={() => loadInfra()}
+            />
           )}
-
-          <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Зарегистрированные ноды ({nodes ? nodes.length : 0})</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
-              {nodes?.map((n) => {
-                const u = nodeUtil[n.id];
-                const isOnline = n.last_heartbeat && (Date.now() - new Date(n.last_heartbeat).getTime() < 300_000);
-                const ramTotal = n.ram_gb || 1;
-                const ramUsed = (u?.ram_used_gb != null && u.ram_used_gb > 0) ? u.ram_used_gb : 0;
-                const cpuPct = (u?.cpu_used_percent != null && u.cpu_used_percent > 0) ? u.cpu_used_percent : 0;
-                const diskTotal = n.disk_gb || 1;
-                const diskUsed = (u?.disk_used_gb != null && u.disk_used_gb > 0) ? u.disk_used_gb : 0;
-                const schoolsPct = u ? u.capacity_percent : 0;
-                return (
-                  <div key={n.id} className={styles.card} style={{ padding: 16, margin: 0 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div>
-                        <b style={{ fontSize: "1.05rem" }}>{n.name}</b>
-                        <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{n.hostname}</div>
-                      </div>
-                      <span className={statusBadge(n.status)}>{n.status}</span>
-                    </div>
-                    {n.status === "active" && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: "0.8rem" }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 4, background: isOnline ? "#28a745" : "#dc3545" }} />
-                        <span style={{ color: isOnline ? "#28a745" : "#dc3545", fontWeight: 600 }}>{isOnline ? "онлайн" : "оффлайн"}</span>
-                        {n.last_heartbeat && <span style={{ color: "var(--text-secondary)", marginLeft: "auto" }}>{Math.round((Date.now() - new Date(n.last_heartbeat).getTime()) / 1000)}с назад</span>}
-                      </div>
-                    )}
-                    <ResourceBar label="CPU" pct={cpuPct} detail={n.cpu_cores ? `${n.cpu_cores} ядер` : ""} dimmed={n.status !== "active"} />
-                    <ResourceBar label="RAM" pct={ramUsed > 0 ? Math.round((ramUsed / ramTotal) * 100) : 0} detail={ramUsed > 0 ? `${ramUsed.toFixed(1)} / ${ramTotal.toFixed(0)} GB` : `${ramTotal.toFixed(0)} GB`} dimmed={n.status !== "active"} />
-                    <ResourceBar label="Диск" pct={diskUsed > 0 ? Math.round((diskUsed / diskTotal) * 100) : 0} detail={diskUsed > 0 ? `${diskUsed.toFixed(1)} / ${diskTotal.toFixed(0)} GB` : `${diskTotal.toFixed(0)} GB`} dimmed={n.status !== "active"} />
-                    <ResourceBar label="Школы" pct={schoolsPct} detail={u ? `${u.schools_count} / ${u.max_schools}` : `0 / ${n.max_schools}`} />
-                    <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-                      {n.status === "pending_bootstrap" && <button type="button" className={styles.actionBtn} style={{ flex: 1 }} onClick={() => getBootstrap(n.id, n.name)}>Скачать скрипт</button>}
-                      {n.status === "active" && <button type="button" className={styles.actionBtn} style={{ flex: 1 }} onClick={() => drainNode(n.id)}>Drain</button>}
-                      <button type="button" className={`${styles.actionBtn} ${styles.danger}`} onClick={() => deleteNode(n.id, n.name)}>Удалить</button>
-                    </div>
-                  </div>
-                );
-              })}
-              {nodes && nodes.length === 0 && <p className={styles.emptyState}>Нет зарегистрированных нод. Нажмите «+ Добавить ноду».</p>}
-              {nodes === null && <p className={c.muted} onClick={() => { loadInfra(); }} style={{ cursor: "pointer", textDecoration: "underline", gridColumn: "1/-1" }}>Нажмите для загрузки списка нод…</p>}
-            </div>
-          </div>
 
           {showFaq && (
             <Modal title="FAQ — управление серверами (нодами)" onClose={() => setShowFaq(false)} width={700}>
               <p className={c.muted}><b>Нода</b> — это физический или виртуальный сервер, на котором крутятся школы организации. Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам.</p>
               <p className={c.muted} style={{marginTop:12}}><b>Как добавить новую ноду:</b></p>
               <ol className={c.muted} style={{paddingLeft:20}}>
-                <li>Зарегистрируйте ноду — появится статус <span className={statusBadge("pending_bootstrap")}>pending_bootstrap</span></li>
-                <li>Нажмите «Скачать скрипт» — получите bash-скрипт для автоматической установки</li>
-                <li>Запустите скрипт на целевом сервере: <code className={styles.code}>bash perum-node-*.sh</code></li>
+                <li>Нажмите «+ Создать ноду» — укажите имя, страну, организацию, домен/IP и порт</li>
+                <li>Скопируйте <code className={styles.code}>docker-compose.yml</code> из мастера установки</li>
+                <li>На целевом сервере создайте файл и выполните: <code className={styles.code}>docker compose up -d</code></li>
                 <li>Через 1-2 минуты нода подключится и статус сменится на <span className={statusBadge("active")}>active</span></li>
               </ol>
               <p className={c.muted} style={{marginTop:12}}><b>Статусы нод:</b></p>
@@ -479,7 +417,7 @@ export default function PlatformConsole() {
               </div>
             </Modal>
           )}
-        </>
+        </div>
       )}
       {section === "billing" && (
         <>
@@ -630,22 +568,6 @@ export default function PlatformConsole() {
         </Modal>
       )}
     </ConsoleShell>
-  );
-}
-
-function ResourceBar({ label, pct, detail, dimmed }: { label: string; pct: number; detail?: string; dimmed?: boolean }) {
-  const color = dimmed ? "#9e9e9e" : pct > 80 ? "#dc3545" : pct > 60 ? "#ffc107" : "#28a745";
-  const width = Math.max(0, Math.min(100, pct || 0));
-  return (
-    <div style={{ marginBottom: 6 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.78rem", marginBottom: 2 }}>
-        <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-        <span style={{ fontWeight: 600, color: dimmed ? "var(--text-secondary)" : "var(--text-primary)" }}>{detail || `${Math.round(width)}%`}</span>
-      </div>
-      <div style={{ height: 6, background: "var(--surface-tertiary, #eee)", borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ height: 6, width: `${width}%`, background: color, borderRadius: 3, transition: "width 0.5s ease" }} />
-      </div>
-    </div>
   );
 }
 

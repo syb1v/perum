@@ -10,6 +10,7 @@ class NodeCreate(BaseModel):
     cpu_cores: int = Field(default=2, ge=1)
     ram_gb: float = Field(default=2.0, gt=0)
     disk_gb: float = Field(default=20.0, gt=0)
+    country_code: str | None = Field(default=None, max_length=2, examples=["RU"])
     org_id: int | None = None
     max_schools: int = Field(default=5, ge=1)
 
@@ -30,6 +31,7 @@ class NodeResponse(BaseModel):
     cpu_cores: int
     ram_gb: float
     disk_gb: float
+    country_code: str | None
     status: str
     org_id: int | None
     agent_version: str | None
