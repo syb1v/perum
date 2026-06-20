@@ -202,27 +202,23 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
     const [port, setPort] = useState(2222);
     const [country, setCountry] = useState("");
     const [orgId, setOrgId] = useState<string>("");
-    const [showAdvanced, setShowAdvanced] = useState(false);
-    const [cpu, setCpu] = useState(2);
-    const [ram, setRam] = useState(4);
-    const [disk, setDisk] = useState(40);
-    const [maxSchools, setMaxSchools] = useState(5);
 
     const [bootstrap, setBootstrap] = useState<any>(null);
     const [createdId, setCreatedId] = useState<number | null>(null);
     const [busy, setBusy] = useState(false);
+    const [downloaded, setDownloaded] = useState(false);
     const [err, setErr] = useState<string | null>(null);
 
     const canProceed = name.trim().length > 0 && hostname.trim().length > 0;
 
-    // Создаёт ноду (если ещё не создана) и тянет docker-compose. Кэширует результат.
+    // Создаёт ноду (если ещё не создана) и тянет bootstrap-скрипт. Кэширует результат.
+    // CPU/RAM/диск НЕ задаём — их снимет и пришлёт сам воркер ноды при подключении.
     async function ensureCreated(): Promise<any | null> {
         if (bootstrap && createdId) return bootstrap;
         setBusy(true); setErr(null);
         try {
             const payload: any = {
                 name: name.trim(), hostname: hostname.trim(), ssh_port: port,
-                cpu_cores: cpu, ram_gb: ram, disk_gb: disk, max_schools: maxSchools,
             };
             if (country) payload.country_code = country;
             if (orgId) payload.org_id = Number(orgId);
@@ -240,9 +236,23 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
         }
     }
 
-    async function copyCompose() {
+    // Скачивает bootstrap-скрипт (.sh). Скрипт ставит Docker, поднимает воркера ноды
+    // (ROLE=org_agent) с CORE_URL+ENROLLMENT_TOKEN и выполняет enroll-handshake с ядром —
+    // т.е. реально настраивает связку «нода ↔ скрипт ↔ ядро».
+    async function downloadScript(): Promise<any | null> {
         const bs = await ensureCreated();
-        if (bs) { try { await navigator.clipboard.writeText(bs.docker_compose); } catch { /* blocked */ } }
+        if (!bs) return null;
+        const blob = new Blob([bs.content], { type: "application/x-sh" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = bs.filename || `perum-node-${name.trim()}-bootstrap.sh`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setDownloaded(true);
+        return bs;
     }
 
     async function goNext() {
@@ -269,8 +279,9 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
                 {step === 1 ? (
                     <>
                         <p className={s.hint}>
-                            Скопируйте содержимое <span className={s.codeChip}>docker-compose.yml</span> для ноды ниже и запустите на сервере.{" "}
-                            <span className={s.link} onClick={() => setShowAdvanced((v) => !v)}>Доп. параметры.</span>
+                            Заполните данные ноды и скачайте <span className={s.codeChip}>скрипт установки</span>.
+                            Он сам поставит Docker, поднимет воркера и подключит ноду к ядру.
+                            Характеристики сервера (CPU, RAM, диск) воркер определит сам.
                         </p>
 
                         <div className={s.field}>
@@ -322,17 +333,8 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
                             </div>
                         </div>
 
-                        {showAdvanced && (
-                            <div className={s.fieldRow} style={{ gridTemplateColumns: "1fr 1fr 1fr 1fr" }}>
-                                <div><label className={s.label}>CPU</label><input className={s.input} type="number" min={1} value={cpu} onChange={(e) => setCpu(Number(e.target.value) || 2)} /></div>
-                                <div><label className={s.label}>RAM</label><input className={s.input} type="number" min={1} value={ram} onChange={(e) => setRam(Number(e.target.value) || 4)} /></div>
-                                <div><label className={s.label}>Диск</label><input className={s.input} type="number" min={10} value={disk} onChange={(e) => setDisk(Number(e.target.value) || 40)} /></div>
-                                <div><label className={s.label}>Школ</label><input className={s.input} type="number" min={1} value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value) || 5)} /></div>
-                            </div>
-                        )}
-
-                        <button className={`${s.dockerBtn} ${bootstrap ? s.dockerBtnOk : ""}`} onClick={copyCompose} disabled={!canProceed || busy}>
-                            <I.Docker /> {busy ? "Генерация…" : bootstrap ? "docker-compose.yml скопирован" : "Копировать docker-compose.yml"}
+                        <button className={`${s.dockerBtn} ${downloaded ? s.dockerBtnOk : ""}`} onClick={downloadScript} disabled={!canProceed || busy}>
+                            <I.Download /> {busy ? "Генерация…" : downloaded ? "Скрипт скачан" : "Скачать скрипт установки"}
                         </button>
 
                         <div className={s.wizFoot}>
@@ -344,18 +346,12 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
                 ) : (
                     <>
                         <p className={s.hint}>
-                            Нода <b style={{ color: "#f4f4f5" }}>{name}</b> зарегистрирована. Скопируйте конфигурацию на сервер и запустите стек.
+                            Нода <b style={{ color: "#f4f4f5" }}>{name}</b> зарегистрирована. Скачайте скрипт и запустите его на сервере под root.
                         </p>
 
-                        <div className={s.composeBox}>
-                            <div className={s.composeHead}>
-                                <span className={s.composeName}><I.Docker /> docker-compose.yml</span>
-                                <CopyBtn text={bootstrap?.docker_compose || ""} className={s.copyIcon} okClassName={s.copyIconOk}>
-                                    {(ok) => (ok ? <I.Check /> : <I.Copy />)}
-                                </CopyBtn>
-                            </div>
-                            <pre className={s.composeCode}>{bootstrap?.docker_compose}</pre>
-                        </div>
+                        <button className={`${s.dockerBtn} ${downloaded ? s.dockerBtnOk : ""}`} onClick={downloadScript} disabled={busy}>
+                            <I.Download /> {downloaded ? "Скрипт скачан повторно" : "Скачать скрипт установки"}
+                        </button>
 
                         <div className={s.tokenBox}>
                             <div className={s.tokenLabel}>Enrollment Token (действителен 7 дней)</div>
@@ -363,8 +359,9 @@ export function CreateNodeWizard({ orgs, onClose, onCreated }: {
                         </div>
 
                         <p className={s.runHint}>
-                            На сервере: создайте <code>docker-compose.yml</code>, затем выполните <code>docker compose up -d</code>.
-                            Через 1–2 минуты статус ноды сменится на <b style={{ color: "#2dd4a7" }}>Онлайн</b>.
+                            На сервере выполните под root: <code>bash {bootstrap?.filename || "perum-node-*.sh"}</code>.
+                            Скрипт поставит Docker, поднимет воркера и подключит ноду к ядру. Через 1–2 минуты
+                            статус сменится на <b style={{ color: "#2dd4a7" }}>Онлайн</b>, а CPU/RAM/диск подтянутся автоматически.
                         </p>
 
                         <div className={s.wizFoot}>

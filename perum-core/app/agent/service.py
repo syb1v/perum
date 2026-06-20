@@ -63,9 +63,24 @@ async def enroll_on_boot() -> None:
                 logger.warning("agent: ENROLLMENT_TOKEN не задан — пропускаю enroll")
                 return
 
+            # Снять реальные характеристики сервера и сообщить их ядру — оператор не
+            # вводит CPU/RAM/диск вручную, нода сама себя «представляет» при подключении.
+            try:
+                cpu_cores = psutil.cpu_count(logical=True) or psutil.cpu_count() or 1
+                ram_gb = round(psutil.virtual_memory().total / (1024 ** 3), 1)
+                disk_gb = round(psutil.disk_usage("/").total / (1024 ** 3), 1)
+            except Exception:  # psutil может не дать данные в нестандартном окружении
+                cpu_cores = ram_gb = disk_gb = None
+
             url = f"{settings.CORE_URL.rstrip('/')}/api/enroll"
             async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.post(url, json={"token": settings.ENROLLMENT_TOKEN})
+                resp = await client.post(url, json={
+                    "token": settings.ENROLLMENT_TOKEN,
+                    "cpu_cores": cpu_cores,
+                    "ram_gb": ram_gb,
+                    "disk_gb": disk_gb,
+                    "agent_version": "1.0.0",
+                })
             if resp.status_code >= 300:
                 logger.error("agent: enroll не удался: %s %s", resp.status_code, resp.text[:300])
                 return
