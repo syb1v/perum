@@ -311,7 +311,8 @@ export default function OrgConsole() {
                         <td style={{ whiteSpace: "nowrap" }}>
                           <button className={styles.actionBtn} disabled={busyId === s.id} onClick={() => openAdmins(s)}>Админы</button>{" "}
                           <button className={styles.actionBtn} disabled={busyId === s.id} onClick={() => openDomains(s)}>Домены</button>{" "}
-                          {canUpdate && <><button className={styles.actionBtn} disabled={busyId === s.id || delinquent} title={st?.changelog || ""} onClick={() => updateSchool(s.id)}>{busyId === s.id ? "…" : `Обновить → ${st.latest_version}`}</button>{" "}</>}
+                          {canUpdate && <><button className={styles.actionBtn} style={{ background: "#28a745", color: "#fff", borderColor: "#28a745", fontWeight: 600 }} disabled={busyId === s.id || delinquent} title={st?.changelog || ""} onClick={() => updateSchool(s.id)}>{busyId === s.id ? "Обновляю…" : `↑ Обновить → ${st.latest_version}`}</button>{" "}</>}
+                          {s.status === "updating" && <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: "0.8rem", color: "#3b82f6", fontWeight: 600 }}><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#3b82f6", animation: "perumPulse 1.2s ease-in-out infinite" }} />устанавливается…</span>}
                           <button className={styles.actionBtn} disabled={busyId === s.id || !["active", "suspended"].includes(s.status)} onClick={() => toggleSuspend(s)}>{s.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
                           <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busyId === s.id} onClick={() => removeSchool(s.id, s.slug)}>Удал.</button>
                         </td>
