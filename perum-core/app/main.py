@@ -196,7 +196,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="PERUM Control Plane",
-    version="0.3.0",
+    version="0.4.0",
     description="Manages organizations, provisioning, billing and observability for PERUM tenant stacks.",
     lifespan=lifespan,
 )
@@ -213,7 +213,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, nodes, org_self, organizations, ota_config, releases, releases_ci, schools, stats, telemetry  # noqa: E402
+from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, news, nodes, notifications, org_self, organizations, ota_config, releases, releases_ci, schools, stats, support, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -278,6 +278,13 @@ app.include_router(nodes.platform_router, prefix="/api", tags=["nodes"])
 app.include_router(nodes.capacity_router, prefix="/api", tags=["capacity"])
 # Org admin: view own nodes.
 app.include_router(nodes.org_nodes_router, prefix="/api", tags=["org-nodes"])
+# Новости ядра: POST/GET/PATCH/DELETE — platform_admin; GET /feed — org_admin.
+# Гарды на самих эндпоинтах (смешанные роли в одном роутере).
+app.include_router(news.router, prefix="/api/news", tags=["news"])
+# Уведомления организатора (колокол) — только org_admin (гард на роутере).
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
+# Поддержка (тикеты): /tickets* — org_admin, /admin/* — platform_admin (гарды на эндпоинтах).
+app.include_router(support.router, prefix="/api/support", tags=["support"])
 
 
 @app.get("/")

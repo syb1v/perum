@@ -6,6 +6,8 @@ import { clearPlatformToken, getPlatformToken, getTokenPayload, papi } from "@/l
 import ConsoleShell, { Icon, NavItem } from "@/components/platform/ConsoleShell";
 import Modal from "@/components/platform/Modal";
 import { CreateNodeWizard, EditNodeModal, NodeRow, NodeSchoolsModal } from "@/components/platform/InfraNodes";
+import NewsManager from "@/components/platform/NewsManager";
+import SupportInbox from "@/components/platform/SupportInbox";
 import styles from "@/app/admin/page.module.css";
 import c from "@/components/platform/console.module.css";
 import infra from "@/app/platform/infra.module.css";
@@ -31,6 +33,7 @@ export default function PlatformConsole() {
   const [stats, setStats] = useState<any>(null);
   const [releases, setReleases] = useState<any[] | null>(null);
   const [leads, setLeads] = useState<any[] | null>(null);
+  const [supportBadge, setSupportBadge] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
 
   // create org
@@ -83,6 +86,7 @@ export default function PlatformConsole() {
       setOrgs(await papi("/api/organizations"));
       try { setStats(await papi("/api/platform/stats")); } catch { /* non-fatal */ }
       try { setReceivables(await papi("/api/billing/receivables")); } catch { /* non-fatal */ }
+      try { setSupportBadge((await papi("/api/support/admin/badge")).count || 0); } catch { /* non-fatal */ }
       const r = await papi("/api/releases");
       setReleases(r.releases || []);
     } catch (e: any) {
@@ -306,9 +310,11 @@ export default function PlatformConsole() {
     { id: "infrastructure", label: "Инфраструктура", icon: <Icon.Server /> },
     { id: "billing", label: "Биллинг", icon: <Icon.Billing /> },
     { id: "releases", label: "Релизы", icon: <Icon.Release /> },
+    { id: "news", label: "Новости", icon: <Icon.News /> },
+    { id: "support", label: "Поддержка", icon: <Icon.Support />, badge: supportBadge || undefined },
     { id: "leads", label: "Заявки", icon: <Icon.Mail />, badge: leads ? leads.filter((l) => l.status === "new").length : undefined },
   ];
-  const titles: Record<string, string> = { dashboard: "Дашборд платформы", orgs: "Организации", infrastructure: "Инфраструктура (ноды)", billing: "Биллинг", releases: "Релизы (обновления)", leads: "Заявки с лендинга" };
+  const titles: Record<string, string> = { dashboard: "Дашборд платформы", orgs: "Организации", infrastructure: "Инфраструктура (ноды)", billing: "Биллинг", releases: "Релизы (обновления)", news: "Новости", support: "Поддержка", leads: "Заявки с лендинга" };
 
   return (
     <ConsoleShell
@@ -680,6 +686,12 @@ export default function PlatformConsole() {
           </div>
         </>
       )}
+
+      {/* ===================== NEWS ===================== */}
+      {section === "news" && <NewsManager orgs={orgs} />}
+
+      {/* ===================== SUPPORT ===================== */}
+      {section === "support" && <SupportInbox onChanged={() => { papi("/api/support/admin/badge").then((r) => setSupportBadge(r.count || 0)).catch(() => {}); }} />}
 
       {/* ===================== LEADS ===================== */}
       {section === "leads" && (

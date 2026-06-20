@@ -55,6 +55,9 @@ export default function OrgConsole() {
   const [availUpdates, setAvailUpdates] = useState<any>(null);
   const [schoolDns, setSchoolDns] = useState<Record<number, any>>({});
 
+  // news feed (новости от ядра)
+  const [newsFeed, setNewsFeed] = useState<any[] | null>(null);
+
   async function load() {
     try {
       const r = await papi("/api/schools");
@@ -111,6 +114,12 @@ export default function OrgConsole() {
   useEffect(() => {
     if (section === "infrastructure" && orgNodes === null) loadOrgInfra();
   }, [section, orgNodes]);
+
+  useEffect(() => {
+    if (section === "news" && newsFeed === null) {
+      papi("/api/news/feed").then((r) => setNewsFeed(r.news || [])).catch(() => setNewsFeed([]));
+    }
+  }, [section, newsFeed]);
 
   // Поллинг статуса (#1): провижининг/обновление идут в фоне — пока есть школы в
   // переходном статусе, обновляем список каждые 4с, чтобы статус «доехал» до active.
@@ -184,8 +193,9 @@ export default function OrgConsole() {
     { id: "schools", label: "Школы", icon: <Icon.School /> },
     { id: "infrastructure", label: "Инфраструктура", icon: <Icon.Server /> },
     { id: "billing", label: "Биллинг", icon: <Icon.Billing /> },
+    { id: "news", label: "Новости", icon: <Icon.News /> },
   ];
-  const titles: Record<string, string> = { dashboard: "Дашборд организации", schools: "Школы организации", infrastructure: "Моя инфраструктура", billing: "Биллинг" };
+  const titles: Record<string, string> = { dashboard: "Дашборд организации", schools: "Школы организации", infrastructure: "Моя инфраструктура", billing: "Биллинг", news: "Новости" };
 
   return (
     <ConsoleShell
@@ -415,6 +425,22 @@ export default function OrgConsole() {
               </div>
             )}
           </div>
+        </>
+      )}
+
+      {/* NEWS FEED */}
+      {section === "news" && (
+        <>
+          <p className={c.muted} style={{ marginBottom: 14 }}>Новости и объявления от платформы ПЭРУМ.</p>
+          {newsFeed === null && <p className={c.muted}>Загрузка…</p>}
+          {newsFeed && newsFeed.length === 0 && <div className={styles.card}><p className={styles.emptyState} style={{ margin: 0 }}>Новостей пока нет.</p></div>}
+          {newsFeed?.map((n) => (
+            <div key={n.id} className={styles.card} style={n.pinned ? { borderColor: "var(--accent-primary)" } : undefined}>
+              <h2 className={styles.cardTitle}>{n.pinned && <span title="Закреплено">📌 </span>}{n.title}</h2>
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, color: "var(--text-primary)" }}>{n.body}</div>
+              {n.created_at && <p className={c.muted} style={{ marginTop: 10, marginBottom: 0, fontSize: "0.78rem" }}>{new Date(n.created_at).toLocaleString()}</p>}
+            </div>
+          ))}
         </>
       )}
 

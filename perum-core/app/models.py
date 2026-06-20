@@ -534,3 +534,129 @@ class PlatformSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
+
+
+# ============================================================================
+# Канал «ядро → организаторы»: новости (broadcast/таргет), уведомления (per
+# org_admin) и поддержка (тикеты). platform_admin пишет новости и отвечает в
+# поддержку; org_admin получает уведомления (колокол) и ведёт переписку
+# (плавающий чат). Всё в контур-плейне, школьных данных не касается.
+# ============================================================================
+
+
+class NewsPost(Base):
+    """Новость, написанная platform_admin в ядре. Адресуется всем организациям
+    (`is_global`) или выбранным (через NewsTarget). Публикация рассылается как
+    Notification активным org_admin адресатов."""
+
+    __tablename__ = "news_posts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_global: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false",
+        comment="true — видна всем орг; false — только адресатам из news_targets",
+    )
+    is_published: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    author_id: Mapped[int | None] = mapped_column(
+        ForeignKey("platform_admins.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    targets: Mapped[list["NewsTarget"]] = relationship(
+        back_populates="news", cascade="all, delete-orphan"
+    )
+
+
+class NewsTarget(Base):
+    """Адресат новости — организация. Используется когда NewsPost.is_global=false."""
+
+    __tablename__ = "news_targets"
+    __table_args__ = (UniqueConstraint("news_id", "org_id", name="uq_news_targets_news_org"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    news_id: Mapped[int] = mapped_column(
+        ForeignKey("news_posts.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
+    news: Mapped[NewsPost] = relationship(back_populates="targets")
+
+
+class Notification(Base):
+    """Уведомление для конкретного org_admin (колокол + всплывашка). Источники:
+    публикация новости (`type=news`) и ответ поддержки (`type=support`). ref_id —
+    id новости/тикета для перехода."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_admin_id: Mapped[int] = mapped_column(
+        ForeignKey("org_admins.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    type: Mapped[str] = mapped_column(String(20), nullable=False, comment="news | support")
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ref_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class SupportTicket(Base):
+    """Обращение в поддержку. Открывает org_admin (плавающий чат), обрабатывает
+    platform_admin (раздел «Поддержка» в ядре). Скоуп — org_id. Флаги *_unread
+    показывают, у кого есть непрочитанное (для бейджа ядра и колокола орг)."""
+
+    __tablename__ = "support_tickets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open",
+        comment="open | pending | closed",
+    )
+    created_by_org_admin_id: Mapped[int | None] = mapped_column(
+        ForeignKey("org_admins.id", ondelete="SET NULL"), nullable=True
+    )
+    # У platform_admin есть непрочитанные сообщения от орг (для бейджа «Поддержка»).
+    platform_unread: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    # У org_admin есть непрочитанный ответ поддержки (для колокола/чата).
+    org_unread: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    messages: Mapped[list["SupportMessage"]] = relationship(
+        back_populates="ticket", cascade="all, delete-orphan"
+    )
+
+
+class SupportMessage(Base):
+    """Сообщение в тикете. sender_type — кто написал (org_admin | platform_admin)."""
+
+    __tablename__ = "support_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    sender_type: Mapped[str] = mapped_column(String(20), nullable=False, comment="org_admin | platform_admin")
+    sender_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+    ticket: Mapped[SupportTicket] = relationship(back_populates="messages")

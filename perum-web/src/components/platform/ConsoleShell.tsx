@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import styles from '@/app/admin/page.module.css';
+import { getTokenPayload } from '@/lib/platformApi';
+import NotificationBell from '@/components/console/NotificationBell';
+import SupportChatWidget from '@/components/console/SupportChatWidget';
 
 export type NavItem = { id: string; label: string; icon: React.ReactNode; badge?: number };
 
@@ -24,6 +27,8 @@ export default function ConsoleShell({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // Колокол уведомлений и плавающий чат поддержки — только у организатора.
+  const isOrg = getTokenPayload()?.role === 'org_admin';
   return (
     <div className={styles.adminContainer}>
       {open && <div className={styles.sidebarOverlay} onClick={() => setOpen(false)} />}
@@ -72,6 +77,7 @@ export default function ConsoleShell({
           </div>
           <div className={styles.headerRight}>
             {headerActions}
+            {isOrg && <NotificationBell />}
             {userLabel && (
               <span className={styles.userInfo}>
                 <span className={styles.userAvatar}>{(userLabel[0] || '?').toUpperCase()}</span>
@@ -82,6 +88,7 @@ export default function ConsoleShell({
         </header>
         <div className={styles.contentSection}>{children}</div>
       </main>
+      {isOrg && <SupportChatWidget />}
     </div>
   );
 }
@@ -98,4 +105,6 @@ export const Icon = {
   Mail: () => (<svg {...S({})}><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><polyline points="22,6 12,13 2,6" /></svg>),
   Server: () => (<svg {...S({})}><rect x="2" y="2" width="20" height="8" rx="2" /><rect x="2" y="14" width="20" height="8" rx="2" /><circle cx="6" cy="6" r="1" fill="currentColor"/><circle cx="6" cy="18" r="1" fill="currentColor"/></svg>),
   Logout: () => (<svg {...S({})}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>),
+  News: () => (<svg {...S({})}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z" /></svg>),
+  Support: () => (<svg {...S({})}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>),
 };
