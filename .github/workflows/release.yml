@@ -34,10 +34,17 @@ jobs:
           filters: |
             core:
               - 'perum-core/**'
-            tenant:
-              - 'perum-tenant/**'
             web:
               - 'perum-web/**'
+            tenant:
+              # OTA-релиз тенанта публикуется ТОЛЬКО при изменении кода тенанта.
+              # Не-кодовые правки (доки/README/changelog внутри perum-tenant) НЕ
+              # должны порождать «пустой» OTA — образ функционально тот же, но git-sha
+              # тег другой, и бэкенд по тегу его бы не отсеял. Поэтому исключаем их.
+              - 'perum-tenant/**'
+              - '!perum-tenant/**/*.md'
+              - '!perum-tenant/docs/**'
+              - '!perum-tenant/**/CHANGELOG*'
 
   build:
     needs: changes
@@ -92,6 +99,36 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.meta.outputs.tag }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
+
+  deploy:
+    # Авто-деплой CONTROL PLANE (ядро + веб) на прод-сервер после пуша образов в GHCR.
+    # Тенант (школы) НЕ трогаем — у него opt-in OTA по кнопке org_admin (см. ниже).
+    # Запускается только если изменился core/web И включён деплой (vars.DEPLOY_ENABLED
+    # == 'true'). Без переменной/секретов job пропускается — текущий прод не ломается.
+    needs: [changes, build]
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (needs.changes.outputs.core == 'true' || needs.changes.outputs.web == 'true')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull свежие образы и перезапустить control plane по SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ vars.DEPLOY_PATH || '/opt/perum' }}"
+            # Подтянуть свежие compose-файлы/миграции (репо на сервере).
+            git pull --ff-only
+            COMPOSE="docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+            # Pull свежих образов ядра+веба из GHCR и пересоздание только их контейнеров.
+            # Ядро при старте само прогоняет `alembic upgrade head` (см. command в compose).
+            $COMPOSE pull perum_core perum_web
+            $COMPOSE up -d perum_core perum_web
+            docker image prune -f
 
   tenant-release:
     # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.

@@ -33,14 +33,22 @@
 
 Ничего не публикует. Если красный — релиз делать нельзя.
 
-### `release.yml` — сборка образов и регистрация релиза тенанта (на push в `main` + ручной `workflow_dispatch`)
+### `release.yml` — сборка образов, авто-деплой control plane и регистрация релиза тенанта (на push в `main` + ручной `workflow_dispatch`)
 1. **`changes`** — `dorny/paths-filter` определяет, что РЕАЛЬНО изменилось:
-   `perum-core/**`, `perum-tenant/**`, `perum-web/**`.
+   `perum-core/**`, `perum-web/**`, `perum-tenant/**`. Для тенанта **не-кодовые**
+   пути исключены (`*.md`, `perum-tenant/docs/**`, `CHANGELOG*`) — правка доки не
+   порождает «пустой» OTA.
 2. **`build`** — собирает и пушит в **GHCR** ТОЛЬКО изменённые образы:
    `ghcr.io/<owner>/<image>:git-<sha>` и `:latest`. Неизменённый сервис не
    пересобирается. → фронт/ядро/тенант релизятся независимо, образ появляется
    лишь при реальном изменении кода.
-3. **`tenant-release`** — выполняется ТОЛЬКО если изменился `perum-tenant/**`:
+3. **`deploy`** — авто-деплой **control plane** (ядро + веб) на прод-сервер по SSH:
+   выполняется, если изменился `core`/`web` И задана переменная репозитория
+   **`DEPLOY_ENABLED=true`**. На сервере: `git pull` → `docker compose pull
+   perum_core perum_web` (свежие образы из GHCR) → `up -d` (ядро при старте само
+   прогоняет `alembic upgrade head`). Тенант (школы) НЕ трогается — у него opt-in
+   OTA. Без `DEPLOY_ENABLED`/секретов job пропускается (текущий прод не ломается).
+4. **`tenant-release`** — выполняется ТОЛЬКО если изменился код `perum-tenant/**`:
    - собирает **changelog** из `git log` коммитов, затронувших `perum-tenant/**`;
    - регистрирует релиз в ядре: `POST /api/ci/release` с
      `{version_tag: git-<sha>, image: ghcr.../perum-tenant:git-<sha>, changelog, source_commit}`.
@@ -86,6 +94,10 @@
 ---
 
 ## 5. Обновить сервис по отдельности
+
+> При включённом `DEPLOY_ENABLED=true` (раздел 6) **ядро и веб обновляются сами**
+> на push в `main` — ручные шаги ниже нужны только как резерв или для разовых
+> обновлений вне CI. Тенант-школы обновляются всегда вручную (opt-in OTA).
 
 Базовый домен прод-стенда задаётся в `deploy/.env.prod` (`PUBLIC_BASE_DOMAIN`).
 Команды compose на сервере: `cd /opt/perum/deploy && docker compose --env-file .env.prod -f docker-compose.core.yml -f docker-compose.prod.yml ...`.
@@ -137,9 +149,22 @@
 | GitHub repo → Variables | `CORE_URL` | variable | базовый URL ядра (напр. `https://admin.<домен>`); включает шаг регистрации релиза |
 | GitHub repo → Secrets | `RELEASE_PUBLISH_TOKEN` | secret | bearer-токен CI-публикации релиза |
 | Прод `deploy/.env.prod` | `RELEASE_PUBLISH_TOKEN` | env | тот же токен на стороне ядра (иначе `/api/ci/release` = 503) |
+| GitHub repo → Variables | `DEPLOY_ENABLED` | variable | `true` — включает job `deploy` (авто-деплой ядра+веба на прод) |
+| GitHub repo → Variables | `DEPLOY_PATH` | variable | путь к репо на сервере (по умолчанию `/opt/perum`) |
+| GitHub repo → Secrets | `DEPLOY_SSH_HOST` | secret | хост прод-сервера для SSH-деплоя |
+| GitHub repo → Secrets | `DEPLOY_SSH_USER` | secret | пользователь SSH (напр. `root`) |
+| GitHub repo → Secrets | `DEPLOY_SSH_KEY` | secret | приватный SSH-ключ (с доступом к серверу) |
+| GitHub repo → Secrets | `DEPLOY_SSH_PORT` | secret | порт SSH (опц., по умолчанию `22`) |
 
 Сгенерировать токен: `python -c "import secrets; print(secrets.token_urlsafe(32))"`,
 положить одинаковое значение в секрет GitHub и в `.env.prod`, пересоздать `perum_core`.
+
+**Включить авто-деплой control plane:** на сервере репо должно лежать в `DEPLOY_PATH`
+(дефолт `/opt/perum`) с настроенным `deploy/.env.prod` (образы `CORE_IMAGE`/`WEB_IMAGE`
+= GHCR `:latest`, `*_PULL_POLICY=always`). Завести deploy-ключ (`ssh-keygen`), публичную
+часть — в `~/.ssh/authorized_keys` сервера, приватную — в секрет `DEPLOY_SSH_KEY`. Задать
+`DEPLOY_ENABLED=true`. После этого push в `main`, меняющий `perum-core/**` или
+`perum-web/**`, сам выкатит свежий control plane (тенант-школы остаются на opt-in OTA).
 
 ---
 

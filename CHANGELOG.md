@@ -6,10 +6,22 @@
 
 ## [Unreleased] — 2026-06-20
 
+### Инфраструктура нод — UI в стиле Remnawave + мастер создания
+- **Тёмный список нод (Remnawave-style).** Полная переделка секции «Инфраструктура» в консоли платформы: строки нод с бирюзово-зелёной свечой-индикатором по статусу, sparkline-иконкой, **флагом страны**, моноширинными метриками, статус-пилюлями, баром ёмкости (школы/диск) и чипами аптайма/версии. Переделана именно инлайн-секция `platform/page.tsx` (раньше правки уходили в неслинкованную страницу `/platform/infrastructure`, которую пользователь не видел).
+- **Мастер «Создать ноду» (2 шага).** Прогресс-бар, поле `Secret Key (SECRET_KEY)` с копированием, внутреннее имя, выбор страны (с флагами), **привязка ноды к организации**, домен/IP + Node Port, кнопка «Копировать docker-compose.yml». Шаг 2 — превью `docker-compose.yml` + enrollment-токен + инструкция `docker compose up -d`. Новые `src/lib/countries.ts`, `src/components/platform/InfraNodes.tsx`, `src/app/platform/infra.module.css`.
+- **Поле страны у ноды.** Модель `Node` дополнена `country_code` (ISO 3166-1 alpha-2) — миграция `0019_add_node_country`; флаг рендерится в UI из кода.
+- **Bootstrap-эндпоинт принимает GET и POST** + отдаёт `docker_compose` и `enrollment_token` (генерация `docker-compose.yml` с вшитыми ENROLLMENT_TOKEN/SECRET_KEY/DB_PASSWORD).
+
+### CI/CD — авто-деплой control plane + усиление OTA-гейтинга
+- **Авто-деплой ядра и веба на прод.** В `release.yml` добавлен job `deploy`: на push в `main`, меняющий `perum-core/**` или `perum-web/**`, по SSH делает `git pull` + `docker compose pull/up -d` control plane (ядро при старте само мигрирует БД). Гейтится переменной `DEPLOY_ENABLED=true` — без неё пропускается. Секреты: `DEPLOY_SSH_HOST/USER/KEY/PORT`, переменная `DEPLOY_PATH`.
+- **Фикс авто-обновления прода.** Убран хардкод `pull_policy: never` для `perum_core`/`perum_web` в `docker-compose.prod.yml` — он оверрайдил `*_PULL_POLICY=always` из `.env.prod` и физически не давал прод-стеку подтянуть свежий образ из GHCR.
+- **OTA тенанта — без «пустых» релизов от доки.** В детекторе изменений `release.yml` для тенанта исключены не-кодовые пути (`*.md`, `perum-tenant/docs/**`, `CHANGELOG*`): правка документации больше не порождает OTA-релиз с новым git-sha тегом, но тем же кодом.
+
 ### Исправления инфраструктуры
-- **Фикс 500 на генерацию bootstrap-скрипта.** `enrollment_tokens.org_id` сделан nullable (миграция 0018) — pool-ноды без организации больше не вызывают IntegrityError. Добавлена миграция `0018_nullable_enrollment_token_org`.
+- **Фикс длины ID миграции.** Ревизия `0018_nullable_enrollment_token_org` (34 симв.) не влезала в `alembic_version.version_num` (`varchar(32)`) — ломала `alembic upgrade` на чистом деплое (и проде). Переименована в `0018_nullable_token_org`.
+- **Фикс 500 на генерацию bootstrap-скрипта.** `enrollment_tokens.org_id` сделан nullable (миграция `0018_nullable_token_org`) — pool-ноды без организации больше не вызывают IntegrityError.
 - **Фикс пути шаблона в Docker.** Шаблон `node-bootstrap.sh.tmpl` скопирован в `perum-core/deploy/scripts/` (в Docker build context). `TEMPLATE_PATH` исправлен — теперь 3 уровня вверх от сервиса, а не 4. Dockerfile дополнен `COPY deploy ./deploy`.
-- **Редизайн карточек нод.** Строчный layout в стиле remnawave: цветная точка online/offline (зелёная/красная с glow), бары CPU/RAM/Диск, компактные метки. `pending_bootstrap` и `offline` теперь отображаются красным с меткой «Не установлена»/«Оффлайн». Кнопка «↓ Скрипт установки» видна для всех неактивных нод.
+- **Редизайн карточек нод (итерация 1).** Строчный layout, точка online/offline, бары CPU/RAM/Диск — заменён финальным Remnawave-UI выше.
 
 ## [Unreleased] — 2026-06-18
 

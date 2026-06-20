@@ -21,13 +21,14 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
+  # perum_core/perum_web: образ и pull-политику задаёт .env.prod
+  # (CORE_IMAGE/WEB_IMAGE=ghcr.io/...:latest, CORE_PULL_POLICY/WEB_PULL_POLICY=always),
+  # чтобы `docker compose pull` тянул свежий образ из GHCR при деплое
+  # (см. .github/workflows/release.yml job `deploy`). Раньше тут стоял хардкод
+  # `pull_policy: never`, который физически ломал авто-обновление прод-стека.
   perum_core:
-    pull_policy: never
     environment:
       DATABASE_URL: postgresql+asyncpg://perum:${CONTROL_DB_PASSWORD}@perum_control_db:5432/perum_control
-
-  perum_web:
-    pull_policy: never
 
   perum_control_db:
     environment:
