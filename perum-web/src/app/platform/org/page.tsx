@@ -374,7 +374,9 @@ export default function OrgConsole() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 14 }}>
               {orgNodes?.map((n) => {
                 const u = orgNodeUtil[n.id];
-                const isOnline = n.last_heartbeat && (Date.now() - new Date(n.last_heartbeat).getTime() < 300_000);
+                // Статус ставит монитор ядра (источник истины) — не пересчитываем по
+                // heartbeat на фронте (naive-UTC парсился бы как локальное время).
+                const isOnline = n.status === "active";
                 const schoolsPct = u ? u.capacity_percent : 0;
                 const ramTotal = n.ram_gb || 1;
                 const ramUsed = (u?.ram_used_gb != null && u.ram_used_gb > 0) ? u.ram_used_gb : 0;
@@ -392,7 +394,7 @@ export default function OrgConsole() {
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, fontSize: "0.78rem" }}>
                         <span style={{ width: 8, height: 8, borderRadius: 4, background: isOnline ? "#28a745" : "#dc3545" }} />
                         <span style={{ color: isOnline ? "#28a745" : "#dc3545", fontWeight: 600 }}>{isOnline ? "онлайн" : "оффлайн"}</span>
-                        {n.last_heartbeat && <span style={{ color: "var(--text-secondary)", marginLeft: "auto" }}>{Math.round((Date.now() - new Date(n.last_heartbeat).getTime()) / 1000)}с</span>}
+                        {n.last_ping_ms != null && <span style={{ color: "var(--text-secondary)", marginLeft: "auto" }} title="Латентность ядро→воркер">{n.last_ping_ms} мс</span>}
                       </div>
                     )}
                     <OrgResourceBar label="CPU" pct={cpuPct} detail={n.cpu_cores ? `${n.cpu_cores} ядер` : ""} dimmed={n.status !== "active"} />

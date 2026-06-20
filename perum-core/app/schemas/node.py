@@ -42,6 +42,14 @@ class NodeResponse(BaseModel):
     agent_version: str | None
     last_heartbeat: datetime | None
     max_schools: int
+    # Реальная загрузка (снимок монитор-петли) + латентность ядро→воркер.
+    last_cpu_percent: float | None = None
+    last_ram_used_mb: int | None = None
+    last_ram_total_mb: int | None = None
+    last_disk_used_gb: float | None = None
+    last_disk_total_gb: float | None = None
+    last_ping_ms: int | None = None
+    metrics_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

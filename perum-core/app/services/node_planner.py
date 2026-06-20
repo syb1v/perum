@@ -63,14 +63,17 @@ class NodePlanner:
         max_capacity = self.calculate_capacity(node)
         capacity_percent = (schools_count / max_capacity * 100) if max_capacity > 0 else 100.0
 
+        # Реальная загрузка — из снимка монитор-петли (Node.last_*). Пусто, пока
+        # метрики ещё не снимались (нода только поднялась).
+        ram_used_gb = round(node.last_ram_used_mb / 1024, 2) if node.last_ram_used_mb else None
         return NodeUtilizationResponse(
             node_id=node.id,
             schools_count=schools_count,
             max_schools=max_capacity,
             capacity_percent=round(capacity_percent, 1),
-            ram_used_gb=None,
-            cpu_used_percent=None,
-            disk_used_gb=None,
+            ram_used_gb=ram_used_gb,
+            cpu_used_percent=node.last_cpu_percent,
+            disk_used_gb=node.last_disk_used_gb,
         )
 
     async def find_best_node(self, org_id: int | None = None) -> Node | None:

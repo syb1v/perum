@@ -137,24 +137,28 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
     onToggleEnabled: () => void;
     onViewSchools: () => void;
 }) {
+    // Статус — источник истины БЭКЕНД (монитор-петля сама ставит active/offline по
+    // связи). Никаких пересчётов по heartbeat на фронте (раньше naive-UTC парсился
+    // как локальное время → ложный «оффлайн» при красной иконке и «онлайн» пилюле).
     const meta = STATUS_META[node.status] ?? STATUS_META.offline;
-    const heartbeatAlive = node.last_heartbeat && Date.now() - new Date(node.last_heartbeat).getTime() < 300_000;
-    const online = node.status === "active" && heartbeatAlive;
+    const online = node.status === "active" && node.enabled !== false;
 
-    const cpuPct = util?.cpu_used_percent != null && util.cpu_used_percent > 0 ? util.cpu_used_percent : null;
-    const diskTotal = node.disk_gb || 1;
-    const diskUsed = util?.disk_used_gb != null && util.disk_used_gb > 0 ? util.disk_used_gb : 0;
-    const diskPct = diskUsed > 0 ? Math.min(100, (diskUsed / diskTotal) * 100) : 0;
+    // Реальная загрузка — снимок монитор-петли (node.last_*). util — ёмкость по школам.
+    const cpuPct = node.last_cpu_percent != null ? node.last_cpu_percent : null;
+    const ramTotalGb = node.last_ram_total_mb ? node.last_ram_total_mb / 1024 : (node.ram_gb || null);
+    const ramUsedGb = node.last_ram_used_mb != null ? node.last_ram_used_mb / 1024 : null;
+    const ramPct = ramUsedGb != null && ramTotalGb ? Math.min(100, (ramUsedGb / ramTotalGb) * 100) : null;
+    const diskTotalGb = node.last_disk_total_gb || node.disk_gb || null;
+    const diskUsedGb = node.last_disk_used_gb != null ? node.last_disk_used_gb : null;
+    const diskPct = diskUsedGb != null && diskTotalGb ? Math.min(100, (diskUsedGb / diskTotalGb) * 100) : null;
+    const pingMs = node.last_ping_ms != null ? node.last_ping_ms : null;
     const schoolsPct = util ? util.capacity_percent : 0;
-
-    const cpuClass = cpuPct == null ? s.cpuPct : cpuPct > 85 ? s.cpuPctCrit : cpuPct > 60 ? s.cpuPctWarn : s.cpuPct;
     const fillClass = schoolsPct > 85 ? s.storageFillCrit : schoolsPct > 60 ? s.storageFillWarn : s.storageFill;
+    const uptime = online ? humanUptime(node.created_at) : null;
 
-    const uptime = node.last_heartbeat && online ? humanUptime(node.created_at) : null;
-
-    // Динамическая иконка слева по реальному состоянию (связь ядро↔воркер):
-    // зелёный пульс-хертбит — online; жёлтый воскл. — переходное/не установлена;
-    // красный запрет — оффлайн/недоступна; серый — выключена/выведена.
+    // Динамическая иконка слева по статусу (его уже выставил монитор ядра):
+    // зелёный пульс — online; серый — выключена/выведена; жёлтый — не установлена/вывод;
+    // красный — оффлайн.
     let statusIcon = <I.Spark color="#2dd4a7" />;
     let iconBoxStyle: React.CSSProperties | undefined;
     let pulse = false;
@@ -171,7 +175,6 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
         statusIcon = <I.Alert color="#fbbf24" />;
         iconBoxStyle = { background: "rgba(251,191,36,0.1)", borderColor: "rgba(251,191,36,0.3)" };
     } else {
-        // offline или active без свежего heartbeat
         statusIcon = <I.Ban color="#f87171" />;
         iconBoxStyle = { background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)" };
     }
@@ -186,9 +189,9 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
                 <div className={s.identMain}>
                     <span className={s.name}>{node.name}</span>
                     <span className={s.sub}>
-                        {cpuPct != null ? <span className={cpuClass}>{cpuPct.toFixed(0)}%</span> : <span className={s.netRate}>{node.cpu_cores} ядер</span>}
-                        <span className={s.netUp}>{node.ram_gb} ГБ</span>
-                        <span className={s.netDown}>{node.disk_gb} ГБ</span>
+                        <span className={s.netRate}>{node.cpu_cores} ядер</span>
+                        <span className={s.netUp}>{(ramTotalGb || 0).toFixed(0)} ГБ ОЗУ</span>
+                        <span className={s.netDown}>{(diskTotalGb || 0).toFixed(0)} ГБ ПЗУ</span>
                     </span>
                 </div>
                 <span className={`${s.statusPill} ${meta.pill}`}>{meta.label}</span>
@@ -201,23 +204,29 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
                 {node.hostname}
             </div>
 
-            {/* storage / schools capacity */}
+            {/* live metrics: CPU / RAM / Disk / schools */}
             <div className={s.storage}>
-                <div className={s.storageTop}>
-                    <span className={s.storageVal}>{util ? `${util.schools_count} / ${util.max_schools}` : `0 / ${node.max_schools}`} школ</span>
-                    <span className={s.storageInf}>{diskUsed > 0 ? `${diskUsed.toFixed(0)} ГБ` : "∞"}</span>
-                </div>
-                <div className={s.storageTrack}>
-                    <div className={fillClass} style={{ width: `${Math.max(schoolsPct, diskPct)}%` }} />
-                </div>
+                {online ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        <MetricBar label="CPU" pct={cpuPct} detail={cpuPct != null ? `${cpuPct.toFixed(0)}%` : "—"} />
+                        <MetricBar label="ОЗУ" pct={ramPct} detail={ramUsedGb != null && ramTotalGb ? `${ramUsedGb.toFixed(1)}/${ramTotalGb.toFixed(0)} ГБ` : "—"} />
+                        <MetricBar label="ПЗУ" pct={diskPct} detail={diskUsedGb != null && diskTotalGb ? `${diskUsedGb.toFixed(0)}/${diskTotalGb.toFixed(0)} ГБ` : "—"} />
+                        <MetricBar label="Школы" pct={schoolsPct} detail={util ? `${util.schools_count}/${util.max_schools}` : `0/${node.max_schools}`} fill={fillClass} />
+                    </div>
+                ) : (
+                    <div className={s.storageTop}>
+                        <span className={s.storageVal}>{util ? `${util.schools_count} / ${util.max_schools}` : `0 / ${node.max_schools}`} школ</span>
+                        <span className={s.storageInf}>метрики при онлайне</span>
+                    </div>
+                )}
             </div>
 
             {/* right: chips + actions */}
             <div className={s.right}>
                 <div className={s.chips}>
                     {uptime && <span className={`${s.chip} ${s.chipUptime}`}><span className={s.chipDot} />{uptime}</span>}
+                    {online && pingMs != null && <span className={`${s.chip}`} title="Латентность ядро→воркер">{pingMs} мс</span>}
                     {node.agent_version && <span className={s.chip}>v{node.agent_version}</span>}
-                    {!online && node.status === "active" && <span className={s.chip}>оффлайн</span>}
                 </div>
                 <div className={s.actions}>
                     {(node.status === "pending_bootstrap" || node.status === "offline") && (
@@ -246,13 +255,39 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
     );
 }
 
+// Бэкенд отдаёт naive-UTC ISO (без таймзоны). JS парсит такую строку как ЛОКАЛЬНОЕ
+// время → на UTC+N сдвиг на N часов. Добавляем 'Z', чтобы парсить как UTC.
+function utcMs(iso?: string | null): number | null {
+    if (!iso) return null;
+    const norm = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso + "Z";
+    const t = new Date(norm).getTime();
+    return isNaN(t) ? null : t;
+}
+
 function humanUptime(iso: string): string {
-    const ms = Date.now() - new Date(iso).getTime();
+    const t = utcMs(iso);
+    if (t == null) return "";
+    const ms = Date.now() - t;
     const d = Math.floor(ms / 86_400_000);
     if (d > 0) return `${d}д`;
     const h = Math.floor(ms / 3_600_000);
     if (h > 0) return `${h}ч`;
     return `${Math.max(1, Math.floor(ms / 60_000))}м`;
+}
+
+// Мини-бар загрузки ресурса ноды (CPU/ОЗУ/ПЗУ/школы). pct=null → данных нет.
+function MetricBar({ label, pct, detail, fill }: { label: string; pct: number | null; detail: string; fill?: string }) {
+    const p = pct == null ? 0 : Math.max(0, Math.min(100, pct));
+    const color = pct == null ? "#3a3f4a" : p > 85 ? "#f87171" : p > 60 ? "#fbbf24" : "#2dd4a7";
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.68rem", color: "var(--text-secondary, #9898a6)" }}>
+            <span style={{ width: 34, flexShrink: 0 }}>{label}</span>
+            <span style={{ flex: 1, height: 5, background: "rgba(255,255,255,0.07)", borderRadius: 3, overflow: "hidden" }}>
+                <span style={{ display: "block", height: "100%", width: `${p}%`, background: fill ? undefined : color, borderRadius: 3, transition: "width .5s ease" }} className={fill} />
+            </span>
+            <span style={{ width: 78, flexShrink: 0, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{detail}</span>
+        </div>
+    );
 }
 
 // ──────────────────────────────────────────────────────────────────────────

@@ -316,19 +316,25 @@ class DockerClient:
         def _run() -> bytes:
             # БЕЗ `|| true`: ненулевой выход tar (ошибка чтения/места/OOM) должен
             # поднять docker.errors.ContainerError, иначе бэкап «успешен» пустым и
-            # тома снесутся с потерей вложений (AUDIT-fix review). stderr НЕ
-            # подмешиваем в stdout (нам нужен чистый gzip), но ошибку контейнер
-            # сигналит кодом возврата.
-            return self.client.containers.run(
+            # тома снесутся с потерей вложений (AUDIT-fix review).
+            # demux=True: docker возвращает мультиплексированный поток (8-байтные
+            # фрейм-заголовки на не-TTY контейнере). Через docker-socket-proxy ноды
+            # docker-py НЕ демультиплексирует сам → в stdout попадал заголовок фрейма
+            # и gzip-magic «съезжал» (бэкап на ноде падал как «не gzip»). С demux
+            # клиент возвращает кортеж (stdout, stderr) с уже чистыми потоками.
+            out = self.client.containers.run(
                 image=image,
                 command=["sh", "-c", "tar czf - -C /data ."],
                 volumes={volume: {"bind": "/data", "mode": "ro"}},
                 remove=True,
                 detach=False,
                 stdout=True,
-                stderr=False,
+                stderr=True,
+                demux=True,
                 network_disabled=True,
             )
+            stdout_data, _stderr = out if isinstance(out, tuple) else (out, None)
+            return stdout_data or b""
 
         return await asyncio.to_thread(_run)
 

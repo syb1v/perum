@@ -468,6 +468,16 @@ class Node(Base):
     last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     max_schools: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
 
+    # Снимок реальной загрузки ноды + латентность ядро→воркер. Обновляет монитор-петля
+    # ядра (опрашивает /api/agent/health воркера). NULL — метрики ещё не снимались.
+    last_cpu_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_ram_used_mb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_ram_total_mb: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_disk_used_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_disk_total_gb: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_ping_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metrics_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
