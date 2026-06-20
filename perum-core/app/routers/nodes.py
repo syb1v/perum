@@ -217,6 +217,15 @@ async def restart_node(node_id: int, db: AsyncSession = Depends(get_db)) -> dict
     ok, message = await _restart_node_stack(node)
     if not ok:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"перезагрузка не удалась: {message}")
+    # Воркор перезапускает себя в фоне → связь сейчас разорвётся. Сразу помечаем ноду
+    # offline + сбрасываем метрики, чтобы UI показал переход; монитор вернёт active,
+    # когда воркор поднимется (обычно 5-15с).
+    from datetime import datetime, timezone
+    node.status = "offline"
+    node.last_ping_ms = None
+    node.last_cpu_percent = None
+    node.metrics_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
     return {"id": node_id, "ok": True, "message": message}
 
 

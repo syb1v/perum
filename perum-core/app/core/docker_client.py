@@ -317,6 +317,46 @@ class DockerClient:
 
         return await asyncio.to_thread(_restart)
 
+    async def restart_node_stack_except_self(self, *, self_service: str = "perum_agent") -> tuple[list[str], str | None]:
+        """Перезагрузить все контейнеры стека ноды (по compose-проекту) КРОМЕ самого
+        воркора. Возвращает (список перезапущенных, имя своего контейнера) — воркор
+        перезапускается отдельно и ПОСЛЕ отправки ответа (см. agent.service)."""
+
+        def _restart() -> tuple[list[str], str | None]:
+            restarted: list[str] = []
+            project = "perum-node"
+            self_name: str | None = None
+            # Имя своего контейнера — по hostname (= id контейнера) либо по service-лейблу.
+            for c in self.client.containers.list(all=True):
+                svc = c.labels.get("com.docker.compose.service")
+                proj = c.labels.get("com.docker.compose.project")
+                if svc == self_service and proj:
+                    project = proj
+            members = self.client.containers.list(
+                all=True, filters={"label": f"com.docker.compose.project={project}"}
+            )
+            for c in members:
+                if c.labels.get("com.docker.compose.service") == self_service:
+                    self_name = c.name
+                    continue
+                try:
+                    c.restart(timeout=10)
+                    restarted.append(f"container:{c.name}")
+                except NotFound:
+                    pass
+            return restarted, self_name
+
+        return await asyncio.to_thread(_restart)
+
+    async def restart_self(self, name: str) -> None:
+        """Перезапустить собственный контейнер воркора (вызывается в фоне, после ответа)."""
+        def _restart() -> None:
+            try:
+                self.client.containers.get(name).restart(timeout=5)
+            except Exception:  # noqa: BLE001
+                pass
+        await asyncio.to_thread(_restart)
+
     async def backup_volume_tar(self, volume: str, image: str) -> bytes:
         """Снять tar.gz содержимого тома (для бэкапа вложений школы перед purge).
         Запускает одноразовый контейнер с томом, смонтированным RO в /data, и tar'ит

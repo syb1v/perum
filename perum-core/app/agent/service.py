@@ -126,16 +126,27 @@ async def get_agent_health(db: AsyncSession) -> AgentHealthResponse:
 
 
 async def restart_node_stack(db: AsyncSession) -> "AgentNodeActionResponse":
-    """Перезагрузить docker-стек ноды: рестарт всех управляемых контейнеров школ.
-    Физическая перезагрузка сервера не выполняется — только контейнеры."""
+    """Полная перезагрузка стека ноды: рестарт ВСЕХ контейнеров стека (школы, БД ноды,
+    redis, caddy, docker_proxy) И самого воркора. Сервер не перезагружается. Воркор
+    перезапускает себя в фоне ПОСЛЕ отправки ответа — связь ядро→воркор на время
+    рестарта пропадёт и вернётся (ожидаемо: монитор покажет offline→active)."""
+    import asyncio
+
     from app.agent.schemas import AgentNodeActionResponse
 
     docker = DockerClient()
     try:
-        restarted = await docker.restart_managed_containers()
+        restarted, self_name = await docker.restart_node_stack_except_self()
+        if self_name:
+            # Отдельная задача: подождать, чтобы HTTP-ответ ушёл, и перезапустить воркор.
+            async def _self_restart() -> None:
+                await asyncio.sleep(1.5)
+                await docker.restart_self(self_name)
+            asyncio.create_task(_self_restart())
+            restarted.append(f"container:{self_name} (воркор, в фоне)")
         return AgentNodeActionResponse(
             success=True, restarted=restarted,
-            message=f"перезагружено контейнеров: {len(restarted)}",
+            message=f"перезагрузка стека ноды: {len(restarted)} контейнер(ов), воркор перезапускается",
         )
     except Exception as exc:  # noqa: BLE001
         return AgentNodeActionResponse(success=False, message=f"ошибка перезагрузки: {exc}")

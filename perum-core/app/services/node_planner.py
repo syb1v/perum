@@ -60,8 +60,12 @@ class NodePlanner:
         )
         schools_count = result.scalar() or 0
 
-        max_capacity = self.calculate_capacity(node)
-        capacity_percent = (schools_count / max_capacity * 100) if max_capacity > 0 else 100.0
+        # Знаменатель шкалы = лимит, заданный ОПЕРАТОРОМ (node.max_schools) — это его
+        # явное решение. Ресурсная оценка (по CPU/RAM) идёт отдельным полем
+        # recommended_max как подсказка: если она ниже лимита — UI предупредит.
+        max_schools = node.max_schools
+        recommended_max = self.calculate_capacity(node)
+        capacity_percent = (schools_count / max_schools * 100) if max_schools > 0 else 100.0
 
         # Реальная загрузка — из снимка монитор-петли (Node.last_*). Пусто, пока
         # метрики ещё не снимались (нода только поднялась).
@@ -69,7 +73,8 @@ class NodePlanner:
         return NodeUtilizationResponse(
             node_id=node.id,
             schools_count=schools_count,
-            max_schools=max_capacity,
+            max_schools=max_schools,
+            recommended_max=recommended_max,
             capacity_percent=round(capacity_percent, 1),
             ram_used_gb=ram_used_gb,
             cpu_used_percent=node.last_cpu_percent,
@@ -93,9 +98,13 @@ class NodePlanner:
 
         for node in nodes:
             util = await self.get_utilization(node)
-            if util.schools_count >= util.max_schools:
+            # Лимит размещения — min(операторский лимит, ресурсная оценка): не
+            # перегружаем ноду сверх того, что тянет железо, даже если оператор
+            # выставил больше. Шкала в UI при этом показывает операторский лимит.
+            effective = min(util.max_schools, util.recommended_max or util.max_schools)
+            if util.schools_count >= effective:
                 continue
-            score = util.max_schools - util.schools_count
+            score = effective - util.schools_count
             if score > best_score:
                 best_score = score
                 best_node = node

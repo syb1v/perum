@@ -62,7 +62,8 @@ class NodeListResponse(BaseModel):
 class NodeUtilizationResponse(BaseModel):
     node_id: int
     schools_count: int
-    max_schools: int
+    max_schools: int                       # лимит, заданный оператором
+    recommended_max: int | None = None     # ресурсная оценка (по CPU/RAM) — подсказка
     capacity_percent: float
     ram_used_gb: float | None = None
     cpu_used_percent: float | None = None

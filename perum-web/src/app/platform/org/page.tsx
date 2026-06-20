@@ -115,6 +115,14 @@ export default function OrgConsole() {
     if (section === "infrastructure" && orgNodes === null) loadOrgInfra();
   }, [section, orgNodes]);
 
+  // Реал-тайм: пока открыт раздел инфраструктуры — обновляем ноды и метрики каждые 10с.
+  useEffect(() => {
+    if (section !== "infrastructure") return;
+    const t = setInterval(() => { loadOrgInfra(); }, 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section]);
+
   useEffect(() => {
     if (section === "news" && newsFeed === null) {
       papi("/api/news/feed").then((r) => setNewsFeed(r.news || [])).catch(() => setNewsFeed([]));

@@ -103,6 +103,17 @@ export default function PlatformConsole() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Реал-тайм для раздела «Инфраструктура»: пока он открыт, обновляем список нод и
+  // их метрики каждые 10с (тихо, без сброса UI). Монитор ядра пишет свежие метрики
+  // ~раз в минуту, но во время рестарта ноды связь меняется быстрее — поллинг ловит
+  // переход online→offline→online.
+  useEffect(() => {
+    if (section !== "infrastructure") return;
+    const t = setInterval(() => { loadInfra(); }, 10_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [section]);
+
   async function createOrg(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setCreated(null); setCreating(true);
     try {
