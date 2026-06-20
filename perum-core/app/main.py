@@ -128,6 +128,46 @@ async def _billing_enforcement_loop() -> None:
         await asyncio.sleep(interval)
 
 
+async def _node_monitor_loop() -> None:
+    """Мониторинг связи ЯДРО↔ВОРКЕР: статус ноды ставит ядро автоматически, не человек.
+    Раз в NODE_MONITOR_INTERVAL_S пингуем воркер каждой ноды (active/offline/draining):
+    доступен → active + свежий last_heartbeat; недоступен → offline. Lifecycle-состояния
+    (pending_bootstrap, decommissioned) и явный drain оператора не трогаем."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import select
+
+    from app.core.db import SessionLocal
+    from app.models import Node
+    from app.services.remote_node_client import RemoteNodeClient
+
+    interval = settings.NODE_MONITOR_INTERVAL_S
+    client = RemoteNodeClient(timeout=8.0)
+    await asyncio.sleep(min(interval, 20))
+    while True:
+        try:
+            async with SessionLocal() as db:
+                nodes = (
+                    await db.execute(select(Node).where(Node.status.in_(("active", "offline", "draining"))))
+                ).scalars().all()
+                for node in nodes:
+                    alive = await client.ping(node)
+                    now = datetime.now(timezone.utc).replace(tzinfo=None)
+                    if alive:
+                        node.last_heartbeat = now
+                        if node.status == "offline":
+                            node.status = "active"
+                            logger.info("node monitor: %s снова online", node.name)
+                    else:
+                        if node.status == "active":
+                            node.status = "offline"
+                            logger.info("node monitor: %s недоступна → offline", node.name)
+                await db.commit()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("node monitor iteration failed: %s", exc)
+        await asyncio.sleep(interval)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     tasks: list[asyncio.Task] = []
@@ -142,6 +182,8 @@ async def lifespan(app: FastAPI):
         await _sync_caddy_routes()
         if settings.BILLING_ENFORCE_INTERVAL_S > 0:
             tasks.append(asyncio.create_task(_billing_enforcement_loop()))
+        if settings.NODE_MONITOR_INTERVAL_S > 0:
+            tasks.append(asyncio.create_task(_node_monitor_loop()))
     try:
         yield
     finally:

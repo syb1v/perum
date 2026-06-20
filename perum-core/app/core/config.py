@@ -79,6 +79,8 @@ class Settings(BaseSettings):
     # Период фонового свипа просроченных подписок (заморозка + дебиторка), сек.
     # 0 — выключить планировщик (тогда только ручной POST /api/billing/enforce).
     BILLING_ENFORCE_INTERVAL_S: int = Field(default=3600)
+    # Интервал мониторинга связи ядро↔воркер (статус ноды active/offline). 0 → выкл.
+    NODE_MONITOR_INTERVAL_S: int = Field(default=60)
 
     # Токен для CI-публикации релизов (POST /api/ci/release). Пусто → CI-эндпоинт
     # выключен (релизы только вручную через platform_admin). Задаётся в .env.prod

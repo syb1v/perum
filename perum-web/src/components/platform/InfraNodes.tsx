@@ -9,9 +9,24 @@ import s from "@/app/platform/infra.module.css";
 // Иконки (инлайн, чтобы не тянуть зависимости)
 // ──────────────────────────────────────────────────────────────────────────
 const I = {
-    Spark: () => (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2dd4a7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    Spark: ({ color = "#2dd4a7" }: { color?: string }) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 12h3l2-7 4 14 3-9 2 2h4" />
+        </svg>
+    ),
+    Alert: ({ color = "#fbbf24" }: { color?: string }) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" />
+        </svg>
+    ),
+    Ban: ({ color = "#f87171" }: { color?: string }) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" /><path d="m5.6 5.6 12.8 12.8" />
+        </svg>
+    ),
+    PowerOff: ({ color = "#6e7681" }: { color?: string }) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64M12 2v8" />
         </svg>
     ),
     Globe: () => (
@@ -137,11 +152,35 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
 
     const uptime = node.last_heartbeat && online ? humanUptime(node.created_at) : null;
 
+    // Динамическая иконка слева по реальному состоянию (связь ядро↔воркер):
+    // зелёный пульс-хертбит — online; жёлтый воскл. — переходное/не установлена;
+    // красный запрет — оффлайн/недоступна; серый — выключена/выведена.
+    let statusIcon = <I.Spark color="#2dd4a7" />;
+    let iconBoxStyle: React.CSSProperties | undefined;
+    let pulse = false;
+    if (node.enabled === false) {
+        statusIcon = <I.PowerOff />;
+        iconBoxStyle = { background: "rgba(110,118,129,0.12)", borderColor: "rgba(110,118,129,0.3)" };
+    } else if (node.status === "decommissioned") {
+        statusIcon = <I.Ban color="#6e7681" />;
+        iconBoxStyle = { background: "rgba(110,118,129,0.12)", borderColor: "rgba(110,118,129,0.3)" };
+    } else if (online) {
+        statusIcon = <I.Spark color="#2dd4a7" />;
+        pulse = true;
+    } else if (node.status === "pending_bootstrap" || node.status === "draining") {
+        statusIcon = <I.Alert color="#fbbf24" />;
+        iconBoxStyle = { background: "rgba(251,191,36,0.1)", borderColor: "rgba(251,191,36,0.3)" };
+    } else {
+        // offline или active без свежего heartbeat
+        statusIcon = <I.Ban color="#f87171" />;
+        iconBoxStyle = { background: "rgba(248,113,113,0.1)", borderColor: "rgba(248,113,113,0.3)" };
+    }
+
     return (
         <div className={`${s.row} ${meta.row}`}>
             {/* identity */}
             <div className={s.ident}>
-                <span className={s.sparkBox}><I.Spark /></span>
+                <span className={`${s.sparkBox} ${pulse ? s.sparkPulse : ""}`} style={iconBoxStyle}>{statusIcon}</span>
                 <span className={s.allBadge}>ALL {util ? util.schools_count : 0}</span>
                 <span className={s.flag}>{flagEmoji(node.country_code)}</span>
                 <div className={s.identMain}>
@@ -187,7 +226,9 @@ export function NodeRow({ node, util, onInstall, onDrain, onDelete, onEdit, onRe
                         </button>
                     )}
                     <button className={s.actBtn} onClick={onViewSchools} title="Школы на ноде"><I.Eye /></button>
-                    <button className={s.actBtn} onClick={onRestart} title="Перезагрузить стек ноды (контейнеры)"><I.Restart /></button>
+                    {online && (
+                        <button className={s.actBtn} onClick={onRestart} title="Перезагрузить стек ноды (контейнеры)"><I.Restart /></button>
+                    )}
                     <button
                         className={s.actBtn}
                         onClick={onToggleEnabled}
@@ -407,17 +448,8 @@ export function EditNodeModal({ node, onClose, onSaved }: {
     const [hostname, setHostname] = useState(node.hostname || "");
     const [port, setPort] = useState(node.ssh_port || 2222);
     const [maxSchools, setMaxSchools] = useState(node.max_schools || 5);
-    const [status, setStatus] = useState(node.status || "active");
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
-
-    const STATUSES = [
-        { v: "active", l: "Онлайн" },
-        { v: "draining", l: "Вывод из ротации" },
-        { v: "offline", l: "Оффлайн" },
-        { v: "pending_bootstrap", l: "Не установлена" },
-        { v: "decommissioned", l: "Выведена" },
-    ];
 
     async function save() {
         setBusy(true); setErr(null);
@@ -430,7 +462,6 @@ export function EditNodeModal({ node, onClose, onSaved }: {
                     ssh_port: port,
                     country_code: country || null,
                     max_schools: maxSchools,
-                    status,
                 }),
             });
             onSaved();
@@ -482,21 +513,14 @@ export function EditNodeModal({ node, onClose, onSaved }: {
                     </div>
                 </div>
 
-                <div className={s.fieldRow}>
-                    <div>
-                        <label className={s.label}>Макс. школ</label>
-                        <input className={s.input} type="number" min={1} value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value) || 5)} />
-                    </div>
-                    <div>
-                        <label className={s.label}>Статус</label>
-                        <select className={s.select} value={status} onChange={(e) => setStatus(e.target.value)}>
-                            {STATUSES.map((o) => <option key={o.v} value={o.v}>{o.l}</option>)}
-                        </select>
-                    </div>
+                <div className={s.field}>
+                    <label className={s.label}>Макс. школ</label>
+                    <input className={s.input} type="number" min={1} value={maxSchools} onChange={(e) => setMaxSchools(Number(e.target.value) || 5)} />
                 </div>
 
                 <p className={s.hint} style={{ marginTop: 4 }}>
-                    CPU, RAM и диск задаёт сам воркер ноды при подключении — здесь не редактируются.
+                    Статус ноды (онлайн/оффлайн) ставит ядро автоматически по связи с воркером — вручную не задаётся.
+                    CPU, RAM и диск воркер тоже определяет сам при подключении.
                 </p>
 
                 <div className={s.wizFoot}>
