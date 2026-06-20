@@ -46,11 +46,13 @@ export default function OrgConsole() {
   const [domainsFor, setDomainsFor] = useState<any>(null);
   const [domains, setDomains] = useState<any[] | null>(null);
   const [newDomain, setNewDomain] = useState("");
+  const [dnsInfo, setDnsInfo] = useState<any>(null);
 
   // infrastructure
   const [orgNodes, setOrgNodes] = useState<any[] | null>(null);
   const [orgNodeUtil, setOrgNodeUtil] = useState<Record<number, any>>({});
   const [availUpdates, setAvailUpdates] = useState<any>(null);
+  const [schoolDns, setSchoolDns] = useState<Record<number, any>>({});
 
   async function load() {
     try {
@@ -87,6 +89,14 @@ export default function OrgConsole() {
     } catch { /* non-fatal */ }
     try {
       setAvailUpdates(await papi("/api/schools/releases/available"));
+    } catch { /* non-fatal */ }
+    // DNS-инфо по каждой школе (реальный IP ноды + базовый домен) для таблицы «Где крутятся школы».
+    try {
+      const list = schools || (await papi("/api/schools")).schools || [];
+      const entries = await Promise.all(list.map(async (s: any) => {
+        try { return [s.id, await papi(`/api/schools/${s.id}/dns`)] as const; } catch { return [s.id, null] as const; }
+      }));
+      setSchoolDns(Object.fromEntries(entries.filter(([, v]) => v)));
     } catch { /* non-fatal */ }
   }
 
@@ -158,7 +168,11 @@ export default function OrgConsole() {
   async function removeAdmin(uid: number, login: string) { if (!adminsFor || !confirm(`Удалить администратора «${login}»?`)) return; setAdminBusy(true); try { await papi(`/api/schools/${adminsFor.id}/admins/${uid}`, { method: "DELETE" }); reloadAdmins(); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
 
   // --- domains ---
-  async function openDomains(s: any) { setDomainsFor(s); setDomains(null); setNewDomain(""); try { setDomains((await papi(`/api/schools/${s.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } }
+  async function openDomains(s: any) {
+    setDomainsFor(s); setDomains(null); setNewDomain(""); setDnsInfo(null);
+    try { setDomains((await papi(`/api/schools/${s.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); }
+    try { setDnsInfo(await papi(`/api/schools/${s.id}/dns`)); } catch { /* non-fatal */ }
+  }
   async function addDomain(e: React.FormEvent) { e.preventDefault(); if (!domainsFor) return; setAdminBusy(true); try { await papi(`/api/schools/${domainsFor.id}/domains`, { method: "POST", body: JSON.stringify({ domain: newDomain }) }); setNewDomain(""); setDomains((await papi(`/api/schools/${domainsFor.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
   async function delDomain(did: number) { if (!domainsFor) return; setAdminBusy(true); try { await papi(`/api/schools/${domainsFor.id}/domains/${did}`, { method: "DELETE" }); setDomains((await papi(`/api/schools/${domainsFor.id}/domains`)).domains || []); } catch (e: any) { setErr(e.message); } finally { setAdminBusy(false); } }
 
@@ -379,14 +393,22 @@ export default function OrgConsole() {
           </div>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Где крутятся ваши школы</h2>
-            <p className={c.muted}>Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам.</p>
-            {orgNodes && orgNodes.length > 0 && (
+            <p className={c.muted}>Каждая школа — изолированный Docker-стек (контейнер + БД). Система автоматически распределяет школы по наиболее свободным нодам. Колонка «Нода (DNS-цель)» — адрес, на который указывать свой домен (детали — кнопка «Домены» у школы).</p>
+            {schools && schools.length > 0 && (
               <div className={styles.tableContainer} style={{ marginTop: 10 }}>
                 <table className={styles.table}>
-                  <thead><tr><th>Школа</th><th>Домен</th><th>Статус</th><th>Нода (IP)</th></tr></thead>
-                  <tbody>{schools?.map((s) => (
-                    <tr key={s.id}><td><b>{s.name}</b></td><td><code className={styles.code}>{s.slug}.avari-land.ru</code></td><td><span className={statusBadge(s.status)}>{s.status}</span></td><td><code className={styles.code}>{orgNodes[0]?.hostname || "—"}</code></td></tr>
-                  ))}</tbody>
+                  <thead><tr><th>Школа</th><th>Адрес</th><th>Статус</th><th>Нода (DNS-цель)</th></tr></thead>
+                  <tbody>{schools?.map((s) => {
+                    const dns = schoolDns[s.id];
+                    return (
+                      <tr key={s.id}>
+                        <td><b>{s.name}</b></td>
+                        <td><code className={styles.code}>{dns?.default_subdomain || `${s.slug}.…`}</code></td>
+                        <td><span className={statusBadge(s.status)}>{s.status}</span></td>
+                        <td>{dns?.dns_target ? <><code className={styles.code}>{dns.dns_target}</code> <span className={c.muted} style={{ fontSize: "0.72rem" }}>({dns.record_type})</span></> : "—"}</td>
+                      </tr>
+                    );
+                  })}</tbody>
                 </table>
               </div>
             )}
@@ -423,19 +445,83 @@ export default function OrgConsole() {
 
       {/* DOMAINS MODAL */}
       {domainsFor && (
-        <Modal title={`Домены школы «${domainsFor.name}»`} onClose={() => setDomainsFor(null)}>
-          <p className={c.muted}>Кастомные домены школы. После привязки направьте DNS этого домена на сервер — TLS выпустится автоматически.</p>
+        <Modal title={`Домены школы «${domainsFor.name}»`} onClose={() => setDomainsFor(null)} width={720}>
+          {/* Дефолтный поддомен платформы — работает сразу, ничего настраивать не надо */}
+          <div className={styles.card} style={{ margin: "0 0 14px" }}>
+            <h3 className={styles.cardTitle} style={{ marginBottom: 6 }}>Адрес школы на платформе</h3>
+            {dnsInfo ? (
+              <p className={c.muted} style={{ margin: 0 }}>
+                Работает сразу, без настройки DNS:{" "}
+                <CopyChip text={`https://${dnsInfo.default_subdomain}`} />
+              </p>
+            ) : <p className={c.muted} style={{ margin: 0 }}>Загрузка…</p>}
+          </div>
+
+          {/* Куда указывать DNS своего домена */}
+          {dnsInfo && (
+            <div className={styles.card} style={{ margin: "0 0 14px", borderColor: "var(--accent-primary)" }}>
+              <h3 className={styles.cardTitle} style={{ marginBottom: 8 }}>Подключить свой домен — DNS-записи</h3>
+              <p className={c.muted} style={{ marginTop: 0 }}>
+                В панели вашего регистратора домена создайте запись на сервер школы
+                {dnsInfo.node_name ? <> (нода <b style={{ color: "var(--text-primary)" }}>{dnsInfo.node_name}</b>)</> : null}.
+                TLS-сертификат выпустится автоматически после того, как DNS «доедет».
+              </p>
+              <div className={styles.tableContainer}>
+                <table className={styles.table}>
+                  <thead><tr><th>Тип</th><th>Имя (host)</th><th>Значение</th><th>Назначение</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><code className={styles.code}>{dnsInfo.record_type}</code></td>
+                      <td><code className={styles.code}>@</code></td>
+                      <td><CopyChip text={dnsInfo.dns_target} /></td>
+                      <td className={c.muted}>корень домена → школа</td>
+                    </tr>
+                    <tr>
+                      <td><code className={styles.code}>{dnsInfo.record_type}</code></td>
+                      <td><code className={styles.code}>*</code></td>
+                      <td><CopyChip text={dnsInfo.dns_target} /></td>
+                      <td className={c.muted}>wildcard: любой поддомен</td>
+                    </tr>
+                    <tr>
+                      <td><code className={styles.code}>CNAME</code></td>
+                      <td><code className={styles.code}>www</code></td>
+                      <td><CopyChip text={dnsInfo.dns_target} /></td>
+                      <td className={c.muted}>www → школа</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className={c.muted} style={{ fontSize: "0.8rem", marginBottom: 0 }}>
+                {dnsInfo.record_type === "A"
+                  ? <>Сервер отдаёт прямой IP — используйте записи типа <b>A</b>. Для лендинга по домену достаточно записи на корень <code className={styles.code}>@</code>.</>
+                  : <>Адрес сервера — доменное имя, поэтому записи типа <b>CNAME</b> (для корня <code className={styles.code}>@</code> у некоторых регистраторов нужен ALIAS/ANAME).</>}
+              </p>
+            </div>
+          )}
+
+          {/* Привязанные кастомные домены */}
+          <h3 className={styles.cardTitle} style={{ marginBottom: 6 }}>Привязанные домены</h3>
           <div className={styles.tableContainer}>
             <table className={styles.table}>
               <thead><tr><th>Домен</th><th>Тип</th><th>Статус</th><th></th></tr></thead>
-              <tbody>{domains?.map((d) => (<tr key={d.id}><td>{d.domain}</td><td>{d.type}</td><td><span className={statusBadge(d.status)}>{d.status}</span></td><td>{d.type === "custom" && <button className={`${styles.actionBtn} ${styles.danger}`} disabled={adminBusy} onClick={() => delDomain(d.id)}>Отвязать</button>}</td></tr>))}</tbody>
+              <tbody>{domains?.map((d) => (<tr key={d.id}><td>{d.domain}</td><td>{d.type === "custom" ? "свой" : "поддомен"}</td><td><span className={statusBadge(d.status)}>{d.status === "pending_dns" ? "ждёт DNS" : d.status === "active" ? "активен" : d.status}</span></td><td>{d.type === "custom" && <button className={`${styles.actionBtn} ${styles.danger}`} disabled={adminBusy} onClick={() => delDomain(d.id)}>Отвязать</button>}</td></tr>))}</tbody>
             </table>
-            {domains && domains.length === 0 && <p className={styles.emptyState}>Доменов пока нет.</p>}
+            {domains && domains.length === 0 && <p className={styles.emptyState}>Своих доменов пока нет — школа доступна по адресу платформы выше.</p>}
           </div>
           <form onSubmit={addDomain} className={styles.form} style={{ marginTop: 14 }}>
-            <div className={styles.formGroup}><label className={styles.label}>Новый домен</label><input className={styles.input} value={newDomain} onChange={(e) => setNewDomain(e.target.value)} placeholder="school.example.ru" required /></div>
+            <div className={styles.formGroup}><label className={styles.label}>Привязать свой домен</label><input className={styles.input} value={newDomain} onChange={(e) => setNewDomain(e.target.value)} placeholder="school.example.ru" required /></div>
             <div className={styles.formActions}><button className={styles.submitBtn} disabled={adminBusy}>Привязать домен</button></div>
           </form>
+
+          <details style={{ marginTop: 14 }}>
+            <summary style={{ cursor: "pointer", color: "var(--text-secondary)", fontWeight: 600 }}>FAQ — домены и поддомены</summary>
+            <div className={c.muted} style={{ fontSize: "0.85rem", marginTop: 8, lineHeight: 1.6 }}>
+              <p style={{ margin: "0 0 6px" }}><b>Поддомен платформы</b> ({dnsInfo?.default_subdomain || "<школа>." + (dnsInfo?.base_domain || "домен")}) работает сразу — настройка не нужна.</p>
+              <p style={{ margin: "0 0 6px" }}><b>Свой домен:</b> добавьте его выше, создайте DNS-запись по таблице, подождите 5–60 минут (распространение DNS). Статус сменится <span className={statusBadge("pending_dns")}>ждёт DNS</span> → <span className={statusBadge("active")}>активен</span>, TLS выпустится сам.</p>
+              <p style={{ margin: "0 0 6px" }}><b>Wildcard</b> (<code className={styles.code}>*</code>) позволяет ловить любые поддомены вашего домена на школу — удобно для лендингов и разделов.</p>
+              <p style={{ margin: 0 }}><b>Лендинг по домену:</b> направьте корень домена (<code className={styles.code}>@</code>) на школу — главная страница откроется по вашему домену.</p>
+            </div>
+          </details>
         </Modal>
       )}
     </ConsoleShell>
@@ -464,5 +550,23 @@ function Kpi({ v, l, online }: { v: React.ReactNode; l: string; online?: boolean
       <div className={c.kpiVal}>{online !== undefined ? <span className={online ? c.dotOnline : c.dotOffline}>{v}</span> : v}</div>
       <div className={c.kpiLabel}>{l}</div>
     </div>
+  );
+}
+
+// Моноширинное значение с кнопкой копирования — для DNS-целей, адресов и т.п.
+function CopyChip({ text }: { text: string }) {
+  const [ok, setOk] = useState(false);
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <code className={styles.code}>{text}</code>
+      <button
+        type="button"
+        className={styles.actionBtn}
+        style={{ padding: "1px 7px", fontSize: "0.72rem" }}
+        onClick={async () => { try { await navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1500); } catch { /* blocked */ } }}
+      >
+        {ok ? "✓" : "копировать"}
+      </button>
+    </span>
   );
 }

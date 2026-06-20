@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal, get_db
 from app.core.deps import require_billing_ok, require_org_admin
 from app.core.locks import keyed_lock, org_create_key, school_key
-from app.models import OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
+from app.models import Node, NodeAssignment, OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret
 from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
 from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
 from app.services.stats import rollup, school_stat, schools_with_metrics
@@ -453,6 +453,56 @@ async def list_domains(school_id: int, admin: OrgAdmin = Depends(require_org_adm
         await db.execute(select(SchoolDomain).where(SchoolDomain.school_id == school.id).order_by(SchoolDomain.id))
     ).scalars().all()
     return {"domains": [_domain_dict(d) for d in rows]}
+
+
+def _looks_like_ipv4(value: str | None) -> bool:
+    if not value:
+        return False
+    parts = value.split(".")
+    return len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts)
+
+
+@router.get("/{school_id}/dns")
+async def school_dns_info(
+    school_id: int, admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    """DNS-инфо школы для подключения доменов: реальный адрес ноды (для A/CNAME-записи),
+    дефолтный поддомен платформы и список кастомных доменов. Используется модалкой
+    «Домены» в орг-консоли, чтобы показать оператору точные DNS-инструкции."""
+    school = await _get_school(school_id, admin, db)
+    settings = get_settings()
+    base = settings.PUBLIC_BASE_DOMAIN
+
+    # На какой ноде крутится школа — её hostname и есть цель DNS-записи. Если школа на
+    # сервере платформы (нет назначения ноды) — цель = сам control-plane домен.
+    node = (
+        await db.execute(
+            select(Node)
+            .join(NodeAssignment, NodeAssignment.node_id == Node.id)
+            .where(NodeAssignment.school_id == school.id)
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    target = node.hostname if node else base
+    record_type = "A" if _looks_like_ipv4(target) else "CNAME"
+
+    domains = (
+        await db.execute(
+            select(SchoolDomain)
+            .where(SchoolDomain.school_id == school.id, SchoolDomain.status != "removed")
+            .order_by(SchoolDomain.id)
+        )
+    ).scalars().all()
+
+    return {
+        "slug": school.slug,
+        "base_domain": base,
+        "default_subdomain": f"{school.slug}.{base}",
+        "node_name": node.name if node else None,
+        "dns_target": target,           # IP или FQDN ноды — куда указывать домен
+        "record_type": record_type,     # "A" если target — IP, иначе "CNAME"
+        "domains": [_domain_dict(d) for d in domains],
+    }
 
 
 @router.post("/{school_id}/domains", status_code=status.HTTP_201_CREATED)

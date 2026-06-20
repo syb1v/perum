@@ -13,6 +13,11 @@
 - **Скачивание скрипта вместо docker-compose + авто-определение железа.** В мастере «Создать ноду» кнопка «Копировать docker-compose.yml» заменена на «Скачать скрипт установки» (bootstrap `.sh`, который ставит Docker, поднимает воркера `ROLE=org_agent` и выполняет enroll-handshake). Ручные поля CPU/RAM/диск убраны — воркер снимает их сам (`psutil`) и присылает ядру при подключении. `enroll` теперь привязывает токен к ноде: ставит `status=active`, `last_heartbeat`, `agent_version` и реальные `cpu_cores/ram_gb/disk_gb`. Pool-ноды (без организации) больше не получают 404 при enroll.
 - **Bootstrap-эндпоинт принимает GET и POST** + отдаёт `docker_compose` и `enrollment_token` (генерация `docker-compose.yml` с вшитыми ENROLLMENT_TOKEN/SECRET_KEY/DB_PASSWORD).
 
+### DNS/домены — экосистема подключения доменов школ
+- **DNS-инфо школы.** Новый эндпоинт `GET /api/schools/{id}/dns` отдаёт реальный адрес ноды, где крутится школа (цель DNS-записи), дефолтный поддомен платформы (`<slug>.<base>`) и тип записи (`A` если адрес — IP, иначе `CNAME`).
+- **Модалка «Домены» переписана.** Карточка адреса школы (работает сразу), таблица DNS-записей с кнопками копирования (`@`/`*` wildcard/`www`), привязка своего домена, FAQ-аккордеон (поддомен/свой домен/wildcard/лендинг по домену). Раньше был только список без инструкций.
+- **Таблица «Где крутятся школы» — реальные данные.** Адрес и DNS-цель ноды берутся из бэкенда per-school (`/dns`), а не хардкод `avari-land.ru`/`orgNodes[0]`.
+
 ### CI/CD — авто-деплой control plane + усиление OTA-гейтинга
 - **Авто-деплой ядра и веба на прод.** В `release.yml` добавлен job `deploy`: на push в `main`, меняющий `perum-core/**` или `perum-web/**`, по SSH делает `git pull` + `docker compose pull/up -d` control plane (ядро при старте само мигрирует БД). Гейтится переменной `DEPLOY_ENABLED=true` — без неё пропускается. Секреты: `DEPLOY_SSH_HOST/USER/KEY/PORT`, переменная `DEPLOY_PATH`.
 - **Фикс авто-обновления прода.** Убран хардкод `pull_policy: never` для `perum_core`/`perum_web` в `docker-compose.prod.yml` — он оверрайдил `*_PULL_POLICY=always` из `.env.prod` и физически не давал прод-стеку подтянуть свежий образ из GHCR.
