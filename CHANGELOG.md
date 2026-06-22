@@ -6,6 +6,11 @@
 
 ## [Unreleased] — 2026-06-22
 
+### Нода: агент-порт опубликован + тест конфигурации deploy
+
+- **`org_agent` публикует AGENT_PORT 3001 на хосте.** `deploy/org-node/docker-compose.yml` — добавлен `ports: ["3001:3000"]` для сервиса `org_agent`. Без этого ядро не могло достучаться до `http://{hostname}:3001/api/agent/whoami` → `node.status = "offline"`. Uvicorn внутри контейнера слушает `:3000`, порт 3001 на хосте — это то, что использует `RemoteNodeClient` (config `AGENT_PORT`).
+- **`test_deploy_config.py`** — новый тест: проверяет, что `org_agent` публикует порт 3001 и `caddy` публикует 80/443. Регрессия в compose-файле теперь ломает `pytest`.
+
 ### Изоляция тенантов: правки по итогам аудита
 
 - **Node Caddy re-sync при рестарте воркора.** `_resync_node_caddy_routes()` — при старте `org_agent` восстанавливает лендинг-маршрут, маршруты активных и maintenance-маршруты замороженных школ из локальной БД. Домен орг сохраняется в локальный shadow-record при первом `provision_landing`.

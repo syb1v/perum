@@ -5,6 +5,10 @@
 > в [CHANGELOG.md](../CHANGELOG.md). Правило: каждый новый коммит добавляет
 > строку сюда — `№(N) · ГГГГ-ММ-ДД ЧЧ:ММ · хеш · описание`.
 
+## Обновление 2026-06-22 — патч: нода офлайн (AGENT_PORT не был опубликован)
+
+`deploy/org-node/docker-compose.yml` → добавлен `ports: ["3001:3000"]` для `org_agent`. Без этого `RemoteNodeClient.ping()` падал с connection refused → `node.status = "offline"`. Добавлен `test_deploy_config.py` — тест на обязательные порты в compose-файле.
+
 ## Обновление 2026-06-22 — патч изоляции тенантов
 
 Версии: `perum-core` → **0.4.1**. Подробности — в [CHANGELOG.md](../CHANGELOG.md).
