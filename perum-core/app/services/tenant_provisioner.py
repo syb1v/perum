@@ -142,7 +142,7 @@ async def _bring_up_stack(
 
         # --- Caddy route (PROVISIONING step 10) ---
         host = f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
-        await caddy.add_route(spec.slug, host, f"{spec.app_container}:3000")
+        await caddy.add_proxy_route(spec.slug, host, f"{spec.app_container}:3000")
         logger.info("org %s: route %s -> %s:3000 added", spec.slug, host, spec.app_container)
         return BringUpResult(
             host=host, admin_login=admin_login, admin_temp_password=admin_temp_password

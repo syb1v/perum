@@ -77,6 +77,11 @@ class SchoolProvisionOutcome:
     admin_temp_password: str | None = None
 
 
+async def _next_redis_db_index(db: AsyncSession) -> int:
+    used = set((await db.execute(select(SchoolSecret.redis_db_index))).scalars().all())
+    return next((i for i in range(REDIS_DB_COUNT) if i not in used), 0)
+
+
 async def _get_or_create_secret(school: School, db: AsyncSession) -> SchoolSecret:
     existing = await db.get(SchoolSecret, school.id)
     if existing is not None:
@@ -92,7 +97,7 @@ async def _get_or_create_secret(school: School, db: AsyncSession) -> SchoolSecre
         secret_key=secrets_mod.token_urlsafe(36),
         telemetry_token=secrets_mod.token_urlsafe(24),
         internal_rpc_token=secrets_mod.token_urlsafe(24),
-        redis_db_index=school.id % REDIS_DB_COUNT,
+        redis_db_index=await _next_redis_db_index(db),
     )
     db.add(secret)
     await db.flush()
@@ -171,7 +176,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
 
         # Реальный домен школы (полный поддомен орг) — если задан ядром; иначе fallback.
         host = spec.host or f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
-        await caddy.add_route(label_slug, host, f"{spec.app_container}:3000")
+        await caddy.add_proxy_route(label_slug, host, f"{spec.app_container}:3000")
         logger.info("school %s: provisioned, route %s -> %s:3000", spec.slug, host, spec.app_container)
         return SchoolProvisionOutcome(school=None, host=host, admin_login=admin_login, admin_temp_password=admin_pw)  # type: ignore[arg-type]
     except Exception as exc:
@@ -383,6 +388,15 @@ async def deprovision_school(school: School, db: AsyncSession, *, purge: bool = 
     logger.info("school %s: purged (бэкап: %s)", school.slug, backup_path)
 
 
+async def _school_active_host(school: School, db: AsyncSession, settings: Settings) -> str:
+    domain = (await db.execute(
+        select(SchoolDomain)
+        .where(SchoolDomain.school_id == school.id, SchoolDomain.status == "active")
+        .limit(1)
+    )).scalar_one_or_none()
+    return domain.domain if domain else f"{school.slug}.{settings.PUBLIC_BASE_DOMAIN}"
+
+
 async def suspend_school(school: School, db: AsyncSession, settings: Settings | None = None, *, reason: str = "manual") -> None:
     """Заморозить школу: остановить контейнеры (том сохранён), маршрут → 503
     «приостановлено». Идемпотентно. `reason`: 'manual' (org_admin вручную) или
@@ -391,7 +405,7 @@ async def suspend_school(school: School, db: AsyncSession, settings: Settings | 
     docker = get_docker_client()
     caddy = get_caddy_admin()
     label_slug = school_label_slug(school.slug)
-    host = f"{school.slug}.{settings.PUBLIC_BASE_DOMAIN}"
+    host = await _school_active_host(school, db, settings)
     try:
         await docker.stop_containers(label_slug)
     except Exception as exc:  # noqa: BLE001
@@ -411,20 +425,19 @@ async def suspend_school(school: School, db: AsyncSession, settings: Settings | 
 
 
 async def unsuspend_school(school: School, db: AsyncSession, settings: Settings | None = None) -> None:
-    """Разморозить школу: поднять контейнеры, дождаться здоровья app, вернуть
-    нормальный маршрут (/api → стек школы, UI → веб)."""
+    """Разморозить школу: поднять контейнеры, дождаться здоровья app, вернуть маршрут."""
     settings = settings or get_settings()
     docker = get_docker_client()
     caddy = get_caddy_admin()
     label_slug = school_label_slug(school.slug)
-    host = f"{school.slug}.{settings.PUBLIC_BASE_DOMAIN}"
+    host = await _school_active_host(school, db, settings)
     app_container = school_container_name(school.slug, "app")
     await docker.start_containers(label_slug)
     try:
         await docker.wait_for_healthy(app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
     except Exception as exc:  # noqa: BLE001
         logger.warning("school %s: unsuspend health wait failed (%s) — маршрут всё равно ставим", school.slug, exc)
-    await caddy.add_route(label_slug, host, f"{app_container}:3000")
+    await caddy.add_proxy_route(label_slug, host, f"{app_container}:3000")
     school.status = "active"
     school.suspended_at = None
     school.suspended_by = None

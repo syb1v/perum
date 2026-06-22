@@ -58,6 +58,7 @@ async def enroll_on_boot() -> None:
             existing = await get_agent_state(db)
             if existing is not None:
                 logger.info("agent: уже подключён к орг '%s'", existing.org_slug)
+                await _resync_node_caddy_routes()
                 return
             if not settings.ENROLLMENT_TOKEN:
                 logger.warning("agent: ENROLLMENT_TOKEN не задан — пропускаю enroll")
@@ -95,6 +96,7 @@ async def enroll_on_boot() -> None:
             ))
             await db.commit()
             logger.info("agent: подключён к орг '%s' (релиз %s)", data["org_slug"], rel.get("version_tag"))
+            await _resync_node_caddy_routes()
     except Exception as exc:
         logger.warning("agent: enroll-on-boot отложен: %s", exc)
 
@@ -375,10 +377,80 @@ async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingRespo
         if code != 0:
             return AgentLandingResponse(success=False, domain=req.domain, message=f"write index failed: {out[-300:]}")
         await caddy.add_proxy_route(label, req.domain, f"{name}:80")
+        # Сохраняем домен орг в локальном shadow-record — нужен для Caddy re-sync
+        # при рестарте ноды (иначе после docker restart caddy маршрут лендинга теряется).
+        from sqlalchemy import select as _sel
+        from app.models import Organization as _Org
+        local_org = await db.scalar(_sel(_Org).where(_Org.slug == slug))
+        if local_org and not local_org.domain:
+            local_org.domain = req.domain
+            await db.commit()
         return AgentLandingResponse(success=True, domain=req.domain, message="landing provisioned")
     except Exception as exc:  # noqa: BLE001
         logger.error("provision_landing_on_node failed: %s", exc)
         return AgentLandingResponse(success=False, domain=req.domain, message=str(exc))
+
+
+async def _resync_node_caddy_routes() -> None:
+    """Восстановить все Caddy-маршруты ноды после рестарта Caddy-контейнера.
+
+    Node Caddy хранит runtime-конфиг в памяти — после рестарта Caddy все маршруты,
+    добавленные через admin API, исчезают. Эта функция воссоздаёт их из локальной БД:
+    лендинг орг, активные школы и maintenance-маршруты замороженных школ.
+    Ошибки не фатальны — школы/лендинг просто временно недоступны до следующего
+    ручного провижинига или рестарта воркора.
+    """
+    from sqlalchemy import select as _sel
+    from app.core.db import SessionLocal
+    from app.models import AgentState as _AS, Organization as _Org, School as _Sch, SchoolDomain as _SD
+    from app.services.caddy_admin import get_caddy_admin
+    from app.services.stack_spec import (
+        landing_container_name, landing_label_slug,
+        school_container_name, school_label_slug,
+    )
+
+    caddy = get_caddy_admin()
+    try:
+        async with SessionLocal() as db:
+            state = await db.scalar(_sel(_AS).limit(1))
+            if not state:
+                return
+
+            local_org = await db.scalar(_sel(_Org).where(_Org.slug == state.org_slug))
+            if local_org and local_org.domain:
+                lbl = landing_label_slug(state.org_slug)
+                try:
+                    await caddy.add_proxy_route(lbl, local_org.domain, f"{landing_container_name(state.org_slug)}:80")
+                    logger.info("node caddy sync: landing %s", local_org.domain)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("node caddy sync: landing failed: %s", exc)
+
+            active = (await db.execute(
+                _sel(_SD, _Sch).join(_Sch, _SD.school_id == _Sch.id)
+                .where(_Sch.status == "active", _SD.status == "active")
+            )).all()
+            for domain, school in active:
+                try:
+                    await caddy.add_proxy_route(
+                        school_label_slug(school.slug), domain.domain,
+                        f"{school_container_name(school.slug, 'app')}:3000",
+                    )
+                    logger.info("node caddy sync: school %s", domain.domain)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("node caddy sync: school %s failed: %s", domain.domain, exc)
+
+            suspended = (await db.execute(
+                _sel(_SD, _Sch).join(_Sch, _SD.school_id == _Sch.id)
+                .where(_Sch.status == "suspended", _SD.status == "active")
+            )).all()
+            for domain, school in suspended:
+                try:
+                    await caddy.add_maintenance_route(school_label_slug(school.slug), domain.domain)
+                    logger.info("node caddy sync: suspended school %s -> 503", domain.domain)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("node caddy sync: suspended school %s failed: %s", domain.domain, exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("node caddy route sync skipped: %s", exc)
 
 
 async def deprovision_landing_on_node(db: AsyncSession, org_slug: str, domain: str | None = None) -> "AgentLandingResponse":

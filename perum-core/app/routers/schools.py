@@ -650,7 +650,7 @@ async def add_domain(
     await db.flush()
     upstream = f"{school_container_name(school.slug, 'app')}:3000"
     try:
-        await get_caddy_admin().add_route(f"dom-{dom.id}", host, upstream)
+        await get_caddy_admin().add_proxy_route(f"dom-{dom.id}", host, upstream)
     except Exception as exc:  # noqa: BLE001
         await db.rollback()
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось добавить маршрут для {host}: {exc}")

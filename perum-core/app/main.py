@@ -29,10 +29,16 @@ async def _sync_caddy_routes() -> None:
     caddy = get_caddy_admin()
     try:
         async with SessionLocal() as db:
+            # Орг на нодах (node_id IS NOT NULL) не имеют локальных контейнеров
+            # на ядре — их лендинги живут на нодах. Пропускаем их при синке.
             org_rows = (await db.execute(
                 select(OrganizationDomain, Organization)
                 .join(Organization, OrganizationDomain.org_id == Organization.id)
-                .where(Organization.status == "active", OrganizationDomain.status == "active")
+                .where(
+                    Organization.status == "active",
+                    OrganizationDomain.status == "active",
+                    Organization.node_id.is_(None),
+                )
             )).all()
             # v2: маршруты ШКОЛ (silo=школа) — раньше не восстанавливались после
             # рестарта/reload Caddy, и школа теряла маршрутизацию (AUDIT раздел 4).
@@ -65,24 +71,25 @@ async def _sync_caddy_routes() -> None:
 
     for domain, org in org_rows:
         try:
-            await caddy.add_route(org.slug, domain.domain, f"org_{org.slug}_app:3000")
+            await caddy.add_proxy_route(org.slug, domain.domain, f"org_{org.slug}_app:3000")
             logger.info("route sync (org): %s -> org_%s_app:3000", domain.domain, org.slug)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for %s: %s", domain.domain, exc)
 
     for domain, school in school_rows:
         try:
-            # Школа на ноде → апстрим нода:80 (там Caddy ноды раздаёт по Host на
-            # контейнер школы). Локальная школа → её контейнер на хосте платформы.
-            if school.id in node_map:
-                upstream = f"{node_map[school.id]}:80"
-            else:
-                upstream = f"{school_container_name(school.slug, 'app')}:3000"
-            # Уникальный route-id на КАЖДЫЙ домен: основной поддомен — sch-<slug>
-            # (как у провижинера), кастомные домены — dom-<id> (как у add_domain).
-            # Иначе несколько доменов одной школы перетирали бы друг друга.
             rid = school_label_slug(school.slug) if domain.domain_type == "subdomain" else f"dom-{domain.id}"
-            await caddy.add_route(rid, domain.domain, upstream)
+            if school.id in node_map:
+                # Школа на ноде: DNS школы указывает на ноду напрямую, платформенный
+                # Caddy не задействован для основного трафика. Маршрут здесь нужен
+                # только если кастомный домен школы указывает на ядро (редко).
+                # Используем add_proxy_route — нода сама обслуживает весь трафик.
+                upstream = f"{node_map[school.id]}:80"
+                await caddy.add_proxy_route(rid, domain.domain, upstream)
+            else:
+                # Локальная школа на ядре: tenant-образ обслуживает и API и фронтенд.
+                upstream = f"{school_container_name(school.slug, 'app')}:3000"
+                await caddy.add_proxy_route(rid, domain.domain, upstream)
             logger.info("route sync (school): %s -> %s", domain.domain, upstream)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for school %s: %s", domain.domain, exc)
