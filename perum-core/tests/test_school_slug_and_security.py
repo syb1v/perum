@@ -13,28 +13,28 @@ from app.schemas.organization import RESERVED_SLUGS
 from app.services.caddy_admin import CaddyAdmin, CaddyAdminError
 
 
-# --- slug школы валидируется так же строго, как slug организации ---
+# --- поддомен школы валидируется так же строго, как slug организации ---
 
-@pytest.mark.parametrize("slug", ["acme", "school45", "kuban-edu-1", "lyceum-7"])
-def test_school_valid_slugs_accepted(slug: str):
-    assert SchoolCreate(slug=slug, name="Школа").slug == slug
+@pytest.mark.parametrize("subdomain", ["acme", "school45", "kuban-edu-1", "lyceum-7"])
+def test_school_valid_slugs_accepted(subdomain: str):
+    assert SchoolCreate(subdomain=subdomain, name="Школа").subdomain == subdomain
 
 
 def test_school_slug_lowercased_and_trimmed():
-    assert SchoolCreate(slug="  Lyceum-7  ", name="Школа").slug == "lyceum-7"
+    assert SchoolCreate(subdomain="  Lyceum-7  ", name="Школа").subdomain == "lyceum-7"
 
 
 @pytest.mark.parametrize("slug", sorted(RESERVED_SLUGS))
 def test_school_reserved_slugs_rejected(slug: str):
     # 'admin'/'api'/... перехватили бы платформенный хост через Caddy-маршрут.
     with pytest.raises(ValidationError):
-        SchoolCreate(slug=slug, name="Школа")
+        SchoolCreate(subdomain=slug, name="Школа")
 
 
 @pytest.mark.parametrize("slug", ["ab", "1school", "school_1", "school.1", "-school", "ШКОЛА", "a" * 41])
 def test_school_malformed_slugs_rejected(slug: str):
     with pytest.raises(ValidationError):
-        SchoolCreate(slug=slug, name="Школа")
+        SchoolCreate(subdomain=slug, name="Школа")
 
 
 # --- Caddy add_route не отдаёт платформенные хосты на стек школы ---

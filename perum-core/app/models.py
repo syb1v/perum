@@ -127,6 +127,7 @@ class Organization(Base):
     nodes: Mapped[list["Node"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
+        foreign_keys="[Node.org_id]",
     )
 
 
@@ -498,7 +499,9 @@ class Node(Base):
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    organization: Mapped[Organization | None] = relationship(back_populates="nodes")
+    organization: Mapped[Organization | None] = relationship(
+        back_populates="nodes", foreign_keys="[Node.org_id]"
+    )
     assignments: Mapped[list["NodeAssignment"]] = relationship(
         back_populates="node", cascade="all, delete-orphan"
     )

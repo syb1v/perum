@@ -5,6 +5,18 @@
 > в [CHANGELOG.md](../CHANGELOG.md). Правило: каждый новый коммит добавляет
 > строку сюда — `№(N) · ГГГГ-ММ-ДД ЧЧ:ММ · хеш · описание`.
 
+## Обновление 2026-06-22 — патч изоляции тенантов
+
+Версии: `perum-core` → **0.4.1**. Подробности — в [CHANGELOG.md](../CHANGELOG.md).
+
+- Node Caddy re-sync при рестарте воркора (`_resync_node_caddy_routes`)
+- Redis DB index: min-unused вместо `id % 16` (`_next_redis_db_index`)
+- `suspend/unsuspend_school` берут реальный хост из `SchoolDomain`
+- `add_proxy_route` везде для tenant-образов (фронт+API из одного порта)
+- Platform Caddy sync пропускает орги на нодах (`node_id IS NOT NULL`)
+- `Organization.nodes` — явный `foreign_keys` (fix `AmbiguousForeignKeysError`)
+- Все тесты обновлены под `domain`/`node_id` и `/{org_id}` API: 106/106 passed
+
 ## Обновление 2026-06-22 (доменная идентичность орг/школ, ломающий рефактор)
 
 Версии: `perum-web` → **2.3.0**, `perum-core` → **0.4.0**. Подробности — в [CHANGELOG.md](../CHANGELOG.md).

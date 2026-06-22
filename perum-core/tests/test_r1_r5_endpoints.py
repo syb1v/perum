@@ -16,11 +16,11 @@ def _paths() -> dict:
 
 def test_r1_org_routes_registered():
     p = _paths()
-    assert "patch" in p["/api/organizations/{slug}"]
-    assert "/api/organizations/{slug}/suspend" in p
-    assert "/api/organizations/{slug}/unsuspend" in p
-    assert "/api/organizations/{slug}/org-admins/{admin_id}" in p
-    assert "/api/organizations/{slug}/org-admins/{admin_id}/reset-password" in p
+    assert "patch" in p["/api/organizations/{org_id}"]
+    assert "/api/organizations/{org_id}/suspend" in p
+    assert "/api/organizations/{org_id}/unsuspend" in p
+    assert "/api/organizations/{org_id}/org-admins/{admin_id}" in p
+    assert "/api/organizations/{org_id}/org-admins/{admin_id}/reset-password" in p
 
 
 def test_r1_school_routes_registered():
@@ -39,10 +39,10 @@ def test_r5_school_admin_routes_registered():
 
 def test_org_lifecycle_requires_platform_admin():
     # Роутер организаций целиком под require_platform_admin → без токена отказ.
-    assert client.post("/api/organizations/demo/suspend").status_code in (401, 403)
-    assert client.post("/api/organizations/demo/unsuspend").status_code in (401, 403)
-    assert client.patch("/api/organizations/demo", json={"name": "X"}).status_code in (401, 403)
-    assert client.get("/api/organizations/demo/org-admins").status_code in (401, 403)
+    assert client.post("/api/organizations/1/suspend").status_code in (401, 403)
+    assert client.post("/api/organizations/1/unsuspend").status_code in (401, 403)
+    assert client.patch("/api/organizations/1", json={"name": "X"}).status_code in (401, 403)
+    assert client.get("/api/organizations/1/org-admins").status_code in (401, 403)
 
 
 def test_school_management_requires_org_admin():

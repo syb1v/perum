@@ -63,23 +63,23 @@ def test_plan_helpers():
 
 def test_org_create_rejects_unknown_plan():
     with pytest.raises(ValidationError):
-        OrganizationCreate(slug="acme", name="Acme", plan="platinum")
+        OrganizationCreate(domain="acme.ru", node_id=1, name="Acme", plan="platinum")
     # валидный план проходит
-    assert OrganizationCreate(slug="acme", name="Acme", plan="pro").plan == "pro"
+    assert OrganizationCreate(domain="acme.ru", node_id=1, name="Acme", plan="pro").plan == "pro"
 
 
 def test_billing_endpoints_registered():
     p = client.get("/openapi.json").json()["paths"]
     for path in [
-        "/api/organizations/{slug}/billing", "/api/organizations/{slug}/billing/charge",
-        "/api/organizations/{slug}/billing/invoices", "/api/billing/enforce", "/api/schools/billing",
+        "/api/organizations/{org_id}/billing", "/api/organizations/{org_id}/billing/charge",
+        "/api/organizations/{org_id}/billing/invoices", "/api/billing/enforce", "/api/schools/billing",
     ]:
         assert path in p, path
 
 
 def test_platform_billing_requires_platform_admin():
     assert client.post("/api/billing/enforce").status_code in (401, 403)
-    assert client.post("/api/organizations/demo/billing/charge", json={"months": 1}).status_code in (401, 403)
+    assert client.post("/api/organizations/1/billing/charge", json={"months": 1}).status_code in (401, 403)
 
 
 def test_org_billing_view_requires_org_admin():

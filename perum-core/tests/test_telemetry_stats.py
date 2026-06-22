@@ -60,7 +60,7 @@ def test_school_stat_shape():
 def test_endpoints_registered():
     p = client.get("/openapi.json").json()["paths"]
     for path in [
-        "/api/telemetry", "/api/platform/stats", "/api/organizations/{slug}/stats",
+        "/api/telemetry", "/api/platform/stats", "/api/organizations/{org_id}/stats",
         "/api/schools/stats/overview", "/api/schools/{school_id}/stats",
     ]:
         assert path in p, path

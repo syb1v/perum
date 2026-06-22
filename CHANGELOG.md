@@ -6,6 +6,16 @@
 
 ## [Unreleased] — 2026-06-22
 
+### Изоляция тенантов: правки по итогам аудита
+
+- **Node Caddy re-sync при рестарте воркора.** `_resync_node_caddy_routes()` — при старте `org_agent` восстанавливает лендинг-маршрут, маршруты активных и maintenance-маршруты замороженных школ из локальной БД. Домен орг сохраняется в локальный shadow-record при первом `provision_landing`.
+- **Redis DB index: min-unused вместо modulo.** `_next_redis_db_index()` выбирает наименьший свободный индекс из уже занятых `SchoolSecret.redis_db_index`; устраняет коллизию при id кратных 16 на одной ноде.
+- **`suspend/unsuspend_school` — реальный хост из `SchoolDomain`.** Maintenance- и proxy-маршруты теперь ставятся на фактический хост (`gym5.acme.ru`) из таблицы `school_domains`, а не на `slug.PUBLIC_BASE_DOMAIN`.
+- **`add_proxy_route` везде для tenant-образов.** `unsuspend_school`, `tenant_provisioner`, platform Caddy sync и кастомные домены переключены на `add_proxy_route`; tenant-образ обслуживает фронтенд и API из одного порта `:3000`, split-маршрут `WEB_UPSTREAM` был неприменим.
+- **Platform Caddy sync пропускает нод-орги.** `_sync_caddy_routes` при старте ядра фильтрует орги с `node_id IS NOT NULL` — у них нет локальных контейнеров.
+- **`Organization.nodes` — явный `foreign_keys`.** Два FK-пути между `organizations` и `nodes` требовали `foreign_keys="[Node.org_id]"` на обоих концах relationship; SQLAlchemy поднимал `AmbiguousForeignKeysError`.
+- **Тесты обновлены под новую схему.** `OrganizationCreate(domain=…, node_id=…)` вместо `slug`; пути `/{org_id}` вместо `/{slug}` в `test_billing`, `test_r1_r5_endpoints`, `test_telemetry_stats`; `SchoolCreate(subdomain=…)` в `test_school_slug_and_security`; `test_slug_validation` переписан под domain-валидацию.
+
 ### Доменная идентичность организаций и школ (ломающий рефактор)
 
 Организация теперь идентифицируется **доменом** (он же её лендинг), школа — **поддоменом** этого домена. Ядро — тонкий реестр (авторизация + биллинг), все стеки живут на нодах.
