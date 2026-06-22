@@ -60,8 +60,20 @@ class Organization(Base):
     __tablename__ = "organizations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    # Идентичность организации — её ДОМЕН (он же лендинг). slug — внутренний
+    # производный токен от домена (имена контейнеров/маршрутов/БД), наружу не виден.
     slug: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
+    domain: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    # Нода, на которой живёт орг (её лендинг + школы). Орг/школы НЕ крутятся на ядре.
+    node_id: Mapped[int | None] = mapped_column(
+        ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    landing_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", server_default="pending",
+        comment="pending | active | failed — статус контейнера-лендинга на ноде",
+    )
 
     status: Mapped[str] = mapped_column(
         String(30),
@@ -193,7 +205,10 @@ class School(Base):
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    # Идентичность школы — её ПОДДОМЕН в домене орг (полный хост `<subdomain>.<org.domain>`).
+    # slug — внутренний производный токен (имена контейнеров/маршрутов), наружу не виден.
     slug: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    subdomain: Mapped[str | None] = mapped_column(String(63), nullable=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     status: Mapped[str] = mapped_column(

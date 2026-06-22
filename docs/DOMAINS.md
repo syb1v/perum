@@ -1,206 +1,129 @@
-# Domains: поддомены и кастомные домены
+# Domains: доменная идентичность орг и школ
 
-> Документ описывает, как организация получает свой URL — поддомен `<org>.perum.ru` или кастомный домен (`kuban-edu.ru`, `school45.ru`, и т.п.). Реализация — `deploy/caddy/Caddyfile.tmpl` + `perum-core/app/services/caddy_admin.py` + endpoint `perum-core/app/routers/domains.py`.
+> Документ описывает актуальную (с 2026-06-22) модель доменной идентичности ПЭРУМ.
+> Предыдущая модель (slug → `<slug>.<base>`) устарела и заменена описанной здесь.
 
-## Тарифные лимиты
+## Концепция
 
-| План | Поддомены | Кастомные домены | Лендинги |
-|------|-----------|------------------|----------|
-| Trial | ∞ | 0 | Нет |
-| Basic | ∞ | 1 | Нет |
-| Pro | ∞ | 5 | Да |
-| Enterprise | ∞ | 20 | Да |
+| Сущность | Идентичность | Где живёт стек |
+|---|---|---|
+| Организация | Корневой домен (`acme.ru`) | Лендинг-контейнер на ноде |
+| Школа | Поддомен домена орг (`gym5.acme.ru`) | Школьный стек на ноде |
 
-**Поддомены** (e.g., `school1.perum.ru`) не лимитируются — каждая школа получает поддомен автоматически.
+**Ядро — тонкий реестр.** Хранит метаданные (домен орг → нода, поддомен школы, авторизацию org_admin, биллинг). Сами стеки (лендинг орг и школы) разворачиваются и работают на нодах — воркор ноды (`ROLE=org_agent`) поднимает контейнеры и правит Caddy ноды через admin API.
 
-**Кастомные домены** лимитируются полем `organizations.max_custom_domains`. Проверка при `POST /api/schools/{id}/domains`.
+**DNS — ручная настройка.** Оператор создаёт у регистратора:
 
-**Лендинги** — кастомный HTML на домене школы с формой обратной связи. Доступно только если `organizations.custom_landing_enabled = true`.
+| Запись | Тип | Значение |
+|---|---|---|
+| `@` (корень домена) | A или CNAME | IP / hostname ноды |
+| `*` (wildcard) | A или CNAME | IP / hostname ноды |
 
-## Поддомен `<org_slug>.perum.ru` (по умолчанию)
+После распространения DNS (5–60 мин) node Caddy выпускает TLS-сертификаты автоматически (on-demand).
 
-При создании организации (см. [PROVISIONING.md](PROVISIONING.md)) автоматически назначается `<org_slug>.perum.ru`. Это работает прозрачно благодаря:
+## Создание организации
 
-1. **DNS:** wildcard A-запись `*.perum.ru → IP_сервера` настроена один раз на регистраторе.
-2. **TLS:** wildcard сертификат `*.perum.ru` через DNS-01 challenge. Caddy запрашивает его автоматически, использует API DNS-провайдера. Один cert покрывает все поддомены.
-3. **Routing:** при провижининге control plane добавляет маршрут `<org_slug>.perum.ru → org_<slug>_app:3000` через Caddy admin API.
+`POST /api/organizations` принимает:
 
-DNS-провайдер для wildcard выбирается из тех, что поддерживают [Caddy DNS providers](https://github.com/caddy-dns). Выбор зафиксирован в `.env`:
-
-```
-DNS_PROVIDER=yandex      # или cloudflare, route53, и т.д.
-DNS_PROVIDER_TOKEN=...
-```
-
-Решение по конкретному провайдеру откладывается до Phase 1, когда будет настраиваться сервер.
-
-## Кастомный домен
-
-Орг может подключить свой домен (`kuban-edu.ru`, `school45.ru`). Это premium-фича — обычно идёт в платных планах. Поток:
-
-### Шаг 1 — org_admin вводит домен
-
-В org-admin UI на `https://<slug>.perum.ru/org-admin/domains`:
-
-```
-[ kuban-edu.ru ] [Подключить]
-```
-
-Запрос: `POST /api/org-admin/domains` с `{"domain": "kuban-edu.ru"}`. Tenant app пересылает в perum-core (`POST /internal/domains`) с `TELEMETRY_TOKEN`.
-
-### Шаг 2 — control plane сохраняет домен в pending статусе
-
-```sql
-INSERT INTO organization_domains (org_id, domain, status, created_at)
-VALUES (<org.id>, 'kuban-edu.ru', 'pending_dns', now());
-```
-
-UI org-admin показывает инструкцию:
-
-> Создайте у вашего регистратора CNAME-запись:
-> `kuban-edu.ru → caddy.perum.ru`
->
-> Когда запись пропагируется (обычно 5-30 минут), мы автоматически выпустим SSL-сертификат и активируем домен.
-
-### Шаг 3 — org_admin создаёт CNAME у регистратора
-
-Это шаг на стороне клиента. UI периодически опрашивает control plane через `GET /api/org-admin/domains/<id>/status` и обновляет статус.
-
-### Шаг 4 — первый запрос на новый домен
-
-Когда CNAME пропагирован, любой запрос на `https://kuban-edu.ru/` попадает в Caddy. Caddy не имеет cert для этого домена — это первый запрос.
-
-### Шаг 5 — Caddy спрашивает control plane
-
-Перед попыткой выпустить Let's Encrypt cert, Caddy делает запрос:
-
-```
-GET https://admin.perum.ru/internal/validate-domain?domain=kuban-edu.ru
-```
-
-Этот endpoint (`perum-core/app/routers/domains.py::validate_domain`) проверяет:
-
-```python
-async def validate_domain(domain: str):
-    row = await domains_repo.get_by_domain(domain)
-    if not row:
-        return Response(status_code=404)  # домена нет в БД, Caddy не выпустит cert
-    if row.status not in ("pending_dns", "active"):
-        return Response(status_code=403)
-    # Опционально: проверка биллинга (план разрешает кастомный домен)
-    org = await orgs_repo.get(row.org_id)
-    if org.plan not in ALLOWED_CUSTOM_DOMAIN_PLANS:
-        return Response(status_code=402)  # Payment Required
-    return Response(status_code=200)
-```
-
-Если 200 → Caddy идёт за cert'ом.
-
-### Шаг 6 — Caddy выпускает Let's Encrypt cert
-
-Caddy использует HTTP-01 challenge (запрос идёт через тот же домен). Получает cert, кеширует на диске (`caddy_data` volume).
-
-### Шаг 7 — Caddy просит upstream
-
-После получения cert Caddy нужно понять, куда роутить `kuban-edu.ru`. Если в Caddyfile нет статической записи — control plane должен был добавить её через admin API после успешного `validate-domain`.
-
-Это делается асинхронно после первого 200-ответа от `validate-domain`:
-
-```python
-async def validate_domain(domain: str):
-    row = await domains_repo.get_by_domain(domain)
-    if validation_passes(row):
-        # Доабавить маршрут в Caddy
-        await caddy_admin.add_route(
-            host=domain,
-            upstream=f"org_{row.org_slug}_app:3000"
-        )
-        # Обновить статус
-        await domains_repo.mark_active(row.id)
-        return Response(status_code=200)
-```
-
-После этого запрос на `kuban-edu.ru` роутится в `org_<slug>_app`.
-
-### Шаг 8 — статус становится active
-
-```sql
-UPDATE organization_domains SET status = 'active', activated_at = now()
-WHERE domain = 'kuban-edu.ru';
-```
-
-UI org-admin показывает «Домен активен».
-
-## Удаление домена
-
-`DELETE /api/org-admin/domains/<id>`:
-
-1. Удаление маршрута в Caddy admin API.
-2. `UPDATE organization_domains SET status = 'removed' WHERE id = ?` (не DELETE, для аудита).
-
-Cert остаётся в кэше Caddy (не валит существующие соединения).
-
-## Caddy конфигурация (шаблон)
-
-`deploy/caddy/Caddyfile.tmpl`:
-
-```caddy
+```json
 {
-    # Глобальный on-demand TLS для кастомных доменов
-    on_demand_tls {
-        ask https://admin.perum.ru/internal/validate-domain
-        interval 2m
-        burst 5
-    }
-    # admin API для control plane
-    admin :2019
+  "domain": "acme.ru",
+  "node_id": 3,
+  "name": "Acme Education",
+  "admin_email": "admin@acme.ru",
+  "plan": "trial"
 }
-
-# Control plane
-admin.perum.ru {
-    reverse_proxy perum_core:3000
-    encode gzip zstd
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-    }
-}
-
-# Wildcard для *.perum.ru — DNS-01 challenge
-*.perum.ru {
-    tls {
-        dns {env.DNS_PROVIDER} {env.DNS_PROVIDER_TOKEN}
-    }
-    # Маршруты внутрь добавляются control plane через admin API
-    # Каждая орг получает route org_<slug>_app:3000 при провижининге
-    # См. caddy_admin.add_route()
-}
-
-# Кастомные домены добавляются control plane через admin API
-# Шаблон конкретного маршрута:
-# kuban-edu.ru {
-#     tls {
-#         on_demand
-#     }
-#     reverse_proxy org_kuban_app:3000
-# }
 ```
 
-## Безопасность: защита от подмены домена
+Ядро:
+1. Проверяет уникальность домена.
+2. Проверяет, что нода активна.
+3. Выводит внутренний `slug = slug_from_domain(domain)` (инфра-токен, не показывается наружу).
+4. Создаёт запись орг, подписку и org_admin.
+5. Просит воркор ноды `POST /api/agent/landing/provision` поднять лендинг.
+6. Ставит `landing_status = "active" | "failed"`.
 
-Угроза: злоумышленник создаёт у себя CNAME `evil.com → caddy.perum.ru` и при заходе на `evil.com` Caddy просит control plane подтвердить. Control plane проверяет:
+Ответ содержит объект `OrganizationRead` (с `domain`, `landing_status`) и одноразовые credentials org_admin.
 
-1. **Домен зарегистрирован в БД.** Если `evil.com` не добавлен ни одной орг — 404.
-2. **Биллинг ок.** Если орг не оплатила план с кастомным доменом — 402.
+## Лендинг организации на ноде
 
-Без 1-го условия (домен в БД) — никто не может затащить чужой Caddy в выпуск cert'a на свой домен. Это базовая защита от abuse.
+Воркор (`provision_landing_on_node`):
+1. Пуллит `nginx:alpine`.
+2. Создаёт контейнер `landing_{slug}` с `index.html` (имя орг + список школ).
+3. Добавляет в Caddy ноды proxy-маршрут: `{domain}` → `landing_{slug}:80` (все пути).
 
-Дополнительно — rate limit на `validate-domain` endpoint (5 запросов в минуту с IP), чтобы не спалить квоту Let's Encrypt.
+`deprovision_landing_on_node` удаляет контейнер и маршрут по label-slug.
 
-## Что появляется на каждой фазе
+При **репровижининге** (`POST /api/organizations/{id}/reprovision`) лендинг пересоздаётся с актуальным списком школ.
 
-- **Phase 0:** документ.
-- **Phase 1:** wildcard `*.perum.ru` через DNS-01, Caddy admin API, control plane умеет добавлять маршруты для поддоменов.
-- **Phase 4:** custom domain flow целиком (включая on-demand TLS endpoint).
-- **Phase 9:** валидация по биллинг-плану в `validate-domain`.
+## Создание школы
+
+`POST /api/schools` (org_admin) принимает:
+
+```json
+{
+  "subdomain": "gym5",
+  "name": "Гимназия №5",
+  "admin_email": "director@gym5.acme.ru"
+}
+```
+
+Ядро:
+1. Проверяет уникальность поддомена в рамках орг.
+2. Создаёт запись `School(subdomain="gym5", slug="sch{id}")`.
+3. Полный хост: `gym5.acme.ru`.
+
+Воркор (`provision_school_orchestrated`) получает `host = "gym5.acme.ru"` и добавляет маршрут в Caddy ноды: `gym5.acme.ru/{api,websocket} → school_{id}_app:3000`.
+
+## DNS-гайд в UI
+
+**Платформа-консоль (`GET /api/organizations/{id}/dns`):**
+
+```json
+{
+  "domain": "acme.ru",
+  "node_name": "node-1",
+  "dns_target": "150.241.87.91",
+  "record_type": "A",
+  "records": [
+    {"name": "@", "type": "A", "value": "150.241.87.91", "purpose": "корневой домен → лендинг орг"},
+    {"name": "*", "type": "A", "value": "150.241.87.91", "purpose": "wildcard → все школы (поддомены)"}
+  ]
+}
+```
+
+Кнопка **DNS** у каждой орг в таблице открывает модалку с этими записями.
+
+**Кабинет орг (`GET /api/schools/{id}/dns`):** возвращает `full_host` (`gym5.acme.ru`), `dns_target` (нода), `record_type`. Модалка «Домены» у школы показывает DNS-инструкцию.
+
+## Внутренние имена (инфра-токены)
+
+| Объект | Шаблон | Пример |
+|---|---|---|
+| Slug орг | `slug_from_domain(domain)` | `acme-ru` |
+| Лендинг-контейнер | `landing_{slug}` | `landing_acme-ru` |
+| Caddy-маршрут лендинга | `lnd-{slug}` | `lnd-acme-ru` |
+| Slug школы | `sch{school.id}` | `sch42` |
+| Контейнер школы | `school_{slug}_app` | `school_sch42_app` |
+| Caddy-маршрут школы | `sch-{slug}` | `sch-sch42` |
+
+`slug` никогда не показывается в UI — это внутренний инфра-токен. Наружу орг = домен, школа = поддомен.
+
+## Тарифные лимиты кастомных доменов школ
+
+| План | Кастомных доменов школы |
+|------|------------------------|
+| Trial | 0 |
+| Basic | 1 |
+| Pro | 5 |
+| Enterprise | 20 |
+
+Кастомные домены школ (`POST /api/schools/{id}/domains`) — дополнительные домены поверх поддомена. Лимит проверяется полем `organizations.max_custom_domains`.
+
+## Безопасность
+
+- Уникальность домена орг — на уровне БД (`UNIQUE` constraint на `organizations.domain`).
+- Уникальность поддомена школы — в рамках орг (`UNIQUE(org_id, subdomain)` де-факто, проверяется перед созданием).
+- Slug школы `sch{id}` — глобально уникален по PK; исключает конфликты имён контейнеров при одинаковых поддоменах в разных орг на одной ноде.
+- Воркор принимает запросы только с валидным `AGENT_TOKEN` (Bearer).
+- DNS не валидируется ядром — ответственность оператора. TLS выпускается node Caddy (on-demand + Let's Encrypt) только после реального A/CNAME.

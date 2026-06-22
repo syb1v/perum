@@ -110,6 +110,27 @@ class CaddyAdmin:
                     f"{resp.status_code} {resp.text}"
                 )
 
+    async def add_proxy_route(self, slug: str, host: str, upstream: str) -> None:
+        """Простой маршрут: ВСЕ пути host → один upstream (для лендинга орг — там нет
+        разделения /api/web). Вставляется первым (terminal), id `perum-org-<slug>`."""
+        base = settings.PUBLIC_BASE_DOMAIN.lower()
+        if host.lower() in {base, f"admin.{base}", f"www.{base}"}:
+            raise CaddyAdminError(f"host '{host}' зарезервирован платформой")
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            await self._delete_id(client, route_id(slug), ignore_missing=True)
+            server = await self._http_server_name(client)
+            route = {
+                "@id": route_id(slug),
+                "match": [{"host": [host]}],
+                "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": upstream}]}],
+                "terminal": True,
+            }
+            resp = await client.put(
+                f"{self.base_url}/config/apps/http/servers/{server}/routes/0", json=route
+            )
+            if resp.status_code >= 300:
+                raise CaddyAdminError(f"failed to add proxy route for {host}: {resp.status_code} {resp.text}")
+
     async def add_maintenance_route(self, slug: str, host: str, *, message: str = "Школа временно приостановлена") -> None:
         """Заменить маршрут школы на терминальный ответ 503 (заморозка). Контейнер
         остановлен, но хост отдаёт понятную страницу вместо 502 Bad Gateway."""

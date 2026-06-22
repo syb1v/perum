@@ -37,9 +37,13 @@ export default function PlatformConsole() {
   const [busy, setBusy] = useState<string | null>(null);
 
   // create org
-  const [form, setForm] = useState({ slug: "", name: "", email: "", plan: "trial" });
+  const [form, setForm] = useState({ domain: "", node_id: "" as string | number, name: "", email: "", plan: "trial" });
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<any>(null);
+
+  // org DNS guide modal
+  const [orgDnsFor, setOrgDnsFor] = useState<any>(null);
+  const [orgDns, setOrgDns] = useState<any>(null);
 
   // release
   const [rel, setRel] = useState({ version_tag: "", image: "", changelog: "" });
@@ -88,6 +92,7 @@ export default function PlatformConsole() {
       try { setStats(await papi("/api/platform/stats")); } catch { /* non-fatal */ }
       try { setReceivables(await papi("/api/billing/receivables")); } catch { /* non-fatal */ }
       try { setSupportBadge((await papi("/api/support/admin/badge")).count || 0); } catch { /* non-fatal */ }
+      try { const nd = await papi("/api/platform/nodes"); setNodes(nd.nodes || []); } catch { /* non-fatal */ }
       const r = await papi("/api/releases");
       setReleases(r.releases || []);
     } catch (e: any) {
@@ -117,98 +122,99 @@ export default function PlatformConsole() {
   async function createOrg(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setCreated(null); setCreating(true);
     try {
-      const r = await papi("/api/organizations", { method: "POST", body: JSON.stringify({ slug: form.slug, name: form.name, admin_email: form.email || null, plan: form.plan }) });
-      setCreated(r); setForm({ slug: "", name: "", email: "", plan: "trial" }); load();
+      const r = await papi("/api/organizations", { method: "POST", body: JSON.stringify({ domain: form.domain, node_id: Number(form.node_id), name: form.name, admin_email: form.email || null, plan: form.plan }) });
+      setCreated(r); setForm({ domain: "", node_id: "", name: "", email: "", plan: "trial" }); load();
     } catch (e: any) { setErr(e.message); } finally { setCreating(false); }
   }
 
   async function orgAction(o: any, path: string, method = "POST", confirmMsg?: string) {
     if (confirmMsg && !confirm(confirmMsg)) return;
-    setBusy(o.slug); setErr("");
-    try { await papi(`/api/organizations/${o.slug}${path}`, { method }); load(); if (billOrg === o.slug) reloadBilling(o.slug); }
+    setBusy(String(o.id)); setErr("");
+    try { await papi(`/api/organizations/${o.id}${path}`, { method }); load(); if (billOrg === String(o.id)) reloadBilling(String(o.id)); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
 
   async function removeOrg(o: any) {
-    // Необратимое удаление орг со всеми школами: требуем ввести slug (бэкап снимается).
     const typed = prompt(
-      `БЕЗВОЗВРАТНОЕ удаление организации «${o.name}» (${o.slug}) вместе со ВСЕМИ её школами и данными. Перед удалением снимается бэкап БД школ.\n\nДля подтверждения введите slug организации:`,
+      `БЕЗВОЗВРАТНОЕ удаление организации «${o.name}» (${o.domain || o.slug}) вместе со ВСЕМИ её школами и данными. Перед удалением снимается бэкап БД школ.\n\nДля подтверждения введите slug организации:`,
     );
     if (typed == null) return;
     if (typed.trim() !== o.slug) { alert("slug не совпал — удаление отменено"); return; }
-    setBusy(o.slug); setErr("");
-    try { await papi(`/api/organizations/${o.slug}?purge=true&confirm=${encodeURIComponent(o.slug)}`, { method: "DELETE" }); load(); }
+    setBusy(String(o.id)); setErr("");
+    try { await papi(`/api/organizations/${o.id}?purge=true&confirm=${encodeURIComponent(o.slug)}`, { method: "DELETE" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
 
   async function saveEdit() {
     if (!editOrg) return;
-    setBusy(editOrg.slug); setErr("");
+    setBusy(String(editOrg.id)); setErr("");
     try {
-      await papi(`/api/organizations/${editOrg.slug}`, { method: "PATCH", body: JSON.stringify({ name: editOrg.name, admin_email: editOrg.admin_email || null, notes: editOrg.notes || null, deployment_mode: editOrg.deployment_mode }) });
+      await papi(`/api/organizations/${editOrg.id}`, { method: "PATCH", body: JSON.stringify({ name: editOrg.name, admin_email: editOrg.admin_email || null, notes: editOrg.notes || null, deployment_mode: editOrg.deployment_mode }) });
       setEditOrg(null); load();
     } catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
 
   async function openAdmins(o: any) {
     setAdminsOrg(o); setOrgAdmins(null); setCred(null); setNewAdmin({ login: "", password: "", full_name: "", email: "" });
-    try { setOrgAdmins((await papi(`/api/organizations/${o.slug}/org-admins`)).org_admins || []); } catch (e: any) { setErr(e.message); }
+    try { setOrgAdmins((await papi(`/api/organizations/${o.id}/org-admins`)).org_admins || []); } catch (e: any) { setErr(e.message); }
   }
   async function openOrgInfra(o: any) {
     setOrgInfra(o); setOrgInfraData(null);
     try { setOrgInfraData(await papi(`/api/platform/nodes/org-overview/${o.id}`)); } catch (e: any) { toast.showError(e.message); }
   }
-  async function reloadAdmins() { if (adminsOrg) setOrgAdmins((await papi(`/api/organizations/${adminsOrg.slug}/org-admins`)).org_admins || []); }
+  async function openOrgDns(o: any) {
+    setOrgDnsFor(o); setOrgDns(null);
+    try { setOrgDns(await papi(`/api/organizations/${o.id}/dns`)); } catch (e: any) { toast.showError(e.message); }
+  }
+  async function reloadAdmins() { if (adminsOrg) setOrgAdmins((await papi(`/api/organizations/${adminsOrg.id}/org-admins`)).org_admins || []); }
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault(); if (!adminsOrg) return; setBusy("adm"); setErr("");
-    try { await papi(`/api/organizations/${adminsOrg.slug}/org-admins`, { method: "POST", body: JSON.stringify(newAdmin) }); setNewAdmin({ login: "", password: "", full_name: "", email: "" }); reloadAdmins(); }
+    try { await papi(`/api/organizations/${adminsOrg.id}/org-admins`, { method: "POST", body: JSON.stringify(newAdmin) }); setNewAdmin({ login: "", password: "", full_name: "", email: "" }); reloadAdmins(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
   async function resetAdmin(id: number) {
     if (!adminsOrg) return; setBusy("adm");
-    try { const r = await papi(`/api/organizations/${adminsOrg.slug}/org-admins/${id}/reset-password`, { method: "POST" }); setCred(r); }
+    try { const r = await papi(`/api/organizations/${adminsOrg.id}/org-admins/${id}/reset-password`, { method: "POST" }); setCred(r); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
   async function toggleAdmin(a: any) {
     if (!adminsOrg) return; setBusy("adm");
-    try { await papi(`/api/organizations/${adminsOrg.slug}/org-admins/${a.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !a.is_active }) }); reloadAdmins(); }
+    try { await papi(`/api/organizations/${adminsOrg.id}/org-admins/${a.id}`, { method: "PATCH", body: JSON.stringify({ is_active: !a.is_active }) }); reloadAdmins(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
   async function delAdmin(id: number, login: string) {
     if (!adminsOrg || !confirm(`Удалить org_admin «${login}»?`)) return; setBusy("adm");
-    try { await papi(`/api/organizations/${adminsOrg.slug}/org-admins/${id}`, { method: "DELETE" }); reloadAdmins(); }
+    try { await papi(`/api/organizations/${adminsOrg.id}/org-admins/${id}`, { method: "DELETE" }); reloadAdmins(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
 
-  async function openBilling(slug: string) {
-    setBillOrg(slug); setBilling(null); setInvoices([]); setMonths(1); setSection("billing");
-    reloadBilling(slug);
+  async function openBilling(id: string) {
+    setBillOrg(id); setBilling(null); setInvoices([]); setMonths(1); setSection("billing");
+    reloadBilling(id);
   }
-  async function reloadBilling(slug: string) {
+  async function reloadBilling(id: string) {
     try {
-      setBilling(await papi(`/api/organizations/${slug}/billing`));
-      setInvoices((await papi(`/api/organizations/${slug}/billing/invoices`)).invoices || []);
+      setBilling(await papi(`/api/organizations/${id}/billing`));
+      setInvoices((await papi(`/api/organizations/${id}/billing/invoices`)).invoices || []);
     } catch (e: any) { setErr(e.message); }
   }
-  async function changePlan(slug: string, plan: string, force = false) {
+  async function changePlan(id: string, plan: string, force = false) {
     setBusy("bill"); setErr("");
     try {
-      const r = await papi(`/api/organizations/${slug}/billing${force ? "?force=true" : ""}`, { method: "PUT", body: JSON.stringify({ plan }) });
+      const r = await papi(`/api/organizations/${id}/billing${force ? "?force=true" : ""}`, { method: "PUT", body: JSON.stringify({ plan }) });
       if (r?.warning) setErr(r.warning);
-      await reloadBilling(slug); load();
+      await reloadBilling(id); load();
     } catch (e: any) {
-      // Понижение ниже текущего использования бэкенд блокирует (400). Даём оператору
-      // явный выбор продавить через force (сверхлимитные школы остаются работать).
       if (e.status === 400 && !force && confirm(`${e.message}\n\nПонизить план ПРИНУДИТЕЛЬНО?`)) {
         setBusy(null);
-        return changePlan(slug, plan, true);
+        return changePlan(id, plan, true);
       }
       setErr(e.message);
     } finally { setBusy(null); }
   }
-  async function charge(slug: string) {
+  async function charge(id: string) {
     setBusy("bill"); setErr("");
-    try { await papi(`/api/organizations/${slug}/billing/charge`, { method: "POST", body: JSON.stringify({ months }) }); await reloadBilling(slug); load(); }
+    try { await papi(`/api/organizations/${id}/billing/charge`, { method: "POST", body: JSON.stringify({ months }) }); await reloadBilling(id); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
   async function enforce() {
@@ -388,43 +394,57 @@ export default function PlatformConsole() {
         <>
           {created && (
             <div className={`${styles.card} ${c.okCard}`}>
-              <b>Организация создана: {created.organization.slug}</b>
+              <b>Организация создана: {created.organization.domain || created.organization.slug}</b>
+              <p className={c.muted}>Лендинг: <span className={statusBadge(created.organization.landing_status || "pending")}>{created.organization.landing_status || "pending"}</span></p>
               {created.org_admin ? <p>Организатор: <code className={styles.code}>{created.org_admin.login}</code> · временный пароль: <code className={styles.code}>{created.org_admin.temporary_password}</code></p>
                 : <p className={c.muted}>org_admin не создан (не указан email).</p>}
             </div>
           )}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Создать организацию</h2>
+            <p className={c.muted} style={{ marginTop: 0 }}>Организация идентифицируется доменом (он же её лендинг). Заранее укажите на ноду A-записи: <code className={styles.code}>@</code> и <code className={styles.code}>*</code> → IP ноды.</p>
             <form onSubmit={createOrg} className={styles.form}>
               <div className={styles.formRow}>
-                <div className={styles.formGroup}><label className={styles.label}>Slug</label><input className={styles.input} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="acme" required /></div>
+                <div className={styles.formGroup}><label className={styles.label}>Домен организации</label><input className={styles.input} value={String(form.domain)} onChange={(e) => setForm({ ...form, domain: e.target.value })} placeholder="acme.ru" required /></div>
                 <div className={styles.formGroup}><label className={styles.label}>Название</label><input className={styles.input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Acme Education" required /></div>
               </div>
               <div className={styles.formRow}>
+                <div className={styles.formGroup}><label className={styles.label}>Нода (лендинг + школы)</label>
+                  <select className={styles.input} value={String(form.node_id)} onChange={(e) => setForm({ ...form, node_id: e.target.value })} required>
+                    <option value="">— выберите ноду —</option>
+                    {nodes?.filter((n) => n.status === "active").map((n) => <option key={n.id} value={n.id}>{n.name} ({n.hostname})</option>)}
+                  </select>
+                </div>
                 <div className={styles.formGroup}><label className={styles.label}>Email организатора</label><input className={styles.input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="admin@acme.ru" /></div>
+              </div>
+              <div className={styles.formRow}>
                 <div className={styles.formGroup}><label className={styles.label}>План</label><select className={styles.input} value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}>{PLANS.map((p) => <option key={p} value={p}>{p}</option>)}</select></div>
               </div>
-              <div className={styles.formActions}><button className={styles.submitBtn} disabled={creating}>{creating ? "Создаётся (поднимается стек)…" : "Создать организацию"}</button></div>
+              <div className={styles.formActions}><button className={styles.submitBtn} disabled={creating || !form.node_id}>{creating ? "Создаётся (поднимается лендинг)…" : "Создать организацию"}</button></div>
             </form>
           </div>
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>Все организации</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Slug</th><th>Название</th><th>План</th><th>Статус</th><th>Создана</th><th>Действия</th></tr></thead>
+                <thead><tr><th>Домен</th><th>Название</th><th>Лендинг</th><th>План</th><th>Статус</th><th>Создана</th><th>Действия</th></tr></thead>
                 <tbody>
                   {orgs?.map((o) => (
                     <tr key={o.id}>
-                      <td>{o.slug}</td><td>{o.name}</td><td>{o.plan}</td>
+                      <td><b>{o.domain || o.slug}</b><br /><span className={c.muted} style={{ fontSize: "0.75rem" }}>{o.slug}</span></td>
+                      <td>{o.name}</td>
+                      <td><span className={statusBadge(o.landing_status || "pending")}>{o.landing_status || "pending"}</span></td>
+                      <td>{o.plan}</td>
                       <td><span className={statusBadge(o.status)}>{o.status}</span></td>
                       <td>{new Date(o.created_at).toLocaleDateString()}</td>
                       <td style={{ whiteSpace: "nowrap" }}>
                         <button className={styles.actionBtn} onClick={() => setEditOrg({ ...o })}>Изм.</button>{" "}
                         <button className={styles.actionBtn} onClick={() => openAdmins(o)}>Орг-админы</button>{" "}
                         <button className={styles.actionBtn} onClick={() => openOrgInfra(o)}>Инфраструктура</button>{" "}
-                        <button className={styles.actionBtn} onClick={() => openBilling(o.slug)}>Биллинг</button>{" "}
-                        <button className={styles.actionBtn} disabled={busy === o.slug || !["active", "suspended"].includes(o.status)} onClick={() => orgAction(o, o.status === "suspended" ? "/unsuspend" : "/suspend", "POST", o.status === "suspended" ? undefined : `Заморозить «${o.name}»? Школы будут остановлены.`)}>{o.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
-                        <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busy === o.slug || o.status === "provisioning"} onClick={() => removeOrg(o)}>Удал.</button>
+                        <button className={styles.actionBtn} onClick={() => openOrgDns(o)}>DNS</button>{" "}
+                        <button className={styles.actionBtn} onClick={() => openBilling(String(o.id))}>Биллинг</button>{" "}
+                        <button className={styles.actionBtn} disabled={busy === String(o.id) || !["active", "suspended"].includes(o.status)} onClick={() => orgAction(o, o.status === "suspended" ? "/unsuspend" : "/suspend", "POST", o.status === "suspended" ? undefined : `Заморозить «${o.name}»? Школы будут остановлены.`)}>{o.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
+                        <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busy === String(o.id) || o.status === "provisioning"} onClick={() => removeOrg(o)}>Удал.</button>
                       </td>
                     </tr>
                   ))}
@@ -566,7 +586,7 @@ export default function PlatformConsole() {
           <div className={c.toolbar}>
             <select className={styles.input} style={{ maxWidth: 280 }} value={billOrg} onChange={(e) => e.target.value && openBilling(e.target.value)}>
               <option value="">— выберите организацию —</option>
-              {orgs?.map((o) => <option key={o.slug} value={o.slug}>{o.name} ({o.slug})</option>)}
+              {orgs?.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.domain || o.slug})</option>)}
             </select>
             <span className={c.spacer} />
             <button className={styles.btnSecondary} onClick={enforce}>Проверить просрочки</button>
@@ -602,13 +622,13 @@ export default function PlatformConsole() {
                   <h2 className={styles.cardTitle}>Управление</h2>
                   <div className={styles.formRow}>
                     <div className={styles.formGroup}><label className={styles.label}>Сменить план</label>
-                      <select className={styles.input} value={billing.plan} disabled={busy === "bill"} onChange={(e) => changePlan(billOrg, e.target.value)}>{PLANS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
+                      <select className={styles.input} value={billing.plan} disabled={busy === "bill"} onChange={(e) => changePlan(String(billOrg), e.target.value)}>{PLANS.map((p) => <option key={p} value={p}>{p}</option>)}</select>
                     </div>
                     <div className={styles.formGroup}><label className={styles.label}>Оплата (месяцев)</label>
                       <input className={styles.input} type="number" min={1} value={months} disabled={busy === "bill"} onChange={(e) => setMonths(Math.max(1, Number(e.target.value) || 1))} />
                     </div>
                   </div>
-                  <div className={styles.formActions}><button className={styles.submitBtn} disabled={busy === "bill"} onClick={() => charge(billOrg)}>Отметить оплату</button></div>
+                  <div className={styles.formActions}><button className={styles.submitBtn} disabled={busy === "bill"} onClick={() => charge(String(billOrg))}>Отметить оплату</button></div>
                 </div>
                 <div className={styles.card}>
                   <h2 className={styles.cardTitle}>Счета</h2>
@@ -806,7 +826,7 @@ export default function PlatformConsole() {
         </Modal>
       )}
       {editOrg && (
-        <Modal title={`Редактирование — ${editOrg.slug}`} onClose={() => setEditOrg(null)} footer={<><button className={styles.cancelBtn} onClick={() => setEditOrg(null)}>Отмена</button><button className={styles.submitBtn} disabled={busy === editOrg.slug} onClick={saveEdit}>Сохранить</button></>}>
+        <Modal title={`Редактирование — ${editOrg.domain || editOrg.name}`} onClose={() => setEditOrg(null)} footer={<><button className={styles.cancelBtn} onClick={() => setEditOrg(null)}>Отмена</button><button className={styles.submitBtn} disabled={busy === String(editOrg.id)} onClick={saveEdit}>Сохранить</button></>}>
           <div className={styles.formGroup}><label className={styles.label}>Название</label><input className={styles.input} value={editOrg.name || ""} onChange={(e) => setEditOrg({ ...editOrg, name: e.target.value })} /></div>
           <div className={styles.formGroup}><label className={styles.label}>Email организатора</label><input className={styles.input} value={editOrg.admin_email || ""} onChange={(e) => setEditOrg({ ...editOrg, admin_email: e.target.value })} /></div>
           <div className={styles.formGroup}><label className={styles.label}>Режим</label><select className={styles.input} value={editOrg.deployment_mode || "shared_host"} onChange={(e) => setEditOrg({ ...editOrg, deployment_mode: e.target.value })}><option value="shared_host">shared_host</option><option value="dedicated_vm">dedicated_vm</option></select></div>
@@ -815,7 +835,7 @@ export default function PlatformConsole() {
       )}
 
       {adminsOrg && (
-        <Modal title={`Организаторы — ${adminsOrg.name}`} onClose={() => setAdminsOrg(null)} width={680}>
+        <Modal title={`Организаторы — ${adminsOrg.name} (${adminsOrg.domain || adminsOrg.slug})`} onClose={() => setAdminsOrg(null)} width={680}>
           {cred && <div className={`${styles.card} ${c.okCard}`}><b>Пароль для {cred.login}</b><p>Временный пароль: <code className={styles.code}>{cred.temporary_password}</code></p></div>}
           <div className={styles.tableContainer}>
             <table className={styles.table}>
@@ -837,6 +857,41 @@ export default function PlatformConsole() {
             </div>
             <div className={styles.formActions}><button className={styles.submitBtn} disabled={busy === "adm"}>Добавить</button></div>
           </form>
+        </Modal>
+      )}
+
+      {/* DNS GUIDE MODAL */}
+      {orgDnsFor && (
+        <Modal title={`DNS — ${orgDnsFor.domain || orgDnsFor.name}`} onClose={() => { setOrgDnsFor(null); setOrgDns(null); }} width={720}>
+          {!orgDns ? <p className={c.muted}>Загрузка…</p> : (
+            <>
+              <p className={c.muted} style={{ marginTop: 0 }}>
+                Укажите у регистратора домена <b>{orgDns.domain}</b> следующие записи на ноду{orgDns.node_name ? <> <b>{orgDns.node_name}</b></> : null}. TLS-сертификат выпустится автоматически после распространения DNS (5–60 мин).
+              </p>
+              {orgDns.dns_target ? (
+                <div className={styles.tableContainer}>
+                  <table className={styles.table}>
+                    <thead><tr><th>Тип</th><th>Имя (host)</th><th>Значение</th><th>Назначение</th></tr></thead>
+                    <tbody>
+                      {orgDns.records?.map((r: any, i: number) => (
+                        <tr key={i}>
+                          <td><code className={styles.code}>{r.type}</code></td>
+                          <td><code className={styles.code}>{r.name}</code></td>
+                          <td><code className={styles.code}>{r.value}</code></td>
+                          <td className={c.muted}>{r.purpose}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className={c.muted}>Нода не назначена — DNS-цель неизвестна.</p>}
+              <p className={c.muted} style={{ fontSize: "0.82rem", marginTop: 10, marginBottom: 0 }}>
+                {orgDns.record_type === "A"
+                  ? <>IP ноды: <code className={styles.code}>{orgDns.dns_target}</code> — используйте записи типа <b>A</b>.</>
+                  : <>Адрес ноды: <code className={styles.code}>{orgDns.dns_target}</code> — используйте <b>CNAME</b> (для корня <code className={styles.code}>@</code> у некоторых регистраторов нужен ALIAS/ANAME).</>}
+              </p>
+            </>
+          )}
         </Modal>
       )}
     </ConsoleShell>

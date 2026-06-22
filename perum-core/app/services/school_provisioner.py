@@ -169,7 +169,8 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
 
         admin_login, admin_pw = await _bootstrap_admin(spec, admin_email)
 
-        host = f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
+        # Реальный домен школы (полный поддомен орг) — если задан ядром; иначе fallback.
+        host = spec.host or f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
         await caddy.add_route(label_slug, host, f"{spec.app_container}:3000")
         logger.info("school %s: provisioned, route %s -> %s:3000", spec.slug, host, spec.app_container)
         return SchoolProvisionOutcome(school=None, host=host, admin_login=admin_login, admin_temp_password=admin_pw)  # type: ignore[arg-type]
@@ -190,7 +191,7 @@ async def _upsert_subdomain(school: School, host: str, db: AsyncSession) -> None
         domain.activated_at = now
 
 
-async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None, image: str | None = None) -> SchoolProvisionOutcome:
+async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None, image: str | None = None, host: str | None = None) -> SchoolProvisionOutcome:
     settings = settings or get_settings()
     docker = get_docker_client()
     caddy = get_caddy_admin()
@@ -204,7 +205,7 @@ async def provision_school(school: School, db: AsyncSession, settings: Settings 
     await db.refresh(school)
     await db.refresh(secret)
 
-    spec = build_school_stack_spec(school, secret, settings, image=target_image)
+    spec = build_school_stack_spec(school, secret, settings, image=target_image, host=host)
     try:
         outcome = await _bring_up(spec, label_slug, settings, docker, caddy, admin_email=school.admin_email)
     except Exception as exc:
@@ -543,15 +544,27 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     from app.services.node_planner import NodePlanner
     from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 
+    # Полный публичный домен школы = <subdomain>.<org.domain> (если заданы).
+    from app.models import Organization
+    org = await db.get(Organization, school.org_id)
+    host = f"{school.subdomain}.{org.domain}" if (org and org.domain and school.subdomain) else None
+
     node = await _assigned_node(school, db)
     if node is None:
-        node = await NodePlanner(db).find_best_node(school.org_id)
+        # Школа едет на ноду орг (если задана), иначе — лучшая нода орг.
+        if org and org.node_id:
+            from app.models import Node
+            node = await db.get(Node, org.node_id)
+            if node is not None and node.status not in ("active", "draining"):
+                node = None
+        if node is None:
+            node = await NodePlanner(db).find_best_node(school.org_id)
         if node is not None:
             db.add(NodeAssignment(node_id=node.id, school_id=school.id))
             await db.commit()
 
     if node is None:
-        await provision_school(school, db)  # локально на хосте платформы
+        await provision_school(school, db, host=host)  # локально (fallback)
         return
 
     # --- Удалённо на ноде ---
@@ -566,6 +579,7 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
         "db_password": secret.db_password, "secret_key": secret.secret_key,
         "telemetry_token": secret.telemetry_token, "internal_rpc_token": secret.internal_rpc_token,
         "redis_db_index": secret.redis_db_index, "admin_email": school.admin_email,
+        "host": host,
     }
     try:
         resp = await RemoteNodeClient().provision_school(node, req)
@@ -578,21 +592,14 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
         await db.commit()
         raise ProvisioningError(resp.get("message") or "провижининг на ноде не удался")
 
-    # Маршрут на платформе: <slug>.<base> → /api на воркор ноды (:80), остальное → web.
-    # Платформа терминирует TLS (wildcard), нода отдаёт API по plain-HTTP внутри.
-    host = f"{school.slug}.{settings.PUBLIC_BASE_DOMAIN}"
-    try:
-        await get_caddy_admin().add_route(school_label_slug(school.slug), host, f"{node.hostname}:80")
-    except Exception as exc:  # noqa: BLE001
-        logger.error("school %s: platform route to node failed: %s", school.slug, exc)
-
     school.status = "active"
     school.activated_at = datetime.utcnow()
     school.release_tag = image
-    await _upsert_subdomain(school, host, db)
+    if host:
+        await _upsert_subdomain(school, host, db)
     await db.commit()
     await db.refresh(school)
-    logger.info("school %s: provisioned on node %s (%s)", school.slug, node.name, node.hostname)
+    logger.info("school %s: provisioned on node %s (%s), host=%s", school.slug, node.name, node.hostname, host)
 
 
 async def update_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:

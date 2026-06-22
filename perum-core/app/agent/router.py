@@ -14,6 +14,8 @@ from app.agent.schemas import (
     AgentHeartbeatResponse,
     AgentInternalRpcRequest,
     AgentInternalRpcResponse,
+    AgentLandingRequest,
+    AgentLandingResponse,
     AgentNodeActionResponse,
     AgentProvisionSchoolRequest,
     AgentProvisionSchoolResponse,
@@ -27,8 +29,10 @@ from app.agent.service import (
     deprovision_school_on_node,
     get_agent_health,
     get_agent_schools,
+    deprovision_landing_on_node,
     get_agent_state,
     internal_rpc_on_node,
+    provision_landing_on_node,
     provision_school_on_node,
     restart_node_stack,
     send_heartbeat,
@@ -147,6 +151,20 @@ async def internal_rpc(
     if get_settings().ROLE != "org_agent":
         raise HTTPException(400, "internal-rpc only available in org_agent mode")
     return await internal_rpc_on_node(db, school_slug, req)
+
+
+@router.post("/landing/provision", response_model=AgentLandingResponse, dependencies=[Depends(require_agent_token)])
+async def provision_landing(req: AgentLandingRequest, db: AsyncSession = Depends(get_db)) -> AgentLandingResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "landing only available in org_agent mode")
+    return await provision_landing_on_node(db, req)
+
+
+@router.post("/landing/{org_slug}/deprovision", response_model=AgentLandingResponse, dependencies=[Depends(require_agent_token)])
+async def deprovision_landing(org_slug: str, db: AsyncSession = Depends(get_db)) -> AgentLandingResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "landing only available in org_agent mode")
+    return await deprovision_landing_on_node(db, org_slug)
 
 
 @router.post("/restart", response_model=AgentNodeActionResponse)

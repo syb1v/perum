@@ -60,6 +60,16 @@ def school_label_slug(slug: str) -> str:
     return f"sch-{slug}"
 
 
+# --- v3: контейнер-лендинг организации (по корневому домену орг) ---
+
+def landing_container_name(slug: str) -> str:
+    return f"landing_{slug}"
+
+
+def landing_label_slug(slug: str) -> str:
+    return f"lnd-{slug}"
+
+
 @dataclass
 class StackSpec:
     slug: str
@@ -80,6 +90,9 @@ class StackSpec:
     control_plane_url: str
     internal_rpc_token: str | None = None
     app_env: dict[str, str] = field(default_factory=dict)
+    # Реальный публичный хост школы (полный домен `<subdomain>.<org.domain>`). Если
+    # задан — маршрут Caddy ставится на него; иначе fallback `<slug>.<base>`.
+    host: str | None = None
 
 
 def build_stack_spec(
@@ -127,7 +140,7 @@ def build_stack_spec(
 
 
 def build_school_stack_spec(
-    school: School, secret: SchoolSecret, settings: Settings, *, image: str | None = None
+    school: School, secret: SchoolSecret, settings: Settings, *, image: str | None = None, host: str | None = None
 ) -> StackSpec:
     """Спек школьного стека. Контейнеры `school_<slug>_*`. `image` задаёт тег образа
     приложения (для OTA-обновлений); по умолчанию `settings.TENANT_IMAGE`.
@@ -177,6 +190,7 @@ def build_school_stack_spec(
         redis_url=redis_url,
         control_plane_url=settings.CONTROL_PLANE_URL,
         app_env=app_env,
+        host=host,
     )
 
 

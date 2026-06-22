@@ -5,6 +5,19 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # first char a letter, last char alnum, middle 1-38 of [a-z0-9-] → total length 3-40
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
+# Базовая валидация доменного имени (FQDN): метки a-z0-9 с дефисами, TLD ≥2 букв.
+DOMAIN_PATTERN = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$")
+
+
+def slug_from_domain(domain: str) -> str:
+    """Внутренний инфра-токен из домена: `acme.ru` → `acme-ru` (имена контейнеров/
+    маршрутов/БД). Наружу не показывается — идентичность орг это домен."""
+    s = re.sub(r"[^a-z0-9]+", "-", domain.strip().lower()).strip("-")
+    if not s or not s[0].isalpha():
+        s = "org-" + s
+    return s[:40].rstrip("-")
+
+
 RESERVED_SLUGS = {
     "admin",
     "www",
@@ -24,24 +37,23 @@ RESERVED_SLUGS = {
 
 
 class OrganizationCreate(BaseModel):
-    slug: str = Field(min_length=3, max_length=40, examples=["acme"])
+    # Идентичность орг — её ДОМЕН (он же лендинг). slug выводится из домена внутри ядра.
+    domain: str = Field(min_length=4, max_length=253, examples=["acme.ru"])
+    node_id: int = Field(examples=[1], description="нода, где живёт орг (лендинг + школы)")
     name: str = Field(min_length=2, max_length=255, examples=["Acme Education"])
     admin_email: EmailStr | None = None
     plan: str = "trial"
-    deployment_mode: str = "shared_host"
     notes: str | None = None
 
-    @field_validator("slug")
+    @field_validator("domain")
     @classmethod
-    def validate_slug(cls, v: str) -> str:
-        v = v.strip().lower()
-        if v in RESERVED_SLUGS:
-            raise ValueError(f"slug '{v}' is reserved")
-        if not SLUG_PATTERN.match(v):
-            raise ValueError(
-                "slug must start with a letter, end with a letter or digit, "
-                "contain only lowercase letters/digits/hyphens, length 3-40"
-            )
+    def validate_domain(cls, v: str) -> str:
+        v = v.strip().lower().rstrip(".")
+        if v.startswith(("http://", "https://")):
+            v = v.split("//", 1)[1]
+        v = v.split("/", 1)[0].split(":", 1)[0]
+        if not DOMAIN_PATTERN.match(v):
+            raise ValueError("домен должен быть валидным FQDN, напр. acme.ru")
         return v
 
     @field_validator("plan")
@@ -54,19 +66,15 @@ class OrganizationCreate(BaseModel):
             raise ValueError(f"unknown plan; allowed: {', '.join(PLANS)}")
         return v
 
-    @field_validator("deployment_mode")
-    @classmethod
-    def validate_deployment_mode(cls, v: str) -> str:
-        if v not in ("shared_host", "dedicated_vm"):
-            raise ValueError("deployment_mode must be 'shared_host' or 'dedicated_vm'")
-        return v
-
 
 class OrganizationRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     slug: str
+    domain: str | None
+    node_id: int | None
+    landing_status: str
     name: str
     status: str
     deployment_mode: str

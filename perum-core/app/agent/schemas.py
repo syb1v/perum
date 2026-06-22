@@ -13,6 +13,23 @@ class AgentProvisionSchoolRequest(BaseModel):
     internal_rpc_token: str | None = None
     redis_db_index: int = 0
     admin_email: str | None = None
+    # Полный публичный домен школы (`<subdomain>.<org.domain>`) — воркор ставит на него
+    # маршрут в Caddy ноды. Пусто → fallback `<slug>.<base>` (легаси).
+    host: str | None = None
+
+
+class AgentLandingRequest(BaseModel):
+    """Поднять/обновить контейнер-лендинг организации на ноде (по корневому домену)."""
+    domain: str
+    org_name: str
+    org_slug: str
+    school_hosts: list[str] = []  # для списка школ на странице лендинга
+
+
+class AgentLandingResponse(BaseModel):
+    success: bool
+    domain: str
+    message: str | None = None
 
 
 class AgentProvisionSchoolResponse(BaseModel):

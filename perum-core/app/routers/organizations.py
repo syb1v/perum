@@ -1,9 +1,7 @@
-"""Organization CRUD + lifecycle.
+"""Organization CRUD + lifecycle (domain-identity model).
 
-`POST /api/organizations` creates the control-DB record and then provisions the
-org's docker stack (see app.services.tenant_provisioner). Provisioning is
-synchronous for Phase 1: the request returns once the stack is healthy and
-routed (status=active), or 502 if it failed (status=failed, resources cleaned).
+Org идентифицируется числовым id (домен — лишь атрибут). Все стеки (лендинг орг,
+школы) живут на ноде; ядро — только реестр + авторизация + биллинг.
 """
 
 from __future__ import annotations
@@ -23,7 +21,7 @@ from app.core.db import get_db
 from app.core.deps import require_platform_admin
 from app.core.locks import keyed_lock, school_key
 from app.core.security import hash_password
-from app.models import EnrollmentToken, Invoice, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
+from app.models import EnrollmentToken, Invoice, Node, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
 from app.services.billing import (
     PLANS,
     billing_state,
@@ -39,43 +37,24 @@ from app.schemas.organization import (
     OrgAdminCredentials,
     ProvisionResult,
 )
+from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 from app.services.school_provisioner import deprovision_school, suspend_school, unsuspend_school
 from app.services.stats import rollup, school_stat, schools_with_metrics
-from app.services.tenant_provisioner import (
-    ProvisioningError,
-    ProvisionOutcome,
-    deprovision,
-    provision,
-)
 
 logger = logging.getLogger("perum.organizations")
 
-# Defense-in-depth (#10): весь жизненный цикл орг (создание/удаление/заморозка/
-# биллинг/смена плана/enrollment) держится на этом гарде НА САМОМ роутере, а не
-# только на dependencies= в main.py. Потеря kwarg при include_router больше не
-# раскроет управление организациями.
 router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
-# Statuses from which a fresh POST may reuse the existing row and (re)provision.
-REPROVISIONABLE = {"failed", "archived"}
-# Statuses that block a new POST for the same slug.
-BLOCKING = {"active", "provisioning"}
+
+def _looks_like_ipv4(value: str | None) -> bool:
+    if not value:
+        return False
+    parts = value.split(".")
+    return len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts)
 
 
-def _to_result(outcome: ProvisionOutcome) -> ProvisionResult:
-    admin = None
-    if outcome.admin_login and outcome.admin_temp_password:
-        admin = OrgAdminCredentials(
-            login=outcome.admin_login, temporary_password=outcome.admin_temp_password
-        )
-    return ProvisionResult(
-        organization=OrganizationRead.model_validate(outcome.org), org_admin=admin
-    )
-
-
-async def _get_org(slug: str, db: AsyncSession) -> Organization | None:
-    result = await db.execute(select(Organization).where(Organization.slug == slug))
-    return result.scalar_one_or_none()
+async def _get_org(org_id: int, db: AsyncSession) -> Organization | None:
+    return await db.get(Organization, org_id)
 
 
 @router.get("", response_model=list[OrganizationRead])
@@ -84,121 +63,185 @@ async def list_organizations(db: AsyncSession = Depends(get_db)) -> list[Organiz
     return list(result.scalars().all())
 
 
+async def _unique_org_slug(domain: str, db: AsyncSession) -> str:
+    from app.schemas.organization import slug_from_domain
+    base = slug_from_domain(domain)
+    cand = base
+    i = 1
+    while (await db.execute(select(Organization.id).where(Organization.slug == cand))).scalar_one_or_none() is not None:
+        i += 1
+        cand = f"{base[:36]}-{i}"
+    return cand
+
+
 @router.post("", response_model=ProvisionResult, status_code=status.HTTP_201_CREATED)
 async def create_organization(
     payload: OrganizationCreate,
     db: AsyncSession = Depends(get_db),
 ) -> ProvisionResult:
-    existing = await _get_org(payload.slug, db)
-    if existing is not None and existing.status in BLOCKING:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"organization '{payload.slug}' already exists (status={existing.status})",
-        )
+    """Создать организацию по домену (он же лендинг) на выбранной ноде. Ядро НЕ
+    поднимает стек у себя — лендинг разворачивается контейнером на ноде воркором."""
+    dup = (await db.execute(select(Organization).where(Organization.domain == payload.domain))).scalar_one_or_none()
+    if dup is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, f"организация с доменом '{payload.domain}' уже есть")
 
-    if existing is not None:
-        # Reuse a failed/archived row: refresh mutable fields, then reprovision.
-        org = existing
-        org.name = payload.name
-        org.admin_email = payload.admin_email
-        org.plan = payload.plan
-        org.deployment_mode = payload.deployment_mode
-        org.notes = payload.notes
-    else:
-        org = Organization(
-            slug=payload.slug,
-            name=payload.name,
-            admin_email=payload.admin_email,
-            plan=payload.plan,
-            deployment_mode=payload.deployment_mode,
-            notes=payload.notes,
-            status="provisioning",
-        )
-        db.add(org)
+    node = await db.get(Node, payload.node_id)
+    if node is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "нода не найдена")
+    if node.status != "active":
+        raise HTTPException(status.HTTP_409_CONFLICT, f"нода не в строю (статус '{node.status}') — дождитесь active")
+
+    slug = await _unique_org_slug(payload.domain, db)
+    org = Organization(
+        slug=slug, domain=payload.domain, node_id=node.id, name=payload.name,
+        admin_email=payload.admin_email, plan=payload.plan, notes=payload.notes,
+        status="active", landing_status="pending",
+        activated_at=datetime.utcnow(),
+    )
+    db.add(org)
+    await db.commit()
+    await db.refresh(org)
+    await get_or_create_subscription(db, org)
+
+    login = (payload.admin_email or f"admin@{payload.domain}").strip().lower()
+    temp_pw = secrets_mod.token_urlsafe(9)
+    admin = OrgAdmin(org_id=org.id, login=login, password_hash=hash_password(temp_pw),
+                     email=payload.admin_email)
+    db.add(admin)
+
+    try:
+        resp = await RemoteNodeClient().provision_landing(node, {
+            "domain": org.domain, "org_name": org.name, "org_slug": org.slug, "school_hosts": [],
+        })
+        org.landing_status = "active" if resp.get("success") else "failed"
+    except RemoteNodeError as exc:
+        org.landing_status = "failed"
+        logger.warning("org %s: landing provision failed: %s", org.slug, exc)
     await db.commit()
     await db.refresh(org)
 
-    try:
-        outcome = await provision(org, db)
-    except ProvisioningError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"provisioning failed for '{org.slug}': {exc}",
-        )
-    return _to_result(outcome)
+    return ProvisionResult(
+        organization=OrganizationRead.model_validate(org),
+        org_admin=OrgAdminCredentials(login=login, temporary_password=temp_pw),
+    )
 
 
-@router.get("/{slug}", response_model=OrganizationRead)
-async def get_organization(slug: str, db: AsyncSession = Depends(get_db)) -> Organization:
-    org = await _get_org(slug, db)
+@router.get("/{org_id}", response_model=OrganizationRead)
+async def get_organization(org_id: int, db: AsyncSession = Depends(get_db)) -> Organization:
+    org = await _get_org(org_id, db)
     if org is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="organization not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     return org
 
 
-@router.post("/{slug}/reprovision", response_model=ProvisionResult)
-async def reprovision_organization(
-    slug: str, db: AsyncSession = Depends(get_db)
-) -> ProvisionResult:
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/reprovision", response_model=ProvisionResult)
+async def reprovision_organization(org_id: int, db: AsyncSession = Depends(get_db)) -> ProvisionResult:
+    """Перезапустить лендинг организации на её ноде."""
+    org = await _get_org(org_id, db)
     if org is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="organization not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    if not org.node_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "у организации нет назначенной ноды")
+    node = await db.get(Node, org.node_id)
+    if node is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "нода не найдена")
+
+    schools = (await db.execute(
+        select(School).where(School.org_id == org.id, School.status == "active")
+    )).scalars().all()
+    school_hosts = [f"{s.subdomain}.{org.domain}" for s in schools if s.subdomain and org.domain]
+
     try:
-        outcome = await provision(org, db)
-    except ProvisioningError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"reprovisioning failed for '{org.slug}': {exc}",
-        )
-    return _to_result(outcome)
+        resp = await RemoteNodeClient().provision_landing(node, {
+            "domain": org.domain, "org_name": org.name, "org_slug": org.slug,
+            "school_hosts": school_hosts,
+        })
+        org.landing_status = "active" if resp.get("success") else "failed"
+    except RemoteNodeError as exc:
+        org.landing_status = "failed"
+        await db.commit()
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось поднять лендинг: {exc}")
+    await db.commit()
+    await db.refresh(org)
+    return ProvisionResult(organization=OrganizationRead.model_validate(org))
 
 
-@router.delete("/{slug}")
+@router.delete("/{org_id}")
 async def delete_organization(
-    slug: str,
+    org_id: int,
     purge: bool = Query(False, description="Also delete the control-DB row + secrets (IRREVERSIBLE)"),
     confirm: str | None = Query(None, description="For purge: the exact org slug (typo guard)"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    org = await _get_org(slug, db)
+    org = await _get_org(org_id, db)
     if org is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="organization not found")
-    # purge каскадно сносит тома ВСЕХ школ орг (необратимо) — требуем подтверждения
-    # slug-ом, чтобы опечатка не уничтожила целую организацию (AUDIT, lifecycle #3).
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if purge and (confirm or "").strip() != org.slug:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"для безвозвратного удаления организации повторите её slug в ?confirm={org.slug}",
+            status.HTTP_400_BAD_REQUEST,
+            f"для безвозвратного удаления организации повторите slug в ?confirm={org.slug}",
         )
 
-    # КАСКАД: сначала снять стеки ВСЕХ школ орг (они помечены лейблом sch-<slug>,
-    # которого нет у орг-стека com.perum.org=<slug> — без этого школы остаются
-    # работающими «призраками» после удаления орг). purge пробрасываем: при полном
-    # удалении орг школы тоже удаляются (с pg_dump-бэкапом), иначе — архивируются.
-    schools = (
-        await db.execute(select(School).where(School.org_id == org.id))
-    ).scalars().all()
+    node = await db.get(Node, org.node_id) if org.node_id else None
+
+    schools = (await db.execute(select(School).where(School.org_id == org.id))).scalars().all()
     for school in schools:
         if school.status == "archived" and not purge:
             continue
         try:
             async with keyed_lock(school_key(school.id)):
-                await deprovision_school(school, db, purge=purge)
+                if node is not None:
+                    await RemoteNodeClient().deprovision_school(
+                        node, school.slug, mode="purge" if purge else "archive"
+                    )
+                else:
+                    await deprovision_school(school, db, purge=purge)
         except Exception as exc:  # noqa: BLE001
             logger.error("org %s: deprovision school %s failed: %s", org.slug, school.slug, exc)
 
-    await deprovision(org, db)
+    if node is not None and org.slug:
+        try:
+            await RemoteNodeClient().deprovision_landing(node, org.slug)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("org %s: deprovision landing failed: %s", org.slug, exc)
+
     if purge:
         secret = await db.get(OrganizationSecret, org.id)
         if secret is not None:
             await db.delete(secret)
         await db.delete(org)
         await db.commit()
-        return {"slug": slug, "purged": True}
-    return {"slug": slug, "status": org.status}
+        return {"id": org_id, "purged": True}
+
+    org.status = "archived"
+    org.archived_at = datetime.utcnow()
+    await db.commit()
+    return {"id": org_id, "slug": org.slug, "status": org.status}
 
 
-# --- v2: редактирование и заморозка организации (platform_admin) ---
+@router.get("/{org_id}/dns")
+async def org_dns_info(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """DNS-инструкция для домена орг: A/CNAME на IP ноды для корня и wildcard."""
+    org = await _get_org(org_id, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    node = await db.get(Node, org.node_id) if org.node_id else None
+    target = node.hostname if node else None
+    record_type = "A" if _looks_like_ipv4(target) else "CNAME"
+    records = []
+    if target:
+        records = [
+            {"name": "@", "type": record_type, "value": target, "purpose": "корневой домен → лендинг орг"},
+            {"name": "*", "type": record_type, "value": target, "purpose": "wildcard → все школы (поддомены)"},
+        ]
+    return {
+        "domain": org.domain,
+        "node_name": node.name if node else None,
+        "dns_target": target,
+        "record_type": record_type,
+        "records": records,
+    }
+
 
 class OrgPatch(BaseModel):
     name: str | None = None
@@ -207,10 +250,9 @@ class OrgPatch(BaseModel):
     deployment_mode: str | None = None
 
 
-@router.patch("/{slug}", response_model=OrganizationRead)
-async def patch_organization(slug: str, payload: OrgPatch, db: AsyncSession = Depends(get_db)) -> Organization:
-    """Редактирование метаданных организации без репровижининга."""
-    org = await _get_org(slug, db)
+@router.patch("/{org_id}", response_model=OrganizationRead)
+async def patch_organization(org_id: int, payload: OrgPatch, db: AsyncSession = Depends(get_db)) -> Organization:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if payload.name is not None:
@@ -228,11 +270,9 @@ async def patch_organization(slug: str, payload: OrgPatch, db: AsyncSession = De
     return org
 
 
-@router.post("/{slug}/suspend")
-async def suspend_organization(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    """Заморозить организацию: остановить стеки всех её активных школ и заблокировать
-    org_admin (статус 'suspended'). Тома сохранены — разморозка вернёт всё."""
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/suspend")
+async def suspend_organization(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if org.status not in ("active", "suspended"):
@@ -248,13 +288,10 @@ async def suspend_organization(slug: str, db: AsyncSession = Depends(get_db)) ->
     org.status = "suspended"
     org.suspended_at = datetime.utcnow()
     await db.commit()
-    return {"slug": org.slug, "status": org.status}
+    return {"id": org.id, "slug": org.slug, "status": org.status}
 
 
 async def _resume_org(org: Organization, db: AsyncSession) -> None:
-    """Вернуть организацию в 'active' и поднять её школы, замороженные КАСКАДОМ
-    (suspended_by='org'). Школы, замороженные org_admin вручную ('manual'),
-    остаются замороженными. Используется и ручной разморозкой, и оплатой."""
     org.status = "active"
     org.suspended_at = None
     await db.commit()
@@ -268,39 +305,31 @@ async def _resume_org(org: Organization, db: AsyncSession) -> None:
                 logger.error("org %s: unsuspend school %s failed: %s", org.slug, school.slug, exc)
 
 
-@router.post("/{slug}/unsuspend")
-async def unsuspend_organization(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    """Разморозить организацию: вернуть статус 'active' и поднять её школы,
-    которые были заморожены каскадом."""
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/unsuspend")
+async def unsuspend_organization(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if org.status not in ("suspended", "active"):
         raise HTTPException(status.HTTP_409_CONFLICT, f"организацию в статусе '{org.status}' нельзя разморозить")
     await _resume_org(org, db)
-    return {"slug": org.slug, "status": org.status}
+    return {"id": org.id, "slug": org.slug, "status": org.status}
 
 
-@router.get("/{slug}/schools")
-async def organization_schools(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    """Сквозной список ВСЕХ школ организации для platform_admin (включая archived).
-    Не ломает org-скоуп: живёт под /api/organizations (require_platform_admin),
-    роутер /api/schools (org_admin) не трогается."""
+@router.get("/{org_id}/schools")
+async def organization_schools(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
     from app.routers.schools import _school_dict
-
-    org = await _get_org(slug, db)
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     rows = (await db.execute(select(School).where(School.org_id == org.id).order_by(School.id))).scalars().all()
-    return {"org_slug": org.slug, "schools": [_school_dict(s) for s in rows]}
+    return {"org_id": org.id, "org_slug": org.slug, "schools": [_school_dict(s) for s in rows]}
 
 
-@router.get("/{slug}/schools/{school_id}")
-async def organization_school(slug: str, school_id: int, db: AsyncSession = Depends(get_db)) -> dict:
-    """Карточка одной школы любой орг для platform_admin: метаданные + телеметрия."""
+@router.get("/{org_id}/schools/{school_id}")
+async def organization_school(org_id: int, school_id: int, db: AsyncSession = Depends(get_db)) -> dict:
     from app.routers.schools import _school_dict
-
-    org = await _get_org(slug, db)
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     school = await db.get(School, school_id)
@@ -310,18 +339,15 @@ async def organization_school(slug: str, school_id: int, db: AsyncSession = Depe
     return {**_school_dict(school), "stat": school_stat(school, metric, datetime.utcnow())}
 
 
-@router.get("/{slug}/stats")
-async def organization_stats(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    """Статистика организации: сводка по её школам + разбивка по каждой школе."""
-    org = await _get_org(slug, db)
+@router.get("/{org_id}/stats")
+async def organization_stats(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     rows = await schools_with_metrics(db, org_id=org.id)
     agg, schools = rollup(rows, datetime.utcnow())
-    return {"org_slug": org.slug, "name": org.name, "plan": org.plan, "status": org.status, **agg, "schools": schools}
+    return {"org_id": org.id, "org_slug": org.slug, "name": org.name, "plan": org.plan, "status": org.status, **agg, "schools": schools}
 
-
-# --- v2: платформа заводит администратора организации (оператора узла орг) ---
 
 class OrgAdminCreate(BaseModel):
     login: str
@@ -330,9 +356,9 @@ class OrgAdminCreate(BaseModel):
     email: str | None = None
 
 
-@router.post("/{slug}/org-admins", status_code=status.HTTP_201_CREATED)
-async def create_org_admin(slug: str, payload: OrgAdminCreate, db: AsyncSession = Depends(get_db)) -> dict:
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/org-admins", status_code=status.HTTP_201_CREATED)
+async def create_org_admin(org_id: int, payload: OrgAdminCreate, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     clash = await db.execute(select(OrgAdmin).where(OrgAdmin.login == payload.login))
@@ -354,8 +380,8 @@ class OrgAdminPatch(BaseModel):
     is_active: bool | None = None
 
 
-async def _get_org_admin(slug: str, admin_id: int, db: AsyncSession) -> OrgAdmin:
-    org = await _get_org(slug, db)
+async def _get_org_admin(org_id: int, admin_id: int, db: AsyncSession) -> OrgAdmin:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     oa = await db.get(OrgAdmin, admin_id)
@@ -364,9 +390,9 @@ async def _get_org_admin(slug: str, admin_id: int, db: AsyncSession) -> OrgAdmin
     return oa
 
 
-@router.get("/{slug}/org-admins")
-async def list_org_admins(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    org = await _get_org(slug, db)
+@router.get("/{org_id}/org-admins")
+async def list_org_admins(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     rows = (await db.execute(select(OrgAdmin).where(OrgAdmin.org_id == org.id).order_by(OrgAdmin.id))).scalars().all()
@@ -376,9 +402,9 @@ async def list_org_admins(slug: str, db: AsyncSession = Depends(get_db)) -> dict
     ]}
 
 
-@router.patch("/{slug}/org-admins/{admin_id}")
-async def patch_org_admin(slug: str, admin_id: int, payload: OrgAdminPatch, db: AsyncSession = Depends(get_db)) -> dict:
-    oa = await _get_org_admin(slug, admin_id, db)
+@router.patch("/{org_id}/org-admins/{admin_id}")
+async def patch_org_admin(org_id: int, admin_id: int, payload: OrgAdminPatch, db: AsyncSession = Depends(get_db)) -> dict:
+    oa = await _get_org_admin(org_id, admin_id, db)
     if payload.full_name is not None:
         oa.full_name = payload.full_name or None
     if payload.email is not None:
@@ -390,24 +416,22 @@ async def patch_org_admin(slug: str, admin_id: int, payload: OrgAdminPatch, db: 
     return {"id": oa.id, "login": oa.login, "is_active": oa.is_active}
 
 
-@router.delete("/{slug}/org-admins/{admin_id}")
-async def delete_org_admin(slug: str, admin_id: int, db: AsyncSession = Depends(get_db)) -> dict:
-    oa = await _get_org_admin(slug, admin_id, db)
+@router.delete("/{org_id}/org-admins/{admin_id}")
+async def delete_org_admin(org_id: int, admin_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    oa = await _get_org_admin(org_id, admin_id, db)
     await db.delete(oa)
     await db.commit()
     return {"id": admin_id, "deleted": True}
 
 
-@router.post("/{slug}/org-admins/{admin_id}/reset-password")
-async def reset_org_admin_password(slug: str, admin_id: int, db: AsyncSession = Depends(get_db)) -> dict:
-    oa = await _get_org_admin(slug, admin_id, db)
+@router.post("/{org_id}/org-admins/{admin_id}/reset-password")
+async def reset_org_admin_password(org_id: int, admin_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    oa = await _get_org_admin(org_id, admin_id, db)
     new_password = secrets_mod.token_urlsafe(9)
     oa.password_hash = hash_password(new_password)
     await db.commit()
     return {"id": oa.id, "login": oa.login, "temporary_password": new_password}
 
-
-# --- v2: enrollment-токен для подключения узла организации ---
 
 class EnrollmentTokenOut(BaseModel):
     token: str
@@ -416,11 +440,9 @@ class EnrollmentTokenOut(BaseModel):
     expires_at: str
 
 
-@router.post("/{slug}/enrollment-token", response_model=EnrollmentTokenOut)
-async def issue_enrollment_token(slug: str, db: AsyncSession = Depends(get_db)) -> EnrollmentTokenOut:
-    """Выдать одноразовый токен подключения узла орг. Плейнтекст — только в ответе;
-    в БД хранится sha256-хеш. Узел орг предъявит токен на POST /api/enroll."""
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/enrollment-token", response_model=EnrollmentTokenOut)
+async def issue_enrollment_token(org_id: int, db: AsyncSession = Depends(get_db)) -> EnrollmentTokenOut:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     raw = secrets_mod.token_urlsafe(32)
@@ -434,8 +456,6 @@ async def issue_enrollment_token(slug: str, db: AsyncSession = Depends(get_db)) 
         core_url=get_settings().CONTROL_PLANE_URL, expires_at=expires.isoformat(),
     )
 
-
-# --- v2: биллинг (план + лимит школ + подписка + оплата) ---
 
 class PlanUpdate(BaseModel):
     plan: str
@@ -456,6 +476,7 @@ async def _billing_payload(db: AsyncSession, org: Organization) -> dict:
     used = await _active_school_count(db, org.id)
     limit = school_limit(org.plan)
     return {
+        "org_id": org.id,
         "org_slug": org.slug,
         "plan": org.plan,
         "price_rub_month": plan_price(org.plan),
@@ -468,32 +489,28 @@ async def _billing_payload(db: AsyncSession, org: Organization) -> dict:
     }
 
 
-@router.get("/{slug}/billing")
-async def get_billing(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    org = await _get_org(slug, db)
+@router.get("/{org_id}/billing")
+async def get_billing(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     return await _billing_payload(db, org)
 
 
-@router.put("/{slug}/billing")
+@router.put("/{org_id}/billing")
 async def set_plan(
-    slug: str,
+    org_id: int,
     payload: PlanUpdate,
     force: bool = Query(False, description="Разрешить понижение плана ниже текущего использования"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     if payload.plan not in PLANS:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, f"неизвестный план; допустимо: {', '.join(PLANS)}")
-    org = await _get_org(slug, db)
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     used = await _active_school_count(db, org.id)
     new_limit = school_limit(payload.plan)
-    # Понижение ниже текущего использования по умолчанию ЗАПРЕЩЕНО: иначе орг могла
-    # бы уйти на дешёвый план, сохранив все сверхлимитные школы работающими бесплатно
-    # (AUDIT, billing #9). Оператор платформы может продавить через ?force=true,
-    # но тогда обязан сам решить судьбу лишних школ (заморозить/архивировать).
     if used > new_limit and not force:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -511,11 +528,9 @@ async def set_plan(
     return out
 
 
-@router.post("/{slug}/billing/charge")
-async def charge_billing(slug: str, payload: ChargeRequest, db: AsyncSession = Depends(get_db)) -> dict:
-    """Ручная отметка оплаты: продлевает подписку на N месяцев (создаёт счёт).
-    Реальная интеграция с провайдером (ЮKassa) заменит это на счёт+webhook."""
-    org = await _get_org(slug, db)
+@router.post("/{org_id}/billing/charge")
+async def charge_billing(org_id: int, payload: ChargeRequest, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if plan_price(org.plan) <= 0:
@@ -525,8 +540,6 @@ async def charge_billing(slug: str, payload: ChargeRequest, db: AsyncSession = D
         )
     sub = await get_or_create_subscription(db, org)
     invoice = await record_payment(db, org, sub, payload.months)
-    # Цикл биллинга самозамыкается: если орг была приостановлена за неоплату и
-    # теперь оплачена — автоматически размораживаем (поднимаем стеки школ).
     resumed = False
     if org.status == "suspended" and not is_delinquent(sub, datetime.utcnow()):
         await _resume_org(org, db)
@@ -540,9 +553,9 @@ async def charge_billing(slug: str, payload: ChargeRequest, db: AsyncSession = D
     }
 
 
-@router.get("/{slug}/billing/invoices")
-async def list_invoices(slug: str, db: AsyncSession = Depends(get_db)) -> dict:
-    org = await _get_org(slug, db)
+@router.get("/{org_id}/billing/invoices")
+async def list_invoices(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     rows = (await db.execute(

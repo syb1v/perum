@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal, get_db
 from app.core.deps import require_billing_ok, require_org_admin
 from app.core.locks import keyed_lock, org_create_key, school_key
-from app.models import Node, NodeAssignment, OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret, UpdateHistory
+from app.models import Node, NodeAssignment, OrgAdmin, Organization, Release, School, SchoolDomain, SchoolMetric, SchoolSecret, UpdateHistory  # noqa: F401
 from app.schemas.organization import RESERVED_SLUGS, SLUG_PATTERN
 from app.services.billing import billing_state, get_or_create_subscription, plan_price, school_limit
 from app.services.stats import rollup, school_stat, schools_with_metrics
@@ -53,23 +53,19 @@ BLOCKING = {"active", "provisioning", "suspended"}
 
 
 class SchoolCreate(BaseModel):
-    slug: str = Field(min_length=3, max_length=40)
+    subdomain: str = Field(min_length=3, max_length=40)
     name: str = Field(min_length=2, max_length=255)
     admin_email: str | None = None
 
-    @field_validator("slug")
+    @field_validator("subdomain")
     @classmethod
-    def validate_slug(cls, v: str) -> str:
-        # Slug школы напрямую формирует хост `<slug>.<base>` и Caddy-маршрут
-        # (terminal, index 0). Без этой проверки org_admin мог завести школу со
-        # slug='admin'/'api' и перехватить хост платформы. Тот же контракт, что
-        # и у организаций (см. app/schemas/organization.py).
+    def validate_subdomain(cls, v: str) -> str:
         v = v.strip().lower()
         if v in RESERVED_SLUGS:
-            raise ValueError(f"slug '{v}' зарезервирован")
+            raise ValueError(f"поддомен '{v}' зарезервирован")
         if not SLUG_PATTERN.match(v):
             raise ValueError(
-                "slug: строчные латинские буквы/цифры/дефис, начинается с буквы, "
+                "поддомен: строчные латинские буквы/цифры/дефис, начинается с буквы, "
                 "заканчивается буквой или цифрой, длина 3-40"
             )
         return v
@@ -84,6 +80,7 @@ def _school_dict(s: School) -> dict:
         "id": s.id,
         "org_id": s.org_id,
         "slug": s.slug,
+        "subdomain": s.subdomain,
         "name": s.name,
         "status": s.status,
         "release_tag": s.release_tag,
@@ -156,6 +153,9 @@ async def list_schools(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSe
         await db.execute(select(School).where(School.org_id == admin.org_id).order_by(School.id))
     ).scalars().all()
 
+    org = await db.get(Organization, admin.org_id)
+    org_domain = org.domain if org else None
+
     # Связка с нодами из ядра: какая школа на каком сервере (одним запросом).
     node_map: dict[int, tuple[str, str]] = {}
     if rows:
@@ -171,6 +171,7 @@ async def list_schools(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSe
     out = []
     for s in rows:
         d = _school_dict(s)
+        d["full_host"] = f"{s.subdomain}.{org_domain}" if (s.subdomain and org_domain) else None
         nm = node_map.get(s.id)
         d["node_name"] = nm[0] if nm else None
         d["node_hostname"] = nm[1] if nm else None
@@ -204,15 +205,19 @@ async def create_school(
     admin: OrgAdmin = Depends(require_billing_ok),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    subdomain = payload.subdomain
     # Лок орг делает «проверку лимита плана + вставку строки» атомарными: иначе два
     # параллельных create могли оба пройти проверку (used<limit) до вставки и
     # превысить оплаченный лимит (AUDIT, lifecycle-low).
     async with keyed_lock(org_create_key(admin.org_id)):
-        existing = (await db.execute(select(School).where(School.slug == payload.slug))).scalar_one_or_none()
-        if existing is not None and existing.status in BLOCKING:
-            raise HTTPException(status.HTTP_409_CONFLICT, f"школа '{payload.slug}' уже существует (status={existing.status})")
+        existing = (await db.execute(
+            select(School).where(School.org_id == admin.org_id, School.subdomain == subdomain)
+        )).scalar_one_or_none()
 
-        if existing is not None and existing.org_id == admin.org_id:
+        if existing is not None and existing.status in BLOCKING:
+            raise HTTPException(status.HTTP_409_CONFLICT, f"школа '{subdomain}' уже существует (status={existing.status})")
+
+        if existing is not None:
             # Возрождение archived-школы увеличивает число активных → проверяем лимит.
             if existing.status == "archived":
                 await _enforce_school_limit(db, admin.org_id)
@@ -220,17 +225,23 @@ async def create_school(
             school.name = payload.name
             school.admin_email = payload.admin_email
             school.status = "provisioning"
-        elif existing is not None:
-            raise HTTPException(status.HTTP_409_CONFLICT, f"slug '{payload.slug}' занят другой организацией")
+            await db.commit()
+            await db.refresh(school)
         else:
             await _enforce_school_limit(db, admin.org_id)
+            # slug — внутренний инфра-токен; производится из id (избегает коллизий
+            # при одинаковых поддоменах в разных орг на одной ноде). Временный slug
+            # заменяется на финальный после flush (когда id известен).
             school = School(
-                org_id=admin.org_id, slug=payload.slug, name=payload.name,
+                org_id=admin.org_id, subdomain=subdomain, name=payload.name,
                 admin_email=payload.admin_email, status="provisioning",
+                slug=f"sch-pending-{admin.org_id}",
             )
             db.add(school)
-        await db.commit()
-        await db.refresh(school)
+            await db.flush()
+            school.slug = f"sch{school.id}"
+            await db.commit()
+            await db.refresh(school)
 
     # Провижининг (десятки секунд–минуты) уходит в фон → отвечаем 202 сразу.
     _schedule_lifecycle(school.id, "provision")
@@ -240,6 +251,15 @@ async def create_school(
         "message": "школа создаётся в фоне; следите за статусом. Пароль администратора "
                    "выдайте после активации в разделе «Админы» (сбросить пароль).",
     }
+
+
+@router.get("/info")
+async def org_info(admin: OrgAdmin = Depends(require_org_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    """Базовая информация об организации для org_admin (домен, имя, статус лендинга)."""
+    org = await db.get(Organization, admin.org_id)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "организация не найдена")
+    return {"id": org.id, "name": org.name, "domain": org.domain, "plan": org.plan, "status": org.status, "landing_status": org.landing_status}
 
 
 @router.get("/billing")
@@ -582,13 +602,17 @@ async def school_dns_info(
         )
     ).scalars().all()
 
+    org = await db.get(Organization, admin.org_id)
+    full_host = f"{school.subdomain}.{org.domain}" if (school.subdomain and org and org.domain) else None
     return {
         "slug": school.slug,
+        "subdomain": school.subdomain,
+        "full_host": full_host,
         "base_domain": base,
-        "default_subdomain": f"{school.slug}.{base}",
+        "default_subdomain": f"{school.subdomain or school.slug}.{base}",
         "node_name": node.name if node else None,
-        "dns_target": target,           # IP или FQDN ноды — куда указывать домен
-        "record_type": record_type,     # "A" если target — IP, иначе "CNAME"
+        "dns_target": target,
+        "record_type": record_type,
         "domains": [_domain_dict(d) for d in domains],
     }
 
@@ -662,12 +686,13 @@ async def delete_school(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     school = await _get_school(school_id, admin, db)
-    # purge — необратимое уничтожение томов: требуем явного подтверждения slug-ом,
+    # purge — необратимое уничтожение томов: требуем явного подтверждения поддомена,
     # чтобы случайный DELETE?purge=true не стёр данные школы (AUDIT, lifecycle #3).
-    if purge and (confirm or "").strip() != school.slug:
+    confirm_key = school.subdomain or school.slug
+    if purge and (confirm or "").strip() != confirm_key:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
-            f"для безвозвратного удаления повторите slug школы в ?confirm={school.slug}",
+            f"для безвозвратного удаления повторите поддомен школы в ?confirm={confirm_key}",
         )
     async with keyed_lock(school_key(school.id)):
         node = await _node_for_school(school, db)

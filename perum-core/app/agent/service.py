@@ -231,8 +231,8 @@ async def provision_school_on_node(
             ))
             await db.commit()
 
-        # Образ передаёт ядро (req.release_tag) — на ноде таблица релизов пустая.
-        await provision_school(school, db, image=req.release_tag)
+        # Образ + полный домен школы передаёт ядро (на ноде нет таблицы релизов/орг-домена).
+        await provision_school(school, db, image=req.release_tag, host=req.host)
         return AgentProvisionSchoolResponse(
             success=True, school_slug=req.school_slug, message="School provisioned successfully"
         )
@@ -332,6 +332,69 @@ async def deprovision_school_on_node(
         return AgentSchoolActionResponse(
             success=False, school_slug=req.school_slug, message=str(exc)
         )
+
+
+def _landing_html(org_name: str, domain: str, school_hosts: list[str]) -> str:
+    schools = "".join(f'<li><a href="https://{h}">{h}</a></li>' for h in school_hosts) or "<li>школы появятся здесь</li>"
+    return f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{org_name}</title>
+<style>body{{font-family:system-ui,sans-serif;background:#0b1020;color:#e6e9f0;margin:0;display:flex;min-height:100vh;align-items:center;justify-content:center}}
+.card{{max-width:640px;padding:40px;text-align:center}}h1{{font-size:2rem;margin:0 0 8px}}
+.dom{{color:#5ea0ff;font-family:monospace}}ul{{list-style:none;padding:0;margin:24px 0 0;text-align:left;display:inline-block}}
+li{{margin:6px 0}}a{{color:#7cc4ff}}.muted{{color:#8a93a8;font-size:.9rem;margin-top:24px}}</style></head>
+<body><div class="card"><h1>{org_name}</h1><div class="dom">{domain}</div>
+<p>Образовательная платформа организации. Школы:</p><ul>{schools}</ul>
+<div class="muted">Powered by ПЭРУМ</div></div></body></html>"""
+
+
+async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingResponse":
+    """Поднять/обновить контейнер-лендинг орг на ноде и маршрут Caddy (корневой домен)."""
+    from app.agent.schemas import AgentLandingResponse
+    from app.services.stack_spec import landing_container_name, landing_label_slug
+    from app.services.caddy_admin import get_caddy_admin
+
+    settings = get_settings()
+    docker = DockerClient()
+    caddy = get_caddy_admin()
+    slug = req.org_slug
+    name = landing_container_name(slug)
+    label = landing_label_slug(slug)
+    image = "nginx:alpine"
+    try:
+        await docker.ensure_network(settings.DOCKER_NETWORK)
+        await docker.ensure_image(image)
+        await docker.remove_containers(label)
+        await docker.run_container(
+            name=name, image=image, slug=label, role="landing",
+            environment={}, network=settings.DOCKER_NETWORK,
+        )
+        import base64 as _b64
+        html_b64 = _b64.b64encode(_landing_html(req.org_name, req.domain, req.school_hosts).encode()).decode()
+        code, out = await docker.exec(name, ["sh", "-c", f"echo {html_b64} | base64 -d > /usr/share/nginx/html/index.html"])
+        if code != 0:
+            return AgentLandingResponse(success=False, domain=req.domain, message=f"write index failed: {out[-300:]}")
+        await caddy.add_proxy_route(label, req.domain, f"{name}:80")
+        return AgentLandingResponse(success=True, domain=req.domain, message="landing provisioned")
+    except Exception as exc:  # noqa: BLE001
+        logger.error("provision_landing_on_node failed: %s", exc)
+        return AgentLandingResponse(success=False, domain=req.domain, message=str(exc))
+
+
+async def deprovision_landing_on_node(db: AsyncSession, org_slug: str, domain: str | None = None) -> "AgentLandingResponse":
+    from app.agent.schemas import AgentLandingResponse
+    from app.services.stack_spec import landing_label_slug
+    from app.services.caddy_admin import get_caddy_admin
+
+    docker = DockerClient()
+    caddy = get_caddy_admin()
+    label = landing_label_slug(org_slug)
+    try:
+        await docker.remove_containers(label)
+        await caddy.remove_route(label)
+        return AgentLandingResponse(success=True, domain=domain or "", message="landing removed")
+    except Exception as exc:  # noqa: BLE001
+        return AgentLandingResponse(success=False, domain=domain or "", message=str(exc))
 
 
 async def internal_rpc_on_node(db: AsyncSession, school_slug: str, req) -> "AgentInternalRpcResponse":

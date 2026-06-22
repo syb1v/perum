@@ -30,8 +30,11 @@ export default function OrgConsole() {
   const [suspended, setSuspended] = useState(false);
   const [selfBilling, setSelfBilling] = useState<any>(null);
 
+  // org info (домен — для предпросмотра full_host при создании школы)
+  const [orgInfo, setOrgInfo] = useState<any>(null);
+
   // create school
-  const [form, setForm] = useState({ slug: "", name: "", email: "" });
+  const [form, setForm] = useState({ subdomain: "", name: "", email: "" });
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<any>(null);
 
@@ -60,6 +63,7 @@ export default function OrgConsole() {
 
   async function load() {
     try {
+      try { setOrgInfo(await papi("/api/schools/info")); } catch { /* non-fatal */ }
       const r = await papi("/api/schools");
       const list = r.schools || [];
       setSchools(list);
@@ -143,7 +147,7 @@ export default function OrgConsole() {
 
   async function createSchool(e: React.FormEvent) {
     e.preventDefault(); setErr(""); setCreated(null); setCreating(true);
-    try { const r = await papi("/api/schools", { method: "POST", body: JSON.stringify({ slug: form.slug, name: form.name, admin_email: form.email || null }) }); setCreated(r); setForm({ slug: "", name: "", email: "" }); load(); }
+    try { const r = await papi("/api/schools", { method: "POST", body: JSON.stringify({ subdomain: form.subdomain, name: form.name, admin_email: form.email || null }) }); setCreated(r); setForm({ subdomain: "", name: "", email: "" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setCreating(false); }
   }
   async function updateSchool(id: number) {
@@ -158,15 +162,14 @@ export default function OrgConsole() {
     try { await papi(`/api/schools/${s.id}/${action}`, { method: "POST" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
-  async function removeSchool(id: number, slug: string) {
-    // Необратимое удаление: требуем ввести slug (бэкап БД и вложений снимается).
+  async function removeSchool(id: number, confirmKey: string) {
     const typed = prompt(
-      `БЕЗВОЗВРАТНОЕ удаление школы «${slug}»: все данные стека будут стёрты (перед удалением снимается бэкап БД и вложений).\n\nДля подтверждения введите slug школы:`,
+      `БЕЗВОЗВРАТНОЕ удаление школы «${confirmKey}»: все данные стека будут стёрты (перед удалением снимается бэкап БД и вложений).\n\nДля подтверждения введите поддомен школы:`,
     );
     if (typed == null) return;
-    if (typed.trim() !== slug) { alert("slug не совпал — удаление отменено"); return; }
+    if (typed.trim() !== confirmKey) { alert("поддомен не совпал — удаление отменено"); return; }
     setBusyId(id);
-    try { await papi(`/api/schools/${id}?purge=true&confirm=${encodeURIComponent(slug)}`, { method: "DELETE" }); load(); }
+    try { await papi(`/api/schools/${id}?purge=true&confirm=${encodeURIComponent(confirmKey)}`, { method: "DELETE" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
   }
 
@@ -266,7 +269,7 @@ export default function OrgConsole() {
               <div className={styles.tableContainer}>
                 <table className={styles.table}>
                   <thead><tr><th>Школа</th><th>Онлайн</th><th>Ученики</th><th>Учителя</th><th>Ср. балл</th><th>Активны 24ч</th></tr></thead>
-                  <tbody>{stats.schools?.map((s: any) => (<tr key={s.id}><td><b>{s.name}</b><br /><span className={c.muted}>{s.slug}</span></td><td><span className={s.online ? c.dotOnline : c.dotOffline}>●</span></td><td>{s.students}</td><td>{s.teachers}</td><td>{s.avg_grade ?? "—"}</td><td>{s.active_24h}</td></tr>))}</tbody>
+                  <tbody>{stats.schools?.map((s: any) => (<tr key={s.id}><td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td><td><span className={s.online ? c.dotOnline : c.dotOffline}>●</span></td><td>{s.students}</td><td>{s.teachers}</td><td>{s.avg_grade ?? "—"}</td><td>{s.active_24h}</td></tr>))}</tbody>
                 </table>
                 {stats.schools?.length === 0 && <p className={styles.emptyState}>Нет школ.</p>}
               </div>
@@ -296,7 +299,8 @@ export default function OrgConsole() {
           )}
           {created && (
             <div className={`${styles.card} ${c.okCard}`}>
-              <b>Школа «{created.school?.slug}» создаётся…</b>
+              <b>Школа «{created.school?.subdomain || created.school?.slug}» создаётся…</b>
+              {orgInfo?.domain && created.school?.subdomain && <p className={c.muted}>Адрес: <code className={styles.code}>{created.school.subdomain}.{orgInfo.domain}</code></p>}
               <p className={c.muted}>{created.message || "Идёт провижининг стека (поднимается контейнер, БД, миграции). Статус обновится автоматически."} После активации откройте «Админы» и задайте пароль администратора кнопкой «Сбросить пароль».</p>
             </div>
           )}
@@ -304,7 +308,15 @@ export default function OrgConsole() {
             <h2 className={styles.cardTitle}>Создать школу</h2>
             <form onSubmit={createSchool} className={styles.form}>
               <div className={styles.formRow}>
-                <div className={styles.formGroup}><label className={styles.label}>Slug (поддомен)</label><input className={styles.input} value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} placeholder="gimnazia5" required /></div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Поддомен</label>
+                  <input className={styles.input} value={form.subdomain} onChange={(e) => setForm({ ...form, subdomain: e.target.value })} placeholder="gimnazia5" required />
+                  {form.subdomain && orgInfo?.domain && (
+                    <p className={c.muted} style={{ margin: "4px 0 0", fontSize: "0.82rem" }}>
+                      Адрес школы: <code className={styles.code}>{form.subdomain}.{orgInfo.domain}</code>
+                    </p>
+                  )}
+                </div>
                 <div className={styles.formGroup}><label className={styles.label}>Название</label><input className={styles.input} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Гимназия №5" required /></div>
               </div>
               <div className={styles.formGroup}><label className={styles.label}>Email администратора школы</label><input className={styles.input} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="director@gimnazia5.ru" /></div>
@@ -315,14 +327,16 @@ export default function OrgConsole() {
             <h2 className={styles.cardTitle}>Школы</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Школа</th><th>Состояние</th><th>Нода</th><th>Ученики</th><th>Версия</th><th>Действия</th></tr></thead>
+                <thead><tr><th>Школа</th><th>Адрес</th><th>Состояние</th><th>Нода</th><th>Ученики</th><th>Версия</th><th>Действия</th></tr></thead>
                 <tbody>
                   {schools?.map((s) => {
                     const st = statuses[s.id];
                     const canUpdate = st?.update_available && s.status === "active";
+                    const confirmKey = s.subdomain || s.slug;
                     return (
                       <tr key={s.id}>
-                        <td><b>{s.name}</b><br /><span className={c.muted}>{s.slug}</span></td>
+                        <td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td>
+                        <td>{s.full_host ? <code className={styles.code} style={{ fontSize: "0.78rem" }}>{s.full_host}</code> : <span className={c.muted}>—</span>}</td>
                         <td><SchoolStatus status={s.status} online={!!statById[s.id]?.online} /></td>
                         <td>{s.node_name ? <span title={s.node_hostname || ""}><code className={styles.code}>{s.node_name}</code></span> : <span className={c.muted} style={{ fontSize: "0.8rem" }}>платформа</span>}</td>
                         <td>{statById[s.id]?.students ?? "—"}</td>
@@ -336,7 +350,7 @@ export default function OrgConsole() {
                             <span title={st.last_update.error || ""} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.78rem", color: "#dc3545", fontWeight: 600 }}>⚠ {st.last_update.status === "rolled_back" ? "прошлое обновление откатилось" : "ошибка обновления"}</span>
                           )}
                           <button className={styles.actionBtn} disabled={busyId === s.id || !["active", "suspended"].includes(s.status)} onClick={() => toggleSuspend(s)}>{s.status === "suspended" ? "Разморозить" : "Заморозить"}</button>{" "}
-                          <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busyId === s.id} onClick={() => removeSchool(s.id, s.slug)}>Удал.</button>
+                          <button className={`${styles.actionBtn} ${styles.danger}`} disabled={busyId === s.id} onClick={() => removeSchool(s.id, confirmKey)}>Удал.</button>
                         </td>
                       </tr>
                     );
@@ -422,13 +436,14 @@ export default function OrgConsole() {
             {schools && schools.length > 0 && (
               <div className={styles.tableContainer} style={{ marginTop: 10 }}>
                 <table className={styles.table}>
-                  <thead><tr><th>Школа</th><th>Адрес</th><th>Статус</th><th>Нода (DNS-цель)</th></tr></thead>
+                  <thead><tr><th>Школа</th><th>Адрес (поддомен)</th><th>Статус</th><th>Нода (DNS-цель)</th></tr></thead>
                   <tbody>{schools?.map((s) => {
                     const dns = schoolDns[s.id];
+                    const fullHost = s.full_host || dns?.full_host || dns?.default_subdomain || `${s.subdomain || s.slug}.…`;
                     return (
                       <tr key={s.id}>
                         <td><b>{s.name}</b></td>
-                        <td><code className={styles.code}>{dns?.default_subdomain || `${s.slug}.…`}</code></td>
+                        <td><code className={styles.code} style={{ fontSize: "0.78rem" }}>{fullHost}</code></td>
                         <td><span className={statusBadge(s.status)}>{s.status}</span></td>
                         <td>{dns?.dns_target ? <><code className={styles.code}>{dns.dns_target}</code> <span className={c.muted} style={{ fontSize: "0.72rem" }}>({dns.record_type})</span></> : "—"}</td>
                       </tr>
@@ -487,13 +502,14 @@ export default function OrgConsole() {
       {/* DOMAINS MODAL */}
       {domainsFor && (
         <Modal title={`Домены школы «${domainsFor.name}»`} onClose={() => setDomainsFor(null)} width={720}>
-          {/* Дефолтный поддомен платформы — работает сразу, ничего настраивать не надо */}
+          {/* Основной адрес школы — поддомен домена орг */}
           <div className={styles.card} style={{ margin: "0 0 14px" }}>
-            <h3 className={styles.cardTitle} style={{ marginBottom: 6 }}>Адрес школы на платформе</h3>
+            <h3 className={styles.cardTitle} style={{ marginBottom: 6 }}>Основной адрес школы</h3>
             {dnsInfo ? (
               <p className={c.muted} style={{ margin: 0 }}>
-                Работает сразу, без настройки DNS:{" "}
-                <CopyChip text={`https://${dnsInfo.default_subdomain}`} />
+                {dnsInfo.full_host
+                  ? <><CopyChip text={`https://${dnsInfo.full_host}`} /> <span style={{ marginLeft: 6 }}>— поддомен вашего домена</span></>
+                  : <>Платформенный адрес: <CopyChip text={`https://${dnsInfo.default_subdomain}`} /></>}
               </p>
             ) : <p className={c.muted} style={{ margin: 0 }}>Загрузка…</p>}
           </div>
