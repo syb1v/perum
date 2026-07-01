@@ -166,4 +166,14 @@ git push                      # только по явной команде
 | **Путь на сервере** | `/opt/perum` (проверить при деплое) |
 
 Для деплоя использовать скрипты из `deploy/` (Caddyfile, docker-compose, .env.prod).
+| **IP** | `171.22.73.2` |
+| **Пользователь** | `leonid` |
+| **SSH-ключ** | `C:\Users\halil\.ssh\id_ed25519` |
+| **Подключение** | `ssh -i C:\Users\halil\.ssh\id_ed25519 leonid@171.22.73.2` |
+| **Домен** | `grsn-panel.ru` (A-записи: `@` и `*` → `171.22.73.2`) |
+| **Путь на сервере** | `/opt/perum` (проверить при деплое) |
+
+Для деплоя использовать скрипты из `deploy/scripts/`:
+- `deploy-core.sh` — bash-скрипт (Ubuntu-сервер), флаги: `--setup` (первичная установка), `--local`, `--dry-run`, `--skip-git`, `--no-prune`
+- `deploy-core.ps1` — PowerShell-скрипт (Windows)
 **Никогда не коммитить секреты и пароли в репозиторий.**
