@@ -1,0 +1,1647 @@
+/* ==================== Page Layout ==================== */
+.schedulePage {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ==================== Header & View Toggle ==================== */
+.scheduleHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.scheduleControls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    justify-content: flex-start;
+}
+
+.viewToggle {
+    display: flex;
+    background: var(--bg-tertiary);
+    border-radius: 12px;
+    padding: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    scrollbar-width: none;
+    gap: 4px;
+    /* Firefox */
+}
+
+.viewToggle::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.viewBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.viewBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.viewBtnActive {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== Content Switching ==================== */
+.scheduleContent {
+    display: none;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.scheduleContentActive {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== Week Navigation ==================== */
+.weekNav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+}
+
+.weekNavBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.weekNavBtn:hover {
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
+
+.weekNavInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 200px;
+}
+
+.weekLabel {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.weekTodayLink {
+    font-size: 0.8125rem;
+    padding: 2px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+    font-family: inherit;
+    text-decoration: none;
+}
+
+.weekTodayLink:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
+/* ==================== Schedule Grid ==================== */
+.scheduleGridContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.scheduleGrid {
+    /* Styles are overridden at the end of file for the responsive card grid. 
+       No background/borders here to avoid leaking through gaps. */
+}
+
+.scheduleDaysHeader {
+    display: grid;
+    grid-template-columns: 60px repeat(6, 1fr);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.timeHeader {
+    padding: 16px 12px;
+    border-right: 1px solid var(--border-color);
+}
+
+.dayHeader {
+    padding: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+.dayHeader:last-child {
+    border-right: none;
+}
+
+.dayHeaderToday {
+    color: var(--accent-primary);
+    background: var(--color-primary-light);
+}
+
+.dayDate {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.dayHeaderToday .dayDate {
+    color: var(--accent-primary);
+}
+
+.scheduleBody {
+    min-height: 400px;
+}
+
+.scheduleRow {
+    display: grid;
+    grid-template-columns: 60px repeat(6, 1fr);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.scheduleRow:last-child {
+    border-bottom: none;
+}
+
+.timeCell {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+.lessonNumber {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.lessonTime {
+    font-size: 0.625rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.scheduleCell {
+    padding: 8px;
+    min-height: 80px;
+    border-right: 1px solid var(--border-color);
+    transition: background 0.15s ease;
+}
+
+.scheduleCell:last-child {
+    border-right: none;
+}
+
+.scheduleCell:hover {
+    background: var(--bg-hover);
+}
+
+.lessonCard {
+    padding: 10px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    height: 100%;
+}
+
+.lessonCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.lessonSubject {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.lessonTeacher {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+
+.lessonRoom {
+    font-size: 0.6875rem;
+    color: var(--accent-tertiary);
+    margin-top: 4px;
+}
+
+.emptyCell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    height: 100%;
+}
+
+/* Lesson card grade badges */
+.lessonGrades {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.gradeMini {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 4px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+.lessonHomeworkIndicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    color: var(--warning);
+    font-size: 0.625rem;
+}
+
+/* ==================== Loading & Empty ==================== */
+.scheduleLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.emptyState svg {
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.emptyState p {
+    font-size: 0.9375rem;
+}
+
+/* ==================== Grades View ==================== */
+.gradesLayout {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+}
+
+/* Summary Card */
+.gradesSummaryCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 24px;
+    height: fit-content;
+}
+
+.gradesSummaryCard h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+}
+
+.totalPointsDisplay {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border-color);
+}
+
+.totalPointsLabel {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.totalPointsValue {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.gradesStatsList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.gradeStatItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.gradeStatItem:hover {
+    border-color: var(--border-hover);
+}
+
+.statInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.statSubject {
+    font-weight: 500;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+}
+
+.statCount {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.statValues {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.statBadge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: white;
+}
+
+.statBadgeExcellent {
+    background-color: #10b981;
+}
+
+.statBadgeGood {
+    background-color: #8b5cf6;
+}
+
+.statBadgeSatisfactory {
+    background-color: #f59e0b;
+}
+
+.statBadgeBad {
+    background-color: #ef4444;
+}
+
+.statPoints {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.statPointsPositive {
+    color: var(--success);
+}
+
+.statPointsNegative {
+    color: var(--error);
+}
+
+/* Grades Table */
+.gradesListContainer {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: fit-content;
+}
+
+.gradesFilters {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    background: var(--bg-secondary);
+}
+
+.sectionTitle {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.filterSelect {
+    padding: 10px 16px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.filterSelect:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.filterSelect:hover {
+    border-color: var(--border-hover);
+}
+
+.gradesTableWrapper {
+    overflow-x: hidden;
+    width: 100%;
+}
+
+.gradesTable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+.gradesTable th {
+    text-align: left;
+    padding: 16px 24px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.gradesTable td {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+    vertical-align: middle;
+}
+
+.gradesTable tr:last-child td {
+    border-bottom: none;
+}
+
+.gradesTable tr:hover td {
+    background: var(--bg-hover);
+}
+
+.gradeDate {
+    color: var(--text-secondary);
+    font-family: monospace;
+}
+
+.gradeSubject {
+    font-weight: 500;
+}
+
+.gradeType {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.gradeValCell {
+    width: 60px;
+    text-align: center;
+}
+
+.gradeBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    color: white;
+    font-size: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.gradePoints {
+    font-weight: 600;
+    font-family: monospace;
+}
+
+.gradePointsPositive {
+    color: var(--success);
+}
+
+.gradePointsNegative {
+    color: var(--error);
+}
+
+.emptyStateCell {
+    text-align: center;
+    padding: 60px !important;
+}
+
+.emptyStateSmall {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+}
+
+.btnShowMore {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 24px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--accent-tertiary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.btnShowMore:hover {
+    background: var(--color-primary-light);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+}
+
+.loadingPlaceholder,
+.errorPlaceholder {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+}
+
+.errorPlaceholder {
+    color: var(--error);
+}
+
+/* ==================== Works View ==================== */
+.worksHeader {
+    margin-bottom: 16px;
+}
+
+.worksHeader h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.worksFilters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.workFilter {
+    padding: 8px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.workFilter:hover {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+}
+
+.workFilterActive {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.worksList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.workItem {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: all 0.15s ease;
+}
+
+.workItem:hover {
+    transform: translateX(4px);
+    border-color: var(--border-hover);
+}
+
+.workStatusIcon {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+}
+
+.workInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.workTitle {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.workSubject {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.workMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.workDue {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.workStatusLabel {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* ==================== Lesson Modal ==================== */
+
+.lessonInfoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.infoItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.infoItem svg {
+    color: var(--accent-tertiary);
+    flex-shrink: 0;
+}
+
+.infoItem span {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.modalSection {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.sectionLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.sectionLabel svg {
+    color: var(--accent-tertiary);
+}
+
+.modalGradesList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modalGradeItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.gradeBadgeLg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-weight: 700;
+    color: white;
+    font-size: 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.gradeInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.gradeInfo .gradeInfoType {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.gradeInfoPoints {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.gradeInfoPointsPositive {
+    color: var(--success);
+}
+
+.gradeInfoPointsNegative {
+    color: var(--error);
+}
+
+.modalHomeworkList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modalHomeworkItem {
+    padding: 12px 14px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    border-left: 3px solid var(--accent-primary);
+}
+
+.hwTitle {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.hwDesc {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.hwDue {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.hwDueOverdue {
+    color: var(--error);
+}
+
+.hwDueUrgent {
+    color: var(--warning);
+}
+
+.modalEmptyNote {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 12px;
+}
+
+/* ==================== Mobile Day Blocks ==================== */
+.mobileSchedule {
+    display: none;
+}
+
+.mobileDayBlock {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.mobileDayHeader {
+    padding: 12px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mobileDayHeaderToday {
+    background: var(--color-primary-light);
+    color: var(--accent-tertiary);
+}
+
+.mobileLessonList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.mobileLessonCard {
+    display: flex;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.15s ease;
+    position: relative;
+}
+
+.mobileLessonCard::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    background: var(--accent-primary);
+    border-radius: 0 3px 3px 0;
+    opacity: 0.6;
+}
+
+.mobileLessonCard:last-child {
+    border-bottom: none;
+}
+
+.mobileLessonCard:active {
+    background: var(--bg-tertiary);
+}
+
+.mobileLessonNumber {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 40px;
+    gap: 2px;
+    padding-top: 2px;
+}
+
+.mobileLessonNumber .num {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--accent-tertiary);
+}
+
+.mobileLessonNumber .time {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.mobileLessonInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.mobileLessonInfo .subject {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 3px;
+}
+
+.mobileLessonInfo .teacher {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.mobileLessonInfo .room {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+}
+
+.mobileLessonMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.mobileLessonEmpty {
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* ==================== Responsive ==================== */
+@media (max-width: 900px) {
+    .scheduleDaysHeader {
+        grid-template-columns: 50px repeat(6, 1fr);
+    }
+
+    .scheduleRow {
+        grid-template-columns: 50px repeat(6, 1fr);
+    }
+
+    .dayHeader {
+        padding: 12px 8px;
+        font-size: 0.75rem;
+    }
+
+    .lessonSubject {
+        font-size: 0.75rem;
+    }
+
+    .lessonTeacher,
+    .lessonRoom {
+        display: none;
+    }
+}
+
+@media (max-width: 1000px) {
+    .gradesLayout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 767px) {
+    .schedulePage {
+        padding: 16px;
+    }
+
+    .scheduleHeader {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .scheduleControls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .viewToggle {
+        width: 100%;
+    }
+
+    .viewBtn {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* The new grid stack naturally collapses to 1 column on mobile, no need to hide it */
+}
+
+@media (max-width: 480px) {
+    .workItem {
+        flex-wrap: wrap;
+    }
+
+    .workMeta {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-color);
+    }
+}
+
+/* ==================== Student Journal (teacher-style) ==================== */
+.journalCard {
+    background: var(--bg-card);
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.journalCardHeader {
+    padding: 20px 24px 12px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.journalTableContainer {
+    overflow-x: auto;
+    overflow-y: visible;
+    width: 100%;
+}
+
+.journalTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+}
+
+.journalTable thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-secondary);
+}
+
+.journalTable th {
+    padding: 1rem 0.75rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.journalTable th:last-child {
+    border-right: none;
+}
+
+.journalTable td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    text-align: center;
+    vertical-align: middle;
+}
+
+.journalTable td:last-child {
+    border-right: none;
+}
+
+.journalTable tr:hover td {
+    background: var(--bg-hover);
+}
+
+/* Subject column (sticky left) */
+.journalSubjectCol {
+    text-align: left !important;
+    position: sticky;
+    left: 0;
+    background: var(--bg-secondary);
+    z-index: 12;
+    min-width: 120px;
+}
+
+.journalSubjectName {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: normal;
+    word-break: break-word;
+    position: sticky;
+    left: 0;
+    background: var(--bg-card);
+    z-index: 5;
+    padding-left: 1rem !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.journalTable tr:hover .journalSubjectName {
+    background-color: var(--bg-card);
+    background-image: linear-gradient(var(--bg-hover), var(--bg-hover));
+}
+
+/* Date columns */
+.journalDateCol {
+    min-width: 52px;
+    font-size: 0.85rem;
+}
+
+.journalDateColToday {
+    background: rgba(14, 165, 233, 0.15) !important;
+    color: var(--accent-primary) !important;
+    border-bottom: 2px solid var(--accent-primary) !important;
+}
+
+/* Grade cells */
+.journalGradeCell {
+    min-width: 52px;
+    position: relative;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+}
+
+.journalGradeCellToday {
+    background: rgba(14, 165, 233, 0.06);
+}
+
+/* Average column */
+.journalAvgCol {
+    min-width: 60px;
+    background: var(--bg-tertiary);
+}
+
+.journalAvgValue {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.journalAvgExcellent {
+    color: var(--success);
+}
+
+.journalAvgGood {
+    color: #a3e635;
+}
+
+.journalAvgSatisfactory {
+    color: var(--warning);
+}
+
+.journalAvgBad {
+    color: var(--error);
+}
+
+/* Grade value badges (gradient, like teacher) */
+.journalGrade {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #fff;
+    margin: 2px;
+    cursor: default;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.journalGrade:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.journalGrade5 {
+    background: linear-gradient(135deg, var(--success), #16a34a);
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);
+}
+
+.journalGrade4 {
+    background: linear-gradient(135deg, #84cc16, #65a30d);
+    box-shadow: 0 2px 4px rgba(101, 163, 13, 0.3);
+}
+
+.journalGrade3 {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+}
+
+.journalGrade2 {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.journalGrade1 {
+    background: linear-gradient(135deg, #64748b, #475569);
+    box-shadow: 0 2px 4px rgba(71, 85, 105, 0.3);
+}
+
+/* Mobile adjustments for journal */
+@media (max-width: 767px) {
+
+    .gradesTableWrapper,
+    .journalTableContainer {
+        overflow-x: auto;
+        overflow-y: visible;
+    }
+
+    .journalTable th,
+    .journalTable td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .journalSubjectName {
+        max-width: 90px;
+        font-size: 0.75rem;
+        padding-left: 0.5rem !important;
+    }
+
+    .journalDateCol {
+        min-width: 36px;
+        font-size: 0.7rem;
+    }
+
+    .journalGradeCell {
+        min-width: 36px;
+    }
+
+    .journalGrade {
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+    }
+}
+
+/* === Appended from TeacherScheduleTab === */
+.scheduleHeader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.weekControls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.weekBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.weekBtn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.currentWeekBtn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.currentWeekBtn.active {
+    color: var(--text-primary);
+}
+
+.scheduleGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1024px) {
+    .scheduleGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .scheduleGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dayCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dayCard:hover {
+    border-color: var(--accent-primary-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dayCard.today {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+.dayHeader {
+    padding: 16px 20px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dayTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.dayName {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.todayBadge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--accent-primary);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.dayDate {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.lessonsList {
+    display: flex;
+    flex-direction: column;
+}
+
+.lessonItem {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+    background: var(--bg-card);
+    min-height: 56px;
+}
+
+.lessonItem:last-child {
+    border-bottom: none;
+}
+
+.lessonItem:hover {
+    background: var(--bg-hover);
+}
+
+.emptyLesson {
+    opacity: 0.7;
+    background: transparent;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 56px;
+}
+
+.emptyLesson:hover {
+    background: transparent;
+}
+
+.lessonNumWrapper {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    margin-right: 12px;
+}
+
+.lessonNum {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    opacity: 0.5;
+}
+
+.timeBlockInline {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    margin-bottom: 2px;
+}
+
+.lessonContentStack {
+    display: flex;
+    flex-direction: column;
+}
+
+.lessonSubjectRow {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lessonDetails {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    position: relative;
+    /* Для абсолютного позиционирования бейджей если нужно */
+}
+
+.lessonSubject {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.lessonMeta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.teacherName {
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.roomBadge {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.hwStatus {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 8px;
+    white-space: nowrap;
+}
+
+.emptyDay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.emptyDay span {
+    font-size: 0.9rem;
+    font-weight: 500;
+}

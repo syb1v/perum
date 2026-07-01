@@ -1,0 +1,116 @@
+/* ==========================================
+   Teacher Dashboard Styles
+   ========================================== */
+
+.dashboard {
+    flex: 1;
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.tabsHeader {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    width: 100%;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tabBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tabBtn svg {
+    opacity: 0.7;
+}
+
+.tabBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.activeTab {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.activeTab svg {
+    opacity: 1;
+    color: var(--accent-primary);
+}
+
+.contentGrid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 20px;
+}
+
+/* Widgets spanning full width (12 columns) or split as needed */
+.scheduleWidget {
+    grid-column: span 8;
+}
+
+.sidebar {
+    grid-column: span 4;
+}
+
+.newsContainer {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .contentGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .scheduleWidget,
+    .newsWidget,
+    .sidebar {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        padding: 16px;
+    }
+
+    .tabsHeader {
+        padding: 6px;
+        margin-bottom: 20px;
+    }
+
+    .tabBtn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+}

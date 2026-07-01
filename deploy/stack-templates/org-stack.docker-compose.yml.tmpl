@@ -1,0 +1,50 @@
+# Per-org tenant stack — reference template.
+#
+# This is the human-readable mirror of COMPOSE_TEMPLATE in
+# perum-core/app/services/stack_spec.py, which is the authoritative copy used at
+# runtime (the control-plane image does not ship the deploy/ directory). Keep
+# the two in sync.
+#
+# Placeholders use Jinja2 syntax ({{ var }}). Phase 1 brings stacks up via the
+# Docker SDK (perum-core/app/core/docker_client.py); a rendered copy of this
+# file is an informational manifest, but it is valid compose:
+#   docker compose -p {{ project }} up -d
+# against a fully-rendered copy would create the same stack.
+name: {{ project }}
+services:
+  app:
+    image: {{ tenant_image }}
+    container_name: {{ app_container }}
+    environment:
+      ORG_SLUG: {{ slug }}
+      ORG_NAME: "{{ org_name }}"
+      DATABASE_URL: {{ database_url }}
+      REDIS_URL: {{ redis_url }}
+      CONTROL_PLANE_URL: {{ control_plane_url }}
+      TELEMETRY_TOKEN: {{ telemetry_token }}
+      SECRET_KEY: {{ secret_key }}
+    networks: [{{ network }}]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  db:
+    image: {{ postgres_image }}
+    container_name: {{ db_container }}
+    environment:
+      POSTGRES_USER: perum
+      POSTGRES_PASSWORD: {{ db_password }}
+      POSTGRES_DB: perum
+    volumes:
+      - {{ volume }}:/var/lib/postgresql/data
+    networks: [{{ network }}]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perum -d perum"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  {{ volume }}: {}
+networks:
+  {{ network }}:
+    external: true

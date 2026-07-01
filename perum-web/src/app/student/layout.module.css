@@ -1,0 +1,36 @@
+.shell {
+    min-height: 100vh;
+}
+
+.main {
+    padding-top: var(--header-height, 90px);
+    padding-bottom: 100px;
+    /* space for mobile nav */
+    min-height: 100vh;
+}
+
+.loader {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

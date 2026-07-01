@@ -1,0 +1,687 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.loading {
+    text-align: center;
+    padding: 4rem;
+    color: var(--text-muted, #888);
+}
+
+.errorBanner {
+    background: #fee;
+    border: 1px solid #fcc;
+    color: #c33;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.section {
+    margin-bottom: 3rem;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.section h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem;
+    color: var(--text-secondary, #555);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.countBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent, #0066cc);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0 0.5rem;
+    min-width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* ── Node list ── */
+.nodeList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.nodeRow {
+    display: grid;
+    grid-template-columns: 2fr 2fr 2fr auto;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    padding: 0.875rem 1.25rem;
+    transition: border-color 0.15s;
+}
+
+.nodeRow:hover {
+    border-color: var(--accent, #0066cc);
+}
+
+/* Left section: dot + name + status */
+.nodeRowLeft {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.onlineDot {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.dotOnline {
+    background: #48bb78;
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.2);
+}
+
+.dotOffline {
+    background: #fc8181;
+    box-shadow: 0 0 0 3px rgba(252, 129, 129, 0.2);
+}
+
+.nodeMain {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.nodeName {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.nodeHost {
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+    font-family: monospace;
+}
+
+.statusPill {
+    flex-shrink: 0;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status_active {
+    background: #c6f6d5;
+    color: #276749;
+}
+
+.status_pending_bootstrap {
+    background: #fed7d7;
+    color: #9b2335;
+}
+
+.status_offline {
+    background: #fed7d7;
+    color: #9b2335;
+}
+
+.status_draining {
+    background: #bee3f8;
+    color: #2a69ac;
+}
+
+.status_decommissioned {
+    background: #e2e8f0;
+    color: #4a5568;
+}
+
+/* Middle: resource bars */
+.nodeRowBars {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.resourceBar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.resourceBarLabel {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text-muted, #888);
+}
+
+.resourceBarValue {
+    font-family: monospace;
+}
+
+.resourceBarTrack {
+    height: 5px;
+    background: var(--border, #e5e7eb);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.resourceBarFill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+/* Right: meta info */
+.nodeRowMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: 0.8rem;
+    color: var(--text-muted, #888);
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+
+.metaIcon {
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
+
+/* Actions */
+.nodeRowActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.btnInstall {
+    background: #0066cc;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.btnInstall:hover {
+    background: #0052a3;
+}
+
+.btnInstall:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
+.btnWarn {
+    background: #ed8936;
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.btnWarn:hover {
+    background: #dd6b20;
+}
+
+.btnDanger {
+    background: transparent;
+    color: #e53e3e;
+    border: 1px solid #e53e3e;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.btnDanger:hover {
+    background: #e53e3e;
+    color: #fff;
+}
+
+.emptyState {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted, #888);
+    border: 1px dashed var(--border, #e5e7eb);
+    border-radius: 8px;
+}
+
+/* ── Capacity planner ── */
+.capacityForm {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    margin-bottom: 1.5rem;
+}
+
+.capacityLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+}
+
+.capacityInput {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    width: 130px;
+    font-size: 0.95rem;
+}
+
+.recommendation {
+    background: var(--bg-subtle, #f8f9fa);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    padding: 1.25rem;
+}
+
+.recSummary {
+    font-weight: 500;
+    margin: 0 0 1rem;
+    color: var(--text-primary, #333);
+}
+
+.recTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.recTable th,
+.recTable td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+}
+
+.recTable th {
+    font-weight: 600;
+    color: var(--text-secondary, #555);
+}
+
+/* ── Buttons ── */
+.btnPrimary {
+    background: var(--accent, #0066cc);
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.btnPrimary:hover {
+    background: #0052a3;
+}
+
+.btnPrimary:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
+.btnSecondary {
+    background: var(--bg-subtle, #f5f5f5);
+    color: var(--text-primary, #333);
+    border: 1px solid var(--border, #ddd);
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btnSecondary:hover {
+    background: #e8e8e8;
+}
+
+/* ── Modal ── */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal {
+    background: var(--card-bg, #fff);
+    border-radius: 10px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+/* ── Wizard modal (wider for docker-compose display) ── */
+.wizardModal {
+    background: var(--card-bg, #fff);
+    border-radius: 12px;
+    padding: 1.75rem;
+    width: 100%;
+    max-width: 640px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+
+/* ── Wizard progress ── */
+.wizardProgress {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.wizardStep {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+}
+
+.wizardStepActive {
+    opacity: 1;
+}
+
+.wizardStepNum {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent, #0066cc);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.wizardStep:not(.wizardStepActive) .wizardStepNum {
+    background: var(--border, #d1d5db);
+    color: var(--text-muted, #888);
+}
+
+.wizardStepLabel {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary, #555);
+}
+
+.wizardProgressLine {
+    flex: 1;
+    height: 2px;
+    background: var(--border, #e5e7eb);
+    border-radius: 1px;
+}
+
+/* ── Modal header ── */
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+}
+
+.modalHeader h2 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.modalClose {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-muted, #888);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+.modalClose:hover {
+    background: var(--border, #eee);
+}
+
+.modalForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.formRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.formRow2 {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.75rem;
+}
+
+.formRow3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0.75rem;
+}
+
+.formLabel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.formInput {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: #fff;
+}
+
+.formInput:focus {
+    outline: none;
+    border-color: var(--accent, #0066cc);
+    box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.15);
+}
+
+.modalActions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+/* ── Step 2: token + docker-compose ── */
+.step2 {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.tokenBlock {
+    background: #fffbeb;
+    border: 1px solid #f6e05e;
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.tokenLabel {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #b7791f;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.tokenRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.tokenValue {
+    flex: 1;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+    color: #744210;
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.tokenHint {
+    margin: 0.6rem 0 0;
+    font-size: 0.78rem;
+    color: #b7791f;
+}
+
+.composeBlock {
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.composeHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-bottom: 1px solid var(--border, #e5e7eb);
+    padding: 0.55rem 1rem;
+}
+
+.composeTitle {
+    font-family: monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #555);
+}
+
+.composeCode {
+    margin: 0;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    line-height: 1.55;
+    background: #1a1a2e;
+    color: #e2e8f0;
+    overflow-x: auto;
+    max-height: 320px;
+    overflow-y: auto;
+    white-space: pre;
+}
+
+.step2Hint {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #555);
+    margin: 0;
+    line-height: 1.6;
+}
+
+.step2Hint code {
+    font-family: monospace;
+    background: var(--bg-subtle, #f5f5f5);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+}
+
+/* ── Copy button ── */
+.copyBtn {
+    background: var(--bg-subtle, #f0f0f0);
+    color: var(--text-secondary, #555);
+    border: 1px solid var(--border, #ddd);
+    padding: 0.3rem 0.75rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+
+.copyBtn:hover {
+    background: var(--border, #e0e0e0);
+}
+
+/* ── Green action button ── */
+.btnGreen {
+    background: #38a169;
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background 0.15s;
+}
+
+.btnGreen:hover {
+    background: #2f855a;
+}
+
+.btnGreen:disabled {
+    background: #999;
+    cursor: not-allowed;
+}

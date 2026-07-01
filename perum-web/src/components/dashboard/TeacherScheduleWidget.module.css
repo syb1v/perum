@@ -1,0 +1,326 @@
+/* ==========================================
+   Teacher Schedule Widget Styles
+   ========================================== */
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.cardTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cardTitle svg {
+    color: var(--accent-tertiary);
+}
+
+/* Day Navigation */
+.dayNav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 8px 20px 14px;
+}
+
+.dayNavBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dayNavBtn:hover {
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+}
+
+.dayNavInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.dayNavLabel {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.dayNavToday {
+    font-size: 0.7rem;
+    padding: 2px 10px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent-primary);
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    display: inline-block;
+}
+
+.dayNavToday:hover {
+    opacity: 0.85;
+}
+
+/* Schedule List */
+.scheduleList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.scheduleItem {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    border-left: 3px solid var(--accent-primary);
+    transition: all 0.2s ease;
+}
+
+.clickableItem {
+    cursor: pointer;
+}
+
+.clickableItem:hover {
+    background: var(--bg-hover);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.lessonNum {
+    width: 32px;
+    height: 32px;
+    background: var(--accent-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.lessonInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.lessonSubject {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+}
+
+.lessonClass {
+    font-size: 0.75rem;
+    color: var(--accent-tertiary);
+    margin-top: 2px;
+}
+
+.lessonMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.lessonTime {
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+.lessonRoom {
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+}
+
+/* Modal Styles */
+.modalContent {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.lessonDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--bg-tertiary);
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.detailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detailRow:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.detailLabel {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.detailValue {
+    font-weight: 500;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+.modalActions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.btnSecondary,
+.btnPrimary {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btnSecondary {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.btnSecondary:hover {
+    background: var(--bg-tertiary);
+}
+
+.btnPrimary {
+    background: var(--accent-gradient);
+    border: none;
+    color: white;
+}
+
+.btnPrimary:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* Loading / Empty */
+.loading,
+.empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    gap: 10px;
+    text-align: center;
+    min-height: 200px;
+}
+
+.empty p {
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    gap: 10px;
+    text-align: center;
+    min-height: 200px;
+}
+
+.error p {
+    font-size: 0.875rem;
+}
+
+/* Homework & CW Badges */
+.lessonBadges {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.homeworkBadge,
+.cwBadge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.homeworkBadge {
+    background: rgba(14, 165, 233, 0.12);
+    color: var(--accent-primary);
+    border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.cwBadge {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error, #ef4444);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}

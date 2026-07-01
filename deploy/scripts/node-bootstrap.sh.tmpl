@@ -1,0 +1,321 @@
+#!/usr/bin/env bash
+# =============================================================================
+# ПЭРУМ — скрипт развёртывания ноды
+# Нода:         {{ node_name }}
+# Организация:  {{ org_slug }}
+# Сгенерирован: {{ generated_at }}
+#
+# Запуск на целевом сервере ОТ ROOT:  bash perum-node-*.sh
+# Ничего вводить не нужно — ключ подключения уже вшит в этот скрипт.
+# =============================================================================
+set -euo pipefail
+
+# Цвета
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log()   { echo -e "${GREEN}[ПЭРУМ]${NC} $*"; }
+warn()  { echo -e "${YELLOW}[ПЭРУМ]${NC} $*"; }
+error() { echo -e "${RED}[ПЭРУМ]${NC} $*" >&2; }
+
+# Конфигурация (значения подставлены ядром при генерации скрипта)
+NODE_NAME="{{ node_name }}"
+ENROLLMENT_TOKEN="{{ enrollment_token }}"
+CORE_URL="{{ core_url }}"
+ORG_SLUG="{{ org_slug }}"
+RELEASE_TAG="{{ release_tag }}"
+INSTALL_DIR="/opt/perum-node"
+
+# =============================================================================
+# 1. Проверка системы
+# =============================================================================
+log "Шаг 1/12: Проверка требований системы..."
+
+if [[ $EUID -ne 0 ]]; then
+    error "Скрипт нужно запускать от root"
+    exit 1
+fi
+
+if ! command -v lsb_release &> /dev/null; then
+    warn "lsb_release не найден, пропускаю проверку версии ОС"
+else
+    OS_VERSION=$(lsb_release -rs)
+    if [[ "$OS_VERSION" < "22.04" ]]; then
+        warn "Рекомендуется Ubuntu 22.04+ (обнаружено $OS_VERSION)"
+    fi
+fi
+
+TOTAL_RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
+if [[ $TOTAL_RAM_MB -lt 1800 ]]; then
+    warn "Мало ОЗУ: ${TOTAL_RAM_MB}МБ (рекомендуется 2048МБ+)"
+fi
+
+log "Проверка системы пройдена"
+
+# =============================================================================
+# 2. Установка Docker
+# =============================================================================
+log "Шаг 2/12: Установка Docker..."
+
+if command -v docker &> /dev/null; then
+    log "Docker уже установлен: $(docker --version)"
+else
+    apt-get update -qq
+    apt-get install -y -qq ca-certificates curl gnupg lsb-release
+
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list
+
+    apt-get update -qq
+    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    systemctl enable docker
+    systemctl start docker
+
+    log "Docker установлен: $(docker --version)"
+fi
+
+# =============================================================================
+# 3. Настройка файрвола
+# =============================================================================
+log "Шаг 3/12: Настройка файрвола..."
+
+if command -v ufw &> /dev/null; then
+    ufw --force reset > /dev/null
+    ufw default deny incoming
+    ufw default allow outgoing
+    ufw allow 22/tcp comment "SSH"
+    ufw allow 80/tcp comment "HTTP"
+    ufw allow 443/tcp comment "HTTPS"
+    ufw --force enable
+    log "UFW настроен"
+else
+    warn "UFW не найден, пропускаю настройку файрвола"
+fi
+
+# =============================================================================
+# 4. Создание каталога установки
+# =============================================================================
+log "Шаг 4/12: Создание каталога установки..."
+
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+# =============================================================================
+# 5. Запись docker-compose.yml
+# =============================================================================
+log "Шаг 5/12: Запись docker-compose.yml..."
+
+cat > docker-compose.yml << 'COMPOSE_EOF'
+version: "3.9"
+
+services:
+  perum_agent:
+    image: ghcr.io/perum/perum-core:{{ release_tag }}
+    container_name: perum_agent
+    restart: unless-stopped
+    environment:
+      - ROLE=org_agent
+      - CORE_URL=${CORE_URL}
+      - ENROLLMENT_TOKEN=${ENROLLMENT_TOKEN}
+      - DATABASE_URL=postgresql+asyncpg://perum:${DB_PASSWORD}@perum_node_db:5432/perum_node
+      - SECRET_KEY=${SECRET_KEY}
+      - DOCKER_HOST=tcp://docker_proxy:2375
+      - PUBLIC_BASE_DOMAIN=${PUBLIC_BASE_DOMAIN}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - perum_node_db
+      - docker_proxy
+    networks:
+      - perum_node
+
+  perum_node_db:
+    image: postgres:15-alpine
+    container_name: perum_node_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=perum
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=perum_node
+    volumes:
+      - perum_node_data:/var/lib/postgresql/data
+    networks:
+      - perum_node
+
+  docker_proxy:
+    image: tecnativa/docker-socket-proxy:0.3
+    container_name: perum_docker_proxy
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CONTAINERS=1
+      - IMAGES=1
+      - VOLUMES=1
+      - NETWORKS=1
+      - EXEC=1
+      - POST=1
+      - AUTH=0
+      - BUILD=0
+      - COMMIT=0
+      - CONFIGS=0
+      - DISTRIBUTION=0
+      - EVENTS=1
+      - GRPC=0
+      - INFO=0
+      - NODES=0
+      - PING=0
+      - PLUGIN=0
+      - SECRETS=0
+      - SERVICES=0
+      - SESSION=0
+      - SWARM=0
+      - SYSTEM=0
+      - TASKS=1
+    networks:
+      - perum_node
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: perum_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - PERUM_BASE_DOMAIN=${PUBLIC_BASE_DOMAIN}
+    networks:
+      - perum_node
+
+volumes:
+  perum_node_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  perum_node:
+    driver: bridge
+COMPOSE_EOF
+
+# =============================================================================
+# 6. Запись .env (секреты генерируются ЛОКАЛЬНО на этом сервере)
+# =============================================================================
+log "Шаг 6/12: Запись переменных окружения..."
+
+DB_PASSWORD=$(openssl rand -hex 16)
+SECRET_KEY=$(openssl rand -hex 32)
+
+cat > .env << ENV_EOF
+CORE_URL=${CORE_URL}
+ENROLLMENT_TOKEN=${ENROLLMENT_TOKEN}
+ORG_SLUG=${ORG_SLUG}
+DB_PASSWORD=${DB_PASSWORD}
+SECRET_KEY=${SECRET_KEY}
+PUBLIC_BASE_DOMAIN={{ public_base_domain }}
+ENV_EOF
+
+chmod 600 .env
+
+# =============================================================================
+# 7. Запись Caddyfile
+# =============================================================================
+log "Шаг 7/12: Запись Caddyfile..."
+
+cat > Caddyfile << 'CADDY_EOF'
+{
+    admin off
+    auto_https on
+}
+
+:80 {
+    respond "PERUM Node - OK" 200
+}
+
+:443 {
+    respond "PERUM Node - OK" 200
+}
+CADDY_EOF
+
+# =============================================================================
+# 8. Загрузка образов
+# =============================================================================
+log "Шаг 8/12: Загрузка Docker-образов..."
+
+docker compose pull
+
+# =============================================================================
+# 9. Запуск стека
+# =============================================================================
+log "Шаг 9/12: Запуск стека ноды ПЭРУМ..."
+
+docker compose up -d
+
+# =============================================================================
+# 10. Ожидание готовности воркера
+# =============================================================================
+log "Шаг 10/12: Ожидание готовности воркера..."
+
+MAX_WAIT=60
+WAITED=0
+while [[ $WAITED -lt $MAX_WAIT ]]; do
+    if curl -sf http://127.0.0.1:3000/agent/health > /dev/null 2>&1; then
+        log "Воркер готов"
+        break
+    fi
+    sleep 2
+    WAITED=$((WAITED + 2))
+done
+
+if [[ $WAITED -ge $MAX_WAIT ]]; then
+    error "Воркер не стал готов за ${MAX_WAIT}с"
+    docker compose logs perum_agent
+    exit 1
+fi
+
+# =============================================================================
+# 11. Подключение к ядру (enrollment)
+# =============================================================================
+log "Шаг 11/12: Подключение ноды к ядру..."
+
+ENROLL_RESPONSE=$(curl -sf -X POST "${CORE_URL}/api/enroll" \
+    -H "Content-Type: application/json" \
+    -d "{\"token\": \"${ENROLLMENT_TOKEN}\"}" 2>&1) || true
+
+if echo "$ENROLL_RESPONSE" | grep -q "org_slug"; then
+    log "Подключение успешно: $(echo "$ENROLL_RESPONSE" | grep -o '"org_slug":"[^"]*"')"
+else
+    warn "Ответ ядра: $ENROLL_RESPONSE"
+    warn "Возможно, потребуется подключить ноду вручную"
+fi
+
+# =============================================================================
+# 12. Итог
+# =============================================================================
+log "Шаг 12/12: Развёртывание завершено!"
+echo ""
+echo "=============================================="
+echo " Нода ПЭРУМ развёрнута"
+echo "=============================================="
+echo " Нода:         ${NODE_NAME}"
+echo " Организация:  ${ORG_SLUG}"
+echo " Каталог:      ${INSTALL_DIR}"
+echo " Порт воркера: 127.0.0.1:3000"
+echo "=============================================="
+echo ""
+echo " Полезные команды:"
+echo "   cd ${INSTALL_DIR}"
+echo "   docker compose ps          # статус контейнеров"
+echo "   docker compose logs -f     # логи"
+echo "   curl http://127.0.0.1:3000/agent/health   # здоровье воркера"
+echo ""
+log "Нода готова принимать школы от ядра."

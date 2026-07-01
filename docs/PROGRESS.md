@@ -1,0 +1,245 @@
+# PROGRESS — где мы сейчас и что делать дальше
+
+> Этот файл — точка возобновления для новой сессии. Полный план — [PLAN.md](PLAN.md). Обновлять при каждом значимом продвижении.
+
+**Дата последнего обновления:** 2026-06-13
+**Текущая фаза:** **Архитектура v2 = silo = ШКОЛА** (каждая школа — отдельный docker-стек: app + БД + volume; School — ребёнок Organization, `School.org_id`). Школы провижинит/обновляет org_admin (узел орг); ядро держит только метаданные и внутрь школьных данных не лезет. Иерархия ядро→организация→школа проаудитирована, находки закрыты — см. [AUDIT_2026-06-12.md](AUDIT_2026-06-12.md). Прод развёрнут.
+**Последний коммит:** см. `git log` (релиз-поток привязан к реальному коду: CI per-component + `/api/ci/release` + `source_commit`).
+
+---
+
+## Обновление 2026-06-13
+
+- **Закрыт аудит иерархии ядро→организация→школа** ([AUDIT_2026-06-12.md](AUDIT_2026-06-12.md)): RBAC defense-in-depth (гарды на самих роутерах — organizations/billing → `require_platform_admin`, schools → `require_org_admin`, не только в `include_router`); keyed asyncio-локи на жизненный цикл школы (`app/core/locks.py`); purge школы/орг требует `?confirm=<slug>`, перед purge бэкапятся БД (`pg_dump`) **и** вложения (appdata tar с валидацией gzip), при сбое бэкапа тома НЕ сносятся; авто-enforce биллинга по расписанию + дебиторка (`GET /api/billing/receivables`); read-only биллинг приостановленной орг; Caddy `_sync_caddy_routes` восстанавливает maintenance-503 для замороженных школ после рестарта.
+- **#1 Async-провижининг:** create/reprovision/update школы → `202` + фоновая asyncio-задача (своя сессия, school-лок); пароль админа школы в ответе create НЕ возвращается (через «Админы» → сбросить пароль); орг-консоль поллит статус.
+- **#7 docker_proxy:** ядро БОЛЬШЕ не монтирует `/var/run/docker.sock` — сокет (RO) только у сервиса `docker_proxy` (`tecnativa/docker-socket-proxy`, фильтр API), ядро ходит к демону по `DOCKER_HOST=tcp://docker_proxy:2375`. Полный вынос в отдельный org-agent — будущий этап мульти-сервера.
+- **#6 Изоляция токенов (активна на демо-школе):** `SchoolSecret.internal_rpc_token` отделён от `telemetry_token` (миграция `0013`); ядро шлёт оба заголовка, тенант с заданным `INTERNAL_RPC_TOKEN` принимает ТОЛЬКО его (telemetry на `/internal` больше не пускает), сравнение constant-time.
+- **Релиз-поток привязан к реальному коду** (см. [RELEASING.md](RELEASING.md)): CI `release.yml` по push в main собирает+пушит в GHCR ТОЛЬКО изменённые образы (perum-core/tenant/web), тег `git-<sha>`+`latest`; `Release.source_commit` (миграция `0014`), publish отклоняет релиз, чей образ/коммит == текущему; CI авто-регистрирует релиз тенанта (`POST /api/ci/release` по `RELEASE_PUBLISH_TOKEN`) + авто-changelog из git log; ченджлоги видны в консоли ядра и баннером «Доступно обновление» в орг-консоли.
+- **Прод развёрнут** (домен + GHCR + secrets). Миграции control-БД доходят до `0014`; `ci.yml`: pytest core + pytest tenant `tests/unit` + tsc web.
+
+---
+
+## TL;DR для новой сессии
+
+1. Прочитай [PLAN.md](PLAN.md) (полный план) и этот файл.
+2. Подними локальный стенд (команды ниже) и убедись, что control plane отвечает.
+3. Бери следующий незакрытый пункт из раздела «Следующие шаги».
+
+---
+
+## Статус по фазам (роадмап)
+
+Карта прогресса для новой сессии. Легенда: ✅ готово · 🔶 частично · ⬜ не начато.
+
+**Готовность ≈ 99 %** (по работающим фичам; фронт ~100% присутствует — скопирован из легаси). **Фазы 4–11 закрыты: CI/release/прод-env готовы, прод развёрнут (домен+GHCR+secrets); v2 silo=ШКОЛА (контейнер на школу, OTA по кнопке); аудит иерархии закрыт (RBAC defense-in-depth, school-локи, purge с бэкапом БД+вложений, изоляция internal-токена, авто-enforce биллинга, восстановление Caddy-503); async-провижининг (#1), docker_proxy без сокета у ядра (#7), релиз-поток привязан к реальному коду (CI per-component + `/api/ci/release` + `source_commit` + авто-changelog); hardening (шифрование секретов, rate-limit, /metrics, вложения на volume) и продуктовые хвосты (настройки/уведомления/обращения).** Остаётся: опц. полный мульти-сервер (отдельный org-agent). Оценка — в [VERSIONS.md](VERSIONS.md).
+
+| Фаза | Содержание | Статус |
+|---|---|---|
+| 0 | Подготовка: репо, монорепо-скелет, архитектурные доки | ✅ |
+| 1 | Control Plane: провижининг org-стеков (Docker SDK), Caddy-маршруты, `platform_admin` auth | ✅ |
+| 2 | Tenant auth: модели Organization/School/User, JWT с `org_slug`, bootstrap org_admin | ✅ |
+| 3 | Фронт: легаси-копия `perum-web`, мульти-тенант по hostname, платформенный UI (создание орг) | ✅ |
+| 4 | Кастомные домены школ + on-demand TLS (`/internal/validate-domain` + домены школы) | ✅ |
+| 5 | Учебное ядро: предметы, виды работ, классы, годы, периоды, звонки, расписание, учителя+назначения | ✅ |
+| 6 | Журнал и оценки | ✅ |
+| 7 | Геймификация: маркет, биржа, квесты, рейтинги | ✅ |
+| 8 | Аналитика, новости, апелляции, родители | ✅ |
+| 9 | Биллинг-заглушки + observability (Prometheus/Grafana) + обновления «по кнопке» (OTA) | ✅ |
+| 10 | Hardening: RBAC-матрица ([HARDENING.md](HARDENING.md)), isolation E2E (cross-school/cross-level 401, отдельные БД), нагрузка (k6) | ✅ |
+| 11 | Прод-деплой: CI (pytest+tsc) + release в GHCR (per-component) + прод-env/Caddyfile/RUNBOOK; **прод развёрнут** (домен+GHCR+secrets) | ✅ |
+| — | Опц. полный мульти-сервер: отдельный org-agent (вынос docker-управления с узла ядра) | ⬜ |
+| — | Миграция данных со старого ПЭРУМ (опционально, за горизонтом) | ⬜ |
+
+## Что осталось (сводка)
+
+| Фаза | Вес | Что конкретно осталось |
+|---|---:|---|
+| **4 — Кастомные домены + TLS** | 3 | `/internal/validate-domain` для on-demand TLS (Caddy); привязка кастомного домена к орг (модель `OrganizationDomain` уже есть); email-инвайт `org_admin` (сейчас временный пароль возвращается в ответе create); прод-`Caddyfile` вместо рантайм-маршрутов. |
+| **9 — Биллинг + observability + обновления** | 6 | **Обновления «по кнопке»** (control plane публикует релиз → баннер у `org_admin` → volume-preserving reprovision; ключевое требование); биллинг-заглушки (план/подписка); observability (Prometheus/Grafana, метрики, логи); вложения ДЗ на volume (сейчас container-local); секреты в KMS (сейчас plaintext). |
+| **10 — Hardening + тесты** | 6 | Полная RBAC-матрица; isolation E2E (cross-org 401, cross-school 403/404); нагрузка k6; CI (pytest + tsc). |
+| **11 — Прод-деплой** | 8 | Ubuntu + Caddy + core + мониторинг; onboarding пилот-орг; runbook эксплуатации. |
+| **Мелкие хвосты** | — | ✅ Админ-вкладки школы оживлены (настройки школы, рассылка уведомлений + чтение, обращения; поддержка-почта/online — честные заглушки). Остаётся: PDF-импорт не проверен на реальном PDF (нет образца); CLI `perum-core create-org` (опц.); email-инвайты вместо одноразовых паролей. |
+| **За горизонтом** | — | Миграция данных со старого ПЭРУМ (опционально). |
+
+> Историческая сводка (модель silo=орг). Актуально на 2026-06-13: фазы 4–11 закрыты, прод развёрнут, готовность ≈99%; остаётся только опц. полный мульти-сервер (отдельный org-agent). Свежий статус — в верхней секции «Обновление 2026-06-13».
+
+**Детализация частично готовых:**
+- **Фаза 5 — хвосты (✅ готово):** редактор расписания с подгруппами (`PUT /classes/{id}/schedule`, `GET/PUT /teachers/{id}/schedule`), массовое назначение учителей (`PUT /teacher-subjects/sync`), управление пользователями (список/поиск/правка/удаление/баланс/транзакции/массовая регистрация/без класса). **Роль-модель:** `org_admin` управляет школами и их администраторами (`CRUD /api/admin/schools`, `/schools/{id}/admins`) — отдельная консоль, внутрь школы не заходит (403 на внутришкольные эндпоинты); `school_admin`/`director` — полный админ одной школы, изолирован по `school_id`. Школы изолированы логически (один стек на орг).
+- **Фаза 6 (✅ закрыта):** журнал учителя (просмотр класса, выставление/правка/удаление оценок), начисление ливок (`points_calculator`), Transaction-история, живой «Обзор школы»; **кабинет ученика** (дневник на неделю с оценками/ДЗ/контрольными, аналитика по периодам, сводка, итоговые оценки); **ДЗ и контрольные** (CRUD учителем + вложения файл/ссылка + скачивание); **кабинет родителя**; **импорт оценок из PDF** (`/api/journal/import/{analyze,execute}`, 23 юнит-теста на логику парсера; разбор реального PDF не проверялся — нет образца).
+
+**Принципы (не пересматривать без запроса)** — см. «Зафиксированные решения»: дизайн+функционал из легаси (`R1dnis/PERUM`); бренд «ПЭРУМ» (кириллица); обновления только «по кнопке»; silo-per-org.
+
+**Демо-доступ (стенд `acme`):** платформа `admin.perum.local` (`admin`/`admin`). `acme.perum.local` — **org_admin** `ivan@acme.ru`/`admin123` (консоль школ: 2 школы + управление их админами, внутрь школы не заходит); **school_admin** `zavuch1`/`test1234` (полная админка школы 1, изолированно); демо-учителя (`petrov`/`ivanova`/…), ученики (`student1..24`), родитель (`parent1`, два ученика 5А) — пароль `test1234`.
+
+---
+
+## Что сделано ✅
+
+### Phase 0 — Подготовка (готово полностью)
+- Репозиторий `https://github.com/syb1v/perum.git`, ветка `main`.
+- Структура monorepo: `perum-core`, `perum-tenant`, `perum-web`, `deploy`, `docs`.
+- Документация: `ARCHITECTURE.md`, `TENANT_ISOLATION.md`, `PROVISIONING.md`, `DOMAINS.md`, `ROLES.md`, `DEPLOYMENT.md`, `MIGRATION_FROM_LEGACY.md`, `PLAN.md`, `PROGRESS.md`.
+- `.gitignore`, `README.md`.
+
+### Phase 1 — Control Plane + Provisioning (каркас + провижининг работают)
+- `perum-core/requirements.txt` (FastAPI, SQLAlchemy 2.x async, asyncpg, alembic, pydantic[email], pyjwt, bcrypt, docker SDK).
+- `perum-core/Dockerfile` (python:3.12-slim, healthcheck на /health).
+- FastAPI бойлерплейт: `app/main.py`, `app/core/config.py` (pydantic-settings), `app/core/db.py` (async engine + Base + get_db).
+- Модели `app/models.py`: `PlatformAdmin`, `Organization`, `OrganizationDomain`.
+- Pydantic-схемы `app/schemas/organization.py` с валидацией slug (regex + reserved words) и deployment_mode.
+- Alembic: `alembic.ini`, `migrations/env.py` (async), миграция `0001_init` (3 таблицы).
+- Роутеры: `app/routers/health.py` (`/health`, `/health/db`), `app/routers/organizations.py` (list / create / get — **без provisioning, только запись в БД**).
+- `deploy/docker-compose.core.yml`: `perum_core` + `perum_control_db` (Postgres 15) + `shared_redis` (Redis 7) + `caddy`. Сеть `perum_internal`.
+- `deploy/caddy/Caddyfile` (dev): HTTP-only, `admin.perum.local → perum_core:3000`.
+- `.env.example` с `IMAGE_REGISTRY` (для обхода блокировки Docker Hub).
+- Тесты: `perum-core/tests/test_slug_validation.py` + `test_health.py` + `test_stack_spec.py` + `test_caddy_route.py`. **40 passed.**
+
+### Phase 1 — Provisioning (готово, проверено end-to-end)
+- **`app/core/docker_client.py`** — async-обёртка над docker-py (блокирующие вызовы через `asyncio.to_thread`): `ensure_network/ensure_image/create_volume/run_container/wait_for_healthy/exec/remove_containers/remove_stack`. Ресурсы помечаются лейблами `com.perum.org=<slug>` для очистки.
+- **`app/services/stack_spec.py`** — единый источник правды по форме стека: `build_stack_spec()` (имена, образы, env, секреты) + `render_compose()` (человекочитаемый compose-манифест, с опц. редактированием секретов). Базовый образ postgres = `${IMAGE_REGISTRY}/library/postgres:15-alpine`.
+- **`deploy/stack-templates/org-stack.docker-compose.yml.tmpl`** — reference-шаблон (зеркало `COMPOSE_TEMPLATE` в коде).
+- **`app/services/caddy_admin.py`** — маршруты орг через Caddy admin API: вставка в позицию `0` сервера, слушающего `:80` (перед catch-all), `@id=perum-org-<slug>` для удаления.
+- **`app/services/tenant_provisioner.py`** — `provision()` (шаги PROVISIONING.md 3,5,6,7,10,11 + cleanup при ошибке) и `deprovision()`. Синхронно, но вынесено в отдельную async-функцию (легко перенести в background).
+- **`app/routers/organizations.py`** — `POST` создаёт запись и поднимает стек (идемпотентность: reuse `failed/archived`, 409 на `active/provisioning`); `POST /{slug}/reprovision`; `DELETE /{slug}?purge=`.
+- **`app/main.py`** — на старте best-effort пере-синхронизирует Caddy-маршруты активных орг (самовосстановление после рестарта Caddy).
+- **Модель `OrganizationSecret` + миграция `0002_org_secrets`** — db_password / secret_key / telemetry_token / redis_db_index (plaintext, TODO KMS — Phase 9).
+- **`perum-tenant` каркас** — `app/{core,models,main}`, `/health` + `/health/db`, `TenantMeta` + миграция `tenant_0001_init`, Dockerfile (curl healthcheck). Образ `perum-tenant:dev` собирается локально.
+- **`deploy/docker-compose.core.yml`** — `perum_core` получил docker-сокет + `IMAGE_REGISTRY`/`CONTROL_PLANE_URL`; дефолт `TENANT_IMAGE=perum-tenant:dev`.
+
+### Phase 1 — platform_admin auth (готово, проверено)
+- **`app/core/security.py`** — bcrypt (`hash_password`/`verify_password`) + JWT (`create/decode_access_token`, HS256, TTL 7 дней).
+- **`app/core/deps.py`** — `require_platform_admin` (HTTPBearer, `auto_error=False`; декод JWT → проверка роли → загрузка `PlatformAdmin`; 401 на отсутствие/невалидность).
+- **`app/routers/auth.py`** — `POST /api/auth/login`, `GET /api/auth/me`.
+- **`app/schemas/auth.py`** — LoginRequest / TokenResponse / PlatformAdminRead.
+- **`app/main.py`** — весь `/api/organizations` закрыт `require_platform_admin`; на старте сидится первый админ (`BOOTSTRAP_ADMIN_*`, dev `admin`/`admin`), если админов ещё нет.
+- Тесты: `test_security.py` + `test_auth_protection.py`. **47 passed** суммарно.
+
+### Phase 2 — tenant auth + identity (готово, проверено)
+- **Модели** `perum-tenant/app/models/`: Organization (meta, 1 строка = stack), School, User (роли org_admin/school_admin/director/teacher/student/parent; `school_id NULL` у org-level). Миграция `tenant_0002_identity`.
+- **`app/core/security.py`** — bcrypt + JWT, токен несёт `org_slug`. **`app/core/deps.py`** — `get_current_user` с проверкой `payload.org_slug == settings.ORG_SLUG` (cross-org guard) + `require_roles`.
+- **`app/modules/auth/`** (router → service → schemas): `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/change-password`, `POST /api/auth/logout`.
+- **`app/internal/router.py`** — `POST /internal/bootstrap-org-admin` (шаг 9), защита `TELEMETRY_TOKEN`; создаёт первого org_admin с временным паролем.
+- **`app/scripts/seed_defaults.py`** — шаг 8: создаёт Organization meta (slug=ORG_SLUG). Academic/market дефолты — позже с их моделями.
+- **perum-core провижининг доведён**: после миграций — seed (exec) + bootstrap org_admin (HTTP RPC по `TELEMETRY_TOKEN`); `POST`/`reprovision` возвращают `ProvisionResult` (орг + одноразовая учётка org_admin).
+- Тесты: tenant `tests/unit/test_security.py` (3).
+
+### Проверено вживую (на dev-машине)
+- `docker compose up` — все 4 сервиса healthy. Миграции `0001`+`0002` на старте.
+- `/health` → `{"status":"ok"}`; `/health/db` → `{"status":"ok","db":1}`.
+- **Provisioning end-to-end** (`IMAGE_REGISTRY=mirror.gcr.io`, образ `perum-tenant:dev`):
+  - `POST /api/organizations {slug:acme}` → 201 `status=active` за ~13 c.
+  - `docker ps` → `org_acme_app` + `org_acme_db` (оба healthy) + volume `org_acme_data`.
+  - Caddy: маршрут `perum-org-acme` (`acme.perum.local → org_acme_app:3000`).
+  - `curl --resolve acme.perum.local:80:127.0.0.1 http://acme.perum.local/health` → `200 {"org":"acme"}`; `/health/db` → `{"db":1}`.
+  - В `org_acme_db` применилась миграция tenant (`tenant_meta`, `alembic_version=tenant_0001_init`).
+  - Дубликат → 409; секреты и `organization_domains` записаны.
+- **Auth + provisioning за гейтом:** login `admin/admin` → токен; `/api/organizations` без токена → 401, с токеном → 200; `/api/auth/me` → админ; неверный пароль → 401. Authed `POST {slug:demo}` → 201 active, стек поднялся, `demo.perum.local/health` → 200; authed `DELETE demo?purge` → всё снесено (0 контейнеров, маршрут Caddy 404).
+- **Route sync на старте:** после пересоздания perum_core маршрут `acme.perum.local` восстановился автоматически.
+- **Phase 2 E2E:** provision acme+beta с admin_email → в ответе одноразовая учётка org_admin; login на `acme.perum.local` → `/api/auth/me` (role=org_admin); **изоляция:** токен acme на `beta.perum.local` → 401. Проверены оба барьера: чужой `SECRET_KEY` (подпись) и guard `org_slug` (валидная подпись acme + чужой slug → 401 "another organization").
+
+---
+
+## Чего ещё НЕТ ❌ (задел на следующие фазы)
+
+- **Академические/market дефолты в сидинге** — WorkType, базовые Subject, BellSchedule, аватары (добавятся с их моделями, Phase 5-7). База сидинга (Organization meta) + bootstrap org_admin — готовы.
+- **Инвайт org_admin на email (шаг 12)** — пока временный пароль возвращается оператору в ответе `create`. Email — Phase 4.
+- **`app/routers/domains.py`** — `/internal/validate-domain` для on-demand TLS. Phase 4.
+- **CLI** `perum-core create-org` (опционально; сейчас провижининг идёт через POST API).
+- **CI** `.github/workflows/test.yml` (pytest + tsc).
+- **Известное ограничение (dev):** Caddy-маршруты живут в рантайм-конфиге; при рестарте Caddy теряются и восстанавливаются `_sync_caddy_routes()` на старте perum_core. Прод — на `Caddyfile.tmpl` (Phase 4).
+- **Cleanup при ошибке провижининга сносит volume** (`down -v` по дизайну PROVISIONING.md); реальных данных пока нет — для Phase 1 ок.
+
+---
+
+## Следующие шаги (рекомендуемый порядок)
+
+**Phase 1 и 2 закрыты. Phase 3 (фронт) — в работе.** Дизайн и функционал — из легаси (`R1dnis/PERUM`); `perum-web` = копия легаси-фронта (Next.js 16, CSS-модули, тёмная тема, same-origin `/api`).
+
+**Сделано в Phase 3:**
+- `perum-web` собирается и **задеплоен** в стенд. Caddy на каждом хосте: `/api`+`/docs`→бэкенд, остальное→`perum_web`.
+- **Мульти-тенант по hostname**: корневой layout читает Host (`next/headers`) — `admin.*` рендерит платформу **без** школьного AuthProvider, поддомен → школьный легаси с его провайдерами.
+- **Платформенный раздел** `src/app/platform/` (`login` + dashboard): вход platform_admin → список/создание орг, фирменная тёмная тема (`platform.module.css` на легаси-переменных), свой `platformApi` (control plane). SSR-проверено: форма и дашборд рендерятся; `admin.*`→платформа, `acme.*`→легаси.
+- Роли `org_admin/director` добавлены во фронт-роутинг (`lib/roles.ts`), хелпер `lib/host.ts`.
+- **Tenant-side вход выровнен под легаси-контракт.** Бэкенд `perum-tenant` отдаёт `POST /api/login`→`{token}`, `GET /api/user/me` (`first_name/last_name/balance/avatar_url/password_changed`), `POST /api/logout`; JWT несёт `id/session_token/role/org_slug` (их читает веб-middleware из cookie). Модель `User` приведена к легаси (first_name/last_name + balance + avatar_url). **E2E:** org_admin логинится на `acme.perum.local`, `/user/me` отдаёт роль → middleware ведёт в `/admin`.
+
+**Фаза 5 (учебное ядро) — в работе:**
+- Перенесены 13 моделей учебного ядра из легаси (subjects/classes/class_students/topics/bell_schedules/bell_schedule_items/schedules/lesson_groups/lesson_group_students/teacher_subjects/academic_years/school_periods/work_types), миграция `tenant_0003`.
+- Сид при создании орг: дефолтная школа + 12 предметов + 6 видов работ.
+- Модуль `app/modules/school_admin` (router→service→schemas): `/api/admin/subjects` (CRUD), `/api/admin/work-types` (CRUD), `/api/admin/dashboard/overview` (пустой, корректной формы). Контракт легаси, RBAC `require_admin`, изоляция по школе. Разделы «Обзор/Предметы/Виды работ» в кабинете работают.
+- Резолвер `school_id`: org_admin (school_id NULL) → первая школа орг.
+
+**Сделано ещё (Фаза 5):** эндпоинты Классы (+ состав `/{id}/students`, расписание `/{id}/schedule`), Учителя `/teachers` (+ назначения `/teacher-subjects`), Учебные годы, Периоды, Расписание звонков — по контракту легаси (`service_classes/_academic/_teachers`). Школа `acme` **заполнена демо-данными** (`app/scripts/seed_test_data.py`): 5 учителей, 4 класса × 6 учеников, год 2025-2026 + 4 четверти, звонки, недельное расписание 10А. Демо-логины (учителя `petrov/ivanova/...`, ученики `student1..24`) — пароль `test1234`. org_admin `ivan@acme.ru` / `_qOI5q3nSHqC`.
+
+**Фаза 6 (журнал и оценки) — начато:**
+- Модели Grade / FinalGrade / Transaction / Homework / HomeworkAttachment / ControlWork (миграция `tenant_0004`). Порт `app/services/points_calculator.py` (5→+25, 4→+10, 3→−5, 2→−20, 1→−30 × коэф. профильности × вес).
+- **Журнал учителя** `app/modules/journal` + `app/modules/teacher` (контракт легаси): `GET /api/journal/teacher/subjects`, `GET /api/journal/{class}/{subject}` (сетка ученики×даты + средние + период + итоговые), `POST/GET/PUT/DELETE /api/journal/grades`, `/work-types`, `/subjects`, `/subjects/{id}/topics`; `GET /api/teacher/{classes,subjects,classes/{id}/students,homework,control-works}`. Выставление оценки начисляет ливки (атомарно, balance≥0) + пишет Transaction. `require_teacher` + проверка назначения (teacher_subjects) / readonly для классрука.
+- **Обзор школы** считает реальные KPI из оценок (средний балл, распределение, по классам).
+- Демо: ~216 оценок в `acme` (3 предмета, май 2026 = текущая четверть). Проверено E2E: учитель `petrov`/`test1234` → журнал 10А → +5 даёт +25 ливок; обзор 217 оценок, ср.балл 4.05.
+
+**Осталось:**
+1. **Фазы 5, 7 и 8 закрыты.** Фаза 8: **новости** + **аналитика** (учитель `GET /api/teacher/analytics/{dashboard,topics,works,students/problem}`; админ `GET /api/admin/dashboard/{overview,performance,deep-economy}` + `POST /api/admin/analytics/track`) + **апелляции** (`/api/appeals/*`). Хвосты Фазы 5: управление пользователями (`/api/admin/users*`, `/register-users`), редактор расписания с подгруппами и `teacher-subjects/sync`. **Дальше — Фаза 4** (домены+TLS, 3%) и эксплуатационные **Фазы 9–11** (обновления-по-кнопке, observability, hardening, деплой).
+2. Хвосты Фазы 5: редактор расписания (подгруппы), массовое назначение учителей (`/teacher-subjects/sync`), управление пользователями (Регистрация).
+3. Фаза 7: геймификация (маркет/биржа/квесты). Фазы 8-11.
+
+Тестируется в браузере: **`http://admin.perum.local`** (вход `admin`/`admin`) — создание/список орг. Школьный дизайн — `http://<slug>.perum.local`. API напрямую — `…/docs` (Swagger).
+
+---
+
+## Как поднять локальный стенд
+
+```bash
+cd "/home/sybiv/Рабочий стол/perum-v2"
+
+# admin.perum.local в /etc/hosts (один раз, нужен sudo):
+echo "127.0.0.1 admin.perum.local" | sudo tee -a /etc/hosts
+
+# поднять (mirror.gcr.io обходит блокировку Docker Hub в РФ):
+IMAGE_REGISTRY=mirror.gcr.io docker compose -f deploy/docker-compose.core.yml up -d --build
+
+# проверить:
+docker compose -f deploy/docker-compose.core.yml ps
+curl http://admin.perum.local/health        # {"status":"ok"}
+curl http://admin.perum.local/health/db     # {"status":"ok","db":1}
+curl http://admin.perum.local/docs          # Swagger
+```
+
+Остановить: `docker compose -f deploy/docker-compose.core.yml down` (с `-v` — снести и БД).
+
+Прогнать тесты control plane (без Docker):
+```bash
+cd perum-core
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pytest
+.venv/bin/python -m pytest      # ожидается: passed
+```
+
+---
+
+## Рабочие правила
+
+- **CHANGELOG.md** — при каждом заметном изменении добавлять запись и поднимать версию (`0.0.x`). На русском, человеческим языком, свежее сверху. Текущая версия: `0.0.19`.
+- **docs/VERSIONS.md** — журнал версий по коммитам: на каждый коммит строка `№(N) · ГГГГ-ММ-ДД ЧЧ:ММ · хеш · описание`; там же оценка готовности (~40–45%) и прогноз сроков.
+- Коммитим осмысленными порциями; пуш в `main` — по ходу работы.
+
+## Зафиксированные решения (не пересматривать без запроса)
+
+- **Изоляция: silo = ШКОЛА** (с 2026-05-25; v2 «узел организации»): каждая ШКОЛА = отдельный docker-стек (app + БД + volume), School — ребёнок Organization (`School.org_id`); школы провижинит/обновляет org_admin, ядро держит только метаданные. (Изначально был выбран silo-per-org вместо schema-per-org; v2 заглубила silo до уровня школы.)
+- **DNS: Cloudflare** (wildcard `*.perum.ru` + custom domains). **Регистратор: Beget** (API нет).
+- **Прод: generic Ubuntu + SSH**, управление через Docker. Cloud-провайдер неважен.
+- **Обновления: только по кнопке орг (opt-in).** Control plane публикует релиз (версия + changelog), орг видит уведомление в админке и обновляется одной кнопкой когда захочет. Принудительных/авто-обновлений НЕТ, даже для секьюрити-патчей. Апдейт volume-preserving (БД/настройки/данные не трогаются), орг независимы. Multi-host (`dedicated_vm`) — через агент-контейнер на VM (модель Remnawave panel↔node), не SSH. Решение пользователя 2026-05-24. Детали — [PLAN.md](PLAN.md) §6 + [DEPLOYMENT.md](DEPLOYMENT.md).
+- **Биллинг: заглушки** на всех фазах, без платёжных систем.
+- **Docker Hub в РФ блокируется** → `IMAGE_REGISTRY=mirror.gcr.io` или daemon.json mirror.
+- **Старый PERUM** (`пэрум.рф`, `/home/sybiv/Рабочий стол/PERUM`) — read-only, не трогать, миграция через ~6 мес опционально.
+- **Дизайн и функционал — из легаси (эталон).** UI/UX и фичи нового ПЭРУМ портируем из старого (`R1dnis/PERUM` / `/home/sybiv/Рабочий стол/PERUM`, фронт — Next.js), не изобретаем с нуля. Текущий минимальный дизайн perum-web — временный каркас (роутинг/авторизация верны), будет приведён к виду легаси.
+- **Бренд — «ПЭРУМ» (кириллица) везде в UI и доках.** Расшифровка: Платформа Экономико-Аналитического Развития Учащейся Молодёжи. Латиница только в технических идентификаторах (`perum-core`, `perum-web`, `perum-tenant`, репозиторий, код, env).
+
+---
+
+## История коммитов
+
+```
+50ac870 fix(deploy): parametrize base-image registry via IMAGE_REGISTRY
+aaeb6e2 fix(deploy): pin perum_core to local build; document RU registry mirror
+0cedc0b test(perum-core): add slug + health tests; fix slug length off-by-one
+8e5ace5 feat(perum-core): Phase 1 starter — FastAPI skeleton + Postgres + Caddy
+3fbf701 chore: bootstrap Phase 0 — monorepo skeleton + architecture docs
+```

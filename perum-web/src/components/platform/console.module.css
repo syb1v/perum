@@ -1,0 +1,59 @@
+/* Дополнения к admin/page.module.css для консолей платформы/орг:
+   KPI-плитки, индикаторы онлайна, тулбар. Цвета — общие токены variables.css. */
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.kpiCard {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+}
+.kpiVal {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--accent-tertiary);
+}
+.kpiLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 5px;
+}
+.dotOnline { color: var(--success); }
+.dotOffline { color: var(--text-muted); }
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.spacer { flex: 1; }
+.muted { color: var(--text-secondary); font-size: 0.9rem; }
+.okCard { border-color: var(--success); }
+.warnText { color: var(--warning); }
+
+/* Бейдж статуса suspended/trial (в admin есть только success/error) */
+.badgeWarn {
+  color: var(--warning);
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+}
+.badgeMuted { color: var(--text-muted); border-color: var(--border-color); }
+
+/* Сетка двух карточек (форма + таблица) */
+.split {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+}

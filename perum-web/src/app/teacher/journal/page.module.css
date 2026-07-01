@@ -1,0 +1,889 @@
+/* ==========================================
+   Journal Styles
+   ========================================== */
+
+.journalPage {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.header {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tabsWrapper {
+    padding: 20px 24px 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.mobileText {
+    display: none;
+}
+
+.desktopText {
+    display: inline;
+}
+
+/* Tabs */
+.tabsHeader {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-card);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.tabBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tabBtn svg {
+    opacity: 0.7;
+}
+
+.tabBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.activeTab {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.activeTab svg {
+    opacity: 1;
+    color: var(--accent-primary);
+}
+
+/* Панель управления */
+.journalControls {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.controlGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 180px;
+}
+
+.controlGroup label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.controlGroup select,
+.controlGroup input {
+    padding: 0.75rem 1rem;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+}
+
+.controlGroup select:focus,
+.controlGroup input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--bg-input-focus, var(--bg-input));
+}
+
+/* Информация о предмете */
+.subjectInfo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.subjectBadge {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.subjectName {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.subjectCategory {
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.coefficientInfo {
+    margin-left: auto;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* Журнал - обёртка */
+.journalWrapper {
+    background: var(--bg-card);
+    border-radius: 14px;
+    border: 1px solid var(--border-color);
+    min-height: 400px;
+    overflow: hidden;
+    position: relative;
+}
+
+.journalEmpty,
+.journalLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    text-align: center;
+    height: 400px;
+}
+
+.journalEmpty svg,
+.journalLoading svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Таблица журнала */
+.tableContainer {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
+    width: 100%;
+}
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.8rem;
+}
+
+.table thead {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg-secondary);
+}
+
+.table th {
+    padding: 0.6rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.studentCol {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: var(--bg-secondary);
+    z-index: 12;
+}
+
+.table th.studentCol:first-child {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    box-sizing: border-box;
+    padding-left: 0;
+    padding-right: 0;
+    z-index: 21;
+}
+
+.table th.studentCol:nth-child(2) {
+    left: 44px;
+    z-index: 21;
+}
+
+.gradeColToday {
+    background: rgba(14, 165, 233, 0.2);
+    color: var(--accent-primary);
+    border-bottom: 2px solid var(--accent-primary);
+}
+
+.gradeCol {
+    min-width: 70px;
+    font-size: 0.85rem;
+}
+
+.avgCol {
+    min-width: 60px;
+    background: var(--bg-tertiary);
+}
+
+.table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    text-align: center;
+    vertical-align: middle;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.table th {
+    padding: 0.6rem 0.5rem;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+
+.table th:last-child,
+.table td:last-child {
+    border-right: none;
+}
+
+.table tr:hover td {
+    background: var(--bg-hover);
+}
+
+.rowNum {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    box-sizing: border-box;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    position: sticky;
+    left: 0;
+    background: var(--bg-card);
+    z-index: 6;
+}
+
+.studentName {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    position: sticky;
+    left: 44px;
+    background: var(--bg-card);
+    z-index: 5;
+    padding-left: 1rem;
+}
+
+.table tr:hover .studentName,
+.table tr:hover .rowNum {
+    background-color: var(--bg-card);
+    box-shadow: inset 0 0 0 1000px var(--bg-hover);
+}
+
+/* Grade Cells */
+.gradeCell {
+    min-width: 70px;
+    position: relative;
+    cursor: pointer;
+}
+
+.gradeCell:hover {
+    background: var(--bg-hover);
+}
+
+.gradeCellToday {
+    background: rgba(14, 165, 233, 0.08);
+}
+
+.gradeCellToday:hover {
+    background: rgba(14, 165, 233, 0.15);
+}
+
+/* Holiday (каникулы) */
+.gradeColHoliday {
+    background: var(--bg-tertiary) !important;
+    color: var(--text-muted) !important;
+    opacity: 0.6;
+}
+
+.gradeCellHoliday {
+    background: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 4px,
+            rgba(148, 163, 184, 0.08) 4px,
+            rgba(148, 163, 184, 0.08) 8px) !important;
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+/* Attendance marks (УП/НП/осв./точка) */
+.attendanceMark {
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 28px;
+    padding: 2px 4px;
+    text-shadow: none !important;
+    letter-spacing: 0.02em;
+    border-radius: 4px;
+    box-shadow: none !important;
+}
+
+.gradeValue {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin: 2px;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gradeValue:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Gradient Grade Classes */
+.grade5 {
+    background: linear-gradient(135deg, var(--success), #16a34a);
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade4 {
+    background: linear-gradient(135deg, #84cc16, #65a30d);
+    box-shadow: 0 2px 4px rgba(101, 163, 13, 0.3);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade3 {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade2 {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade1 {
+    background: linear-gradient(135deg, #64748b, #475569);
+    box-shadow: 0 2px 4px rgba(71, 85, 105, 0.3);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Grade Colors (mapped from journal.css via logic) */
+/* Note: In React we'll likely use inline styles or specific classes for colors */
+
+.addGradeBtn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: 2px dashed rgba(14, 165, 233, 0.5);
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(14, 165, 233, 0.7);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gradeCell:hover .addGradeBtn {
+    opacity: 1;
+}
+
+.addGradeBtn:hover {
+    background: rgba(14, 165, 233, 0.2);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* Averages */
+.avgValue {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.avgExcellent {
+    color: var(--success);
+}
+
+.avgGood {
+    color: #a3e635;
+}
+
+.avgSatisfactory {
+    color: var(--warning);
+}
+
+.avgBad {
+    color: var(--error);
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .tabsWrapper {
+        padding: 4px 12px 0 12px;
+    }
+
+    .tabsHeader {
+        gap: 4px;
+        padding: 6px;
+    }
+
+    .tabBtn {
+        padding: 8px 12px;
+        font-size: 0.8rem;
+        gap: 4px;
+    }
+
+    .mobileText {
+        display: inline;
+    }
+
+    .desktopText {
+        display: none;
+    }
+
+    .journalControls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 0.5rem;
+        margin: 1rem 16px 1rem 16px;
+    }
+
+    .controlGroup {
+        width: calc(50% - 0.25rem);
+        min-width: unset;
+    }
+
+    .controlGroup select,
+    .controlGroup input {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .subjectInfo {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .coefficientInfo {
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+
+    /* Mobile Table Styles */
+    .journalWrapper {
+        overflow: hidden;
+    }
+
+    .tableContainer {
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: calc(100vh - 200px);
+    }
+
+    .table th,
+    .table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.75rem;
+    }
+
+    .studentName {
+        max-width: 100px;
+        min-width: 100px;
+        white-space: normal;
+        word-wrap: break-word;
+        font-size: 0.75rem;
+        padding-left: 0.5rem;
+        line-height: 1.2;
+    }
+
+    .rowNum {
+        width: 32px;
+        min-width: 32px;
+        max-width: 32px;
+        font-size: 0.75rem;
+    }
+
+    .studentName {
+        left: 32px;
+        /* Adjust for smaller rowNum */
+    }
+
+    .table th.studentCol:first-child {
+        width: 32px;
+        min-width: 32px;
+        max-width: 32px;
+    }
+
+    .table th.studentCol:nth-child(2) {
+        left: 32px;
+    }
+
+    .gradeCol {
+        min-width: 36px;
+        font-size: 0.7rem;
+    }
+
+    .gradeValue {
+        width: 24px;
+        height: 24px;
+        font-size: 0.8rem;
+    }
+
+    .gradeCell {
+        min-width: 36px;
+    }
+
+    .addGradeBtn {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Remove unused modal classes */
+
+.modalBody {
+    padding: 20px 24px;
+}
+
+.studentInfo {
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.studentName {
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.gradeButtons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.gradeBtn {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-tertiary);
+}
+
+.gradeBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.selected {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+
+.grade5 {
+    background: linear-gradient(135deg, var(--success), #16a34a);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade4 {
+    background: linear-gradient(135deg, #84cc16, #65a30d);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade3 {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade2 {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.grade1 {
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pointsPreview {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.pointsLabel {
+    color: var(--text-secondary);
+}
+
+.pointsValue {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.positive {
+    color: var(--success);
+}
+
+.negative {
+    color: var(--error);
+}
+
+.formGroup {
+    margin-bottom: 16px;
+}
+
+.select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+.select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.btnPrimary {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnPrimary:hover {
+    opacity: 0.9;
+}
+
+/* View Modal Specifics */
+.gradeViewValue {
+    font-size: 4rem;
+    font-weight: 800;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+.gradeViewPoints {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--success);
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.gradeViewPoints.negative {
+    color: var(--error);
+}
+
+.gradeDetailRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.detailLabel {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.detailValue {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.modalActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btnSecondary {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+    background: var(--bg-hover);
+}
+
+.btnDanger {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    background: var(--error);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.btnDanger:hover {
+    opacity: 0.9;
+}
+
+/* Homework Button */
+.btnHomework {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-tertiary);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 8px;
+    color: var(--accent-tertiary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnHomework:hover:not(:disabled) {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.btnHomework:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal Elements */
+.modalStudentName {
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    word-wrap: break-word;
+    white-space: normal;
+    text-align: center;
+}

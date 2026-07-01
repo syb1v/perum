@@ -1,0 +1,82 @@
+.settingsList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settingItem {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+    cursor: default;
+    text-align: left;
+    border: none;
+    width: 100%;
+}
+
+.settingItemActive {
+    cursor: pointer;
+}
+
+.settingItemActive:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.settingIcon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-primary);
+    flex-shrink: 0;
+}
+
+.settingInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.settingTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.settingSubtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.settingAction {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+
+.chevron {
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.badgeSoon {
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
