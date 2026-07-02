@@ -29,15 +29,16 @@ async def _sync_caddy_routes() -> None:
     caddy = get_caddy_admin()
     try:
         async with SessionLocal() as db:
-            # Орг на нодах (node_id IS NOT NULL) не имеют локальных контейнеров
-            # на ядре — их лендинги живут на нодах. Пропускаем их при синке.
+            # Орг на нодах (node_id IS NOT NULL) тоже нуждаются в маршруте на
+            # ядре, если wildcard DNS организации указывает на ядро (например,
+            # нет доступа к DNS-регистратору). Core проксирует хост на ноду.
             org_rows = (await db.execute(
-                select(OrganizationDomain, Organization)
+                select(OrganizationDomain, Organization, Node)
                 .join(Organization, OrganizationDomain.org_id == Organization.id)
+                .outerjoin(Node, Organization.node_id == Node.id)
                 .where(
                     Organization.status == "active",
                     OrganizationDomain.status == "active",
-                    Organization.node_id.is_(None),
                 )
             )).all()
             # v2: маршруты ШКОЛ (silo=школа) — раньше не восстанавливались после
@@ -69,10 +70,14 @@ async def _sync_caddy_routes() -> None:
         logger.warning("caddy route sync skipped (DB not ready?): %s", exc)
         return
 
-    for domain, org in org_rows:
+    for domain, org, node in org_rows:
         try:
-            await caddy.add_proxy_route(org.slug, domain.domain, f"org_{org.slug}_app:3000")
-            logger.info("route sync (org): %s -> org_%s_app:3000", domain.domain, org.slug)
+            if node is not None:
+                upstream = f"{node.hostname}:80"
+            else:
+                upstream = f"org_{org.slug}_app:3000"
+            await caddy.add_proxy_route(org.slug, domain.domain, upstream)
+            logger.info("route sync (org): %s -> %s", domain.domain, upstream)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for %s: %s", domain.domain, exc)
 

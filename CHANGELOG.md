@@ -4,6 +4,15 @@
 
 > Проект на ранней стадии (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Рабочих функций для конечных пользователей — учеников, учителей — пока нет, они появятся в фазах 5–8 (см. [docs/PLAN.md](docs/PLAN.md)).
 
+## [Unreleased] — 2026-07-03
+
+### Деплой узла организации + маршрутизация орг-доменов через ядро
+
+- **Скрипт авто-деплоя узла** (`deploy/scripts/deploy-node.sh`). Развёртывание полного стека ноды на Ubuntu-сервере: Docker, `perum_agent` (воркор), Postgres, Redis, Caddy (с `auto_https off`), docker-socket-proxy, Watchtower. Генерирует `.env` и enrollment-токен, публикует `AGENT_PORT` 3001, 80/443.
+- **Core проксирует орг-домены на ноду.** Исправлена логика Caddy-маршрутизации: при `node_id IS NOT NULL` ядро добавляет маршрут `<org.domain>` → `node.hostname:80`. Раньше орги на нодах пропускались при старте и не создавались при провижининге, что ломало лендинг, когда wildcard DNS указывал на ядро.
+  - `app/main.py`: `_sync_caddy_routes` теперь синхронизирует все активные орги, выбирая upstream `node.hostname:80` для удалённых нод.
+  - `app/routers/organizations.py`: `create_organization` и `reprovision_organization` добавляют core-Caddy-маршрут сразу после успешного `provision_landing` на ноде.
+
 ## [Unreleased] — 2026-06-27
 
 ### Прод-сервер: новый IP, скрипты авто-деплоя perum-core

@@ -5,6 +5,12 @@
 > в [CHANGELOG.md](../CHANGELOG.md). Правило: каждый новый коммит добавляет
 > строку сюда — `№(N) · ГГГГ-ММ-ДД ЧЧ:ММ · хеш · описание`.
 
+## Обновление 2026-07-03 — маршрутизация орг-доменов через ядро + deploy-node
+
+- `deploy/scripts/deploy-node.sh` — авто-деплой узла организации (perum_agent + стек).
+- `perum-core/app/main.py` — `_sync_caddy_routes` синхронизирует орги на нодах (`node.hostname:80`).
+- `perum-core/app/routers/organizations.py` — core добавляет Caddy-маршрут при создании/перепровижининге орг на ноде.
+
 ## Обновление 2026-06-22 — патч: нода офлайн (AGENT_PORT не был опубликован)
 
 `deploy/org-node/docker-compose.yml` → добавлен `ports: ["3001:3000"]` для `org_agent`. Без этого `RemoteNodeClient.ping()` падал с connection refused → `node.status = "offline"`. Добавлен `test_deploy_config.py` — тест на обязательные порты в compose-файле.

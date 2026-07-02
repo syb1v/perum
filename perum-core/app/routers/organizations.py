@@ -37,6 +37,7 @@ from app.schemas.organization import (
     OrgAdminCredentials,
     ProvisionResult,
 )
+from app.services.caddy_admin import get_caddy_admin
 from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 from app.services.school_provisioner import deprovision_school, suspend_school, unsuspend_school
 from app.services.stats import rollup, school_stat, schools_with_metrics
@@ -114,6 +115,12 @@ async def create_organization(
             "domain": org.domain, "org_name": org.name, "org_slug": org.slug, "school_hosts": [],
         })
         org.landing_status = "active" if resp.get("success") else "failed"
+        if org.landing_status == "active":
+            try:
+                await get_caddy_admin().add_proxy_route(org.slug, org.domain, f"{node.hostname}:80")
+                logger.info("org %s: core caddy route -> %s:80", org.slug, node.hostname)
+            except Exception as route_exc:  # noqa: BLE001
+                logger.warning("org %s: core caddy route failed: %s", org.slug, route_exc)
     except RemoteNodeError as exc:
         org.landing_status = "failed"
         logger.warning("org %s: landing provision failed: %s", org.slug, exc)
@@ -157,6 +164,12 @@ async def reprovision_organization(org_id: int, db: AsyncSession = Depends(get_d
             "school_hosts": school_hosts,
         })
         org.landing_status = "active" if resp.get("success") else "failed"
+        if org.landing_status == "active":
+            try:
+                await get_caddy_admin().add_proxy_route(org.slug, org.domain, f"{node.hostname}:80")
+                logger.info("org %s: core caddy route -> %s:80", org.slug, node.hostname)
+            except Exception as route_exc:  # noqa: BLE001
+                logger.warning("org %s: core caddy route failed: %s", org.slug, route_exc)
     except RemoteNodeError as exc:
         org.landing_status = "failed"
         await db.commit()
