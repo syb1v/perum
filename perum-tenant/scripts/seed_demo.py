@@ -141,7 +141,25 @@ def seed_work_types(session: Session, school: School) -> list[WorkType]:
     return work_types
 
 
-def seed_teachers(session: Session, school: School, subjects: list[Subject]) -> list[User]:
+def seed_classes(session: Session, school: School) -> list[Class]:
+    classes_data = ["5 А", "5 Б", "6 А"]
+    classes = []
+    for name in classes_data:
+        cls = session.query(Class).filter(Class.school_id == school.id, Class.name == name).first()
+        if cls is None:
+            cls = Class(
+                school_id=school.id,
+                name=name,
+                grade_level=int(name.split()[0]),
+                teacher_id=None,
+            )
+            session.add(cls)
+            session.flush()
+        classes.append(cls)
+    return classes
+
+
+def seed_teachers(session: Session, school: School, subjects: list[Subject], classes: list[Class]) -> list[User]:
     teachers_data = [
         ("Елена", "Васильева"),
         ("Сергей", "Петров"),
@@ -155,35 +173,33 @@ def seed_teachers(session: Session, school: School, subjects: list[Subject]) -> 
             teacher = _make_user(session, "teacher", school.id, first, last, login)
         teachers.append(teacher)
 
-    # Assign teachers to subjects
-    for teacher, subject in zip(teachers, subjects[: len(teachers)]):
+    # Assign teachers to subjects + classes (class_id is NOT NULL in teacher_subjects).
+    for idx, (teacher, subject) in enumerate(zip(teachers, subjects[: len(teachers)])):
+        cls = classes[idx % len(classes)]
         exists = (
             session.query(TeacherSubject)
-            .filter(TeacherSubject.school_id == school.id, TeacherSubject.teacher_id == teacher.id, TeacherSubject.subject_id == subject.id)
+            .filter(
+                TeacherSubject.school_id == school.id,
+                TeacherSubject.teacher_id == teacher.id,
+                TeacherSubject.subject_id == subject.id,
+                TeacherSubject.class_id == cls.id,
+            )
             .first()
         )
         if exists is None:
-            session.add(TeacherSubject(school_id=school.id, teacher_id=teacher.id, subject_id=subject.id))
+            session.add(
+                TeacherSubject(
+                    school_id=school.id,
+                    teacher_id=teacher.id,
+                    subject_id=subject.id,
+                    class_id=cls.id,
+                )
+            )
+        # Назначаем классному руководителю первый класс, если ещё не назначен.
+        if cls.teacher_id is None:
+            cls.teacher_id = teacher.id
 
     return teachers
-
-
-def seed_classes(session: Session, school: School, teachers: list[User]) -> list[Class]:
-    classes_data = ["5 А", "5 Б", "6 А"]
-    classes = []
-    for i, name in enumerate(classes_data):
-        cls = session.query(Class).filter(Class.school_id == school.id, Class.name == name).first()
-        if cls is None:
-            cls = Class(
-                school_id=school.id,
-                name=name,
-                grade_level=int(name.split()[0]),
-                teacher_id=teachers[i % len(teachers)].id,
-            )
-            session.add(cls)
-            session.flush()
-        classes.append(cls)
-    return classes
 
 
 def seed_students(session: Session, school: School, classes: list[Class]) -> tuple[list[User], dict[int, list[User]]]:
@@ -296,8 +312,8 @@ def main() -> None:
         seed_admin(session, org)
         subjects = seed_subjects(session, school)
         work_types = seed_work_types(session, school)
-        teachers = seed_teachers(session, school, subjects)
-        classes = seed_classes(session, school, teachers)
+        classes = seed_classes(session, school)
+        teachers = seed_teachers(session, school, subjects, classes)
         students, students_by_class = seed_students(session, school, classes)
         seed_grades(session, school, classes, students_by_class, subjects, work_types)
         seed_transactions(session, school, students)
