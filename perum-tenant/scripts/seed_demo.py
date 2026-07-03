@@ -21,10 +21,13 @@ from app.core.config import get_settings
 from app.core.security import hash_password
 from app.models import (
     Base,
+    BellSchedule,
+    BellScheduleItem,
     Class,
     ClassStudent,
     Grade,
     Organization,
+    Schedule,
     School,
     ShopItem,
     Subject,
@@ -152,7 +155,36 @@ def seed_work_types(session: Session, school: School) -> list[WorkType]:
     return work_types
 
 
-def seed_classes(session: Session, school: School) -> list[Class]:
+def seed_bell_schedule(session: Session, school: School) -> BellSchedule:
+    bell = session.query(BellSchedule).filter(BellSchedule.school_id == school.id, BellSchedule.name == "Основной").first()
+    if bell is None:
+        bell = BellSchedule(school_id=school.id, name="Основной")
+        session.add(bell)
+        session.flush()
+        times = [
+            (1, "08:00", "08:45", False),
+            (2, "08:55", "09:40", False),
+            (3, "09:50", "10:35", False),
+            (4, "10:45", "11:30", False),
+            (5, "11:40", "12:25", False),
+            (6, "12:35", "13:20", False),
+            (1, "08:00", "08:45", True),
+            (2, "08:55", "09:40", True),
+            (3, "09:50", "10:35", True),
+            (4, "10:45", "11:30", True),
+        ]
+        for num, start, end, is_sat in times:
+            session.add(BellScheduleItem(
+                bell_schedule_id=bell.id,
+                lesson_number=num,
+                start_time=start,
+                end_time=end,
+                is_saturday=is_sat,
+            ))
+    return bell
+
+
+def seed_classes(session: Session, school: School, bell: BellSchedule) -> list[Class]:
     classes_data = ["5 А", "5 Б", "6 А"]
     classes = []
     for name in classes_data:
@@ -163,9 +195,12 @@ def seed_classes(session: Session, school: School) -> list[Class]:
                 name=name,
                 grade_level=int(name.split()[0]),
                 teacher_id=None,
+                bell_schedule_id=bell.id,
             )
             session.add(cls)
             session.flush()
+        elif cls.bell_schedule_id is None:
+            cls.bell_schedule_id = bell.id
         classes.append(cls)
     return classes
 
@@ -229,6 +264,30 @@ def seed_teachers(session: Session, school: School, subjects: list[Subject], cla
             cls.teacher_id = teacher.id
 
     return teachers
+
+
+def seed_schedule(session: Session, school: School, classes: list[Class], subjects: list[Subject], teachers: list[User]) -> None:
+    """Create a weekly schedule: each class has 4 lessons per day Mon-Fri."""
+    if session.query(Schedule).filter(Schedule.school_id == school.id).first():
+        return
+
+    # Teachers are assigned to subjects in seed_teachers in the same order.
+    teacher_by_subject = {subjects[i].id: teachers[i % len(teachers)].id for i in range(len(subjects))}
+
+    for cls in classes:
+        for day in range(5):  # Monday-Friday
+            for lesson_num in range(1, 5):
+                idx = (day + lesson_num + cls.id) % len(subjects)
+                subject = subjects[idx]
+                session.add(Schedule(
+                    school_id=school.id,
+                    class_id=cls.id,
+                    subject_id=subject.id,
+                    teacher_id=teacher_by_subject.get(subject.id, teachers[0].id),
+                    day_of_week=day,
+                    lesson_number=lesson_num,
+                    room=f"{101 + (cls.id % 10)}",
+                ))
 
 
 def seed_students(session: Session, school: School, classes: list[Class]) -> tuple[list[User], dict[int, list[User]]]:
@@ -360,8 +419,10 @@ def main() -> None:
         seed_admin(session, org)
         subjects = seed_subjects(session, school)
         work_types = seed_work_types(session, school)
-        classes = seed_classes(session, school)
+        bell = seed_bell_schedule(session, school)
+        classes = seed_classes(session, school, bell)
         teachers = seed_teachers(session, school, subjects, classes)
+        seed_schedule(session, school, classes, subjects, teachers)
         students, students_by_class = seed_students(session, school, classes)
         seed_grades(session, school, classes, students_by_class, subjects, work_types)
         seed_transactions(session, school, students)
