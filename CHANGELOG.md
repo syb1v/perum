@@ -13,6 +13,7 @@
   - `app/main.py`: `_sync_caddy_routes` теперь синхронизирует все активные орги, выбирая upstream `node.hostname:80` для удалённых нод.
   - `app/routers/organizations.py`: `create_organization` и `reprovision_organization` добавляют core-Caddy-маршрут сразу после успешного `provision_landing` на ноде.
 - **Фикс `deploy-node.sh`**: healthcheck воркера использует правильный путь `/api/agent/health` вместо `/agent/health` — устраняет ложное "воркер не готов" в конце деплоя.
+- **Seed-скрипт для демо-данных** (`perum-tenant/scripts/seed_demo.py`). Заполняет школу реалистичными данными: организация, школа, org_admin, учителя, классы (3 шт.), ученики (10–15 на класс), предметы, оценки, ливки, товары в магазине. Запускается внутри контейнера тенанта школы.
 
 ## [Unreleased] — 2026-06-27
 
