@@ -27,6 +27,7 @@ from app.models import (
     ClassStudent,
     Grade,
     Organization,
+    Quest,
     Schedule,
     School,
     ShopItem,
@@ -332,6 +333,37 @@ def seed_students(session: Session, school: School, classes: list[Class]) -> tup
     return students, students_by_class
 
 
+def seed_quests(session: Session, school: School, klass: Class, subject: Subject) -> None:
+    """Seed a couple of random quests for demo."""
+    quest_titles = [
+        ("Пятёрочник недели", "Получи 5 положительных оценок за неделю и заработай ливки.", 50),
+        ("Без троек 10 дней", "Не получай троек 10 дней подряд.", 100),
+        ("Математический марафон", "Реши 5 заданий по математике на отлично.", 75),
+    ]
+
+    created = 0
+    for title, description, reward in quest_titles:
+        existing = session.query(Quest).filter_by(school_id=school.id, title=title).first()
+        if existing:
+            continue
+        quest = Quest(
+            school_id=school.id,
+            title=title,
+            description=description,
+            reward=reward,
+            quest_type="positive_grades",
+            conditions='{"target_count": 5}',
+            class_id=klass.id,
+            subject_id=subject.id,
+            status="available",
+        )
+        session.add(quest)
+        created += 1
+
+    session.commit()
+    print(f"[seed] quests created: {created}")
+
+
 def seed_grades(session: Session, school: School, classes: list[Class], students_by_class: dict[int, list[User]], subjects: list[Subject], work_types: list[WorkType]) -> None:
     if session.query(Grade).filter(Grade.school_id == school.id).first():
         return
@@ -424,11 +456,12 @@ def main() -> None:
         teachers = seed_teachers(session, school, subjects, classes)
         seed_schedule(session, school, classes, subjects, teachers)
         students, students_by_class = seed_students(session, school, classes)
+        seed_quests(session, school, classes[0], subjects[0])
         seed_grades(session, school, classes, students_by_class, subjects, work_types)
         seed_transactions(session, school, students)
         seed_shop_items(session, school)
         session.commit()
-        print(f"Seeded school '{school.name}' (id={school.id}) with {len(students)} students, {len(teachers)} teachers, {len(subjects)} subjects.")
+        print(f"Seeded school '{school.name}' (id={school.id}) with {len(students)} students, {len(teachers)} teachers, {len(subjects)} subjects, 3 quests.")
 
 
 if __name__ == "__main__":
