@@ -551,6 +551,44 @@ async def _assigned_node(school: School, db: AsyncSession):
     return await db.get(Node, a.node_id) if a is not None else None
 
 
+async def _refresh_org_landing(org_id: int, db: AsyncSession) -> None:
+    """Пересоздать лендинг организации на её ноде с актуальным списком школ."""
+    from app.models import Node, Organization, School
+    from app.services.caddy_admin import get_caddy_admin
+    from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
+
+    org = await db.get(Organization, org_id)
+    if not org or not org.node_id:
+        return
+
+    node = await db.get(Node, org.node_id)
+    if not node:
+        return
+
+    schools = (await db.execute(
+        select(School).where(School.org_id == org.id, School.status == "active")
+    )).scalars().all()
+    school_hosts = [f"{s.subdomain}.{org.domain}" for s in schools if s.subdomain and org.domain]
+
+    try:
+        resp = await RemoteNodeClient().provision_landing(node, {
+            "domain": org.domain,
+            "org_name": org.name,
+            "org_slug": org.slug,
+            "school_hosts": school_hosts,
+        })
+        org.landing_status = "active" if resp.get("success") else "failed"
+        if org.landing_status == "active":
+            try:
+                await get_caddy_admin().add_proxy_route(org.slug, org.domain, f"{node.hostname}:80")
+            except Exception as route_exc:  # noqa: BLE001
+                logger.warning("org %s: core caddy route failed during landing refresh: %s", org.slug, route_exc)
+    except RemoteNodeError as exc:
+        org.landing_status = "failed"
+        logger.warning("org %s: landing refresh failed: %s", org.slug, exc)
+    await db.commit()
+
+
 async def provision_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:
     settings = settings or get_settings()
     from app.models import NodeAssignment
@@ -578,6 +616,7 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
 
     if node is None:
         await provision_school(school, db, host=host)  # локально (fallback)
+        await _refresh_org_landing(school.org_id, db)
         return
 
     # --- Удалённо на ноде ---
@@ -612,6 +651,7 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
         await _upsert_subdomain(school, host, db)
     await db.commit()
     await db.refresh(school)
+    await _refresh_org_landing(school.org_id, db)
     logger.info("school %s: provisioned on node %s (%s), host=%s", school.slug, node.name, node.hostname, host)
 
 

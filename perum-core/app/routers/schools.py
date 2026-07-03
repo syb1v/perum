@@ -30,6 +30,7 @@ from app.services.caddy_admin import get_caddy_admin
 from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 from app.services.stack_spec import school_container_name, school_label_slug
 from app.services.school_provisioner import (
+    _refresh_org_landing,
     current_release_image,
     deprovision_school,
     provision_school,
@@ -425,8 +426,10 @@ async def suspend_school_endpoint(
                 school.suspended_by = "manual"
                 await db.commit()
                 await db.refresh(school)
+                await _refresh_org_landing(school.org_id, db)
             else:
                 await suspend_school(school, db)
+                await _refresh_org_landing(school.org_id, db)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось заморозить школу: {exc}")
     return _school_dict(school)
@@ -450,8 +453,10 @@ async def unsuspend_school_endpoint(
                 school.suspended_by = None
                 await db.commit()
                 await db.refresh(school)
+                await _refresh_org_landing(school.org_id, db)
             else:
                 await unsuspend_school(school, db)
+                await _refresh_org_landing(school.org_id, db)
         except Exception as exc:  # noqa: BLE001
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось разморозить школу: {exc}")
     return _school_dict(school)
@@ -697,6 +702,7 @@ async def delete_school(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     school = await _get_school(school_id, admin, db)
+    org_id = school.org_id
     # purge — необратимое уничтожение томов: требуем явного подтверждения поддомена,
     # чтобы случайный DELETE?purge=true не стёр данные школы (AUDIT, lifecycle #3).
     confirm_key = school.subdomain or school.slug
@@ -728,10 +734,12 @@ async def delete_school(
                 await db.delete(secret)
             await db.delete(school)  # каскадом удалит node_assignments
             await db.commit()
+            await _refresh_org_landing(org_id, db)
             return {"id": school_id, "purged": True}
         if node is not None:
             school.status = "archived"
             await db.commit()
+        await _refresh_org_landing(org_id, db)
         return {"id": school_id, "status": school.status}
 
 

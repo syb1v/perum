@@ -49,7 +49,7 @@ from app.schemas.organization import (
 )
 from app.services.caddy_admin import get_caddy_admin
 from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
-from app.services.school_provisioner import deprovision_school, suspend_school, unsuspend_school
+from app.services.school_provisioner import _refresh_org_landing, deprovision_school, suspend_school, unsuspend_school
 from app.services.stats import rollup, school_stat, schools_with_metrics
 
 logger = logging.getLogger("perum.organizations")
@@ -338,6 +338,7 @@ async def _resume_org(org: Organization, db: AsyncSession) -> None:
                     await unsuspend_school(school, db)
             except Exception as exc:  # noqa: BLE001
                 logger.error("org %s: unsuspend school %s failed: %s", org.slug, school.slug, exc)
+    await _refresh_org_landing(org.id, db)
 
 
 @router.post("/{org_id}/unsuspend")
