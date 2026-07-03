@@ -12,6 +12,7 @@
 - **Core проксирует орг-домены на ноду.** Исправлена логика Caddy-маршрутизации: при `node_id IS NOT NULL` ядро добавляет маршрут `<org.domain>` → `node.hostname:80`. Раньше орги на нодах пропускались при старте и не создавались при провижининге, что ломало лендинг, когда wildcard DNS указывал на ядро.
   - `app/main.py`: `_sync_caddy_routes` теперь синхронизирует все активные орги, выбирая upstream `node.hostname:80` для удалённых нод.
   - `app/routers/organizations.py`: `create_organization` и `reprovision_organization` добавляют core-Caddy-маршрут сразу после успешного `provision_landing` на ноде.
+- **Фикс `deploy-node.sh`**: healthcheck воркера использует правильный путь `/api/agent/health` вместо `/agent/health` — устраняет ложное "воркер не готов" в конце деплоя.
 
 ## [Unreleased] — 2026-06-27
 

@@ -328,7 +328,7 @@ while [[ $WAITED -lt $MAX_WAIT ]]; do
     READY=true
     break
   fi
-  if curl -sf http://127.0.0.1:${AGENT_PORT:-3001}/agent/health > /dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:${AGENT_PORT:-3001}/api/agent/health > /dev/null 2>&1; then
     ok "Воркер готов"
     READY=true
     break
@@ -356,4 +356,4 @@ echo -e "  ${YELLOW}Полезные команды:${NC}"
 echo -e "  ${GRAY}  cd ${INSTALL_DIR}${NC}"
 echo -e "  ${GRAY}  docker compose ps${NC}"
 echo -e "  ${GRAY}  docker compose logs -f perum_agent${NC}"
-echo -e "  ${GRAY}  curl http://127.0.0.1:${AGENT_PORT:-3001}/agent/health${NC}"
+  echo -e "  ${GRAY}  curl http://127.0.0.1:${AGENT_PORT:-3001}/api/agent/health${NC}"
