@@ -21,7 +21,17 @@ from app.core.db import get_db
 from app.core.deps import require_platform_admin
 from app.core.locks import keyed_lock, school_key
 from app.core.security import hash_password
-from app.models import EnrollmentToken, Invoice, Node, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
+from app.models import (
+    EnrollmentToken,
+    Invoice,
+    Node,
+    OrgAdmin,
+    Organization,
+    OrganizationDomain,
+    OrganizationSecret,
+    School,
+    SchoolMetric,
+)
 from app.services.billing import (
     PLANS,
     billing_state,
@@ -100,8 +110,20 @@ async def create_organization(
         activated_at=datetime.utcnow(),
     )
     db.add(org)
-    await db.commit()
+    await db.flush()
     await db.refresh(org)
+
+    # Регистрируем домен организации для on-demand TLS и route-sync.
+    db.add(
+        OrganizationDomain(
+            org_id=org.id,
+            domain=org.domain,
+            domain_type="subdomain",
+            status="active",
+            activated_at=datetime.utcnow(),
+        )
+    )
+    await db.flush()
     await get_or_create_subscription(db, org)
 
     login = (payload.admin_email or f"admin@{payload.domain}").strip().lower()
