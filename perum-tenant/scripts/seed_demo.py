@@ -49,16 +49,27 @@ def _random_date(start: datetime, end: datetime) -> datetime:
     return start + timedelta(seconds=random.randint(0, int(delta.total_seconds())))
 
 
-def _make_user(session: Session, role: str, school_id: int | None, first: str, last: str, login_suffix: str) -> User:
-    login = f"{first.lower()}.{last.lower()}.{login_suffix}"
+def _make_user(
+    session: Session,
+    role: str,
+    school_id: int | None,
+    first: str,
+    last: str,
+    login_suffix: str,
+    patronymic: str | None = None,
+    login: str | None = None,
+    password_hash: str | None = None,
+) -> User:
+    actual_login = login if login else f"{first.lower()}.{last.lower()}.{login_suffix}"
     user = User(
         school_id=school_id,
         role=role,
-        login=login,
-        email=f"{login}@grsn-demo.local",
+        login=actual_login,
+        email=f"{actual_login}@grsn-demo.local",
         first_name=first,
         last_name=last,
-        password_hash=DEMO_PASSWORD_HASH,
+        patronymic=patronymic,
+        password_hash=password_hash if password_hash else DEMO_PASSWORD_HASH,
         is_active=True,
         must_change_password=False,
         balance=random.randint(50, 500) if role == "student" else 0,
@@ -160,17 +171,35 @@ def seed_classes(session: Session, school: School) -> list[Class]:
 
 
 def seed_teachers(session: Session, school: School, subjects: list[Subject], classes: list[Class]) -> list[User]:
+    # Первый учитель — точное совпадение с презентацией для инвестора.
     teachers_data = [
-        ("Елена", "Васильева"),
-        ("Сергей", "Петров"),
-        ("Ольга", "Кузнецова"),
+        {
+            "first": "Анатолия",
+            "last": "Меркурьева",
+            "patronymic": "Марсовна",
+            "login": "tea_1_9n5u",
+            "password": "oElzsp7LNX",
+        },
+        {"first": "Сергей", "last": "Петров", "login": "teacher2"},
+        {"first": "Ольга", "last": "Кузнецова", "login": "teacher3"},
     ]
     teachers = []
-    for i, (first, last) in enumerate(teachers_data):
-        login = f"teacher{i+1}"
+    for data in teachers_data:
+        login = data["login"]
         teacher = session.query(User).filter(User.login == login).first()
         if teacher is None:
-            teacher = _make_user(session, "teacher", school.id, first, last, login)
+            pw_hash = hash_password(data["password"]) if "password" in data else None
+            teacher = _make_user(
+                session,
+                "teacher",
+                school.id,
+                data["first"],
+                data["last"],
+                login,
+                patronymic=data.get("patronymic"),
+                login=login,
+                password_hash=pw_hash,
+            )
         teachers.append(teacher)
 
     # Assign teachers to subjects + classes (class_id is NOT NULL in teacher_subjects).
@@ -210,14 +239,33 @@ def seed_students(session: Session, school: School, classes: list[Class]) -> tup
         # 10-15 students per class
         count = random.randint(10, 15)
         for _ in range(count):
-            if random.choice([True, False]):
-                first = random.choice(FIRST_NAMES_M)
-                last = random.choice(LAST_NAMES_M)
+            # Первый ученик — точное совпадение с презентацией для инвестора.
+            if student_index == 1:
+                first, last, patronymic = "Михаил", "Литвин", "Павлович"
+                login = "stu_1_jnlk"
+                pw_hash = hash_password("EE4zfPDwEK")
             else:
-                first = random.choice(FIRST_NAMES_F)
-                last = random.choice(LAST_NAMES_F)
-            login = f"student{student_index}"
-            student = _make_user(session, "student", school.id, first, last, login)
+                if random.choice([True, False]):
+                    first = random.choice(FIRST_NAMES_M)
+                    last = random.choice(LAST_NAMES_M)
+                    patronymic = None
+                else:
+                    first = random.choice(FIRST_NAMES_F)
+                    last = random.choice(LAST_NAMES_F)
+                    patronymic = None
+                login = f"student{student_index}"
+                pw_hash = None
+            student = _make_user(
+                session,
+                "student",
+                school.id,
+                first,
+                last,
+                login,
+                patronymic=patronymic,
+                login=login,
+                password_hash=pw_hash,
+            )
             session.add(ClassStudent(class_id=cls.id, student_id=student.id))
             students.append(student)
             students_by_class[cls.id].append(student)
