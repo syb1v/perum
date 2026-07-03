@@ -240,6 +240,17 @@ async def create_school(
             db.add(school)
             await db.flush()
             school.slug = f"sch{school.id}"
+            # Регистрируем дефолтный поддомен школы для on-demand TLS.
+            org = await db.get(Organization, admin.org_id)
+            full_host = f"{subdomain}.{org.domain}" if (subdomain and org and org.domain) else None
+            if full_host:
+                db.add(SchoolDomain(
+                    school_id=school.id,
+                    domain=full_host,
+                    domain_type="subdomain",
+                    status="active",
+                    activated_at=datetime.utcnow(),
+                ))
             await db.commit()
             await db.refresh(school)
 
