@@ -111,6 +111,16 @@ class Organization(Base):
     custom_landing_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     max_nodes: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 
+    # --- Cloudflare DNS (задача 5) ---
+    dns_provider: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="manual", server_default="manual",
+        comment="manual | cloudflare — кто управляет DNS-записями школ",
+    )
+    cf_zone_id: Mapped[str | None] = mapped_column(
+        String(64), nullable=True,
+        comment="ID зоны в Cloudflare для этого домена; заполняется авто при создании орг",
+    )
+
     domains: Mapped[list["OrganizationDomain"]] = relationship(
         back_populates="organization",
         cascade="all, delete-orphan",
@@ -231,6 +241,8 @@ class School(Base):
     # орг). Разморозка орг поднимает ТОЛЬКО школы с 'org' — вручную замороженные
     # остаются замороженными.
     suspended_by: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # ID DNS-записи в Cloudflare (A-запись поддомена → IP ноды). Пусто → ручной режим.
+    cf_record_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     organization: Mapped[Organization] = relationship(back_populates="schools")
     secret: Mapped["SchoolSecret | None"] = relationship(

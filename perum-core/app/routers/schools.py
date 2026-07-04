@@ -30,6 +30,7 @@ from app.services.caddy_admin import get_caddy_admin
 from app.services.remote_node_client import RemoteNodeClient, RemoteNodeError
 from app.services.stack_spec import school_container_name, school_label_slug
 from app.services.school_provisioner import (
+    _delete_school_dns,
     _refresh_org_landing,
     current_release_image,
     deprovision_school,
@@ -721,6 +722,7 @@ async def delete_school(
             secret = await db.get(SchoolSecret, school.id)
             if secret is not None:
                 await db.delete(secret)
+            await _delete_school_dns(school, db)
             await db.delete(school)  # каскадом удалит node_assignments
             await db.commit()
             await _refresh_org_landing(org_id, db)

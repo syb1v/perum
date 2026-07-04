@@ -582,6 +582,51 @@ async def _refresh_org_landing(org_id: int, db: AsyncSession) -> None:
     await db.commit()
 
 
+async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession) -> None:
+    """Создать/обновить A-запись поддомена школы в Cloudflare (если включено)."""
+    from app.models import Organization
+    from app.services.dns_manager import get_dns_manager
+
+    if not school.subdomain:
+        return
+    org = await db.get(Organization, school.org_id)
+    if not org or not org.cf_zone_id:
+        return
+
+    node_ip = node.hostname if node else None
+    if not node_ip:
+        return
+
+    dns = get_dns_manager()
+    if not dns.is_auto:
+        return
+
+    record = await dns.create_record(org.cf_zone_id, school.subdomain, org.domain or "", node_ip)
+    if record.cf_record_id:
+        school.cf_record_id = record.cf_record_id
+        await db.commit()
+
+
+async def _delete_school_dns(school: School, db: AsyncSession) -> None:
+    """Удалить A-запись поддомена школы из Cloudflare."""
+    from app.models import Organization
+    from app.services.dns_manager import get_dns_manager
+
+    if not school.cf_record_id:
+        return
+    org = await db.get(Organization, school.org_id)
+    if not org or not org.cf_zone_id:
+        return
+
+    dns = get_dns_manager()
+    if not dns.is_auto:
+        return
+
+    await dns.delete_record(org.cf_zone_id, school.cf_record_id)
+    school.cf_record_id = None
+    await db.commit()
+
+
 async def provision_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:
     settings = settings or get_settings()
     from app.models import NodeAssignment
@@ -610,6 +655,7 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     if node is None:
         await provision_school(school, db, host=host)  # локально (fallback)
         await _refresh_org_landing(school.org_id, db)
+        await _sync_school_dns(school, None, db)
         return
 
     # --- Удалённо на ноде ---
@@ -645,6 +691,7 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     await db.commit()
     await db.refresh(school)
     await _refresh_org_landing(school.org_id, db)
+    await _sync_school_dns(school, node, db)
     logger.info("school %s: provisioned on node %s (%s), host=%s", school.slug, node.name, node.hostname, host)
 
 

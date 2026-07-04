@@ -120,6 +120,10 @@ async def create_organization(
     await db.commit()
     await db.refresh(org)
 
+    # Авто-обнаружение CF-зоны: если CLOUDFLARE_API_TOKEN задан — ищем зону,
+    # заполняем cf_zone_id и dns_provider (задача 5).
+    await _auto_detect_cf_zone(org, db)
+
     return ProvisionResult(
         organization=OrganizationRead.model_validate(org),
         org_admin=OrgAdminCredentials(login=login, temporary_password=temp_pw),
@@ -221,10 +225,14 @@ async def delete_organization(
 
 @router.get("/{org_id}/dns")
 async def org_dns_info(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
-    """DNS-инструкция для домена орг: A/CNAME на IP ноды для корня и wildcard."""
+    """DNS-инструкция для домена орг: A/CNAME на IP ноды для корня и wildcard.
+    При включённом CF — показывает статус авто-управления и записи школ."""
     org = await _get_org(org_id, db)
     if org is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+
+    from app.services.dns_manager import get_dns_manager
+
     node = await db.get(Node, org.node_id) if org.node_id else None
     target = node.hostname if node else None
     record_type = "A" if _looks_like_ipv4(target) else "CNAME"
@@ -234,13 +242,55 @@ async def org_dns_info(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
             {"name": "@", "type": record_type, "value": target, "purpose": "корневой домен → лендинг орг"},
             {"name": "*", "type": record_type, "value": target, "purpose": "wildcard → все школы (поддомены)"},
         ]
+
+    dns = get_dns_manager()
+    school_records = []
+    cf_enabled = dns.is_auto and bool(org.cf_zone_id)
+    if cf_enabled:
+        try:
+            result = await dns.sync_org_dns(org, db)
+            school_records = [
+                {"name": r.name, "fqdn": r.fqdn, "type": r.type, "content": r.content,
+                 "node_name": r.node_name, "cf_record_id": r.cf_record_id, "status": r.status}
+                for r in result.records
+            ]
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("org %s: DNS sync failed: %s", org.slug, exc)
+    elif not cf_enabled:
+        result = await dns.manual_records(org, db)
+        school_records = [
+            {"name": r.name, "fqdn": r.fqdn, "type": r.type, "content": r.content,
+             "node_name": r.node_name, "status": "manual"}
+            for r in result.records
+        ]
+
     return {
         "domain": org.domain,
         "node_name": node.name if node else None,
         "dns_target": target,
         "record_type": record_type,
         "records": records,
+        "dns_provider": org.dns_provider,
+        "cf_zone_id": org.cf_zone_id,
+        "cf_enabled": cf_enabled,
+        "school_records": school_records,
     }
+
+
+@router.post("/{org_id}/dns/sync")
+async def org_dns_sync(org_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    """Принудительная синхронизация DNS-записей школ с Cloudflare."""
+    org = await _get_org(org_id, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    from app.services.dns_manager import get_dns_manager
+    dns = get_dns_manager()
+    if not dns.is_auto:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Cloudflare DNS не настроен")
+    if not org.cf_zone_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "зона CF не найдена для домена")
+    result = await dns.sync_org_dns(org, db)
+    return {"synced": result.synced, "deleted": result.deleted, "errors": result.errors}
 
 
 class OrgPatch(BaseModel):
@@ -572,3 +622,20 @@ async def list_invoices(org_id: int, db: AsyncSession = Depends(get_db)) -> dict
         }
         for iv in rows
     ]}
+
+
+async def _auto_detect_cf_zone(org: Organization, db: AsyncSession) -> None:
+    """Попытаться найти CF-зону для домена орг и заполнить cf_zone_id."""
+    from app.services.dns_manager import get_dns_manager
+
+    if not org.domain:
+        return
+    dns = get_dns_manager()
+    if not dns.is_auto:
+        return
+    zone = await dns.find_zone(org.domain)
+    if zone:
+        org.dns_provider = "cloudflare"
+        org.cf_zone_id = zone["id"]
+        await db.commit()
+        logger.info("org %s: CF zone found — %s (id=%s)", org.slug, zone["name"], zone["id"])

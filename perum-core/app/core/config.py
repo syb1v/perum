@@ -119,6 +119,14 @@ class Settings(BaseSettings):
     # Пусто → выводится как https://admin.<PUBLIC_BASE_DOMAIN>.
     PUBLIC_CORE_URL: str = Field(default="")
 
+    # --- Cloudflare DNS API (задача 5) ---
+    # API-токен с правами Zone:DNS:Edit. Пусто → DNS-автоматизация выключена,
+    # используется ручной режим (подсказки в UI для оператора).
+    CLOUDFLARE_API_TOKEN: str = Field(default="")
+    # Включить авто-управление DNS через Cloudflare. Даже при наличии токена
+    # можно выключить глобально этим флагом.
+    CLOUDFLARE_DNS_ENABLED: bool = Field(default=False)
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
