@@ -845,3 +845,40 @@ export interface NodeSchool {
     status: string;
     assigned_at: string;
 }
+
+/* ==========================================
+ * DNS management types (Cloudflare API)
+ * ========================================== */
+
+export interface DnsRecord {
+    name: string;       // school1
+    fqdn: string;       // school1.acme.ru
+    type: string;       // A | CNAME
+    content: string;    // IP ноды
+    node_name: string;
+    cf_record_id?: string | null;
+    status: string;     // ok | pending | error | manual
+}
+
+export interface OrgDnsInfo {
+    domain: string;
+    node_name: string | null;
+    dns_target: string | null;
+    record_type: string;
+    records: Array<{
+        name: string;
+        type: string;
+        value: string;
+        purpose: string;
+    }>;
+    dns_provider: string;
+    cf_zone_id: string | null;
+    cf_enabled: boolean;
+    school_records: DnsRecord[];
+}
+
+export interface DnsSyncResult {
+    synced: number;
+    deleted: number;
+    errors: string[];
+}

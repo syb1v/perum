@@ -166,6 +166,13 @@ export default function PlatformConsole() {
     setOrgDnsFor(o); setOrgDns(null);
     try { setOrgDns(await papi(`/api/organizations/${o.id}/dns`)); } catch (e: any) { toast.showError(e.message); }
   }
+  async function syncOrgDns(orgId: number) {
+    setErr(""); try {
+      const r = await papi(`/api/organizations/${orgId}/dns/sync`, { method: "POST" });
+      toast.showSuccess(`Синхронизировано: +${r.synced} / -${r.deleted}`);
+      openOrgDns(orgDnsFor);
+    } catch (e: any) { toast.showError(e.message); }
+  }
   async function reloadAdmins() { if (adminsOrg) setOrgAdmins((await papi(`/api/organizations/${adminsOrg.id}/org-admins`)).org_admins || []); }
   async function addAdmin(e: React.FormEvent) {
     e.preventDefault(); if (!adminsOrg) return; setBusy("adm"); setErr("");
@@ -862,16 +869,38 @@ export default function PlatformConsole() {
 
       {/* DNS GUIDE MODAL */}
       {orgDnsFor && (
-        <Modal title={`DNS — ${orgDnsFor.domain || orgDnsFor.name}`} onClose={() => { setOrgDnsFor(null); setOrgDns(null); }} width={720}>
+        <Modal title={`DNS — ${orgDnsFor.domain || orgDnsFor.name}`} onClose={() => { setOrgDnsFor(null); setOrgDns(null); }} width={800}>
           {!orgDns ? <p className={c.muted}>Загрузка…</p> : (
             <>
+              {/* CF Status */}
+              <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 8, background: orgDns.cf_enabled ? "rgba(72,187,120,0.08)" : "rgba(255,255,255,0.03)", border: `1px solid ${orgDns.cf_enabled ? "rgba(72,187,120,0.25)" : "rgba(255,255,255,0.06)"}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: orgDns.cf_enabled ? 8 : 0 }}>
+                  <span style={{ fontSize: "0.9rem" }}>{orgDns.cf_enabled ? "🟢" : "⚪"}</span>
+                  <strong style={{ color: orgDns.cf_enabled ? "#48bb78" : "var(--text-secondary)" }}>
+                    Cloudflare DNS: {orgDns.cf_enabled ? "активно" : (orgDns.dns_provider === "cloudflare" ? "не настроен" : "ручной режим")}
+                  </strong>
+                  {orgDns.cf_enabled && (
+                    <button style={{ marginLeft: "auto", fontSize: "0.78rem", padding: "4px 14px", background: "#48bb78", color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}
+                      onClick={() => syncOrgDns(orgDnsFor.id)}>
+                      ⟳ Синхронизировать
+                    </button>
+                  )}
+                </div>
+                {orgDns.cf_enabled && (
+                  <p className={c.muted} style={{ fontSize: "0.78rem", margin: 0 }}>
+                    A-записи поддоменов школ создаются и удаляются автоматически при провижининге. DNS-only (серые облака).
+                  </p>
+                )}
+              </div>
+
+              {/* Корневые записи (лендинг) */}
               <p className={c.muted} style={{ marginTop: 0 }}>
-                Укажите у регистратора домена <b>{orgDns.domain}</b> следующие записи на ноду{orgDns.node_name ? <> <b>{orgDns.node_name}</b></> : null}. TLS-сертификат выпустится автоматически после распространения DNS (5–60 мин).
+                Записи для корня и wildcard на ноду{orgDns.node_name ? <> <b>{orgDns.node_name}</b></> : null}:
               </p>
               {orgDns.dns_target ? (
                 <div className={styles.tableContainer}>
                   <table className={styles.table}>
-                    <thead><tr><th>Тип</th><th>Имя (host)</th><th>Значение</th><th>Назначение</th></tr></thead>
+                    <thead><tr><th>Тип</th><th>Имя</th><th>Значение</th><th>Назначение</th></tr></thead>
                     <tbody>
                       {orgDns.records?.map((r: any, i: number) => (
                         <tr key={i}>
@@ -885,11 +914,40 @@ export default function PlatformConsole() {
                   </table>
                 </div>
               ) : <p className={c.muted}>Нода не назначена — DNS-цель неизвестна.</p>}
-              <p className={c.muted} style={{ fontSize: "0.82rem", marginTop: 10, marginBottom: 0 }}>
-                {orgDns.record_type === "A"
-                  ? <>IP ноды: <code className={styles.code}>{orgDns.dns_target}</code> — используйте записи типа <b>A</b>.</>
-                  : <>Адрес ноды: <code className={styles.code}>{orgDns.dns_target}</code> — используйте <b>CNAME</b> (для корня <code className={styles.code}>@</code> у некоторых регистраторов нужен ALIAS/ANAME).</>}
-              </p>
+
+              {/* Записи школ (CF или ручные подсказки) */}
+              {orgDns.school_records?.length > 0 && (
+                <>
+                  <p className={c.muted} style={{ marginTop: 16 }}>
+                    {orgDns.cf_enabled ? "A-записи школ в Cloudflare:" : "Записи школ (добавьте вручную):"}
+                  </p>
+                  <div className={styles.tableContainer}>
+                    <table className={styles.table}>
+                      <thead><tr><th>Поддомен</th><th>FQDN</th><th>Тип</th><th>IP ноды</th><th>Нода</th><th>Статус</th></tr></thead>
+                      <tbody>
+                        {orgDns.school_records.map((r: any, i: number) => (
+                          <tr key={i}>
+                            <td><code className={styles.code}>{r.name}</code></td>
+                            <td><code className={styles.code} style={{ fontSize: "0.75rem" }}>{r.fqdn}</code></td>
+                            <td><code className={styles.code}>{r.type}</code></td>
+                            <td><code className={styles.code}>{r.content}</code></td>
+                            <td className={c.muted}>{r.node_name || "—"}</td>
+                            <td><span className={r.status === "ok" ? styles.statusBadge + " " + styles.success : r.status === "error" ? styles.statusBadge + " " + styles.error : r.status === "manual" ? styles.statusBadge + " " + c.badgeMuted : ""}>{r.status}</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {!orgDns.cf_enabled && (
+                <p className={c.muted} style={{ fontSize: "0.82rem", marginTop: 10, marginBottom: 0 }}>
+                  {orgDns.record_type === "A"
+                    ? <>IP ноды: <code className={styles.code}>{orgDns.dns_target}</code> — тип <b>A</b>.</>
+                    : <>Адрес: <code className={styles.code}>{orgDns.dns_target}</code> — <b>CNAME</b>.</>}
+                </p>
+              )}
             </>
           )}
         </Modal>
