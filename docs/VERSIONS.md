@@ -253,4 +253,6 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 108 | 2026-06-20 | 0961755 | feat(nodes): полный жизненный цикл школы на ноде — заморозка/удаление + управление админами (worker internal-rpc proxy)
 | 109 | 2026-06-20 | c82a079 | fix(nodes): route-sync ведёт школу на ноде к нода:80 (переживает рестарт ядра); проверено форс-рестартом на проде
 | 110 | 2026-06-20 | 9001065 | feat(nodes): реальные метрики нод (CPU/ОЗУ/ПЗУ/пинг), реал-тайм 2с, авто-обновление воркора (Watchtower), полный рестарт стека, ёмкость по лимиту оператора, docs/WORKER.md
-| 111 | 2026-07-04 | _______ | feat(deploy): скрипт deploy-node.sh перенесён в main (авто-развёртывание стека ноды) + landing refresh при изменении школ (_refresh_org_landing)
+| 111 | 2026-07-04 | 443989d | feat(deploy): deploy-node.sh + landing refresh (_refresh_org_landing при изменении школ) |
+| 112 | 2026-07-04 | 74914e1 | feat(dns): Cloudflare DNS manager — авто-зонирование школ (dns_manager.py, миграция 0025, интеграция в provisioner/schools/org) |
+| 113 | 2026-07-04 | e4cbfd2 | feat(web): DNS-модалка с CF-статусом, записями школ и кнопкой синхронизации |

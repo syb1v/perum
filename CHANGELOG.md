@@ -9,7 +9,16 @@
 ### Подготовка к переразвёртыванию на 3 сервера
 
 - **Скрипт `deploy-node.sh`** перенесён из `feat/deploy-node-and-core-routing` в `main`. Авто-развёртывание полного стека ноды: Docker, perum_agent (воркер), Postgres, Redis, Caddy, docker-socket-proxy, Watchtower. Healthcheck на `/api/agent/health`.
-- **Обновление лендинга при изменении школ.** Добавлена `_refresh_org_landing()` — пересоздаёт лендинг организации на ноде при создании, заморозке, разморозке и удалении школы. Вызывается из `schools.py` и `school_provisioner.py`.
+- **Обновление лендинга при изменении школ.** Добавлена `_refresh_org_landing()` — пересоздаёт лендинг организации на ноде при создании, заморозке, разморозке и удалении школы.
+
+### Cloudflare DNS — авто-управление A-записями школ (задача 5)
+
+- **`dns_manager.py`** — новый сервис-абстракция над Cloudflare API (`Zone:DNS:Edit`). Методы: `create_record` (A-запись поддомена → IP ноды), `delete_record`, `list_records`, `sync_org_dns` (массовая синхронизация), `find_zone` (поиск zone_id по домену). DNS-only режим (серые облака, без проксирования).
+- **Настройки:** `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_DNS_ENABLED` в конфиге ядра. Пусто → ручной режим (подсказки в UI).
+- **Авто-зонирование.** При создании орг ядро авто-находит CF-зону (`_auto_detect_cf_zone`), заполняет `Organization.cf_zone_id` + `dns_provider = "cloudflare"`. При создании школы — авто-создаёт A-запись (`_sync_school_dns`). При purge школы — удаляет запись (`_delete_school_dns`).
+- **Миграция `0025_dns_provider`:** новые поля `organizations.dns_provider` / `cf_zone_id` и `schools.cf_record_id`.
+- **API:** расширен `GET /organizations/{id}/dns` — CF-статус + таблица записей школ. Новый `POST /organizations/{id}/dns/sync` — принудительная синхронизация.
+- **UI:** модалка DNS в консоли платформы: индикатор CF (активно/ручной), кнопка «Синхронизировать», таблица A-записей поддоменов школ (поддомен → FQDN → IP ноды → статус).
 
 ## [Unreleased] — 2026-06-22
 
