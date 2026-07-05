@@ -235,12 +235,10 @@ class DnsManager:
         # Оставшиеся в cf_by_name — записи без школ (удаляем)
         domain = org.domain or ""
         for name, record in cf_by_name.items():
-            # Не трогаем системные записи: апекс, wildcard, www
+            # Не трогаем системные записи: апекс, www
             if record.name == domain:
                 continue
             if record.name == f"www.{domain}":
-                continue
-            if record.name == f"*.{domain}":
                 continue
             if record.cf_record_id:
                 await self.delete_record(org.cf_zone_id, record.cf_record_id)
