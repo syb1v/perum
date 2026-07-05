@@ -81,7 +81,14 @@ if [[ -z "$ENROLL_TOKEN" ]]; then
 fi
 if [[ -z "$AGENT_TOKEN" ]]; then
   AGENT_TOKEN=$(openssl rand -hex 32)
-  warn "AGENT_TOKEN сгенерирован автоматически. Убедись, что в ядре тот же токен!"
+  echo ""
+  warn "AGENT_TOKEN сгенерирован автоматически:"
+  echo ""
+  echo -e "  ${GREEN}${AGENT_TOKEN}${NC}"
+  echo ""
+  warn "Скопируй его в deploy/.env.prod ядра (AGENT_TOKEN=<этот_токен>)"
+  warn "и перезапусти perum_core. Иначе ядро не сможет обратиться к агенту."
+  echo ""
 fi
 if [[ -z "$PUBLIC_BASE_DOMAIN" ]]; then
   PUBLIC_BASE_DOMAIN=$(echo "$CORE_URL" | sed -E 's|https?://||; s|^admin\.||; s|/.*||; s|:.*||')
