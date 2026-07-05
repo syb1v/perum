@@ -12,6 +12,7 @@
 # Флаги:
 #   --core-url URL        URL ядра (ОБЯЗАТЕЛЕН)
 #   --enroll-token TOKEN  Токен подключения к ядру (ОБЯЗАТЕЛЕН)
+#   --domain DOMAIN       Домен орг для авто-HTTPS (если пусто — pool-нода, только HTTP)
 #   --agent-token TOKEN   AGENT_TOKEN (по умолчанию из переменной или auto)
 #   --tenant-image IMG    Образ тенанта для школ (по умолчанию: ghcr.io/syb1v/perum-tenant:latest)
 #   --registry REGISTRY   Реестр базовых образов (по умолчанию: mirror.gcr.io)
@@ -38,6 +39,7 @@ die()   { err "$1"; exit 1; }
 # ── Параметры ────────────────────────────────────────────────────────────
 CORE_URL=""
 ENROLL_TOKEN=""
+ORG_DOMAIN="${ORG_DOMAIN:-}"
 AGENT_TOKEN="${AGENT_TOKEN:-}"
 TENANT_IMAGE="${TENANT_IMAGE:-ghcr.io/syb1v/perum-tenant:latest}"
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-mirror.gcr.io}"
@@ -56,6 +58,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --core-url)      CORE_URL="$2"; shift 2 ;;
     --enroll-token)  ENROLL_TOKEN="$2"; shift 2 ;;
+    --domain)        ORG_DOMAIN="$2"; shift 2 ;;
     --agent-token)   AGENT_TOKEN="$2"; shift 2 ;;
     --tenant-image)  TENANT_IMAGE="$2"; shift 2 ;;
     --registry)      IMAGE_REGISTRY="$2"; shift 2 ;;
@@ -112,6 +115,7 @@ echo -e "${CYAN}╚════════════════════�
 echo ""
 info "Ядро   : ${CORE_URL}"
 info "Домен  : ${PUBLIC_BASE_DOMAIN}"
+[[ -n "$ORG_DOMAIN" ]] && info "Орг    : ${ORG_DOMAIN}"
 info "Каталог: ${INSTALL_DIR}"
 
 # ── [1/8] Docker ─────────────────────────────────────────────────────────
@@ -289,19 +293,36 @@ ok "docker-compose.yml записан"
 
 # ── [5/8] Caddyfile ─────────────────────────────────────────────────────
 step "5/8" "Запись Caddyfile..."
-run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
+
+if [[ -n "$ORG_DOMAIN" ]]; then
+  # Выделенная нода под оргу: HTTPS с конкретным доменом
+  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
-    email {$ACME_EMAIL:ops@perum.ru}
+    email {$ACME_EMAIL:-ops@perum.ru}
     on_demand_tls {
         ask {$CORE_URL}/internal/validate-domain
     }
+}
+
+__ORG_DOMAIN__ {
+    respond \"PERUM node OK\" 200
+}
+CADDYEOF"
+  run "sed -i 's/__ORG_DOMAIN__/${ORG_DOMAIN}/g' ${INSTALL_DIR}/caddy/Caddyfile"
+  ok "Caddyfile с авто-HTTPS для ${ORG_DOMAIN}"
+  # Pool-нода: только HTTP, роуты управляются агентом через admin API
+  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
+{
+    admin 0.0.0.0:2019
+    auto_https off
 }
 
 :80 {
     respond \"PERUM node OK\" 200
 }
 CADDYEOF"
+fi
 ok "Caddyfile записан"
 
 # ── [6/8] Предзагрузка docker-socket-proxy ───────────────────────────────

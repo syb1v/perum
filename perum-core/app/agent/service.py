@@ -378,12 +378,16 @@ async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingRespo
             return AgentLandingResponse(success=False, domain=req.domain, message=f"write index failed: {out[-300:]}")
         await caddy.add_proxy_route(label, req.domain, f"{name}:80")
         # Сохраняем домен орг в локальном shadow-record — нужен для Caddy re-sync
-        # при рестарте ноды (иначе после docker restart caddy маршрут лендинга теряется).
+        # при рестарте ноды. Если записи ещё нет (pool-нода, первое провижининг) — создаём.
         from sqlalchemy import select as _sel
         from app.models import Organization as _Org
         local_org = await db.scalar(_sel(_Org).where(_Org.slug == slug))
-        if local_org and not local_org.domain:
-            local_org.domain = req.domain
+        if local_org:
+            if not local_org.domain:
+                local_org.domain = req.domain
+                await db.commit()
+        else:
+            db.add(_Org(slug=slug, name=req.org_name, domain=req.domain, status="active"))
             await db.commit()
         return AgentLandingResponse(success=True, domain=req.domain, message="landing provisioned")
     except Exception as exc:  # noqa: BLE001
@@ -416,14 +420,18 @@ async def _resync_node_caddy_routes() -> None:
             if not state:
                 return
 
-            local_org = await db.scalar(_sel(_Org).where(_Org.slug == state.org_slug))
-            if local_org and local_org.domain:
-                lbl = landing_label_slug(state.org_slug)
+            # Синхронизировать ВСЕ организации в локальной БД (pool-нода может
+            # обслуживать несколько орг), а не только ту, что в agent_state.
+            all_orgs = (await db.execute(
+                _sel(_Org).where(_Org.domain.isnot(None), _Org.domain != "")
+            )).scalars().all()
+            for org in all_orgs:
+                lbl = landing_label_slug(org.slug)
                 try:
-                    await caddy.add_proxy_route(lbl, local_org.domain, f"{landing_container_name(state.org_slug)}:80")
-                    logger.info("node caddy sync: landing %s", local_org.domain)
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning("node caddy sync: landing failed: %s", exc)
+                    await caddy.add_proxy_route(lbl, org.domain, f"{landing_container_name(org.slug)}:80")
+                    logger.info("node caddy sync: landing %s", org.domain)
+                except Exception as exc:
+                    logger.warning("node caddy sync: landing %s failed: %s", org.domain, exc)
 
             active = (await db.execute(
                 _sel(_SD, _Sch).join(_Sch, _SD.school_id == _Sch.id)
