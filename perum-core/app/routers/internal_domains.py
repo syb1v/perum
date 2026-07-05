@@ -25,20 +25,30 @@ router = APIRouter()
 async def validate_domain(domain: str = Query(...), db: AsyncSession = Depends(get_db)) -> str:
     host = (domain or "").strip().lower().split(":")[0]
     base = get_settings().PUBLIC_BASE_DOMAIN.lower()
+    # Caddy передаёт домен в punycode; сравниваем в обеих кодировках.
+    try:
+        host_unicode = host.encode("ascii").decode("idna")
+    except (ValueError, UnicodeError):
+        host_unicode = host
     # Платформенные хосты: апекс (лендинг ядра) и admin (консоль платформы).
-    if host == base or host == f"admin.{base}":
+    if host == base or host_unicode == base or host == f"admin.{base}" or host_unicode == f"admin.{base}":
         return "ok"
     # ВАЖНО: НЕ выдаём сертификат на любой `*.{base}` (раньше endswith пропускал
     # любой поддомен). С wildcard-DNS это давало сканерам выпускать серты на
     # mail/www/vpn/случайные строки и грозило rate-limit Let's Encrypt. Теперь —
     # только хосты, реально зарегистрированные как домены школы или (легаси) орг.
+    candidates = [host, host_unicode]
     known_school = await db.scalar(
-        select(SchoolDomain.id).where(SchoolDomain.domain == host, SchoolDomain.status != "removed")
+        select(SchoolDomain.id).where(
+            SchoolDomain.domain.in_(candidates), SchoolDomain.status != "removed"
+        )
     )
     if known_school:
         return "ok"
     known_org = await db.scalar(
-        select(OrganizationDomain.id).where(OrganizationDomain.domain == host, OrganizationDomain.status != "removed")
+        select(OrganizationDomain.id).where(
+            OrganizationDomain.domain.in_(candidates), OrganizationDomain.status != "removed"
+        )
     )
     if known_org:
         return "ok"
