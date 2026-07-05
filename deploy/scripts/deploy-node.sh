@@ -150,6 +150,8 @@ AGENT_TOKEN=${AGENT_TOKEN}
 TENANT_IMAGE=${TENANT_IMAGE}
 NODE_DB_PW=${NODE_DB_PW}
 SECRET_KEY=${SECRET_KEY}
+CORE_URL=${CORE_URL}
+ACME_EMAIL=${ACME_EMAIL:-ops@perum.ru}
 ENVEOF"
 run "chmod 600 ${INSTALL_DIR}/.env"
 ok ".env создан"
@@ -248,6 +250,10 @@ services:
     restart: unless-stopped
     ports:
       - '80:80'
+      - '443:443'
+    environment:
+      CORE_URL: ${CORE_URL}
+      ACME_EMAIL: ${ACME_EMAIL:-ops@perum.ru}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -286,11 +292,14 @@ step "5/8" "Запись Caddyfile..."
 run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
-    auto_https off
+    email {$ACME_EMAIL:ops@perum.ru}
+    on_demand_tls {
+        ask {$CORE_URL}/internal/validate-domain
+    }
 }
 
 :80 {
-    respond "PERUM node OK" 200
+    respond \"PERUM node OK\" 200
 }
 CADDYEOF"
 ok "Caddyfile записан"

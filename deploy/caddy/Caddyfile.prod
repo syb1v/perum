@@ -34,6 +34,10 @@
         respond "not found" 404
     }
     @backend path /api/* /docs /docs/* /openapi.json /health /health/*
+    @validate path /internal/validate-domain /internal/validate-domain/*
+    handle @validate {
+        reverse_proxy perum_core:3000
+    }
     handle @backend {
         reverse_proxy perum_core:3000
     }
@@ -53,6 +57,10 @@ admin.{$PERUM_BASE_DOMAIN} {
         respond "not found" 404
     }
     @backend path /api/* /docs /docs/* /openapi.json /health /health/*
+    @validate path /internal/validate-domain /internal/validate-domain/*
+    handle @validate {
+        reverse_proxy perum_core:3000
+    }
     handle @backend {
         reverse_proxy perum_core:3000
     }
