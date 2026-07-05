@@ -37,6 +37,9 @@ services:
       RELEASE_PUBLISH_TOKEN: ${RELEASE_PUBLISH_TOKEN:-}
       # Общий секрет ядро↔воркор ноды (управление школами на нодах /api/agent/*).
       AGENT_TOKEN: ${AGENT_TOKEN:-}
+      # Cloudflare DNS API (авто-управление A-записями школ).
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_DNS_ENABLED: ${CLOUDFLARE_DNS_ENABLED:-false}
     depends_on:
       perum_control_db:
         condition: service_healthy
