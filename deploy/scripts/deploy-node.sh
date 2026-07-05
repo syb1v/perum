@@ -296,33 +296,32 @@ step "5/8" "Запись Caddyfile..."
 
 if [[ -n "$ORG_DOMAIN" ]]; then
   # Выделенная нода под оргу: HTTPS с конкретным доменом
-  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
+  cat > ${INSTALL_DIR}/caddy/Caddyfile <<CADDYEOF
 {
     admin 0.0.0.0:2019
     email ops@perum.ru
     on_demand_tls {
-        ask __CORE_URL__/internal/validate-domain
+        ask ${CORE_URL}/internal/validate-domain
     }
 }
 
-__ORG_DOMAIN__ {
-    respond \"PERUM node OK\" 200
+${ORG_DOMAIN} {
+    respond "PERUM node OK" 200
 }
-CADDYEOF"
-  run "sed -i 's/__ORG_DOMAIN__/${ORG_DOMAIN}/g' ${INSTALL_DIR}/caddy/Caddyfile"
-  run "sed -i 's|__CORE_URL__|${CORE_URL}|g' ${INSTALL_DIR}/caddy/Caddyfile"
+CADDYEOF
   ok "Caddyfile с авто-HTTPS для ${ORG_DOMAIN}"
+else
   # Pool-нода: только HTTP, роуты управляются агентом через admin API
-  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
+  cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
     auto_https off
 }
 
 :80 {
-    respond \"PERUM node OK\" 200
+    respond "PERUM node OK" 200
 }
-CADDYEOF"
+CADDYEOF
 fi
 ok "Caddyfile записан"
 
