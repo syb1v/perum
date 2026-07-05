@@ -13,6 +13,10 @@
 // (оба «двухуровневые» — по числу меток не различить).
 const BASE_DOMAIN = (process.env.NEXT_PUBLIC_BASE_DOMAIN || "").split(":")[0].toLowerCase();
 
+function normalizeDomain(d: string): string {
+  try { return new URL(`https://${d}`).hostname; } catch { return d.toLowerCase(); }
+}
+
 export function isPlatformHostname(hostname: string): boolean {
   const h = (hostname || "").split(":")[0];
   return h === "admin.perum.local" || h.startsWith("admin.");
@@ -25,7 +29,7 @@ export function isPlatformHostname(hostname: string): boolean {
 export function isApexHostname(hostname: string): boolean {
   const h = (hostname || "").split(":")[0].toLowerCase();
   if (!h || isPlatformHostname(h)) return false;
-  if (BASE_DOMAIN) return h === BASE_DOMAIN;
+  if (BASE_DOMAIN) return normalizeDomain(h) === normalizeDomain(BASE_DOMAIN);
   // dev/fallback без NEXT_PUBLIC_BASE_DOMAIN: апекс = perum.local / localhost.
   return h === "perum.local" || h === "localhost";
 }
