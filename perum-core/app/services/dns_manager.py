@@ -18,6 +18,8 @@ from typing import Any
 
 import httpx
 
+from sqlalchemy import select
+
 from app.core.config import get_settings
 
 logger = logging.getLogger("perum.dns")
