@@ -299,9 +299,9 @@ if [[ -n "$ORG_DOMAIN" ]]; then
   run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
-    email {$ACME_EMAIL:-ops@perum.ru}
+    email ops@perum.ru
     on_demand_tls {
-        ask {$CORE_URL}/internal/validate-domain
+        ask __CORE_URL__/internal/validate-domain
     }
 }
 
@@ -310,6 +310,7 @@ __ORG_DOMAIN__ {
 }
 CADDYEOF"
   run "sed -i 's/__ORG_DOMAIN__/${ORG_DOMAIN}/g' ${INSTALL_DIR}/caddy/Caddyfile"
+  run "sed -i 's|__CORE_URL__|${CORE_URL}|g' ${INSTALL_DIR}/caddy/Caddyfile"
   ok "Caddyfile с авто-HTTPS для ${ORG_DOMAIN}"
   # Pool-нода: только HTTP, роуты управляются агентом через admin API
   run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
