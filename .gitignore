@@ -67,3 +67,4 @@ deploy/stacks/
 
 # Claude / dev tooling local state
 .claude/local/
+CF_API_пэрум.txt
