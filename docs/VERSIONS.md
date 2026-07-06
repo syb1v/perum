@@ -267,3 +267,13 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 122 | 2026-07-05 | 0e000aa | fix(deploy): плейсхолдеры вместо heredoc-переменных в Caddyfile deploy-node.sh |
 | 123 | 2026-07-05 | a8361f4 | fix(deploy): пропущенный else в генерации Caddyfile + убран run/eval |
 | 124 | 2026-07-05 | 35b080d | fix(deploy): AGENT_TOKEN показывается явно с инструкцией при авто-генерации |
+| 125 | 2026-07-05 | a64efd2 | fix(core): active school with no metrics treated as online, not offline |
+| 126 | 2026-07-05 | 33693ee | fix(web): enable text selection in admin panel (allow copying tokens, domains, etc.) |
+| 127 | 2026-07-05 | 75cfaa7 | fix(core): sanitize node/org names — replace spaces in node names (used in filenames) |
+| 128 | 2026-07-05 | 2ee0aef | fix(security): auth on /restart /schools /heartbeat + prod validators + CORS + docs off |
+| 129 | 2026-07-05 | b683de4 | perf(core): add indexes on School.status, Node.status + unique constraint on (org_id, subdomain) |
+| 130 | 2026-07-05 | cb579c7 | fix(core): non-fatal landing refresh + DNS sync after provisioning + store error in School.status_message |
+| 131 | 2026-07-05 | 13ce041 | docs(plan): 3 варианта тарификации с анализом и рекомендацией |
+| 132 | 2026-07-05 | a6d4803 | fix(core+web): store and display provisioning error on failed schools |
+| 133 | 2026-07-06 | 1f294a3 | fix(node): add perum_web to node compose + use add_route for school domains |
+| 134 | 2026-07-06 | a0dfb34 | security: per-school network isolation + per-school Redis (own network + redis per school) |

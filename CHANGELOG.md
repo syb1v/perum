@@ -6,6 +6,13 @@
 
 ## [Unreleased] — 2026-07-06
 
+### Security: изоляция школьных стеков на уровне Docker network
+
+- **Каждая школа получила собственную Docker network** (`school_schN_net`). Контейнеры (app, db, redis) изолированы от других школ, docker_proxy и shared Redis.
+- **Per-school Redis**. Вместо общей ноды Redis с 16 DB-индексами — отдельный контейнер Redis на школу. Устраняет риск переполнения DB-индексов и cross-school interference.
+- **Caddy подключён к каждой школьной сети**. Школьные маршруты используют `add_route` (split `/api/*` → tenant app, остальное → perum_web) вместо `add_proxy_route`.
+- **Предзагрузка образов** postgres:15-alpine, redis:7-alpine, caddy:2-alpine в deploy-node.sh.
+
 ### Production deployment — 3 servers, 2 orgs, HTTPS
 
 - **Развёртывание на 3 сервера.** Core (`171.22.73.2`, `пэрум.рф`) + 2 ноды: `grsn-panel.ru` (2.59.80.220), `avari-land.ru` (62.113.75.30). Cloudflare DNS-only, TLS через Caddy с Let's Encrypt на нодах.
@@ -14,14 +21,15 @@
 
 ### Исправления
 
-- **Punycode-домены.** `validate-domain` в ядре и `isApexHostname` в web теперь корректно сравнивают Unicode/Punycode (бразуер шлёт `xn--...`, а `BASE_DOMAIN` хранится как `пэрум.рф`).
-- **`NameError: name 'select' is not defined`** в `dns_manager.py` — добавлен импорт `select` из `sqlalchemy`.
-- **Удаление apex/www-записей при DNS-синхронизации.** CF API возвращает FQDN (напр. `grsn-panel.ru`), а код ждал `@`. Теперь защита сверяет `record.name == domain` и `record.name == f"www.{domain}"`.
-- **`_resync_node_caddy_routes` для pool-нод.** Теперь итерирует ВСЕ организации в локальной БД, а не только ту, что в `agent_state`.
-- **`provision_landing_on_node`** создаёт shadow-record организации в локальной БД, если её ещё нет (первое провижининг на pool-ноде).
-- **`deploy-node.sh`:** пропущенный `else` в генерации Caddyfile (pool-блок всегда перезаписывал dedicated). Убран `run`/`eval` — heredoc теперь без багов экранирования.
-- **`deploy-node.sh` `--domain`** — параметр для авто-HTTPS на выделенной ноде.
-- **AGENT_TOKEN.** При авто-генерации теперь явно показан в консоли с инструкцией скопировать в `.env.prod` ядра.
+- **Школа без метрик не считается офлайн.** Активная школа, у которой нет метрик (только что создана или метрики ещё не собраны), теперь `online`, а не `offline`. Исправлено в `perum-core/app/services/school_metrics.py`.
+- **Текст в админке копируется.** `.contentSection` в админ-панели (`perum-web/src/app/admin/page.module.css`) теперь `user-select: text` — токены, домены, IP можно выделить мышью.
+- **Санитизация названий.** Пробелы в именах нод (`NodeCreate`/`NodeUpdate`) и названиях организаций (`OrganizationCreate`) заменяются на дефисы — имена используются в именах файлов/директорий и не должны содержать пробелов.
+- **Безопасность production.** Защищены эндпоинты агента (`/restart`, `/schools`, `/heartbeat`) — требуют `AGENT_TOKEN`. Включены прод-валидаторы на `SECRET_KEY`, `AGENT_TOKEN`, `SECRETS_ENCRYPTION_KEY`. CORS ограничен HTTPS-доменами. `/docs`, `/redoc`, `/openapi.json` отключены в проде.
+- **Индексы производительности.** Миграция `0027`: добавлены индексы на `School.status` и `Node.status`, уникальное ограничение `(org_id, subdomain)` для школ.
+- **Некритичный landing refresh + DNS sync.** Ошибка при `_refresh_org_landing` или `_sync_school_dns` больше не блокирует провижининг — школа создаётся активной, ошибки логируются.
+- **Ошибка провижининга в UI.** Сохраняется в `School.status_message` (миграция `0026`) и отображается в консоли org_admin.
+- **`perum_web` на нодах.** Добавлен в compose ноды; Caddy-маршруты школ используют `add_route` (split `/api/*` → tenant app, остальное → frontend).
+- **Документация плана тарификации.** В `docs/PLAN.md` добавлен раздел с 3 вариантами тарификации: базовая, таргетированная, корпоративная.
 
 ### DNS-архитектура
 
