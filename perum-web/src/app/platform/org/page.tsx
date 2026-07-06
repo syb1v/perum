@@ -337,7 +337,7 @@ export default function OrgConsole() {
                       <tr key={s.id}>
                         <td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td>
                         <td>{s.full_host ? <code className={styles.code} style={{ fontSize: "0.78rem" }}>{s.full_host}</code> : <span className={c.muted}>—</span>}</td>
-                        <td><SchoolStatus status={s.status} online={!!statById[s.id]?.online} /></td>
+                        <td><SchoolStatus status={s.status} online={!!statById[s.id]?.online} />{s.status === "failed" && s.status_message && <><br /><span className={c.muted} style={{ fontSize: "0.75rem", color: "var(--danger)" }} title={s.status_message}>{s.status_message.length > 80 ? s.status_message.slice(0, 80) + "…" : s.status_message}</span></>}</td>
                         <td>{s.node_name ? <span title={s.node_hostname || ""}><code className={styles.code}>{s.node_name}</code></span> : <span className={c.muted} style={{ fontSize: "0.8rem" }}>платформа</span>}</td>
                         <td>{statById[s.id]?.students ?? "—"}</td>
                         <td><code className={styles.code}>{st?.current_version || s.release_tag || "—"}</code></td>

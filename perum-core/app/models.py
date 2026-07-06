@@ -225,6 +225,7 @@ class School(Base):
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="provisioning", server_default="provisioning"
     )
+    status_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Тег релиза, на котором сейчас крутится стек школы (для OTA-обновлений).
     release_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
 

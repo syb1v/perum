@@ -680,8 +680,9 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
         raise ProvisioningError(f"нода недоступна: {exc}") from exc
     if not resp.get("success"):
         school.status = "failed"
+        school.status_message = resp.get("message") or "провижининг на ноде не удался"
         await db.commit()
-        raise ProvisioningError(resp.get("message") or "провижининг на ноде не удался")
+        raise ProvisioningError(school.status_message)
 
     school.status = "active"
     school.activated_at = datetime.utcnow()

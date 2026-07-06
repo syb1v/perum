@@ -85,6 +85,7 @@ def _school_dict(s: School) -> dict:
         "subdomain": s.subdomain,
         "name": s.name,
         "status": s.status,
+        "status_message": s.status_message,
         "release_tag": s.release_tag,
         "created_at": s.created_at.isoformat() if s.created_at else None,
         "activated_at": s.activated_at.isoformat() if s.activated_at else None,
