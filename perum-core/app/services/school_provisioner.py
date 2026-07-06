@@ -605,6 +605,11 @@ async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession
     if record.cf_record_id:
         school.cf_record_id = record.cf_record_id
         await db.commit()
+        logger.info("school %s: DNS A-record %s.%s → %s (cf_id=%s)",
+                     school.slug, school.subdomain, org.domain, node_ip, record.cf_record_id)
+    elif record.status == "error":
+        logger.error("school %s: DNS A-record creation failed for %s.%s",
+                      school.slug, school.subdomain, org.domain or "")
 
 
 async def _delete_school_dns(school: School, db: AsyncSession) -> None:
@@ -654,8 +659,14 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
 
     if node is None:
         await provision_school(school, db, host=host)  # локально (fallback)
-        await _refresh_org_landing(school.org_id, db)
-        await _sync_school_dns(school, None, db)
+        try:
+            await _refresh_org_landing(school.org_id, db)
+        except Exception as exc:
+            logger.warning("school %s: landing refresh failed (non-fatal): %s", school.slug, exc)
+        try:
+            await _sync_school_dns(school, None, db)
+        except Exception as exc:
+            logger.warning("school %s: DNS sync failed (non-fatal): %s", school.slug, exc)
         return
 
     # --- Удалённо на ноде ---
@@ -691,8 +702,14 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
         await _upsert_subdomain(school, host, db)
     await db.commit()
     await db.refresh(school)
-    await _refresh_org_landing(school.org_id, db)
-    await _sync_school_dns(school, node, db)
+    try:
+        await _refresh_org_landing(school.org_id, db)
+    except Exception as exc:
+        logger.warning("school %s: landing refresh failed (non-fatal): %s", school.slug, exc)
+    try:
+        await _sync_school_dns(school, node, db)
+    except Exception as exc:
+        logger.warning("school %s: DNS sync failed (non-fatal): %s", school.slug, exc)
     logger.info("school %s: provisioned on node %s (%s), host=%s", school.slug, node.name, node.hostname, host)
 
 
