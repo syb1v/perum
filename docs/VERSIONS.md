@@ -256,3 +256,14 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 111 | 2026-07-04 | 443989d | feat(deploy): deploy-node.sh + landing refresh (_refresh_org_landing при изменении школ) |
 | 112 | 2026-07-04 | 74914e1 | feat(dns): Cloudflare DNS manager — авто-зонирование школ (dns_manager.py, миграция 0025, интеграция в provisioner/schools/org) |
 | 113 | 2026-07-04 | e4cbfd2 | feat(web): DNS-модалка с CF-статусом, записями школ и кнопкой синхронизации |
+| 114 | 2026-07-05 | 4ec136e | chore(deploy): CF DNS env vars в docker-compose.core.yml + .env.prod.example |
+| 115 | 2026-07-05 | 3399b4f | fix(core): punycode-домены в validate-domain (Caddy шлёт xn--, ядро ждало Unicode) |
+| 116 | 2026-07-05 | a0a6c4f | fix(web): punycode-домены в isApexHostname (лендинг редиректил на логин) |
+| 117 | 2026-07-05 | 0e40267 | fix(core): пропущенный import select в dns_manager.py (500 на sync) |
+| 118 | 2026-07-05 | 4fb0dc2 | fix(core): защита apex/www DNS-записей от удаления (CF возвращает FQDN, не @) |
+| 119 | 2026-07-05 | 8bea0d3 | chore(core): убрана защита wildcard DNS — не используется |
+| 120 | 2026-07-05 | 944af85 | feat(deploy): HTTPS на нодах (on_demand TLS, 443 порт, Caddyfile.prod с /internal/validate-domain) |
+| 121 | 2026-07-05 | 4a3d916 | fix(core): pool-ноды в _resync_node_caddy_routes + shadow-record при провижининге |
+| 122 | 2026-07-05 | 0e000aa | fix(deploy): плейсхолдеры вместо heredoc-переменных в Caddyfile deploy-node.sh |
+| 123 | 2026-07-05 | a8361f4 | fix(deploy): пропущенный else в генерации Caddyfile + убран run/eval |
+| 124 | 2026-07-05 | 35b080d | fix(deploy): AGENT_TOKEN показывается явно с инструкцией при авто-генерации |

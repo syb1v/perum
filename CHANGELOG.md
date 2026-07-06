@@ -4,6 +4,30 @@
 
 > Проект на ранней стадии (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Рабочих функций для конечных пользователей — учеников, учителей — пока нет, они появятся в фазах 5–8 (см. [docs/PLAN.md](docs/PLAN.md)).
 
+## [Unreleased] — 2026-07-06
+
+### Production deployment — 3 servers, 2 orgs, HTTPS
+
+- **Развёртывание на 3 сервера.** Core (`171.22.73.2`, `пэрум.рф`) + 2 ноды: `grsn-panel.ru` (2.59.80.220), `avari-land.ru` (62.113.75.30). Cloudflare DNS-only, TLS через Caddy с Let's Encrypt на нодах.
+- **HTTPS на нодах.** Caddy на выделенных нодах получает сертификаты через on_demand TLS (Let's Encrypt). Добавлен порт 443 + env `CORE_URL`/`ACME_EMAIL` в compose ноды. `Caddyfile.prod` открывает `/internal/validate-domain` для проверки доменов.
+- **Лендинги организаций.** Обе организации отдают лендинг по HTTPS с перечнем школ.
+
+### Исправления
+
+- **Punycode-домены.** `validate-domain` в ядре и `isApexHostname` в web теперь корректно сравнивают Unicode/Punycode (бразуер шлёт `xn--...`, а `BASE_DOMAIN` хранится как `пэрум.рф`).
+- **`NameError: name 'select' is not defined`** в `dns_manager.py` — добавлен импорт `select` из `sqlalchemy`.
+- **Удаление apex/www-записей при DNS-синхронизации.** CF API возвращает FQDN (напр. `grsn-panel.ru`), а код ждал `@`. Теперь защита сверяет `record.name == domain` и `record.name == f"www.{domain}"`.
+- **`_resync_node_caddy_routes` для pool-нод.** Теперь итерирует ВСЕ организации в локальной БД, а не только ту, что в `agent_state`.
+- **`provision_landing_on_node`** создаёт shadow-record организации в локальной БД, если её ещё нет (первое провижининг на pool-ноде).
+- **`deploy-node.sh`:** пропущенный `else` в генерации Caddyfile (pool-блок всегда перезаписывал dedicated). Убран `run`/`eval` — heredoc теперь без багов экранирования.
+- **`deploy-node.sh` `--domain`** — параметр для авто-HTTPS на выделенной ноде.
+- **AGENT_TOKEN.** При авто-генерации теперь явно показан в консоли с инструкцией скопировать в `.env.prod` ядра.
+
+### DNS-архитектура
+
+- **Wildcard-записи удалены** из всех зон. Каждая школа получает индивидуальную A-запись `school.domain → node_ip`.
+- **Синхронизация защищает** apex и www от удаления. Wildcard больше не защищён — удаляется при sync.
+
 ## [Unreleased] — 2026-07-04
 
 ### Подготовка к переразвёртыванию на 3 сервера
