@@ -439,7 +439,7 @@ async def _resync_node_caddy_routes() -> None:
             )).all()
             for domain, school in active:
                 try:
-                    await caddy.add_proxy_route(
+                    await caddy.add_route(
                         school_label_slug(school.slug), domain.domain,
                         f"{school_container_name(school.slug, 'app')}:3000",
                     )

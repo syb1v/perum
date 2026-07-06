@@ -272,6 +272,16 @@ services:
     networks:
       - perum_internal
 
+  perum_web:
+    image: ghcr.io/syb1v/perum-web:latest
+    container_name: perum_web
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      NODE_ENV: production
+    networks:
+      - perum_internal
+
   watchtower:
     image: ghcr.io/containrrr/watchtower:latest
     container_name: perum_watchtower
