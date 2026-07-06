@@ -181,6 +181,7 @@
 
 .contentSection {
     min-width: 0;
+    user-select: text;
 }
 
 .pageTitle {
