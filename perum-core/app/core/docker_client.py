@@ -90,6 +90,44 @@ class DockerClient:
 
         await asyncio.to_thread(_check)
 
+    async def create_network(self, name: str, *, slug: str) -> None:
+        """Создать изолированную сеть школы (если ещё нет)."""
+        def _create() -> None:
+            try:
+                self.client.networks.get(name)
+                return
+            except NotFound:
+                pass
+            self.client.networks.create(
+                name=name,
+                driver="bridge",
+                labels={LABEL_ORG: slug, LABEL_MANAGED: "true"},
+            )
+        await asyncio.to_thread(_create)
+
+    async def connect_to_network(self, container_name: str, network_name: str) -> None:
+        """Подключить контейнер к сети (для caddy → school network)."""
+        def _connect() -> None:
+            try:
+                net = self.client.networks.get(network_name)
+                container = self.client.containers.get(container_name)
+                net.connect(container)
+            except Exception:
+                pass
+        await asyncio.to_thread(_connect)
+
+    async def remove_network(self, name: str) -> None:
+        """Удалить школьную сеть (при purge)."""
+        def _remove() -> None:
+            try:
+                net = self.client.networks.get(name)
+                net.remove()
+            except NotFound:
+                pass
+            except Exception:
+                pass
+        await asyncio.to_thread(_remove)
+
     async def ensure_image(self, image: str, *, allow_pull: bool = True) -> None:
         def _ensure() -> None:
             try:

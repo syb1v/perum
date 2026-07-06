@@ -54,6 +54,15 @@ def school_project_name(slug: str) -> str:
     return f"school_{slug}"
 
 
+def school_network_name(slug: str) -> str:
+    """Изолированная Docker-сеть школы. На ней — app, db, redis + caddy (connected)."""
+    return f"school_{slug}_net"
+
+
+def school_redis_container_name(slug: str) -> str:
+    return f"school_{slug}_redis"
+
+
 def school_label_slug(slug: str) -> str:
     """Ключ Docker/Caddy-лейблов школьного стека — namespace, чтобы не
     пересекаться с орг-стеками в `com.perum.org`."""
@@ -78,9 +87,11 @@ class StackSpec:
     network: str
     app_container: str
     db_container: str
+    redis_container: str
     volume: str
     tenant_image: str
     postgres_image: str
+    redis_image: str
     db_password: str
     secret_key: str
     telemetry_token: str
@@ -149,10 +160,13 @@ def build_school_stack_spec(
     slug = school.slug
     db_container = school_container_name(slug, "db")
     app_container = school_container_name(slug, "app")
+    redis_container = school_redis_container_name(slug)
+    net_name = school_network_name(slug)
 
     database_url = f"postgresql://perum:{secret.db_password}@{db_container}:5432/perum"
-    redis_url = f"{settings.SHARED_REDIS_URL.rstrip('/')}/{secret.redis_db_index}"
+    redis_url = f"redis://{redis_container}:6379/0"
     postgres_image = f"{settings.IMAGE_REGISTRY}/library/postgres:15-alpine"
+    redis_image = f"{settings.IMAGE_REGISTRY}/library/redis:7-alpine"
 
     app_env = {
         # Tenant-образ пока читает ORG_SLUG/ORG_NAME — на Этапе 3 семантика станет
@@ -175,12 +189,14 @@ def build_school_stack_spec(
         slug=slug,
         org_name=school.name,
         project=school_project_name(slug),
-        network=settings.DOCKER_NETWORK,
+        network=net_name,
         app_container=app_container,
         db_container=db_container,
+        redis_container=redis_container,
         volume=school_volume_name(slug),
         tenant_image=image or settings.TENANT_IMAGE,
         postgres_image=postgres_image,
+        redis_image=redis_image,
         db_password=secret.db_password,
         secret_key=secret.secret_key,
         telemetry_token=secret.telemetry_token,

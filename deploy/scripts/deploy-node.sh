@@ -342,18 +342,13 @@ CADDYEOF
 fi
 ok "Caddyfile записан"
 
-# ── [6/8] Предзагрузка docker-socket-proxy ───────────────────────────────
+# ── [6/8] Предзагрузка образов ─────────────────────────────────────────
 if [[ "$DRY_RUN" != true ]]; then
-  step "6/8" "Предзагрузка docker-socket-proxy..."
-  run "
-    if ! docker image inspect tecnativa/docker-socket-proxy:0.3 &>/dev/null; then
-      docker pull tecnativa/docker-socket-proxy:0.3 2>/dev/null || {
-        docker pull mirror.gcr.io/tecnativa/docker-socket-proxy:0.3 &&
-        docker tag mirror.gcr.io/tecnativa/docker-socket-proxy:0.3 tecnativa/docker-socket-proxy:0.3
-      }
-    fi
-  "
-  ok "docker-socket-proxy готов"
+  step "6/8" "Предзагрузка образов..."
+  for img in tecnativa/docker-socket-proxy:0.3 ${IMAGE_REGISTRY}/library/postgres:15-alpine ${IMAGE_REGISTRY}/library/redis:7-alpine ${IMAGE_REGISTRY}/library/caddy:2-alpine; do
+    run "docker image inspect $img &>/dev/null || docker pull $img 2>/dev/null || docker pull ${IMAGE_REGISTRY}/$img 2>/dev/null || true"
+  done
+  ok "Образы предзагружены"
 fi
 
 # ── [7/8] Запуск стека ──────────────────────────────────────────────────

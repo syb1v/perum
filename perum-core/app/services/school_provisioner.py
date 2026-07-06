@@ -28,6 +28,7 @@ from app.services.stack_spec import (
     school_appdata_volume_name,
     school_container_name,
     school_label_slug,
+    school_network_name,
     school_volume_name,
 )
 
@@ -144,8 +145,9 @@ async def _safe_cleanup(label_slug: str, docker: DockerClient, caddy: CaddyAdmin
 
 async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker: DockerClient, caddy: CaddyAdmin, admin_email: str | None) -> SchoolProvisionOutcome:
     try:
-        await docker.ensure_network(spec.network)
+        await docker.create_network(spec.network, slug=label_slug)
         await docker.ensure_image(spec.postgres_image)
+        await docker.ensure_image(spec.redis_image)
         await docker.ensure_image(spec.tenant_image)
         await docker.remove_containers(label_slug)
 
@@ -159,10 +161,19 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         )
         await docker.wait_for_healthy(spec.db_container, timeout_s=settings.DB_HEALTH_TIMEOUT_S)
 
+        await docker.run_container(
+            name=spec.redis_container, image=spec.redis_image, slug=label_slug, role="redis",
+            command=["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"],
+            network=spec.network,
+        )
+
         # Том для файлов приложения (вложения) — переживает OTA-пересоздание app.
         await docker.create_volume(school_appdata_volume_name(spec.slug), slug=label_slug)
         await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
+
+        # Подключить caddy к школьной сети — чтобы проксировать трафик в app.
+        await docker.connect_to_network("caddy", spec.network)
 
         code, out = await docker.exec(spec.app_container, ["alembic", "upgrade", "head"], workdir="/app")
         if code != 0:
@@ -176,7 +187,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
 
         # Реальный домен школы (полный поддомен орг) — если задан ядром; иначе fallback.
         host = spec.host or f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
-        await caddy.add_proxy_route(label_slug, host, f"{spec.app_container}:3000")
+        await caddy.add_route(label_slug, host, f"{spec.app_container}:3000")
         logger.info("school %s: provisioned, route %s -> %s:3000", spec.slug, host, spec.app_container)
         return SchoolProvisionOutcome(school=None, host=host, admin_login=admin_login, admin_temp_password=admin_pw)  # type: ignore[arg-type]
     except Exception as exc:
@@ -379,6 +390,7 @@ async def deprovision_school(school: School, db: AsyncSession, *, purge: bool = 
             f"сохранены, школа архивирована; повторите удаление"
         )
     await _safe_cleanup(label_slug, docker, caddy)  # сносит контейнеры И тома
+    await docker.remove_network(school_network_name(school.slug))
     result = await db.execute(select(SchoolDomain).where(SchoolDomain.school_id == school.id))
     for domain in result.scalars().all():
         domain.status = "removed"
@@ -437,7 +449,7 @@ async def unsuspend_school(school: School, db: AsyncSession, settings: Settings 
         await docker.wait_for_healthy(app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
     except Exception as exc:  # noqa: BLE001
         logger.warning("school %s: unsuspend health wait failed (%s) — маршрут всё равно ставим", school.slug, exc)
-    await caddy.add_proxy_route(label_slug, host, f"{app_container}:3000")
+    await caddy.add_route(label_slug, host, f"{app_container}:3000")
     school.status = "active"
     school.suspended_at = None
     school.suspended_by = None
