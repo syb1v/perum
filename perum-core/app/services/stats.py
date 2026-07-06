@@ -22,9 +22,11 @@ _AGG_KEYS = (
 )
 
 
-def is_online(metric: SchoolMetric | None, now: datetime) -> bool:
-    if not metric or metric.last_heartbeat_at is None:
+def is_online(school: School, metric: SchoolMetric | None, now: datetime) -> bool:
+    if school.status != "active":
         return False
+    if not metric or metric.last_heartbeat_at is None:
+        return True  # active, контейнеры только поднялись — телеметрии ещё нет
     return (now - metric.last_heartbeat_at).total_seconds() <= HEARTBEAT_FRESH_S
 
 
@@ -34,7 +36,7 @@ def school_stat(school: School, metric: SchoolMetric | None, now: datetime) -> d
         "slug": school.slug,
         "name": school.name,
         "status": school.status,
-        "online": is_online(metric, now),
+        "online": is_online(school, metric, now),
         "last_heartbeat_at": metric.last_heartbeat_at.isoformat() if metric and metric.last_heartbeat_at else None,
         "avg_grade": metric.avg_grade if metric else None,
     }
