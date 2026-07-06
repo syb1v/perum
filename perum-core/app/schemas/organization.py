@@ -56,6 +56,14 @@ class OrganizationCreate(BaseModel):
             raise ValueError("домен должен быть валидным FQDN, напр. acme.ru")
         return v
 
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, v: str) -> str:
+        v = v.strip()
+        v = re.sub(r"[^a-zA-Zа-яА-ЯёЁ0-9 _.-]", "", v)
+        v = re.sub(r"\s+", " ", v)
+        return v
+
     @field_validator("plan")
     @classmethod
     def validate_plan(cls, v: str) -> str:

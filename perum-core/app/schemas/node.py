@@ -1,6 +1,15 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+def _sanitize_name(v: str) -> str:
+    """Замена пробелов и спецсимволов на дефисы для имён файлов/контейнеров."""
+    import re
+    v = v.strip()
+    v = re.sub(r"[^a-zA-Zа-яА-ЯёЁ0-9_.-]", "-", v)
+    v = re.sub(r"-{2,}", "-", v)
+    return v.strip("-")
 
 
 class NodeCreate(BaseModel):
@@ -14,15 +23,25 @@ class NodeCreate(BaseModel):
     org_id: int | None = None
     max_schools: int = Field(default=5, ge=1)
 
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: str) -> str:
+        return _sanitize_name(v)
+
 
 class NodeUpdate(BaseModel):
-    name: str | None = None
+    name: str | None = Field(default=None)
     hostname: str | None = Field(default=None, min_length=1, max_length=255)
     ssh_port: int | None = Field(default=None, ge=1, le=65535)
     country_code: str | None = Field(default=None, max_length=2)
     max_schools: int | None = Field(default=None, ge=1)
     enabled: bool | None = None
     status: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def sanitize_name(cls, v: str | None) -> str | None:
+        return _sanitize_name(v) if v else v
 
 
 class NodeResponse(BaseModel):
