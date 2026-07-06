@@ -210,7 +210,10 @@ class School(Base):
     """Школа внутри организации. Провижинится в свой стек `school_<slug>_*`."""
 
     __tablename__ = "schools"
-    __table_args__ = (UniqueConstraint("slug", name="uq_schools_slug"),)
+    __table_args__ = (
+        UniqueConstraint("slug", name="uq_schools_slug"),
+        UniqueConstraint("org_id", "subdomain", name="uq_schools_org_subdomain"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     org_id: Mapped[int] = mapped_column(
@@ -223,7 +226,7 @@ class School(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
     status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="provisioning", server_default="provisioning"
+        String(30), nullable=False, default="provisioning", server_default="provisioning", index=True
     )
     status_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Тег релиза, на котором сейчас крутится стек школы (для OTA-обновлений).
@@ -476,7 +479,7 @@ class Node(Base):
     )
 
     status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="pending_bootstrap", server_default="pending_bootstrap",
+        String(30), nullable=False, default="pending_bootstrap", server_default="pending_bootstrap", index=True,
         comment="pending_bootstrap | active | draining | offline | decommissioned (ставит воркер)",
     )
     # Визуальный вкл/выкл оператором: выключенная нода не используется планировщиком
