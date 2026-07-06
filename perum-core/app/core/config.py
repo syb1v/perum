@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -126,6 +126,25 @@ class Settings(BaseSettings):
     # Включить авто-управление DNS через Cloudflare. Даже при наличии токена
     # можно выключить глобально этим флагом.
     CLOUDFLARE_DNS_ENABLED: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def _enforce_prod_secrets(self) -> "Settings":
+        if self.ENVIRONMENT != "prod":
+            return self
+        insecure = []
+        if self.SECRET_KEY in ("dev-secret-change-me", "", "dev"):
+            insecure.append("SECRET_KEY")
+        if not self.SECRETS_ENCRYPTION_KEY:
+            insecure.append("SECRETS_ENCRYPTION_KEY")
+        if not self.AGENT_TOKEN:
+            insecure.append("AGENT_TOKEN")
+        if not self.BOOTSTRAP_ADMIN_PASSWORD:
+            insecure.append("BOOTSTRAP_ADMIN_PASSWORD")
+        if insecure:
+            raise ValueError(
+                f"prod требует установки: {', '.join(insecure)}. Проверь deploy/.env.prod"
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

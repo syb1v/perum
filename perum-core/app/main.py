@@ -218,11 +218,17 @@ app = FastAPI(
     version="0.5.3",
     description="Manages organizations, provisioning, billing and observability for PERUM tenant stacks.",
     lifespan=lifespan,
+    docs_url=None if settings.ENVIRONMENT == "prod" else "/docs",
+    redoc_url=None if settings.ENVIRONMENT == "prod" else "/redoc",
+    openapi_url=None if settings.ENVIRONMENT == "prod" else "/openapi.json",
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        f"https://{settings.PUBLIC_BASE_DOMAIN}",
+        f"https://admin.{settings.PUBLIC_BASE_DOMAIN}",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -81,7 +81,7 @@ async def health(db: AsyncSession = Depends(get_db)) -> AgentHealthResponse:
     return await get_agent_health(db)
 
 
-@router.get("/schools", response_model=AgentSchoolListResponse)
+@router.get("/schools", response_model=AgentSchoolListResponse, dependencies=[Depends(require_agent_token)])
 async def list_schools(db: AsyncSession = Depends(get_db)) -> AgentSchoolListResponse:
     if get_settings().ROLE != "org_agent":
         raise HTTPException(400, "schools endpoint only available in org_agent mode")
@@ -167,14 +167,14 @@ async def deprovision_landing(org_slug: str, db: AsyncSession = Depends(get_db))
     return await deprovision_landing_on_node(db, org_slug)
 
 
-@router.post("/restart", response_model=AgentNodeActionResponse)
+@router.post("/restart", response_model=AgentNodeActionResponse, dependencies=[Depends(require_agent_token)])
 async def restart_node(db: AsyncSession = Depends(get_db)) -> AgentNodeActionResponse:
     if get_settings().ROLE != "org_agent":
         raise HTTPException(400, "restart only available in org_agent mode")
     return await restart_node_stack(db)
 
 
-@router.post("/heartbeat", response_model=AgentHeartbeatResponse)
+@router.post("/heartbeat", response_model=AgentHeartbeatResponse, dependencies=[Depends(require_agent_token)])
 async def heartbeat(
     req: AgentHeartbeatRequest,
     db: AsyncSession = Depends(get_db),
