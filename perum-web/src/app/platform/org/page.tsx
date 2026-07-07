@@ -61,6 +61,10 @@ export default function OrgConsole() {
   // news feed (новости от ядра)
   const [newsFeed, setNewsFeed] = useState<any[] | null>(null);
 
+  // DNS sync
+  const [orgDns, setOrgDns] = useState<any>(null);
+  const [dnsSyncing, setDnsSyncing] = useState(false);
+
   async function load() {
     try {
       try { setOrgInfo(await papi("/api/schools/info")); } catch { /* non-fatal */ }
@@ -73,6 +77,7 @@ export default function OrgConsole() {
       setStatuses(Object.fromEntries(entries));
       try { setStats(await papi("/api/schools/stats/overview")); } catch { /* non-fatal */ }
       try { setBilling(await papi("/api/schools/billing")); } catch { /* non-fatal */ }
+      try { setOrgDns(await papi("/api/org/dns")); } catch { /* non-fatal */ }
     } catch (e: any) {
       if (e.status === 401) { router.push("/platform/login"); return; }
       if (e.status === 403) {
@@ -161,6 +166,15 @@ export default function OrgConsole() {
     setBusyId(s.id); setErr("");
     try { await papi(`/api/schools/${s.id}/${action}`, { method: "POST" }); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusyId(null); }
+  }
+  async function syncDns() {
+    setDnsSyncing(true); setErr("");
+    try {
+      const r = await papi("/api/org/dns/sync", { method: "POST" });
+      setOrgDns(await papi("/api/org/dns"));
+      setErr(`DNS синхронизирован: создано ${r.synced}, удалено ${r.deleted}${r.errors?.length ? `. Ошибки: ${r.errors.join("; ")}` : ""}`);
+    }
+    catch (e: any) { setErr(e.message); } finally { setDnsSyncing(false); }
   }
   async function removeSchool(id: number, confirmKey: string) {
     const typed = prompt(
@@ -324,19 +338,34 @@ export default function OrgConsole() {
             </form>
           </div>
           <div className={styles.card}>
-            <h2 className={styles.cardTitle}>Школы</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2 className={styles.cardTitle} style={{ margin: 0 }}>Школы</h2>
+              {orgDns?.cf_enabled && (
+                <button className={styles.actionBtn} disabled={dnsSyncing} onClick={syncDns} style={{ fontSize: "0.8rem" }}>
+                  {dnsSyncing ? "Синхронизация…" : "Синхр. DNS"}
+                </button>
+              )}
+            </div>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Школа</th><th>Адрес</th><th>Состояние</th><th>Нода</th><th>Ученики</th><th>Версия</th><th>Действия</th></tr></thead>
+                <thead><tr><th>Школа</th><th>Адрес</th><th>DNS</th><th>Состояние</th><th>Нода</th><th>Ученики</th><th>Версия</th><th>Действия</th></tr></thead>
                 <tbody>
                   {schools?.map((s) => {
                     const st = statuses[s.id];
                     const canUpdate = st?.update_available && s.status === "active";
                     const confirmKey = s.subdomain || s.slug;
+                    const dnsRec = orgDns?.school_records?.find((r: any) => r.name === s.subdomain);
+                    const dnsStatus = dnsRec?.status || (orgDns?.cf_enabled ? "—" : "manual");
                     return (
                       <tr key={s.id}>
                         <td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td>
                         <td>{s.full_host ? <code className={styles.code} style={{ fontSize: "0.78rem" }}>{s.full_host}</code> : <span className={c.muted}>—</span>}</td>
+                        <td>
+                          {dnsStatus === "ok" ? <span style={{ color: "var(--success)", fontSize: "0.8rem", fontWeight: 600 }}>✓ OK</span>
+                           : dnsStatus === "error" ? <span style={{ color: "var(--danger)", fontSize: "0.8rem", fontWeight: 600 }} title={dnsRec?.content}>✗ Ошибка</span>
+                           : dnsStatus === "pending" ? <span style={{ color: "var(--warning)", fontSize: "0.8rem" }}>⏳ Pending</span>
+                           : <span className={c.muted} style={{ fontSize: "0.78rem" }}>{dnsStatus === "manual" ? "вручную" : "—"}</span>}
+                        </td>
                         <td><SchoolStatus status={s.status} online={!!statById[s.id]?.online} />{s.status === "failed" && s.status_message && <><br /><span className={c.muted} style={{ fontSize: "0.75rem", color: "var(--danger)" }} title={s.status_message}>{s.status_message.length > 80 ? s.status_message.slice(0, 80) + "…" : s.status_message}</span></>}</td>
                         <td>{s.node_name ? <span title={s.node_hostname || ""}><code className={styles.code}>{s.node_name}</code></span> : <span className={c.muted} style={{ fontSize: "0.8rem" }}>платформа</span>}</td>
                         <td>{statById[s.id]?.students ?? "—"}</td>

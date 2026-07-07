@@ -130,6 +130,42 @@ async def _seed_bootstrap_admin() -> None:
         logger.warning("bootstrap admin seeding skipped: %s", exc)
 
 
+async def _dns_sweep_loop() -> None:
+    """Фоновый свип DNS: сверяет A-записи школ с CF по всем активным организациям.
+    Раз в DNS_SWEEP_INTERVAL_S. Дополняет точечные create/delete при lifecycle-хуках."""
+    from sqlalchemy import select
+
+    from app.core.db import SessionLocal
+    from app.models import Organization
+    from app.services.dns_manager import get_dns_manager
+
+    interval = settings.DNS_SWEEP_INTERVAL_S
+    dns = get_dns_manager()
+    if not dns.is_auto:
+        return
+    await asyncio.sleep(min(interval, 30))
+    while True:
+        try:
+            async with SessionLocal() as db:
+                orgs = (await db.execute(
+                    select(Organization).where(
+                        Organization.status == "active",
+                        Organization.cf_zone_id.isnot(None),
+                    )
+                )).scalars().all()
+                for org in orgs:
+                    try:
+                        result = await dns.sync_org_dns(org, db)
+                        if result.synced or result.deleted:
+                            logger.info("DNS sweep: org %s — synced=%d deleted=%d",
+                                        org.slug, result.synced, result.deleted)
+                    except Exception as exc:
+                        logger.warning("DNS sweep: org %s failed: %s", org.slug, exc)
+        except Exception as exc:
+            logger.warning("DNS sweep iteration failed: %s", exc)
+        await asyncio.sleep(interval)
+
+
 async def _billing_enforcement_loop() -> None:
     """Фоновый свип просроченных подписок (#4): раз в BILLING_ENFORCE_INTERVAL_S
     замораживает delinquent-орг и фиксирует дебиторку. Сбой итерации не валит
@@ -203,6 +239,8 @@ async def lifespan(app: FastAPI):
             tasks.append(asyncio.create_task(_billing_enforcement_loop()))
         if settings.NODE_MONITOR_INTERVAL_S > 0:
             tasks.append(asyncio.create_task(_node_monitor_loop()))
+        if settings.DNS_SWEEP_INTERVAL_S > 0:
+            tasks.append(asyncio.create_task(_dns_sweep_loop()))
     try:
         yield
     finally:

@@ -126,6 +126,9 @@ class Settings(BaseSettings):
     # Включить авто-управление DNS через Cloudflare. Даже при наличии токена
     # можно выключить глобально этим флагом.
     CLOUDFLARE_DNS_ENABLED: bool = Field(default=False)
+    # Период фонового свипа DNS: сверяет A-записи школ с реальностью в CF, сек.
+    # 0 — выключить (тогда только создание/удаление при lifecycle).
+    DNS_SWEEP_INTERVAL_S: int = Field(default=1200)
 
     @model_validator(mode="after")
     def _enforce_prod_secrets(self) -> "Settings":

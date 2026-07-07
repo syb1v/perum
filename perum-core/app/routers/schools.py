@@ -731,6 +731,10 @@ async def delete_school(
         if node is not None:
             school.status = "archived"
             await db.commit()
+        try:
+            await _delete_school_dns(school, db)
+        except Exception as exc:
+            logger.warning("school %s: DNS cleanup on archive failed (non-fatal): %s", school.slug, exc)
         await _refresh_org_landing(org_id, db)
         return {"id": school_id, "status": school.status}
 

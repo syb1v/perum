@@ -84,6 +84,31 @@ export const infrastructureApi = {
     async getOrgNodeUtilization(nodeId: number): Promise<NodeUtilization> {
         return api.get<NodeUtilization>(`/org/nodes/${nodeId}/utilization`);
     },
+
+    async getOrgDns(): Promise<{
+        domain: string;
+        node_name: string | null;
+        dns_target: string | null;
+        record_type: string;
+        dns_provider: string;
+        cf_zone_id: string | null;
+        cf_enabled: boolean;
+        school_records: Array<{
+            name: string;
+            fqdn: string;
+            type: string;
+            content: string;
+            node_name: string;
+            cf_record_id: string | null;
+            status: string;
+        }>;
+    }> {
+        return api.get('/org/dns');
+    },
+
+    async syncOrgDns(): Promise<{ synced: number; deleted: number; errors: string[] }> {
+        return api.post('/org/dns/sync');
+    },
 };
 
 export const updateHistoryApi = {

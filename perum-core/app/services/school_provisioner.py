@@ -595,7 +595,8 @@ async def _refresh_org_landing(org_id: int, db: AsyncSession) -> None:
 
 
 async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession) -> None:
-    """Создать/обновить A-запись поддомена школы в Cloudflare (если включено)."""
+    """Создать/обновить A-запись поддомена школы в Cloudflare (если включено).
+    Если запись уже существует (school.cf_record_id) — удаляет старую перед созданием новой."""
     from app.models import Organization
     from app.services.dns_manager import get_dns_manager
 
@@ -612,6 +613,10 @@ async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession
     dns = get_dns_manager()
     if not dns.is_auto:
         return
+
+    if school.cf_record_id:
+        await dns.delete_record(org.cf_zone_id, school.cf_record_id)
+        school.cf_record_id = None
 
     record = await dns.create_record(org.cf_zone_id, school.subdomain, org.domain or "", node_ip)
     if record.cf_record_id:
