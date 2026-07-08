@@ -277,4 +277,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 132 | 2026-07-05 | a6d4803 | fix(core+web): store and display provisioning error on failed schools |
 | 133 | 2026-07-06 | 1f294a3 | fix(node): add perum_web to node compose + use add_route for school domains |
 | 134 | 2026-07-06 | a0dfb34 | security: per-school network isolation + per-school Redis (own network + redis per school) |
-| 135 | 2026-07-08 | ae30d49 | fix(dns): DNS cleanup on archive + update CF records on IP change + auto-sweep + org_admin DNS status/sync |
+| 135 | 2026-07-08 | 1adfbf9 | fix(dns): DNS cleanup on archive + update on IP change + auto-sweep + org_admin status; fix(tests): StackSpec field order + telemetry tests |
