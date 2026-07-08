@@ -87,11 +87,11 @@ class StackSpec:
     network: str
     app_container: str
     db_container: str
-    redis_container: str
+    redis_container: str = ""
     volume: str
     tenant_image: str
     postgres_image: str
-    redis_image: str
+    redis_image: str = ""
     db_password: str
     secret_key: str
     telemetry_token: str

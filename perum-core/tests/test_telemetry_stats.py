@@ -27,10 +27,11 @@ def _school(id=1, slug="s", name="S", status="active", org_id=1):
 
 def test_is_online_fresh_vs_stale():
     now = datetime(2026, 6, 12, 12, 0, 0)
-    assert is_online(_metric(last_heartbeat_at=now - timedelta(seconds=HEARTBEAT_FRESH_S - 1)), now) is True
-    assert is_online(_metric(last_heartbeat_at=now - timedelta(seconds=HEARTBEAT_FRESH_S + 1)), now) is False
-    assert is_online(None, now) is False
-    assert is_online(_metric(last_heartbeat_at=None), now) is False
+    s = _school(1)
+    assert is_online(s, _metric(last_heartbeat_at=now - timedelta(seconds=HEARTBEAT_FRESH_S - 1)), now) is True
+    assert is_online(s, _metric(last_heartbeat_at=now - timedelta(seconds=HEARTBEAT_FRESH_S + 1)), now) is False
+    assert is_online(s, None, now) is True  # active school, no metrics → online (контейнеры только поднялись)
+    assert is_online(s, _metric(last_heartbeat_at=None), now) is True
 
 
 def test_rollup_sums_and_counts_online():
@@ -38,11 +39,11 @@ def test_rollup_sums_and_counts_online():
     rows = [
         (_school(1), _metric(last_heartbeat_at=now, students=10, users_total=15)),
         (_school(2), _metric(last_heartbeat_at=now - timedelta(hours=1), students=5, users_total=8)),
-        (_school(3), None),
+        (_school(3), None),  # active, without metrics → online
     ]
     agg, schools = rollup(rows, now)
     assert agg["schools_total"] == 3
-    assert agg["schools_online"] == 1  # только свежий heartbeat
+    assert agg["schools_online"] == 2  # свежий heartbeat + школа без метрик
     assert agg["students"] == 15
     assert agg["users_total"] == 23
     assert len(schools) == 3
@@ -52,9 +53,9 @@ def test_school_stat_shape():
     now = datetime(2026, 6, 12, 12, 0, 0)
     d = school_stat(_school(7, slug="g5"), _metric(students=3, last_heartbeat_at=now), now)
     assert d["id"] == 7 and d["slug"] == "g5" and d["online"] is True and d["students"] == 3
-    # школа без снимка телеметрии — нули, offline
+    # активная школа без снимка телеметрии — online (контейнеры только поднялись, телеметрии ещё нет)
     d0 = school_stat(_school(8), None, now)
-    assert d0["online"] is False and d0["students"] == 0
+    assert d0["online"] is True and d0["students"] == 0
 
 
 def test_endpoints_registered():
