@@ -21,7 +21,7 @@ export default function ControlWorksSection() {
     const fetchWorks = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get<{ control_works: ControlWork[] }>('/admin/control-works');
+            const response = await api.get<{ control_works: ControlWork[] }>('/control-works');
             setWorks(response.control_works);
             setError('');
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +39,7 @@ export default function ControlWorksSection() {
     const handleDelete = async (id: number) => {
         if (!confirm('Вы уверены, что хотите отменить эту контрольную работу?')) return;
         try {
-            await api.del(`/admin/control-works/${id}`);
+            await api.del(`/control-works/${id}`);
             fetchWorks();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {

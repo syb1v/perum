@@ -29,7 +29,6 @@ const QuestManagement = dynamic(() => import('@/components/admin/QuestManagement
 
 const InquiryManagement = dynamic(() => import('@/components/admin/InquiryManagement'), { loading: () => <LoadingScreen /> });
 const NewsManagement = dynamic(() => import('@/components/admin/NewsManagement'), { loading: () => <LoadingScreen /> });
-const SupportInbox = dynamic(() => import('@/components/admin/SupportInbox'), { loading: () => <LoadingScreen /> });
 const ExchangeManagement = dynamic(() => import('@/components/admin/ExchangeManagement'), { loading: () => <LoadingScreen /> });
 const MarketManagement = dynamic(() => import('@/components/admin/MarketManagement'), { loading: () => <LoadingScreen /> });
 const SchoolPeriods = dynamic(() => import('@/components/admin/SchoolPeriods'), { loading: () => <LoadingScreen /> });
@@ -51,7 +50,7 @@ const BellSchedulesManager = dynamic(() => import('@/components/admin/BellSchedu
 // const InquiriesSection = () => <div className={styles.card}>Inquiries (Coming Soon)</div>;
 // const NewsSection = () => <div className={styles.card}>News (Coming Soon)</div>;
 
-type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'support' | 'schools';
+type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'schools';
 
 export default function AdminDashboard() {
     const { user, isLoading, logout } = useAuth();
@@ -104,7 +103,6 @@ export default function AdminDashboard() {
             case 'quests': return <QuestManagement />;
             case 'inquiries': return <InquiryManagement />;
             case 'news': return <NewsManagement />;
-            case 'support': return <SupportInbox />;
             case 'market': return <MarketManagement />;
             case 'exchange': return <ExchangeManagement />;
             case 'academic-years': return <AcademicYearSection />;
@@ -130,7 +128,6 @@ export default function AdminDashboard() {
         quests: 'Квесты',
         inquiries: 'Обращения',
         news: 'Новости',
-        support: 'Почта поддержки',
         market: 'Маркет',
         exchange: 'Управление биржей',
         'academic-years': 'Учебные года',
@@ -168,38 +165,6 @@ export default function AdminDashboard() {
                         <h1 className={styles.pageTitle}>{sectionTitles[activeSection]}</h1>
                     </div>
                     <div className={styles.headerRight}>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await api.post('/admin/system/clear-cache');
-                                    alert('Кэш успешно очищен');
-                                } catch {
-                                    alert('Ошибка очистки кэша');
-                                }
-                            }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                color: '#ef4444',
-                                border: '1px solid rgba(239, 68, 68, 0.2)',
-                                padding: '6px 14px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                        >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="1 4 1 10 7 10"></polyline>
-                                <polyline points="23 20 23 14 17 14"></polyline>
-                                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                            </svg>
-                            Сбросить кэш
-                        </button>
                         <div className={styles.userInfo}>
                             <span className={styles.userName}>{user.first_name || user.login}</span>
                             <div className={styles.userAvatar}>

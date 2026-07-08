@@ -131,6 +131,14 @@ async def delete_subject(
     return {"success": True, "message": "Предмет удалён"}
 
 
+@router.post("/subjects/enable-all-exchange")
+async def enable_all_subjects_exchange(
+    user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+) -> dict:
+    result = await service.enable_all_subjects_exchange(db, await _school(user, db))
+    return {"success": True, "message": f"Включено предметов для биржи: {result['enabled']}", **result}
+
+
 # ============ Work types ============
 @router.get("/work-types")
 async def get_work_types(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:

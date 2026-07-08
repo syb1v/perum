@@ -95,6 +95,19 @@ async def delete_subject(db: AsyncSession, school_id: int, subject_id: int) -> N
     await db.commit()
 
 
+async def enable_all_subjects_exchange(db: AsyncSession, school_id: int) -> dict:
+    result = await db.execute(
+        select(Subject).where(Subject.school_id == school_id)
+    )
+    count = 0
+    for s in result.scalars().all():
+        if not s.in_exchange:
+            s.in_exchange = True
+            count += 1
+    await db.commit()
+    return {"enabled": count, "total": result.rowcount if hasattr(result, 'rowcount') else count}
+
+
 # ---- Work types ----------------------------------------------------------
 
 def _work_type_dict(w: WorkType) -> dict:

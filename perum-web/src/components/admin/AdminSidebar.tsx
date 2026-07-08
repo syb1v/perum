@@ -67,8 +67,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, onLogout,
                 { id: 'register', label: 'Регистрация', icon: <RegisterIcon /> },
                 { id: 'notifications', label: 'Уведомления', icon: <BellIcon /> },
                 { id: 'inquiries', label: 'Обращения', icon: <MailIcon />, badge: inquiriesCount },
-                { id: 'news', label: 'Новости', icon: <NewspaperIcon /> },
-                { id: 'support', label: 'Поддержка (Почта)', icon: <MailIcon /> }
+                { id: 'news', label: 'Новости', icon: <NewspaperIcon /> }
             ]
         },
         {
