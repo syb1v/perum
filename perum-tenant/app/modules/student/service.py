@@ -22,6 +22,7 @@ from app.models.academic import (
     LessonGroup,
     LessonGroupStudent,
     Schedule,
+    Topic,
     WorkType,
 )
 from app.models.journal import ControlWork, FinalGrade, Grade, Homework, HomeworkAttachment
@@ -109,6 +110,13 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
         )
     ).scalars().all()
     wt_names = await _work_type_names(db, school_id)
+    topic_ids = {g.topic_id for g in grades if g.topic_id}
+    topics_map: dict[int, str] = {}
+    if topic_ids:
+        topics_map = {
+            t.id: t.name
+            for t in (await db.execute(select(Topic).where(Topic.id.in_(topic_ids)))).scalars().all()
+        }
     grades_map: dict[tuple[int, str], list[dict]] = {}
     for g in grades:
         date_str = g.lesson_date.strftime("%Y-%m-%d") if g.lesson_date else None
@@ -121,6 +129,7 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
                 "type": wt_names.get(g.work_type_id, "ответ"),
                 "comment": g.comment,
                 "color": grade_color(g.grade_value, g.attendance_mark),
+                "topic": topics_map.get(g.topic_id) if g.topic_id else None,
             }
         )
 
@@ -289,6 +298,13 @@ async def get_grades(db: AsyncSession, school_id: int, user: User, subject_id: i
         stmt = stmt.where(Grade.subject_id == subject_id)
     rows = (await db.execute(stmt)).all()
     wt_names = await _work_type_names(db, school_id)
+    topic_ids = {g.topic_id for g, _ in rows if g.topic_id}
+    topics_map: dict[int, str] = {}
+    if topic_ids:
+        topics_map = {
+            t.id: t.name
+            for t in (await db.execute(select(Topic).where(Topic.id.in_(topic_ids)))).scalars().all()
+        }
     return {
         "grades": [
             {
@@ -302,6 +318,7 @@ async def get_grades(db: AsyncSession, school_id: int, user: User, subject_id: i
                 "subject_id": subj.id,
                 "subject_name": subj.name,
                 "color": grade_color(g.grade_value, g.attendance_mark),
+                "topic": topics_map.get(g.topic_id) if g.topic_id else None,
             }
             for g, subj in rows
         ]

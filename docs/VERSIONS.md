@@ -279,3 +279,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 134 | 2026-07-06 | a0dfb34 | security: per-school network isolation + per-school Redis (own network + redis per school) |
 | 135 | 2026-07-08 | 1adfbf9 | fix(dns): DNS cleanup on archive + update on IP change + auto-sweep + org_admin status; fix(tests): StackSpec field order + telemetry tests |
 | 136 | 2026-07-08 | 27a2c40 | fix(web+tenant): remove dead SupportInbox + clear-cache btn, fix ControlWorksSection URL, add enable-all-exchange endpoint |
+| 137 | 2026-07-08 | daf79aa | feat(web+tenant): HW stub-fixes (teacher lesson modal/works/activity feed) + grades with lesson topic end-to-end |

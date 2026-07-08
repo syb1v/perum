@@ -17,6 +17,7 @@ interface HomeworkInfo {
     id: number;
     title: string;
     description: string;
+    due_date?: string;
     attachments?: HomeworkAttachmentInfo[];
 }
 
@@ -63,12 +64,12 @@ export default function TeacherLessonModal({
         try {
             const [journalData, hwData] = await Promise.all([
                 api.get<JournalData>(`/journal/${classId}/${subjectId}`),
-                api.get<{ homework: HomeworkInfo[] }>(`/teacher/homework?class_id=${classId}&subject_id=${subjectId}`)
+                api.get<{ homework: HomeworkInfo[] }>(`/homework?class_id=${classId}&subject_id=${subjectId}`)
             ]);
             setJournal(journalData);
 
             if (hwData && hwData.homework) {
-                const todaysHw = hwData.homework.filter((hw: HomeworkInfo & { due_date?: string }) => hw.due_date?.startsWith(date));
+                const todaysHw = hwData.homework.filter((hw: HomeworkInfo) => hw.due_date?.startsWith(date));
                 setLocalHomework(todaysHw);
             }
         } catch (err: unknown) {

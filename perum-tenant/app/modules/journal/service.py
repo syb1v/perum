@@ -248,6 +248,14 @@ async def get_journal(
         if g.lesson_date:
             dates.add(g.lesson_date.date().isoformat())
 
+    topic_ids = {g.topic_id for g in grades if g.topic_id}
+    topics_map: dict[int, str] = {}
+    if topic_ids:
+        topics_map = {
+            t.id: t.name
+            for t in (await db.execute(select(Topic).where(Topic.id.in_(topic_ids)))).scalars().all()
+        }
+
     student_dicts = []
     for s in students:
         glist = sorted(by_student.get(s.id, []), key=lambda g: (g.lesson_date or g.created_at))
@@ -263,6 +271,8 @@ async def get_journal(
                 "lesson_date": g.lesson_date.date().isoformat() if g.lesson_date else None,
                 "comment": g.comment,
                 "color": grade_color(g.grade_value, g.attendance_mark),
+                "topic_id": g.topic_id,
+                "topic_name": topics_map.get(g.topic_id) if g.topic_id else None,
             }
             for g in glist
         ]
@@ -430,6 +440,7 @@ async def get_grade(db: AsyncSession, school_id: int, grade_id: int) -> dict:
     g = await _get_grade(db, school_id, grade_id)
     subject = await db.get(Subject, g.subject_id)
     student = await db.get(User, g.student_id)
+    topic = await db.get(Topic, g.topic_id) if g.topic_id else None
     return {
         "id": g.id,
         "grade_value": g.grade_value,
@@ -444,6 +455,8 @@ async def get_grade(db: AsyncSession, school_id: int, grade_id: int) -> dict:
         "created_at": g.created_at.isoformat() if g.created_at else None,
         "subject": {"id": subject.id, "name": subject.name, "category": subject.category} if subject else None,
         "student": {"id": student.id, "first_name": student.first_name, "last_name": student.last_name} if student else None,
+        "topic_id": g.topic_id,
+        "topic_name": topic.name if topic else None,
     }
 
 
@@ -469,6 +482,7 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     g.work_type_id = payload.work_type_id
     g.attendance_mark = payload.attendance_mark
     g.comment = payload.comment
+    g.topic_id = payload.topic_id
     g.weight = weight
     g.value = new_points
     await db.flush()

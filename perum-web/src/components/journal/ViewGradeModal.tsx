@@ -5,7 +5,7 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { Grade, WorkType } from '@/types';
+import type { Grade, WorkType, Topic } from '@/types';
 
 interface ViewGradeModalProps {
     gradeId: number;
@@ -33,7 +33,9 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
     const [editWorkTypeId, setEditWorkTypeId] = useState<number | null>(null);
     const [editType, setEditType] = useState('');
     const [editComment, setEditComment] = useState('');
+    const [editTopicId, setEditTopicId] = useState<string | null>(null);
     const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+    const [topics, setTopics] = useState<Topic[]>([]);
 
     useEffect(() => {
         api.get<{ success: boolean; work_types: WorkType[] }>('/journal/work-types')
@@ -52,6 +54,12 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                 setEditWorkTypeId(data.work_type_id || null);
                 setEditType(data.grade_type || data.type);
                 setEditComment(data.comment || '');
+                setEditTopicId(data.topic_id ? String(data.topic_id) : null);
+                if (data.subject?.id) {
+                    api.get<{ topics: Topic[] }>(`/journal/subjects/${data.subject.id}/topics`)
+                        .then(t => setTopics(t.topics || []))
+                        .catch(err => console.error('Failed to load topics', err));
+                }
             })
             .catch(() => {
                 showError('Ошибка загрузки оценки');
@@ -73,6 +81,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                 work_type_id: editAttendanceMark ? null : editWorkTypeId,
                 grade_type: editType, // Fallback if no work types
                 attendance_mark: editAttendanceMark,
+                topic_id: editTopicId ? Number(editTopicId) : null,
                 comment: editComment
             });
             showSuccess('Оценка обновлена');
@@ -151,6 +160,12 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                                 {new Date(grade.lesson_date || grade.created_at).toLocaleDateString('ru-RU')}
                             </span>
                         </div>
+                        {(grade.topic_name || grade.topic_id) && (
+                            <div className={styles.gradeDetailRow}>
+                                <span className={styles.detailLabel}>Тема</span>
+                                <span className={styles.detailValue}>{grade.topic_name || '—'}</span>
+                            </div>
+                        )}
                         {grade.comment && (
                             <div className={styles.gradeDetailRow} style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
                                 <span className={styles.detailLabel}>Комментарий</span>
@@ -258,6 +273,21 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                             )}
                             </div>
                         )}
+
+                        <div className={styles.formGroup}>
+                            <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Тема</label>
+                            <select
+                                className={styles.select}
+                                style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)' }}
+                                value={editTopicId || ''}
+                                onChange={e => setEditTopicId(e.target.value || null)}
+                            >
+                                <option value="">Без привязки к теме</option>
+                                {topics.map(t => (
+                                    <option key={t.id} value={t.id}>{t.name}</option>
+                                ))}
+                            </select>
+                        </div>
 
                         <div className={styles.formGroup}>
                             <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Комментарий</label>

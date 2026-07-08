@@ -72,10 +72,12 @@ async def bulk_balance(
 async def works(
     class_id: int | None = None,
     subject_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return {"works": []}
+    return await service.teacher_works(db, await _school(user, db), user, class_id, subject_id, limit, offset)
 
 
 @router.get("/homework")
@@ -85,7 +87,7 @@ async def homework(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return {"homework": []}
+    return await service.teacher_homework(db, await _school(user, db), user, class_id, subject_id)
 
 
 @router.get("/control-works")
@@ -95,4 +97,5 @@ async def control_works(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return {"control_works": []}
+    from app.modules.coursework import service as cw_service
+    return await cw_service.list_control_works(db, await _school(user, db), user, class_id, subject_id)

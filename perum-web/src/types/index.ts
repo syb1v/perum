@@ -313,6 +313,8 @@ export interface Grade {
     };
     points?: number; // alias for points_earned
     attendance_mark?: string | null; // "УП", "НП", "осв."
+    topic_id?: number | null;
+    topic_name?: string | null;
 }
 
 export interface WorkType {
@@ -341,6 +343,7 @@ export interface DiaryGrade {
     color: string;
     points?: number;
     weight?: number;
+    topic?: string | null;
 }
 
 export interface DiaryHomework {
@@ -398,6 +401,7 @@ export interface GradesResponse {
         color: string;
         points: number;
         weight?: number;
+        topic?: string | null;
     }>;
 }
 

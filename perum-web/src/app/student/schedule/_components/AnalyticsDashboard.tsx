@@ -141,7 +141,7 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
                                                         <span
                                                             key={`jg_${g.id}_${gi}`}
                                                             className={`${styles.journalGrade} ${styles['journalGrade' + g.value] || ''}`}
-                                                            title={`${g.type || 'Оценка'}${g.weight ? ` (x${g.weight})` : ''}`}
+                                                            title={`${g.type || 'Оценка'}${g.weight ? ` (x${g.weight})` : ''}${g.topic ? ` · ${g.topic}` : ''}`}
                                                         >
                                                             {g.value}
                                                         </span>

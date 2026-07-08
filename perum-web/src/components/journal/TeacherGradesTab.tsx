@@ -391,7 +391,7 @@ export default function TeacherGradesTab({
                                                                 }}
                                                                 title={g.attendance_mark
                                                                     ? `${g.attendance_mark === 'УП' ? 'Уважительная причина' : g.attendance_mark === 'НП' ? 'Неуважительная причина' : g.attendance_mark === 'точка' ? 'Долг (Точка)' : 'Освобождён'}`
-                                                                    : `${g.grade_type || 'Оценка'}${g.weight ? ` (x${g.weight})` : ''}: ${g.lesson_date ? g.lesson_date.split('-').reverse().join('.') : ''}`}
+                                                                    : `${g.grade_type || 'Оценка'}${g.weight ? ` (x${g.weight})` : ''}${g.topic_name ? ` · ${g.topic_name}` : ''}: ${g.lesson_date ? g.lesson_date.split('-').reverse().join('.') : ''}`}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     if (!journal?.readonly) {

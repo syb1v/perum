@@ -6,6 +6,26 @@
 
 ## [Unreleased] — 2026-07-08
 
+### ДЗ и оценки с темой урока (P1 #5, #6)
+
+- **Учитель видит существующие ДЗ в модале урока.** `TeacherLessonModal` вызывал stub `/api/teacher/homework` (возвращал пусто) → учитель никогда не видел заданные ДЗ. Переключён на реальный `GET /api/homework` (coursework-роутер) с `due_date`+`attachments`.
+- **Вкладка «Работы» у учителя работает.** Реализован `GET /api/teacher/works` — объединённый список ДЗ + контрольных работ с пагинацией (раньше stub `{"works": []}`).
+- **Лента активности учителя работает.** Реализован `GET /api/teacher/homework` — последние 50 ДЗ учителя (раньше stub `{"homework": []}`).
+- **`GET /api/teacher/control-works` подключён** к реальному coursework-сервису (раньше stub).
+- **Teacher diary: ДЗ с due_date и вложениями.** `teacher_diary` возвращал homework без `due_date` и `attachments` → фронт-фильтр по дате всегда давал пусто. Теперь возвращает полные данные.
+- **Убрана проверка `hw.completed`.** Frontend `useSchedule` проверял несуществующее поле → статус работы никогда не был `completed`. Убран.
+- **Оценки с темой урока — последняя миля.**
+  - `GET /api/journal/grades/{id}` теперь возвращает `topic_id` + `topic_name`.
+  - `UpdateGradeRequest` + `update_grade` — тема редактируется.
+  - Сетка журнала `get_journal` возвращает `topic_id` + `topic_name` в `grade_dicts`.
+  - Ученик: `student/diary` и `student/grades` возвращают `topic` для каждой оценки.
+  - `ViewGradeModal` — тема в просмотре + select темы в редактировании.
+  - `TeacherGradesTab` — тема в тултипе ячейки оценки.
+  - `LessonModal` (ученик) — тема под оценкой.
+  - `AnalyticsDashboard` (ученик) — тема в тултипе.
+  - TS-типы `Grade`, `DiaryGrade`, `GradesResponse.grades`, `GradeRow` расширены полем `topic`.
+- **Удалён мёртвый `TopicsTable.tsx`** (не импортировался нигде).
+
 ### Исправления админки школы (P0 #2)
 
 - **Убран SupportInbox.** Мёртвая заглушка «почта поддержки» (фейковые ответы, пустой инбокс). Убран из сайдбара, типа секций и рендера. Заменён будет школьным чатом поддержки (Блок 3).

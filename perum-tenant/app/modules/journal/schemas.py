@@ -19,6 +19,7 @@ class UpdateGradeRequest(BaseModel):
     work_type_id: int | None = None
     grade_type: str | None = None
     attendance_mark: str | None = None
+    topic_id: int | None = None
     comment: str | None = None
 
 

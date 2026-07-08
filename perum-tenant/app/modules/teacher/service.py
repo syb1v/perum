@@ -16,7 +16,7 @@ from app.models.academic import (
     Subject,
     TeacherSubject,
 )
-from app.models.journal import ControlWork, Grade, Homework
+from app.models.journal import ControlWork, Grade, Homework, HomeworkAttachment
 
 
 def _as_date(value):
@@ -171,7 +171,7 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
         subjects = (await db.execute(select(Subject).where(Subject.id.in_(subj_ids)))).scalars().all()
         subj_map = {s.id: s for s in subjects}
 
-    # Homework per (class_id, subject_id)
+    # Homework per (class_id, subject_id) + attachments
     hw_map: dict[tuple[int, int], list] = {}
     if teacher_classes_all:
         all_hw = (
@@ -182,11 +182,23 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                 )
             )
         ).scalars().all()
+        hw_ids = [h.id for h in all_hw]
+        atts_by_hw: dict[int, list[dict]] = {}
+        if hw_ids:
+            atts = (
+                await db.execute(select(HomeworkAttachment).where(HomeworkAttachment.homework_id.in_(hw_ids)))
+            ).scalars().all()
+            for a in atts:
+                atts_by_hw.setdefault(a.homework_id, []).append(
+                    {"id": a.id, "filename": a.filename, "url_link": a.url_link}
+                )
         for h in all_hw:
             hw_map.setdefault((h.class_id, h.subject_id), []).append({
                 "id": h.id,
                 "title": h.title,
                 "description": h.description,
+                "due_date": h.due_date.isoformat() if h.due_date else None,
+                "attachments": atts_by_hw.get(h.id, []),
             })
 
     # Control works for the week
@@ -373,3 +385,114 @@ async def bulk_balance(db: AsyncSession, school_id: int, user: User,
 
     reason = comment or f"Массовое начисление от классного руководителя"
     return {"message": f"Баланс обновлён для {len(valid_ids)} учеников (+{amount} ливок)"}
+
+
+async def teacher_homework(
+    db: AsyncSession, school_id: int, user: User, class_id: int | None, subject_id: int | None
+) -> dict:
+    """Recent homework activity for the teacher's profile feed."""
+    stmt = select(Homework).where(Homework.school_id == school_id)
+    if not _is_admin(user):
+        stmt = stmt.where(Homework.teacher_id == user.id)
+    if class_id:
+        stmt = stmt.where(Homework.class_id == class_id)
+    if subject_id:
+        stmt = stmt.where(Homework.subject_id == subject_id)
+    stmt = stmt.order_by(Homework.created_at.desc()).limit(50)
+    rows = (await db.execute(stmt)).scalars().all()
+
+    class_ids = {h.class_id for h in rows}
+    subj_ids = {h.subject_id for h in rows}
+    classes = (
+        {c.id: c.name for c in (await db.execute(select(Class).where(Class.id.in_(class_ids)))).scalars().all()}
+        if class_ids else {}
+    )
+    subjects = (
+        {s.id: s.name for s in (await db.execute(select(Subject).where(Subject.id.in_(subj_ids)))).scalars().all()}
+        if subj_ids else {}
+    )
+    return {
+        "homework": [
+            {
+                "id": h.id,
+                "title": h.title,
+                "description": h.description or "",
+                "created_at": h.created_at.isoformat() if h.created_at else None,
+                "class_name": classes.get(h.class_id),
+                "subject_name": subjects.get(h.subject_id),
+            }
+            for h in rows
+        ]
+    }
+
+
+async def teacher_works(
+    db: AsyncSession,
+    school_id: int,
+    user: User,
+    class_id: int | None,
+    subject_id: int | None,
+    limit: int,
+    offset: int,
+) -> dict:
+    """Unified list of homework + control works for the teacher's works tab."""
+    hw_stmt = select(Homework).where(Homework.school_id == school_id)
+    if not _is_admin(user):
+        hw_stmt = hw_stmt.where(Homework.teacher_id == user.id)
+    if class_id:
+        hw_stmt = hw_stmt.where(Homework.class_id == class_id)
+    if subject_id:
+        hw_stmt = hw_stmt.where(Homework.subject_id == subject_id)
+    hws = (await db.execute(hw_stmt)).scalars().all()
+
+    cw_stmt = select(ControlWork).where(ControlWork.school_id == school_id)
+    if not _is_admin(user):
+        cw_stmt = cw_stmt.where(ControlWork.teacher_id == user.id)
+    if class_id:
+        cw_stmt = cw_stmt.where(ControlWork.class_id == class_id)
+    if subject_id:
+        cw_stmt = cw_stmt.where(ControlWork.subject_id == subject_id)
+    cws = (await db.execute(cw_stmt)).scalars().all()
+
+    class_ids = {h.class_id for h in hws} | {c.class_id for c in cws}
+    subj_ids = {h.subject_id for h in hws} | {c.subject_id for c in cws}
+    classes = (
+        {c.id: c.name for c in (await db.execute(select(Class).where(Class.id.in_(class_ids)))).scalars().all()}
+        if class_ids else {}
+    )
+    subjects = (
+        {s.id: s.name for s in (await db.execute(select(Subject).where(Subject.id.in_(subj_ids)))).scalars().all()}
+        if subj_ids else {}
+    )
+
+    works = []
+    for h in hws:
+        works.append({
+            "id": f"hw_{h.id}",
+            "type": "homework",
+            "class_id": h.class_id,
+            "class_name": classes.get(h.class_id),
+            "subject_id": h.subject_id,
+            "subject_name": subjects.get(h.subject_id),
+            "title": h.title,
+            "description": h.description,
+            "due_date": h.due_date.isoformat() if h.due_date else None,
+            "created_at": h.created_at.isoformat() if h.created_at else None,
+        })
+    for c in cws:
+        works.append({
+            "id": f"cw_{c.id}",
+            "type": "control",
+            "class_id": c.class_id,
+            "class_name": classes.get(c.class_id),
+            "subject_id": c.subject_id,
+            "subject_name": subjects.get(c.subject_id),
+            "title": c.title or c.work_type,
+            "description": None,
+            "due_date": c.work_date.isoformat() if c.work_date else None,
+            "created_at": None,
+        })
+    works.sort(key=lambda w: (w["due_date"] or w["created_at"] or ""), reverse=True)
+    total = len(works)
+    page = works[offset:offset + limit]
+    return {"works": page, "has_more": offset + limit < total}

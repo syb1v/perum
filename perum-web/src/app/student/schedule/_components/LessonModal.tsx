@@ -73,6 +73,11 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
                                         {g.type || 'Оценка'}
                                         {g.weight ? ` (x${g.weight})` : ''}
                                     </span>
+                                    {g.topic && (
+                                        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 400 }}>
+                                            {g.topic}
+                                        </span>
+                                    )}
                                     {g.points !== undefined && (
                                         <span className={`${styles.gradeInfoPoints} ${g.points >= 0 ? styles.gradeInfoPointsPositive : styles.gradeInfoPointsNegative}`}>
                                             {g.points > 0 ? '+' : ''}{g.points} ливок

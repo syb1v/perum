@@ -20,6 +20,7 @@ export interface GradeRow {
     color: string;
     points: number;
     weight?: number;
+    topic?: string | null;
 }
 
 export interface AnalyticsPeriod {
@@ -130,8 +131,7 @@ export function useSchedule() {
                         (lesson.homework || []).forEach((hw) => {
                             const dueDate = hw.due_date ? new Date(hw.due_date) : null;
                             let status: Work['status'] = 'pending';
-                            if (hw.completed) status = 'completed';
-                            else if (dueDate && dueDate < now) status = 'overdue';
+                            if (dueDate && dueDate < now) status = 'overdue';
                             works.push({
                                 id: hw.id,
                                 title: hw.title,
