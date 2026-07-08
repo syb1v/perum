@@ -87,11 +87,9 @@ class StackSpec:
     network: str
     app_container: str
     db_container: str
-    redis_container: str = ""
     volume: str
     tenant_image: str
     postgres_image: str
-    redis_image: str = ""
     db_password: str
     secret_key: str
     telemetry_token: str
@@ -99,6 +97,8 @@ class StackSpec:
     database_url: str
     redis_url: str
     control_plane_url: str
+    redis_container: str = ""
+    redis_image: str = ""
     internal_rpc_token: str | None = None
     app_env: dict[str, str] = field(default_factory=dict)
     # Реальный публичный хост школы (полный домен `<subdomain>.<org.domain>`). Если
