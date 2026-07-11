@@ -25,6 +25,8 @@ const TEACHER_TABS = [
     { href: '/homeroom', label: 'Мой класс', icon: 'users' },
 ];
 
+const PARENT_TABS = [{ href: '/parent', label: 'Дети', icon: 'users' }];
+
 /* ────── Coin SVG matching vanilla ────── */
 
 
@@ -54,7 +56,7 @@ export default function MobileNav() {
     const [walletOpen, setWalletOpen] = useState(false);
 
     const role = user?.role || 'student';
-    const tabs = ['teacher', 'homeroom_teacher', 'class_teacher'].includes(role || '') ? TEACHER_TABS : (role === 'student' ? STUDENT_TABS : []);
+    const tabs = role === 'teacher' ? TEACHER_TABS : (role === 'student' ? STUDENT_TABS : (role === 'parent' ? PARENT_TABS : []));
 
     const displayName = [user?.last_name, user?.first_name].filter(Boolean).join(' ') || user?.login || 'Пользователь';
 
@@ -118,7 +120,7 @@ export default function MobileNav() {
                             <div className={styles.popupInfo}>
                                 <span className={styles.popupName}>{displayName}</span>
                                 <span className={styles.popupRole}>
-                                    {role === 'student' ? 'Ученик' : ['teacher', 'homeroom_teacher', 'class_teacher'].includes(role || '') ? 'Учитель' : 'Админ'}
+                                    {role === 'student' ? 'Ученик' : role === 'teacher' ? 'Учитель' : 'Админ'}
                                 </span>
                             </div>
                         </div>

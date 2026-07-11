@@ -301,7 +301,6 @@ export default function UserManagement() {
                         <option value="all">Все роли</option>
                         <option value="student">Ученики</option>
                         <option value="teacher">Учителя</option>
-                        <option value="class_teacher">Классные руководители</option>
                         <option value="parent">Родители</option>
                         <option value="admin">Администраторы</option>
                     </select>
@@ -313,7 +312,6 @@ export default function UserManagement() {
             ) : (
                 <>
                     {renderTable('admin', 'Администраторы')}
-                    {renderTable('class_teacher', 'Классные руководители')}
                     {renderTable('teacher', 'Учителя')}
                     {renderTable('parent', 'Родители')}
                     {renderTable('student', 'Ученики')}

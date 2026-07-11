@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, verify_password
+from app.core.time import utc_now
 from app.models import User
 
 
@@ -19,7 +18,7 @@ async def authenticate(db: AsyncSession, login: str, password: str) -> str:
     if user is None or not user.is_active or not verify_password(password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Неверный логин или пароль")
 
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = utc_now()
     await db.commit()
 
     # `id`, `role`, `session_token` are read by the web middleware (from the

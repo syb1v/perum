@@ -7,13 +7,12 @@ itself is deferred (a JSON array of URLs is stored as-is).
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.models import News, NewsLike, NewsRead, User
 
 
@@ -190,7 +189,7 @@ async def update(db: AsyncSession, school_id: int, news_id: int, **fields) -> di
     for key in ("title", "content", "is_published", "media"):
         if fields.get(key) is not None:
             setattr(news, key, fields[key])
-    news.updated_at = datetime.utcnow()
+    news.updated_at = utc_now()
     await db.commit()
     return {"status": "ok"}
 

@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -29,6 +29,7 @@ class Grade(Base):
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
     topic_id: Mapped[int | None] = mapped_column(
         ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
     )
@@ -44,8 +45,60 @@ class Grade(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
+class LessonTemplate(Base):
+    __tablename__ = "lesson_templates"
+    __table_args__ = (
+        UniqueConstraint("occurrence_id", name="uq_lesson_template_occurrence"),
+        Index(
+            "uq_lesson_template_legacy",
+            "class_id", "subject_id", "lesson_date",
+            unique=True,
+            postgresql_where=text("occurrence_id IS NULL"),
+            sqlite_where=text("occurrence_id IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    class_id: Mapped[int] = mapped_column(
+        ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    subject_id: Mapped[int] = mapped_column(
+        ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
+    lesson_date: Mapped[date] = mapped_column(Date, nullable=False)
+    topic_id: Mapped[int | None] = mapped_column(
+        ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
+    )
+    work_type_id: Mapped[int | None] = mapped_column(
+        ForeignKey("work_types.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
 class FinalGrade(Base):
     __tablename__ = "final_grades"
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "student_id", "subject_id", "class_id", "period_id",
+            name="uq_final_grade_period",
+        ),
+        Index(
+            "uq_final_grade_without_period",
+            "school_id", "student_id", "subject_id", "class_id",
+            unique=True,
+            postgresql_where=text("period_id IS NULL"),
+            sqlite_where=text("period_id IS NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     school_id: Mapped[int | None] = mapped_column(
@@ -107,6 +160,7 @@ class Homework(Base):
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
     teacher_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
@@ -143,6 +197,7 @@ class ControlWork(Base):
     subject_id: Mapped[int] = mapped_column(
         ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
     teacher_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

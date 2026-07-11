@@ -7,8 +7,6 @@ that prices the week and settles investments).
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -16,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.core.deps import get_current_user, require_admin, require_student, require_teacher
+from app.core.time import utc_now
 from app.models import ExchangeLog, ExchangeSettings, Investment, Subject, Transaction, TradingWindow, User
 from app.modules.exchange import service
 from app.modules.school_admin.service import resolve_school_id
@@ -147,7 +146,7 @@ async def admin_put_settings(payload: SettingsPayload, user: User = Depends(requ
     s.open_day, s.open_time = payload.open_day, payload.open_time
     s.close_day, s.close_time = payload.close_day, payload.close_time
     s.calc_day, s.calc_time = payload.calc_day, payload.calc_time
-    s.updated_at = datetime.utcnow()
+    s.updated_at = utc_now()
     await db.commit()
     return {"status": "ok"}
 
@@ -203,7 +202,7 @@ async def _refund_investment(inv: Investment, db: AsyncSession, admin_id: int) -
     if inv.status != "active":
         return 0
     inv.status = "cancelled"
-    inv.completed_at = datetime.utcnow()
+    inv.completed_at = utc_now()
     student = await db.get(User, inv.user_id)
     new_balance = None
     if student is not None:

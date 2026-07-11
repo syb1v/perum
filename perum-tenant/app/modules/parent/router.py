@@ -13,24 +13,59 @@ from app.core.db import get_db
 from app.core.deps import require_parent
 from app.models import User
 from app.modules.parent import service
+from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
 
 
 @router.get("/children")
 async def children(user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)) -> dict:
-    return await service.list_children(db, user)
+    return await service.list_children(db, await resolve_school_id(user, db), user)
 
 
 @router.get("/children/{student_id}/grades")
 async def child_grades(
+    student_id: int,
+    subject_id: int | None = None,
+    user: User = Depends(require_parent),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.child_grades(db, await resolve_school_id(user, db), user, student_id, subject_id)
+
+
+@router.get("/children/{student_id}/diary")
+async def child_diary(
+    student_id: int,
+    week_offset: int = 0,
+    user: User = Depends(require_parent),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.child_diary(db, await resolve_school_id(user, db), user, student_id, week_offset)
+
+
+@router.get("/children/{student_id}/grades/summary")
+async def child_grades_summary(
     student_id: int, user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    return await service.child_grades(db, user, student_id)
+    return await service.child_grades_summary(db, await resolve_school_id(user, db), user, student_id)
+
+
+@router.get("/children/{student_id}/grades/analytics")
+async def child_grades_analytics(
+    student_id: int, user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await service.child_grades_analytics(db, await resolve_school_id(user, db), user, student_id)
+
+
+@router.get("/children/{student_id}/grades/finals")
+async def child_grades_finals(
+    student_id: int, user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)
+) -> dict:
+    return await service.child_grades_finals(db, await resolve_school_id(user, db), user, student_id)
 
 
 @router.get("/children/{student_id}/transactions")
 async def child_transactions(
     student_id: int, user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    return await service.child_transactions(db, user, student_id)
+    return await service.child_transactions(db, await resolve_school_id(user, db), user, student_id)

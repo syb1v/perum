@@ -1,6 +1,6 @@
 /* ===== TypeScript types for ПЭРУМ ===== */
 
-export type UserRole = 'student' | 'teacher' | 'class_teacher' | 'admin' | 'homeroom_teacher' | 'school_admin' | 'org_admin' | 'director' | 'parent';
+export type UserRole = 'student' | 'teacher' | 'admin' | 'school_admin' | 'org_admin' | 'director' | 'parent';
 
 // ==========================================
 // Админ-панель
@@ -368,12 +368,17 @@ export interface DiaryLesson {
     end_time: string;
     room: string | null;
     group_name?: string;
+    occurrence_id?: number | null;
+    status?: LessonOccurrenceStatus;
     grades: DiaryGrade[];
     homework: DiaryHomework[];
     control_work?: { id: number; work_type: string; title: string | null; } | null;
 }
 
 export interface DiaryDay {
+    date?: string;
+    day_name?: string;
+    is_today?: boolean;
     lessons: DiaryLesson[];
 }
 
@@ -594,6 +599,7 @@ export interface HolidayPeriod {
 export interface JournalData {
     students: JournalStudent[];
     dates?: string[];
+    schedule_slots?: Record<string, number[]>;
     subject: Subject;
     class_name: string;
     current_period?: PeriodInfo | null;
@@ -604,6 +610,20 @@ export interface JournalData {
     holiday_periods?: HolidayPeriod[];
     readonly?: boolean;
     subgroup_name?: string | null;
+    lesson_templates?: Record<string, {
+        occurrence_id: number | null;
+        lesson_date: string;
+        lesson_number: number | null;
+        topic_id: number | null;
+        work_type_id: number | null;
+    }>;
+}
+
+export type LessonOccurrenceStatus = 'scheduled' | 'cancelled' | 'completed';
+
+export interface LessonOccurrenceInfo {
+    occurrence_id: number | null;
+    status: LessonOccurrenceStatus;
 }
 
 /* Analytics types */

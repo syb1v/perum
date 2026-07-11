@@ -21,13 +21,22 @@ import journalStyles from '../journal/page.module.css';
 import { generateReportHTML, getReportDataForExcel } from '@/utils/reportGenerator';
 import { exportToExcel } from '@/utils/exportUtils';
 
+interface SchoolPeriod {
+    id: number;
+    name: string;
+    period_type: string;
+    start_date: string;
+    end_date: string;
+}
+
 export default function TeacherAnalytics() {
     const { showError, showSuccess } = useToast();
 
     // Filters State
     const [selectedClassId, setSelectedClassId] = useState<number>(0);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
-    const [selectedPeriod, setSelectedPeriod] = useState<string>('current');
+    const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+    const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
 
     // Data State
     const [teacherClasses, setTeacherClasses] = useState<ClassInfo[]>([]);
@@ -42,6 +51,9 @@ export default function TeacherAnalytics() {
     // Loaders
     const [loading, setLoading] = useState(true); // Initial load
     const [tabLoading, setTabLoading] = useState(false);
+    const [periodsLoading, setPeriodsLoading] = useState(false);
+    const [periodsRetry, setPeriodsRetry] = useState(0);
+    const [dashboardError, setDashboardError] = useState<string | null>(null);
 
     // Report State
     const [reportType, setReportType] = useState<string>('summary');
@@ -124,64 +136,69 @@ export default function TeacherAnalytics() {
         }
     }, [selectedClassId, teacherClasses, selectedSubjectId]);
 
-    // Helpers to get dates
-    const getPeriodDates = (period: string) => {
-        const year = new Date().getFullYear();
-        const now = new Date();
-        const month = now.getMonth() + 1;
+    useEffect(() => {
+        if (!selectedClassId) return;
+        const controller = new AbortController();
+        setPeriodsLoading(true);
+        setPeriods([]);
+        setSelectedPeriod('');
+        setDashboardData(null);
+        api.get<{ current_period: SchoolPeriod | null; periods: SchoolPeriod[] }>(`/periods?class_id=${selectedClassId}`, controller.signal)
+            .then((data) => {
+                const academicPeriods = data.periods.filter((period) =>
+                    period.period_type === 'quarter' || period.period_type === 'half_year'
+                );
+                setPeriods(academicPeriods);
+                setSelectedPeriod(String(data.current_period?.id ?? academicPeriods[0]?.id ?? ''));
+                setDashboardError(academicPeriods.length ? null : 'Для класса нет учебных периодов');
+            })
+            .catch((err: unknown) => {
+                if (err instanceof Error && err.name === 'AbortError') return;
+                setDashboardError('Не удалось загрузить учебные периоды');
+                showError('Не удалось загрузить учебные периоды');
+            }).finally(() => {
+                if (!controller.signal.aborted) setPeriodsLoading(false);
+            });
+        return () => controller.abort();
+    }, [selectedClassId, showError, periodsRetry]);
 
-        const startYear = month <= 8 ? year - 1 : year;
-        const endYear = startYear + 1;
-
-        const getCurrentQuarter = () => {
-            if (month >= 9 && month <= 10) return { start: `${startYear}-09-01`, end: `${startYear}-10-31` };
-            if (month >= 11 && month <= 12) return { start: `${startYear}-11-01`, end: `${startYear}-12-31` };
-            if (month >= 1 && month <= 3) return { start: `${endYear}-01-01`, end: `${endYear}-03-31` };
-            return { start: `${endYear}-04-01`, end: `${endYear}-05-31` };
-        };
-
-        switch (period) {
-            case 'current': return getCurrentQuarter();
-            case 'quarter-1': return { start: `${startYear}-09-01`, end: `${startYear}-10-31` };
-            case 'quarter-2': return { start: `${startYear}-11-01`, end: `${startYear}-12-31` };
-            case 'quarter-3': return { start: `${endYear}-01-01`, end: `${endYear}-03-31` };
-            case 'quarter-4': return { start: `${endYear}-04-01`, end: `${endYear}-05-31` };
-            case 'half-year-1': return { start: `${startYear}-09-01`, end: `${startYear}-12-31` };
-            case 'half-year-2': return { start: `${endYear}-01-01`, end: `${endYear}-05-31` };
-            case 'year': return { start: `${startYear}-09-01`, end: `${endYear}-05-31` };
-            default: return getCurrentQuarter();
-        }
-    };
+    const selectedPeriodDates = periods.find((period) => String(period.id) === selectedPeriod);
 
     // Load Data based on Tab
-    const loadTabData = useCallback(async () => {
-        if (!selectedClassId) return;
+    const loadTabData = useCallback(async (signal?: AbortSignal) => {
+        if (!selectedClassId || !selectedPeriodDates) return;
 
         setTabLoading(true);
+        setDashboardData(null);
+        setDashboardError(null);
         try {
-            const periodDates = getPeriodDates(selectedPeriod);
             const params = new URLSearchParams({
                 class_id: String(selectedClassId),
-                period: `${periodDates.start},${periodDates.end}`
+                period: `${selectedPeriodDates.start_date},${selectedPeriodDates.end_date}`
             });
             if (selectedSubjectId) {
                 params.append('subject_id', String(selectedSubjectId));
             }
 
             if (currentTab === 'dashboard') {
-                const data = await api.get<AnalyticsDashboardResponse>(`/teacher/analytics/dashboard?${params}`);
+                const data = await api.get<AnalyticsDashboardResponse>(`/teacher/analytics/dashboard?${params}`, signal);
                 setDashboardData(data);
             }
         } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             console.error(err);
-            // showError('Не удалось загрузить данные'); // Optional: silent fail or toast
+            setDashboardData(null);
+            setDashboardError('Не удалось загрузить данные аналитики');
+            showError('Не удалось загрузить данные аналитики');
         } finally {
             setTabLoading(false);
         }
-    }, [selectedClassId, selectedSubjectId, selectedPeriod, currentTab]); // Remove showError from deps
+    }, [selectedClassId, selectedSubjectId, selectedPeriodDates, currentTab, showError]);
 
     useEffect(() => {
-        loadTabData();
+        const controller = new AbortController();
+        loadTabData(controller.signal);
+        return () => controller.abort();
     }, [loadTabData]);
 
     const handleGenerateReport = async () => {
@@ -189,12 +206,15 @@ export default function TeacherAnalytics() {
             showError('Выберите класс');
             return;
         }
+        if (!selectedPeriodDates) {
+            showError('Выберите учебный период');
+            return;
+        }
         setGeneratingReport(true);
         try {
-            const periodDates = getPeriodDates(selectedPeriod);
             const params = new URLSearchParams({
                 class_id: String(selectedClassId),
-                period: `${periodDates.start},${periodDates.end}`,
+                period: `${selectedPeriodDates.start_date},${selectedPeriodDates.end_date}`,
                 report_type: reportType
             });
             if (selectedSubjectId) {
@@ -315,14 +335,20 @@ export default function TeacherAnalytics() {
                 selectedClassId={selectedClassId}
                 selectedSubjectId={selectedSubjectId}
                 selectedPeriod={selectedPeriod}
+                periods={periods}
                 onClassChange={setSelectedClassId}
                 onSubjectChange={setSelectedSubjectId}
                 onPeriodChange={setSelectedPeriod}
             />
 
+            {periodsLoading && <div className={styles.loading}>Загрузка учебных периодов...</div>}
+            {!periodsLoading && dashboardError === 'Не удалось загрузить учебные периоды' && <div className={styles.loading}>{dashboardError} <button onClick={() => setPeriodsRetry(value => value + 1)}>Повторить</button></div>}
+
             <div className={styles.content}>
                 {tabLoading ? (
                     <div className={styles.loading}>Загрузка данных...</div>
+                ) : dashboardError && currentTab === 'dashboard' ? (
+                    <div className={styles.loading}>{dashboardError} <button onClick={() => loadTabData()}>Повторить</button></div>
                 ) : (
                     <>
                         {currentTab === 'dashboard' && dashboardData && (

@@ -9,52 +9,94 @@ interface DayTemplateModalProps {
     subject: Subject;
     initialWorkTypeId?: string;
     initialTopicId?: string;
-    onSave: (workTypeId: string, topicId: string, shortName: string) => void;
-    onClear: () => void;
+    lessonNumbers: number[];
+    initialLessonNumber: number;
+    hasTemplate: boolean;
+    onLessonChange: (lessonNumber: number) => void;
+    onSave: (workTypeId: string, topicId: string, lessonNumber: number) => void | Promise<void>;
+    onClear: (lessonNumber: number) => void | Promise<void>;
     onClose: () => void;
 }
 
 export default function DayTemplateModal({
-    date, subject, initialWorkTypeId, initialTopicId, onSave, onClear, onClose
+    date, subject, initialWorkTypeId, initialTopicId, lessonNumbers, initialLessonNumber,
+    hasTemplate, onLessonChange, onSave, onClear, onClose
 }: DayTemplateModalProps) {
     const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
     const [topics, setTopics] = useState<Topic[]>([]);
     const [workTypeId, setWorkTypeId] = useState(initialWorkTypeId || '');
     const [topicId, setTopicId] = useState(initialTopicId || '');
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [optionsLoading, setOptionsLoading] = useState(true);
+    const [optionsError, setOptionsError] = useState('');
+    const [reload, setReload] = useState(0);
 
     useEffect(() => {
-        api.get<{ success: boolean; work_types: WorkType[] }>('/journal/work-types')
-            .then(data => {
+        setOptionsLoading(true);
+        setOptionsError('');
+        Promise.all([
+            api.get<{ success: boolean; work_types: WorkType[] }>('/journal/work-types'),
+            api.get<{ topics: Topic[] }>(`/journal/subjects/${subject.id}/topics`),
+        ]).then(([data, topicData]) => {
                 if (data.work_types) {
                     setWorkTypes(data.work_types);
                     if (!initialWorkTypeId && data.work_types.length > 0) {
                         setWorkTypeId(data.work_types[0].id.toString());
                     }
                 }
-            })
-            .catch(err => console.error(err));
+                setTopics(topicData.topics || []);
+            }).catch(err => setOptionsError(err instanceof Error ? err.message : 'Не удалось загрузить параметры'))
+            .finally(() => setOptionsLoading(false));
+    }, [subject.id, initialWorkTypeId, reload]);
 
-        api.get<{ topics: Topic[] }>(`/journal/subjects/${subject.id}/topics`)
-            .then(data => setTopics(data.topics || []))
-            .catch(err => console.error(err));
-    }, [subject.id, initialWorkTypeId]);
+    useEffect(() => {
+        setWorkTypeId(initialWorkTypeId || '');
+        setTopicId(initialTopicId || '');
+    }, [initialWorkTypeId, initialTopicId]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const wt = workTypes.find(w => w.id.toString() === workTypeId);
         if (wt) {
-            // Determine shortname. Use first letters or something custom. 
-            // In actual app, WorkType might have a short_name, but if not we can abbreviate it.
             const shortName = wt.name.split(' ').map((word, i) => i < 2 ? word.substring(0, 1).toUpperCase() : '').join('');
-            onSave(workTypeId, topicId, shortName);
+            setSaving(true);
+            setError('');
+            try {
+                await onSave(workTypeId, topicId, initialLessonNumber);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Не удалось сохранить шаблон');
+                setSaving(false);
+            }
+        }
+    };
+
+    const handleClear = async () => {
+        setSaving(true);
+        setError('');
+        try {
+            await onClear(initialLessonNumber);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось сбросить шаблон');
+            setSaving(false);
         }
     };
 
     return (
-        <Modal isOpen={true} onClose={onClose} title={`Шаблон дня: ${new Date(date).toLocaleDateString('ru-RU')}`} size="default">
+        <Modal isOpen={true} onClose={onClose} title={`Шаблон урока: ${new Date(date).toLocaleDateString('ru-RU')}, урок ${initialLessonNumber}`} size="default">
             <div className={styles.modalBody}>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                    Настройте вид работы и тему, чтобы они подставлялись автоматически при выставлении оценок за этот день.
+                    Тип работы и тема будут подставляться в новые оценки этого урока автоматически.
                 </p>
+
+                {lessonNumbers.length > 1 && <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
+                    <label>Номер урока</label>
+                    <select className={styles.select} value={initialLessonNumber} onChange={e => onLessonChange(Number(e.target.value))}>
+                        {lessonNumbers.map(number => <option key={number} value={number}>Урок {number}</option>)}
+                    </select>
+                </div>}
+
+                {optionsLoading && <p>Загрузка параметров...</p>}
+                {optionsError && <div><p style={{ color: 'var(--error)' }}>{optionsError}</p><button className={styles.btnSecondary} onClick={() => setReload(value => value + 1)}>Повторить</button></div>}
 
                 <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Тип работы (по умолчанию)</label>
@@ -86,19 +128,22 @@ export default function DayTemplateModal({
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
+                    {error && <p style={{ color: 'var(--error)', margin: 0 }}>{error}</p>}
                     <button
                         className={styles.btnSecondary}
                         style={{ flex: 1, padding: '10px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)', cursor: 'pointer' }}
-                        onClick={onClear}
+                        onClick={handleClear}
+                        disabled={saving || !hasTemplate}
                     >
-                        Сбросить
+                        Отключить автоподстановку
                     </button>
                     <button
                         className={styles.btnPrimary}
                         style={{ flex: 2, padding: '10px', background: 'var(--accent-primary)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
                         onClick={handleSave}
+                        disabled={saving || optionsLoading || Boolean(optionsError) || !workTypeId}
                     >
-                        Сохранить шаблон
+                        {saving ? 'Сохранение...' : 'Сохранить шаблон'}
                     </button>
                 </div>
             </div>

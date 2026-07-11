@@ -3,7 +3,7 @@
 балансы), пустую школу и отсутствие PII в снимке. aiosqlite — dev-зависимость."""
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 
@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 import app.models as M
 from app.core.db import Base
 from app.core.roles import DIRECTOR, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
+from app.core.time import utc_now
 from app.telemetry import collect_metrics
 
 EXPECTED_KEYS = {
@@ -57,7 +58,7 @@ async def _seed_and_collect():
         for gv in (4, 5, None):
             db.add(M.Grade(school_id=sid, student_id=students[0].id, class_id=1, subject_id=1, grade_value=gv))
 
-        now = datetime.utcnow()
+        now = utc_now()
         # active_24h = distinct user_id за 24ч, не-NULL: student0 (дубль схлопывается) + student1 = 2.
         db.add(M.PageVisit(school_id=sid, session_identifier="a", user_id=students[0].id, path="/", created_at=now))
         db.add(M.PageVisit(school_id=sid, session_identifier="a", user_id=students[0].id, path="/x", created_at=now))

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/apiClient';
+import type { DiaryResponse, FinalGrade, GradesResponse, GradesSummary } from '@/types';
+import styles from './parent.module.css';
 
 interface Child {
     id: number;
@@ -11,21 +13,11 @@ interface Child {
     patronymic: string | null;
     balance: number;
     class_name: string | null;
-    avg_grade: number;
+    average: number;
     total_grades: number;
-    enrollment_status: string;
 }
 
-interface GradeItem {
-    id: number;
-    value: number;
-    subject_name: string | null;
-    work_type: string | null;
-    comment: string | null;
-    created_at: string | null;
-}
-
-interface TransactionItem {
+interface Transaction {
     id: number;
     amount: number;
     balance_after: number;
@@ -34,207 +26,139 @@ interface TransactionItem {
     created_at: string | null;
 }
 
+interface Analytics {
+    current_period: number | null;
+    periods: { id: number; name: string }[];
+    subjects: { subject_id: number; subject_name: string; periods: Record<string, number | null>; year_average: number | null }[];
+}
+
+type Tab = 'diary' | 'grades' | 'finals' | 'analytics';
+type ChildData = {
+    diary?: DiaryResponse;
+    grades?: GradesResponse;
+    finals?: { final_grades: (FinalGrade & { subject_name: string; period_name: string | null })[] };
+    analytics?: Analytics;
+    summary?: GradesSummary;
+    transactions?: { transactions: Transaction[] };
+};
+
+const tabs: { id: Tab; label: string }[] = [
+    { id: 'diary', label: 'Расписание и ДЗ' },
+    { id: 'grades', label: 'Оценки' },
+    { id: 'finals', label: 'Итоговые' },
+    { id: 'analytics', label: 'Аналитика и баланс' },
+];
+
+const formatDate = (value: string | null | undefined) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('ru-RU') : '';
+
 export default function ParentDashboard() {
     const { token } = useAuth();
     const [children, setChildren] = useState<Child[]>([]);
     const [selectedChild, setSelectedChild] = useState<number | null>(null);
-    const [grades, setGrades] = useState<GradeItem[]>([]);
-    const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-    const [tab, setTab] = useState<'grades' | 'balance'>('grades');
+    const [tab, setTab] = useState<Tab>('diary');
+    const [weekOffset, setWeekOffset] = useState(0);
+    const [data, setData] = useState<ChildData>({});
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [retry, setRetry] = useState(0);
 
     useEffect(() => {
         if (!token) return;
-        api.get<{ children: Child[] }>('/parent/children')
-            .then(res => {
-                setChildren(res.children);
-                if (res.children.length > 0) setSelectedChild(res.children[0].id);
+        const controller = new AbortController();
+        setLoading(true);
+        setError(null);
+        api.get<{ children: Child[] }>('/parent/children', controller.signal)
+            .then(response => {
+                setChildren(response.children);
+                setSelectedChild(current => response.children.some(child => child.id === current) ? current : response.children[0]?.id ?? null);
             })
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }, [token]);
+            .catch(reason => {
+                if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message);
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) setLoading(false);
+            });
+        return () => controller.abort();
+    }, [token, retry]);
 
     useEffect(() => {
         if (!selectedChild || !token) return;
-        loadChildData(selectedChild);
-    }, [selectedChild, token, tab]);
+        const controller = new AbortController();
+        const base = `/parent/children/${selectedChild}`;
+        setData({});
+        setLoading(true);
+        setError(null);
+        let request: Promise<ChildData>;
+        if (tab === 'diary') request = api.get<DiaryResponse>(`${base}/diary?week_offset=${weekOffset}`, controller.signal).then(diary => ({ diary }));
+        else if (tab === 'grades') request = api.get<GradesResponse>(`${base}/grades`, controller.signal).then(grades => ({ grades }));
+        else if (tab === 'finals') request = api.get<NonNullable<ChildData['finals']>>(`${base}/grades/finals`, controller.signal).then(finals => ({ finals }));
+        else request = Promise.all([
+            api.get<Analytics>(`${base}/grades/analytics`, controller.signal),
+            api.get<GradesSummary>(`${base}/grades/summary`, controller.signal),
+            api.get<{ transactions: Transaction[] }>(`${base}/transactions`, controller.signal),
+        ]).then(([analytics, summary, transactions]) => ({ analytics, summary, transactions }));
+        request.then(setData).catch(reason => {
+            if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message);
+        }).finally(() => {
+            if (!controller.signal.aborted) setLoading(false);
+        });
+        return () => controller.abort();
+    }, [selectedChild, tab, token, weekOffset, retry]);
 
-    const loadChildData = async (childId: number) => {
-        if (tab === 'grades') {
-            const res = await api.get<{ grades: GradeItem[] }>(`/parent/children/${childId}/grades`);
-            setGrades(res.grades);
-        } else {
-            const res = await api.get<{ transactions: TransactionItem[] }>(`/parent/children/${childId}/transactions`);
-            setTransactions(res.transactions);
-        }
-    };
+    const child = children.find(item => item.id === selectedChild);
+    if (loading && children.length === 0) return <div className={styles.state}>Загрузка кабинета...</div>;
+    if (error && children.length === 0) return <div className={styles.state}>Не удалось загрузить кабинет: {error}<br /><button onClick={() => setRetry(value => value + 1)}>Повторить</button></div>;
+    if (!children.length) return <div className={styles.state}><h2>Нет привязанных детей</h2><p>Обратитесь к администратору школы.</p></div>;
 
-    const selectedChildData = children.find(c => c.id === selectedChild);
-
-    if (loading) {
-        return (
-            <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted)' }}>
-                Загрузка...
-            </div>
-        );
-    }
-
-    if (children.length === 0) {
-        return (
-            <div style={{ maxWidth: 600, margin: '40px auto', textAlign: 'center', padding: 40 }}>
-                <div style={{ fontSize: 64, marginBottom: 16 }}>👨‍👩‍👧‍👦</div>
-                <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Добро пожаловать!</h2>
-                <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    К вашему аккаунту пока не привязан ни один ребёнок.
-                    Обратитесь к администратору школы для привязки.
-                </p>
-            </div>
-        );
-    }
-
-    return (
-        <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 16px' }}>
-            <h1 style={{ color: 'var(--text-primary)', marginBottom: 20, fontSize: 22 }}>👨‍👩‍👧 Мои дети</h1>
-
-            {/* Children selector */}
-            {children.length > 1 && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-                    {children.map(child => (
-                        <button
-                            key={child.id}
-                            onClick={() => setSelectedChild(child.id)}
-                            style={{
-                                padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                                fontWeight: 500, fontSize: 14,
-                                background: selectedChild === child.id ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                                color: selectedChild === child.id ? '#fff' : 'var(--text-secondary)',
-                            }}
-                        >
-                            {child.last_name} {child.first_name}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Child summary card */}
-            {selectedChildData && (
-                <div style={{
-                    background: 'var(--bg-secondary)', borderRadius: 16, padding: 20,
-                    border: '1px solid var(--border-color)', marginBottom: 20
-                }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <div>
-                            <h2 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 20 }}>
-                                {selectedChildData.last_name} {selectedChildData.first_name} {selectedChildData.patronymic || ''}
-                            </h2>
-                            <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 4 }}>
-                                {selectedChildData.class_name || 'Без класса'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                        <div style={{ textAlign: 'center', padding: 12, background: 'var(--bg-primary)', borderRadius: 10 }}>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: '#22c55e' }}>{selectedChildData.avg_grade}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Средний балл</div>
-                        </div>
-                        <div style={{ textAlign: 'center', padding: 12, background: 'var(--bg-primary)', borderRadius: 10 }}>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--accent-primary)' }}>{selectedChildData.total_grades}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Оценок</div>
-                        </div>
-                        <div style={{ textAlign: 'center', padding: 12, background: 'var(--bg-primary)', borderRadius: 10 }}>
-                            <div style={{ fontSize: 24, fontWeight: 700, color: '#f59e0b' }}>{selectedChildData.balance}</div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Баланс</div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'var(--bg-secondary)', borderRadius: 10, padding: 4 }}>
-                <button
-                    onClick={() => setTab('grades')}
-                    style={{
-                        flex: 1, padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                        fontWeight: 500, fontSize: 14,
-                        background: tab === 'grades' ? 'var(--accent-primary)' : 'transparent',
-                        color: tab === 'grades' ? '#fff' : 'var(--text-secondary)',
-                    }}
-                >
-                    📊 Оценки
-                </button>
-                <button
-                    onClick={() => setTab('balance')}
-                    style={{
-                        flex: 1, padding: '10px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                        fontWeight: 500, fontSize: 14,
-                        background: tab === 'balance' ? 'var(--accent-primary)' : 'transparent',
-                        color: tab === 'balance' ? '#fff' : 'var(--text-secondary)',
-                    }}
-                >
-                    💰 Баланс
-                </button>
-            </div>
-
-            {/* Grades */}
-            {tab === 'grades' && (
-                <div style={{ display: 'grid', gap: 6 }}>
-                    {grades.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Оценок пока нет</div>
-                    )}
-                    {grades.map(g => (
-                        <div key={g.id} style={{
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '10px 14px', borderRadius: 10,
-                            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)'
-                        }}>
-                            <div>
-                                <div style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 14 }}>{g.subject_name}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    {g.work_type || 'Обычная'} • {g.created_at ? new Date(g.created_at).toLocaleDateString('ru') : ''}
-                                </div>
-                            </div>
-                            <div style={{
-                                width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontWeight: 700, fontSize: 18,
-                                background: g.value >= 4 ? 'rgba(34,197,94,0.1)' : g.value >= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
-                                color: g.value >= 4 ? '#22c55e' : g.value >= 3 ? '#f59e0b' : '#ef4444'
-                            }}>
-                                {g.value}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* Transactions */}
-            {tab === 'balance' && (
-                <div style={{ display: 'grid', gap: 6 }}>
-                    {transactions.length === 0 && (
-                        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-muted)' }}>Транзакций пока нет</div>
-                    )}
-                    {transactions.map(t => (
-                        <div key={t.id} style={{
-                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            padding: '10px 14px', borderRadius: 10,
-                            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)'
-                        }}>
-                            <div>
-                                <div style={{ fontWeight: 500, color: 'var(--text-primary)', fontSize: 14 }}>{t.reason || t.type}</div>
-                                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                    {t.created_at ? new Date(t.created_at).toLocaleDateString('ru') : ''}
-                                </div>
-                            </div>
-                            <div style={{
-                                fontWeight: 600, fontSize: 15,
-                                color: t.amount > 0 ? '#22c55e' : '#ef4444'
-                            }}>
-                                {t.amount > 0 ? '+' : ''}{t.amount}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+    return <main className={styles.page}>
+        <header className={styles.header}>
+            <div><span className={styles.eyebrow}>Учебный кабинет</span><h1>{child?.last_name} {child?.first_name}</h1><p>{child?.class_name || 'Класс не указан'}</p></div>
+            {children.length > 1 && <select value={selectedChild ?? ''} onChange={event => { setSelectedChild(Number(event.target.value)); setWeekOffset(0); }}>
+                {children.map(item => <option key={item.id} value={item.id}>{item.last_name} {item.first_name}</option>)}
+            </select>}
+        </header>
+        <section className={styles.metrics}>
+            <div><strong>{child?.average || '—'}</strong><span>Средний балл</span></div>
+            <div><strong>{child?.total_grades || 0}</strong><span>Оценок</span></div>
+            <div><strong>{child?.balance || 0}</strong><span>Баланс</span></div>
+        </section>
+        <nav className={styles.tabs}>{tabs.map(item => <button key={item.id} className={tab === item.id ? styles.active : ''} onClick={() => setTab(item.id)}>{item.label}</button>)}</nav>
+        {error && <div className={styles.error}>{error} <button onClick={() => setRetry(value => value + 1)}>Повторить</button></div>}
+        {loading ? <div className={styles.state}>Загрузка данных...</div> : <section className={styles.content}>
+            {tab === 'diary' && <Diary data={data.diary} offset={weekOffset} setOffset={setWeekOffset} />}
+            {tab === 'grades' && <Grades data={data.grades} />}
+            {tab === 'finals' && <Finals data={data.finals} />}
+            {tab === 'analytics' && <AnalyticsView data={data} />}
+        </section>}
+    </main>;
 }
+
+function Diary({ data, offset, setOffset }: { data?: DiaryResponse; offset: number; setOffset: (value: number) => void }) {
+    const days = Object.values(data?.diary || {});
+    return <><div className={styles.toolbar}><button onClick={() => setOffset(offset - 1)}>← Раньше</button><b>{formatDate(data?.week_start)} — {formatDate(data?.week_end)}</b><button onClick={() => setOffset(offset + 1)}>Позже →</button></div>
+        <div className={styles.days}>{days.map((day, index) => <article className={styles.day} key={index}><h3>{day.day_name || `День ${index + 1}`} · {formatDate(day.date)}{day.is_today ? ' · Сегодня' : ''}</h3>
+            {!day.lessons.length && <p className={styles.muted}>Нет уроков</p>}
+            {day.lessons.map(lesson => <div className={styles.lesson} key={`${lesson.lesson_number}-${lesson.subject_id}`}><span className={styles.number}>{lesson.lesson_number}</span><div><b>{lesson.subject_name} {lesson.status && lesson.status !== 'scheduled' && <span className={`${styles.badge} ${styles[lesson.status]}`}>{lesson.status === 'cancelled' ? 'Отменён' : 'Завершён'}</span>}</b><small>{lesson.start_time}–{lesson.end_time}{lesson.room ? ` · ${lesson.room}` : ''}</small>
+                {lesson.homework.map(homework => <p className={styles.homework} key={homework.id}>ДЗ: {homework.title || homework.description}</p>)}
+                {lesson.control_work && <p className={styles.control}>Контрольная: {lesson.control_work.title || lesson.control_work.work_type}</p>}</div></div>)}</article>)}</div></>;
+}
+
+function Grades({ data }: { data?: GradesResponse }) {
+    if (!data?.grades.length) return <Empty text="Оценок пока нет" />;
+    return <div className={styles.list}>{data.grades.map(grade => <article key={grade.id}><div><b>{grade.subject_name}</b><small>{grade.type} · {formatDate(grade.date)}{grade.topic ? ` · ${grade.topic}` : ''}</small></div><strong className={styles.grade}>{grade.value}</strong></article>)}</div>;
+}
+
+function Finals({ data }: { data?: ChildData['finals'] }) {
+    if (!data?.final_grades.length) return <Empty text="Итоговые оценки ещё не выставлены" />;
+    return <div className={styles.list}>{data.final_grades.map(grade => <article key={grade.id}><div><b>{grade.subject_name}</b><small>{grade.period_name || grade.grade_type}{grade.comment ? ` · ${grade.comment}` : ''}</small></div><strong className={styles.grade}>{grade.grade_value}</strong></article>)}</div>;
+}
+
+function AnalyticsView({ data }: { data: ChildData }) {
+    return <div className={styles.analytics}>
+        <div><h2>Средние по предметам</h2>{!data.summary?.subjects.length ? <Empty text="Недостаточно оценок" /> : <div className={styles.list}>{data.summary.subjects.map(subject => <article key={subject.subject_id}><div><b>{subject.subject_name}</b><small>{subject.count} оценок · {subject.points} баллов</small></div><strong>{subject.average}</strong></article>)}</div>}</div>
+        <div><h2>Динамика по периодам</h2>{!data.analytics?.subjects.length ? <Empty text="Нет данных по периодам" /> : <div className={styles.table}>{data.analytics.subjects.map(subject => <div key={subject.subject_id}><b>{subject.subject_name}</b><span>{data.analytics?.periods.map(period => `${period.name}: ${subject.periods[String(period.id)] ?? '—'}`).join(' · ')}</span></div>)}</div>}</div>
+        <div><h2>Движение баланса</h2>{!data.transactions?.transactions.length ? <Empty text="Операций пока нет" /> : <div className={styles.list}>{data.transactions.transactions.map(item => <article key={item.id}><div><b>{item.reason || item.type}</b><small>{formatDate(item.created_at)} · баланс {item.balance_after}</small></div><strong className={item.amount >= 0 ? styles.positive : styles.negative}>{item.amount > 0 ? '+' : ''}{item.amount}</strong></article>)}</div>}</div>
+    </div>;
+}
+
+function Empty({ text }: { text: string }) { return <p className={styles.empty}>{text}</p>; }

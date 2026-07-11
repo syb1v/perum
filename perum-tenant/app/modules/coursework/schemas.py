@@ -13,6 +13,7 @@ class HomeworkCreate(BaseModel):
     title: str
     description: str | None = None
     due_date: datetime | None = None
+    lesson_number: int | None = None
 
 
 class HomeworkUpdate(BaseModel):
@@ -27,3 +28,4 @@ class ControlWorkCreate(BaseModel):
     work_type: str = "контрольная"
     title: str | None = None
     work_date: datetime
+    lesson_number: int | None = None

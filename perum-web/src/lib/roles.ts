@@ -11,8 +11,6 @@ export const ROLES = {
     SCHOOL_ADMIN: 'school_admin',
     DIRECTOR: 'director',
     TEACHER: 'teacher',
-    CLASS_TEACHER: 'class_teacher',
-    HOMEROOM_TEACHER: 'homeroom_teacher',
     STUDENT: 'student',
     PARENT: 'parent',
 } as const;
@@ -28,8 +26,6 @@ export const ADMIN_ROLES: readonly Role[] = [
 
 export const TEACHER_ROLES: readonly Role[] = [
     ROLES.TEACHER,
-    ROLES.CLASS_TEACHER,
-    ROLES.HOMEROOM_TEACHER,
 ];
 
 export const STAFF_ROLES: readonly Role[] = [...ADMIN_ROLES, ...TEACHER_ROLES];
@@ -44,8 +40,6 @@ export const ROLE_DASHBOARDS: Record<Role, string> = {
     [ROLES.SCHOOL_ADMIN]: '/admin',
     [ROLES.DIRECTOR]: '/admin',
     [ROLES.TEACHER]: '/dashboard',
-    [ROLES.CLASS_TEACHER]: '/dashboard',
-    [ROLES.HOMEROOM_TEACHER]: '/dashboard',
     [ROLES.STUDENT]: '/dashboard',
     [ROLES.PARENT]: '/parent',
 };

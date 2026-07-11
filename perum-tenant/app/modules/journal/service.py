@@ -6,25 +6,29 @@ atomically (floored at 0) and writes a Transaction ledger row.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.models import User
 from app.models.academic import (
     AcademicYear,
     Class,
     ClassStudent,
+    LessonOccurrence,
+    Schedule,
     SchoolPeriod,
     Subject,
     TeacherSubject,
     Topic,
     WorkType,
 )
-from app.models.journal import FinalGrade, Grade, Transaction
-from app.modules.journal.schemas import AddGradeRequest, UpdateGradeRequest
+from app.models.journal import FinalGrade, Grade, LessonTemplate, Transaction
+from app.modules.journal.schemas import AddGradeRequest, FinalGradeRequest, LessonOccurrenceUpdate, LessonTemplateUpdate, UpdateGradeRequest
+from app.modules.academic.occurrences import get_or_create_occurrence
 from app.services.points_calculator import calculate_points, grade_color
 
 VALID_ATTENDANCE = {"УП", "НП", "осв.", "точка"}
@@ -131,15 +135,35 @@ async def list_subjects(db: AsyncSession, school_id: int) -> list[dict]:
 
 
 async def list_topics(db: AsyncSession, school_id: int, subject_id: int) -> list[dict]:
+    subject = await db.get(Subject, subject_id)
+    if subject is None or subject.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     rows = (
         await db.execute(
-            select(Topic).where(Topic.subject_id == subject_id).order_by(Topic.order_num)
+            select(Topic).where(
+                Topic.school_id == school_id, Topic.subject_id == subject_id
+            ).order_by(Topic.order_num)
         )
     ).scalars().all()
     return [{"id": t.id, "name": t.name, "order_num": t.order_num} for t in rows]
 
 
-async def create_topic(db: AsyncSession, school_id: int, subject_id: int, name: str) -> dict:
+async def _can_mutate_subject(db: AsyncSession, user: User, subject_id: int) -> bool:
+    if _is_admin(user):
+        return True
+    return await db.scalar(select(TeacherSubject.id).where(
+        TeacherSubject.teacher_id == user.id, TeacherSubject.subject_id == subject_id,
+    )) is not None
+
+
+async def create_topic(
+    db: AsyncSession, school_id: int, subject_id: int, name: str, user: User
+) -> dict:
+    subject = await db.get(Subject, subject_id)
+    if subject is None or subject.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
+    if not await _can_mutate_subject(db, user, subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
     max_order = await db.scalar(
         select(func.max(Topic.order_num)).where(Topic.subject_id == subject_id)
     ) or 0
@@ -150,23 +174,202 @@ async def create_topic(db: AsyncSession, school_id: int, subject_id: int, name: 
     return {"id": topic.id, "name": topic.name, "order_num": topic.order_num}
 
 
-async def update_topic(db: AsyncSession, topic_id: int, name: str) -> dict:
+async def update_topic(
+    db: AsyncSession, school_id: int, topic_id: int, name: str, user: User
+) -> dict:
     topic = await db.get(Topic, topic_id)
-    if not topic:
+    if not topic or topic.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
+    if not await _can_mutate_subject(db, user, topic.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
     topic.name = name
     await db.commit()
     await db.refresh(topic)
     return {"id": topic.id, "name": topic.name, "order_num": topic.order_num}
 
 
-async def delete_topic(db: AsyncSession, topic_id: int) -> dict:
+async def delete_topic(db: AsyncSession, school_id: int, topic_id: int, user: User) -> dict:
     topic = await db.get(Topic, topic_id)
-    if not topic:
+    if not topic or topic.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
+    if not await _can_mutate_subject(db, user, topic.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
+    if await db.scalar(select(Grade.id).where(Grade.topic_id == topic_id).limit(1)) or await db.scalar(
+        select(LessonTemplate.id).where(LessonTemplate.topic_id == topic_id).limit(1)
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить используемую тему")
     await db.delete(topic)
     await db.commit()
     return {"detail": "ok"}
+
+
+def _parse_lesson_date(value: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Неверная дата урока")
+
+
+def _scheduled_lesson_dates(period_start: date, period_end: date, weekdays: list[int]) -> set[str]:
+    dates: set[str] = set()
+    for weekday in weekdays:
+        lesson_day = period_start + timedelta(days=(weekday - period_start.weekday()) % 7)
+        while lesson_day <= period_end:
+            dates.add(lesson_day.isoformat())
+            lesson_day += timedelta(days=7)
+    return dates
+
+
+async def _validate_template_values(
+    db: AsyncSession, school_id: int, subject_id: int, payload: LessonTemplateUpdate
+) -> None:
+    if payload.topic_id is not None:
+        topic = await db.get(Topic, payload.topic_id)
+        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
+    if payload.work_type_id is not None:
+        work_type = await db.get(WorkType, payload.work_type_id)
+        if work_type is None or work_type.school_id != school_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тип работы не найден")
+
+
+async def set_lesson_template(
+    db: AsyncSession,
+    school_id: int,
+    class_id: int,
+    subject_id: int,
+    lesson_date: str,
+    payload: LessonTemplateUpdate,
+    user: User,
+) -> dict:
+    await _get_class(db, school_id, class_id)
+    subject = await db.get(Subject, subject_id)
+    if subject is None or subject.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
+    if not await _assigned(db, user, class_id, subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
+    await _validate_template_values(db, school_id, subject_id, payload)
+    parsed_date = _parse_lesson_date(lesson_date)
+    scheduled_rows = (await db.execute(select(Schedule).where(
+        Schedule.school_id == school_id,
+        Schedule.class_id == class_id,
+        Schedule.subject_id == subject_id,
+        Schedule.day_of_week == parsed_date.weekday(),
+    ))).scalars().all()
+    if not scheduled_rows:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "На выбранную дату урок не запланирован")
+    if payload.lesson_number is None and len(scheduled_rows) > 1:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Укажите номер урока: предмет встречается несколько раз в этот день")
+    lesson_number = payload.lesson_number or scheduled_rows[0].lesson_number
+    occurrence = await get_or_create_occurrence(
+        db, school_id, class_id, subject_id, parsed_date, lesson_number
+    )
+    template = (
+        await db.execute(
+            select(LessonTemplate).where(
+                LessonTemplate.school_id == school_id,
+                LessonTemplate.class_id == class_id,
+                LessonTemplate.subject_id == subject_id,
+                LessonTemplate.occurrence_id == occurrence.id,
+            )
+        )
+    ).scalar_one_or_none()
+    if template is None:
+        template = LessonTemplate(
+            school_id=school_id,
+            class_id=class_id,
+            subject_id=subject_id,
+            lesson_date=parsed_date,
+            occurrence_id=occurrence.id,
+        )
+        db.add(template)
+    template.topic_id = payload.topic_id
+    template.work_type_id = payload.work_type_id
+    occurrence.topic_id = payload.topic_id
+    occurrence.work_type_id = payload.work_type_id
+    template.updated_by = user.id
+
+    start = datetime.combine(parsed_date, time.min)
+    end = start + timedelta(days=1)
+    updated_grades = 0
+    if payload.topic_id is not None:
+        result = await db.execute(
+            update(Grade)
+            .where(
+                Grade.school_id == school_id,
+                Grade.class_id == class_id,
+                Grade.subject_id == subject_id,
+                Grade.occurrence_id == occurrence.id,
+            )
+            .values(topic_id=payload.topic_id)
+        )
+        updated_grades = result.rowcount
+    await db.commit()
+    return {"success": True, "updated_grades": updated_grades}
+
+
+async def clear_lesson_template(
+    db: AsyncSession,
+    school_id: int,
+    class_id: int,
+    subject_id: int,
+    lesson_date: str,
+    lesson_number: int | None,
+    user: User,
+) -> dict:
+    if not await _assigned(db, user, class_id, subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
+    parsed_date = _parse_lesson_date(lesson_date)
+    occurrence = None
+    if lesson_number is not None:
+        occurrence = await db.scalar(select(LessonOccurrence).where(
+            LessonOccurrence.school_id == school_id,
+            LessonOccurrence.class_id == class_id,
+            LessonOccurrence.subject_id == subject_id,
+            LessonOccurrence.lesson_date == parsed_date,
+            LessonOccurrence.lesson_number == lesson_number,
+        ))
+    template = (
+        await db.execute(
+            select(LessonTemplate).where(
+                LessonTemplate.school_id == school_id,
+                LessonTemplate.class_id == class_id,
+                LessonTemplate.subject_id == subject_id,
+                LessonTemplate.occurrence_id == occurrence.id if occurrence is not None else LessonTemplate.lesson_date == parsed_date,
+            )
+        )
+    ).scalar_one_or_none()
+    if template is not None:
+        if template.occurrence_id is not None:
+            occurrence = await db.get(LessonOccurrence, template.occurrence_id)
+        if occurrence is not None:
+            occurrence.topic_id = None
+            occurrence.work_type_id = None
+        await db.delete(template)
+        await db.commit()
+    return {"success": True}
+
+
+async def update_lesson_occurrence(
+    db: AsyncSession, school_id: int, occurrence_id: int,
+    payload: LessonOccurrenceUpdate, user: User,
+) -> dict:
+    occurrence = await db.get(LessonOccurrence, occurrence_id)
+    if occurrence is None or occurrence.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Урок не найден")
+    if not await _assigned(db, user, occurrence.class_id, occurrence.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому уроку")
+    if payload.status is not None:
+        if payload.status not in {"scheduled", "cancelled", "completed"}:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимый статус урока")
+        occurrence.status = payload.status
+    if payload.topic_id is not None:
+        topic = await db.get(Topic, payload.topic_id)
+        if topic is None or topic.school_id != school_id or topic.subject_id != occurrence.subject_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
+        occurrence.topic_id = payload.topic_id
+    await db.commit()
+    return {"success": True, "occurrence_id": occurrence.id, "status": occurrence.status}
 
 
 # ---- periods ----
@@ -191,10 +394,14 @@ def _resolve_period(periods: list[SchoolPeriod], period_id: int | None) -> Schoo
         for p in periods:
             if p.id == period_id:
                 return p
-    now = datetime.utcnow()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Учебный период не найден")
+    now = utc_now()
     for p in quarters:
         if p.start_date <= now <= p.end_date:
             return p
+    past = [p for p in quarters if p.end_date < now]
+    if past:
+        return past[-1]
     return quarters[0] if quarters else None
 
 
@@ -238,8 +445,36 @@ async def get_journal(
 
     gq = select(Grade).where(Grade.class_id == class_id, Grade.subject_id == subject_id)
     if current is not None:
-        gq = gq.where(Grade.lesson_date >= current.start_date, Grade.lesson_date <= current.end_date)
+        period_end = datetime.combine(current.end_date.date() + timedelta(days=1), time.min)
+        gq = gq.where(Grade.lesson_date >= current.start_date, Grade.lesson_date < period_end)
     grades = (await db.execute(gq)).scalars().all()
+
+    tq = select(LessonTemplate).where(
+        LessonTemplate.school_id == school_id,
+        LessonTemplate.class_id == class_id,
+        LessonTemplate.subject_id == subject_id,
+    )
+    if current is not None:
+        tq = tq.where(
+            LessonTemplate.lesson_date >= current.start_date.date(),
+            LessonTemplate.lesson_date <= current.end_date.date(),
+        )
+    templates = (await db.execute(tq)).scalars().all()
+    occurrence_ids = [t.occurrence_id for t in templates if t.occurrence_id is not None]
+    occurrences = (
+        await db.execute(select(LessonOccurrence).where(LessonOccurrence.id.in_(occurrence_ids)))
+    ).scalars().all() if occurrence_ids else []
+
+    schedule_rows = (
+        await db.execute(
+            select(Schedule.day_of_week, Schedule.lesson_number).where(
+                Schedule.school_id == school_id,
+                Schedule.class_id == class_id,
+                Schedule.subject_id == subject_id,
+            ).order_by(Schedule.day_of_week, Schedule.lesson_number)
+        )
+    ).all()
+    schedule_days = sorted({row.day_of_week for row in schedule_rows})
 
     by_student: dict[int, list[Grade]] = {}
     dates: set[str] = set()
@@ -247,6 +482,13 @@ async def get_journal(
         by_student.setdefault(g.student_id, []).append(g)
         if g.lesson_date:
             dates.add(g.lesson_date.date().isoformat())
+    if current is not None:
+        dates.update(
+            _scheduled_lesson_dates(
+                current.start_date.date(), current.end_date.date(), list(schedule_days)
+            )
+        )
+    dates.update(t.lesson_date.isoformat() for t in templates)
 
     topic_ids = {g.topic_id for g in grades if g.topic_id}
     topics_map: dict[int, str] = {}
@@ -293,7 +535,10 @@ async def get_journal(
     finals = (
         await db.execute(
             select(FinalGrade).where(
-                FinalGrade.class_id == class_id, FinalGrade.subject_id == subject_id
+                FinalGrade.school_id == school_id,
+                FinalGrade.class_id == class_id,
+                FinalGrade.subject_id == subject_id,
+                FinalGrade.period_id == current.id if current is not None else FinalGrade.id.is_(None),
             )
         )
     ).scalars().all()
@@ -302,6 +547,13 @@ async def get_journal(
         "subject": {"id": subject.id, "name": subject.name, "category": subject.category},
         "students": student_dicts,
         "dates": sorted(dates),
+        "schedule_slots": {
+            lesson_date: [
+                row.lesson_number for row in schedule_rows
+                if row.day_of_week == date.fromisoformat(lesson_date).weekday()
+            ]
+            for lesson_date in sorted(dates)
+        },
         "current_period": _period_dict(current) if current else None,
         "available_periods": [_period_dict(p) for p in periods],
         "final_grades": [
@@ -321,56 +573,176 @@ async def get_journal(
         "holiday_periods": [],
         "readonly": readonly,
         "subgroup_name": None,
+        "lesson_templates": {
+            str(t.occurrence_id or t.lesson_date.isoformat()): {
+                "occurrence_id": t.occurrence_id,
+                "lesson_date": t.lesson_date.isoformat(),
+                "lesson_number": next((o.lesson_number for o in occurrences if o.id == t.occurrence_id), None),
+                "topic_id": t.topic_id,
+                "work_type_id": t.work_type_id,
+            }
+            for t in templates
+        },
     }
 
 
-# ---- grade mutations ----
-async def _award(db: AsyncSession, student_id: int, points: int) -> int:
-    res = await db.execute(
-        update(User)
-        .where(User.id == student_id)
-        .values(balance=func.greatest(User.balance + points, 0))
-        .returning(User.balance)
+async def set_final_grade(
+    db: AsyncSession, school_id: int, class_id: int, subject_id: int,
+    payload: FinalGradeRequest, user: User,
+) -> dict:
+    await _get_class(db, school_id, class_id)
+    subject = await db.get(Subject, subject_id)
+    if subject is None or subject.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
+    if not await _assigned(db, user, class_id, subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
+    await _validate_student(db, school_id, class_id, payload.student_id)
+    await db.scalar(select(ClassStudent.id).where(
+        ClassStudent.class_id == class_id,
+        ClassStudent.student_id == payload.student_id,
+    ).with_for_update())
+    _resolve_period(await _list_periods(db, school_id), payload.period_id)
+    if payload.grade_value not in (1, 2, 3, 4, 5):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Оценка должна быть от 1 до 5")
+
+    final = await db.scalar(
+        select(FinalGrade).where(
+            FinalGrade.school_id == school_id,
+            FinalGrade.class_id == class_id,
+            FinalGrade.subject_id == subject_id,
+            FinalGrade.student_id == payload.student_id,
+            FinalGrade.period_id == payload.period_id,
+        ).with_for_update()
     )
-    return int(res.scalar_one())
+    if final is None:
+        final = FinalGrade(
+            school_id=school_id, class_id=class_id, subject_id=subject_id,
+            student_id=payload.student_id, period_id=payload.period_id,
+        )
+        db.add(final)
+    final.teacher_id = user.id
+    final.grade_value = payload.grade_value
+    final.grade_type = payload.grade_type
+    final.comment = payload.comment
+    final.updated_at = utc_now()
+    await db.commit()
+    await db.refresh(final)
+    return {"success": True, "final_grade_id": final.id}
+
+
+async def delete_final_grade(
+    db: AsyncSession, school_id: int, final_grade_id: int, user: User,
+) -> dict:
+    final = await db.get(FinalGrade, final_grade_id)
+    if final is None or final.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Итоговая оценка не найдена")
+    if not await _assigned(db, user, final.class_id, final.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
+    await db.delete(final)
+    await db.commit()
+    return {"success": True}
+
+
+# ---- grade mutations ----
+async def _award(db: AsyncSession, student_id: int, points: int) -> tuple[int, int]:
+    student = await db.scalar(select(User).where(User.id == student_id).with_for_update())
+    if student is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Ученик не найден")
+    old_balance = student.balance
+    student.balance = max(old_balance + points, 0)
+    await db.flush()
+    return student.balance, student.balance - old_balance
+
+
+def _validate_grade_values(grade_value: int | None, attendance_mark: str | None) -> None:
+    if grade_value is None and not attendance_mark:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Нужна оценка или пометка посещаемости")
+    if grade_value is not None and grade_value not in (1, 2, 3, 4, 5):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Оценка должна быть от 1 до 5")
+    if attendance_mark and attendance_mark not in VALID_ATTENDANCE:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимая пометка")
+
+
+async def _validate_student(
+    db: AsyncSession, school_id: int, class_id: int, student_id: int
+) -> None:
+    student = await db.get(User, student_id)
+    if (
+        student is None
+        or student.school_id != school_id
+        or student.role != "student"
+        or not student.is_active
+    ):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ученик не найден или неактивен")
+    membership = await db.scalar(
+        select(ClassStudent.id).where(
+            ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
+        )
+    )
+    if membership is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ученик не состоит в выбранном классе")
+
+
+async def _work_type_weight(db: AsyncSession, school_id: int, work_type_id: int | None) -> float:
+    if work_type_id is None:
+        return 1.0
+    work_type = await db.get(WorkType, work_type_id)
+    if work_type is None or work_type.school_id != school_id or not work_type.is_active:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тип работы не найден или неактивен")
+    return work_type.weight
 
 
 async def add_grade(db: AsyncSession, school_id: int, payload: AddGradeRequest, user: User) -> dict:
-    if payload.grade_value is None and not payload.attendance_mark:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Нужна оценка или пометка посещаемости")
-    if payload.grade_value is not None and payload.grade_value not in (1, 2, 3, 4, 5):
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Оценка должна быть от 1 до 5")
-    if payload.attendance_mark and payload.attendance_mark not in VALID_ATTENDANCE:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимая пометка")
+    _validate_grade_values(payload.grade_value, payload.attendance_mark)
     if not await _assigned(db, user, payload.class_id, payload.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
 
     cls = await _get_class(db, school_id, payload.class_id)
     subject = await db.get(Subject, payload.subject_id)
-    if subject is None:
+    if subject is None or subject.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
+    await _validate_student(db, school_id, payload.class_id, payload.student_id)
 
-    weight = 1.0
-    if payload.work_type_id:
-        wt = await db.get(WorkType, payload.work_type_id)
-        if wt is not None:
-            weight = wt.weight
-
-    points = calculate_points(
-        payload.grade_value,
-        subject.category,
-        weight,
-        subject.profile_weight,
-        subject.is_profile_track,
-        cls.is_profile == 1,
-    )
-
-    lesson_date = datetime.utcnow()
+    lesson_date = utc_now()
     if payload.lesson_date:
         try:
             lesson_date = datetime.fromisoformat(payload.lesson_date)
         except ValueError:
-            pass
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Неверная дата урока")
+
+    occurrence = None
+    if payload.lesson_number is not None:
+        occurrence = await get_or_create_occurrence(
+            db, school_id, payload.class_id, payload.subject_id,
+            lesson_date.date(), payload.lesson_number,
+        )
+
+    topic_id = payload.topic_id
+    work_type_id = payload.work_type_id
+    template = (
+        await db.execute(
+            select(LessonTemplate).where(
+                LessonTemplate.school_id == school_id,
+                LessonTemplate.class_id == payload.class_id,
+                LessonTemplate.subject_id == payload.subject_id,
+                LessonTemplate.occurrence_id == occurrence.id if occurrence is not None else LessonTemplate.lesson_date == lesson_date.date(),
+            )
+        )
+    ).scalar_one_or_none()
+    if payload.topic_id is None and template is not None and template.topic_id is not None:
+        topic_id = template.topic_id
+    if payload.work_type_id is None and template is not None and template.work_type_id is not None:
+        work_type_id = template.work_type_id
+    if topic_id is not None:
+        topic = await db.get(Topic, topic_id)
+        if topic is None or topic.school_id != school_id or topic.subject_id != payload.subject_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
+
+    weight = await _work_type_weight(db, school_id, work_type_id)
+    points = calculate_points(
+        payload.grade_value, subject.category, weight, subject.profile_weight,
+        subject.is_profile_track, cls.is_profile == 1,
+    )
 
     grade = Grade(
         school_id=school_id,
@@ -378,25 +750,29 @@ async def add_grade(db: AsyncSession, school_id: int, payload: AddGradeRequest, 
         teacher_id=user.id,
         class_id=payload.class_id,
         subject_id=payload.subject_id,
-        topic_id=payload.topic_id,
-        work_type_id=payload.work_type_id,
+        topic_id=topic_id,
+        work_type_id=work_type_id,
         grade_value=payload.grade_value,
         weight=weight,
         value=points,
         attendance_mark=payload.attendance_mark,
         comment=payload.comment,
         lesson_date=lesson_date,
+        occurrence_id=occurrence.id if occurrence else None,
     )
     db.add(grade)
     await db.flush()
 
-    new_balance = await _award(db, payload.student_id, points) if points else await _balance(db, payload.student_id)
     if points:
+        new_balance, applied_points = await _award(db, payload.student_id, points)
+    else:
+        new_balance, applied_points = await _balance(db, payload.student_id), 0
+    if applied_points:
         db.add(
             Transaction(
                 school_id=school_id,
                 user_id=payload.student_id,
-                amount=points,
+                amount=applied_points,
                 balance_after=new_balance,
                 type="grade",
                 reason=f"Оценка {payload.grade_value} по «{subject.name}»",
@@ -436,8 +812,10 @@ async def _get_grade(db: AsyncSession, school_id: int, grade_id: int) -> Grade:
     return g
 
 
-async def get_grade(db: AsyncSession, school_id: int, grade_id: int) -> dict:
+async def get_grade(db: AsyncSession, school_id: int, grade_id: int, user: User) -> dict:
     g = await _get_grade(db, school_id, grade_id)
+    if not await _assigned(db, user, g.class_id, g.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этой оценке")
     subject = await db.get(Subject, g.subject_id)
     student = await db.get(User, g.student_id)
     topic = await db.get(Topic, g.topic_id) if g.topic_id else None
@@ -464,13 +842,16 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     g = await _get_grade(db, school_id, grade_id)
     if not await _assigned(db, user, g.class_id, g.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этой оценке")
+    _validate_grade_values(payload.grade_value, payload.attendance_mark)
+    await _validate_student(db, school_id, g.class_id, g.student_id)
+    if payload.topic_id is not None:
+        topic = await db.get(Topic, payload.topic_id)
+        if topic is None or topic.school_id != school_id or topic.subject_id != g.subject_id:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
     subject = await db.get(Subject, g.subject_id)
     cls = await db.get(Class, g.class_id)
 
-    weight = g.weight
-    if payload.work_type_id is not None:
-        wt = await db.get(WorkType, payload.work_type_id)
-        weight = wt.weight if wt else 1.0
+    weight = await _work_type_weight(db, school_id, payload.work_type_id)
 
     new_points = calculate_points(
         payload.grade_value, subject.category, weight, subject.profile_weight,
@@ -487,11 +868,14 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     g.value = new_points
     await db.flush()
 
-    new_balance = await _award(db, g.student_id, diff) if diff else await _balance(db, g.student_id)
     if diff:
+        new_balance, applied_diff = await _award(db, g.student_id, diff)
+    else:
+        new_balance, applied_diff = await _balance(db, g.student_id), 0
+    if applied_diff:
         db.add(
             Transaction(
-                school_id=school_id, user_id=g.student_id, amount=diff, balance_after=new_balance,
+                school_id=school_id, user_id=g.student_id, amount=applied_diff, balance_after=new_balance,
                 type="grade_correction", reason="Изменение оценки", related_id=g.id, created_by=user.id,
             )
         )
@@ -500,7 +884,7 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
         "success": True,
         "grade_value": g.grade_value,
         "points": new_points,
-        "points_diff": diff,
+        "points_diff": applied_diff,
         "new_balance": new_balance,
         "color": grade_color(g.grade_value, g.attendance_mark),
     }
@@ -515,12 +899,13 @@ async def delete_grade(db: AsyncSession, school_id: int, grade_id: int, user: Us
     await db.delete(g)
     await db.flush()
     if refund:
-        new_balance = await _award(db, student_id, refund)
-        db.add(
-            Transaction(
-                school_id=school_id, user_id=student_id, amount=refund, balance_after=new_balance,
-                type="grade_deleted", reason="Удаление оценки", related_id=grade_id, created_by=user.id,
+        new_balance, applied_refund = await _award(db, student_id, refund)
+        if applied_refund:
+            db.add(
+                Transaction(
+                    school_id=school_id, user_id=student_id, amount=applied_refund, balance_after=new_balance,
+                    type="grade_deleted", reason="Удаление оценки", related_id=grade_id, created_by=user.id,
+                )
             )
-        )
     await db.commit()
     return {"success": True, "message": "Оценка удалена"}

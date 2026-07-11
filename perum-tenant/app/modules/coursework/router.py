@@ -83,7 +83,7 @@ async def delete_attachment(
 async def download_attachment(
     attachment_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    att = await service.get_attachment_file(db, await _school(user, db), attachment_id)
+    att = await service.get_attachment_file(db, await _school(user, db), attachment_id, user)
     return FileResponse(att.file_path, filename=att.filename or os.path.basename(att.file_path))
 
 

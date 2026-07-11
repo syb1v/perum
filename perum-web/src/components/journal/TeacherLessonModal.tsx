@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
-import { JournalData, JournalStudent, Subject } from '@/types';
+import { JournalData, JournalStudent, Subject, LessonOccurrenceStatus } from '@/types';
 import GradeModal from './GradeModal';
 import HomeworkModal from './HomeworkModal';
 import ViewGradeModal from './ViewGradeModal';
@@ -27,6 +27,9 @@ interface TeacherLessonModalProps {
     subjectId: number;
     subjectName: string;
     date: string; // YYYY-MM-DD
+    lessonNumber: number;
+    occurrenceId: number | null;
+    occurrenceStatus: LessonOccurrenceStatus;
     homework: HomeworkInfo[];
     onClose: () => void;
     onUpdate: () => void;
@@ -40,13 +43,16 @@ export default function TeacherLessonModal({
     subjectId,
     subjectName,
     date,
+    lessonNumber,
+    occurrenceId,
+    occurrenceStatus,
     homework,
     onClose,
     onUpdate,
     readonlyHomework = false,
     readonlyGrades = false
 }: TeacherLessonModalProps) {
-    const { showError } = useToast();
+    const { showError, showSuccess } = useToast();
 
     const [loading, setLoading] = useState(true);
     const [journal, setJournal] = useState<JournalData | null>(null);
@@ -58,6 +64,27 @@ export default function TeacherLessonModal({
     const [viewGradeId, setViewGradeId] = useState<number | null>(null);
     const [homeworkModalOpen, setHomeworkModalOpen] = useState(false);
     const [selectedHomework, setSelectedHomework] = useState<HomeworkInfo | null>(null);
+    const [status, setStatus] = useState(occurrenceStatus);
+    const [statusLoading, setStatusLoading] = useState(false);
+
+    const updateStatus = async (nextStatus: LessonOccurrenceStatus) => {
+        if (!occurrenceId) {
+            showError('Урок ещё не создан на сервере');
+            return;
+        }
+        if (nextStatus === 'cancelled' && !confirm('Отменить этот урок?')) return;
+        setStatusLoading(true);
+        try {
+            await api.patch(`/journal/lesson-occurrences/${occurrenceId}`, { status: nextStatus });
+            setStatus(nextStatus);
+            showSuccess(nextStatus === 'cancelled' ? 'Урок отменён' : nextStatus === 'completed' ? 'Урок отмечен проведённым' : 'Урок восстановлен');
+            onUpdate();
+        } catch (err) {
+            showError(err instanceof Error ? err.message : 'Не удалось изменить статус урока');
+        } finally {
+            setStatusLoading(false);
+        }
+    };
 
     const loadData = async () => {
         setLoading(true);
@@ -127,7 +154,7 @@ export default function TeacherLessonModal({
                 <div className={styles.header}>
                     <div>
                         <h2 className={styles.title}>{classNameStr}, {subjectName}</h2>
-                        <p className={styles.subtitle}>{displayDate}</p>
+                        <p className={styles.subtitle}>{displayDate}, урок {lessonNumber} · {status === 'cancelled' ? 'отменён' : status === 'completed' ? 'проведён' : 'запланирован'}</p>
                     </div>
                     <button className={styles.closeBtn} onClick={onClose}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -138,6 +165,16 @@ export default function TeacherLessonModal({
                 </div>
 
                 <div className={styles.body}>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {status === 'cancelled' ? (
+                            <button className={styles.addBtn} disabled={statusLoading} onClick={() => updateStatus('scheduled')}>{statusLoading ? 'Обновление...' : 'Восстановить урок'}</button>
+                        ) : (
+                            <>
+                                {status !== 'completed' && <button className={styles.addBtn} disabled={statusLoading} onClick={() => updateStatus('completed')}>Отметить проведённым</button>}
+                                <button className={styles.addBtn} disabled={statusLoading} onClick={() => updateStatus('cancelled')}>Отменить урок</button>
+                            </>
+                        )}
+                    </div>
                     {/* Homework Section */}
                     <div className={styles.sectionCard}>
                         <div className={styles.sectionHeader}>
@@ -322,6 +359,7 @@ export default function TeacherLessonModal({
                     classNameStr={classNameStr}
                     subjectName={subjectName}
                     defaultDueDate={date}
+                    lessonNumber={lessonNumber}
                     existingHomework={selectedHomework || undefined}
                     onClose={() => {
                         setHomeworkModalOpen(false);

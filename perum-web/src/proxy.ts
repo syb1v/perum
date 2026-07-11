@@ -16,8 +16,6 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
     '/dashboard': {
         student: '/student',
         teacher: '/teacher',
-        homeroom_teacher: '/teacher',
-        class_teacher: '/teacher',
         admin: '/admin',
         school_admin: '/admin',
         parent: '/parent',
@@ -25,8 +23,6 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
     '/profile': {
         student: '/student/profile',
         teacher: '/teacher/profile',
-        homeroom_teacher: '/teacher/profile',
-        class_teacher: '/teacher/profile',
         admin: '/admin',
         school_admin: '/admin',
         parent: '/parent',
@@ -100,7 +96,7 @@ function rewriteTo(request: NextRequest, pathname: string) {
     return NextResponse.rewrite(url);
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     // Platform host (admin.*) → serve /platform/*; skip the school role-routing.
     const host = request.headers.get('host') || '';
     if (isPlatformHostname(host)) {

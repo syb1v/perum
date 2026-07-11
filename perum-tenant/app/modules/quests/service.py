@@ -10,12 +10,11 @@ target the quest becomes "ready". Claiming awards livki (Transaction type=quest)
 from __future__ import annotations
 
 import json
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.models import Quest, Transaction, User, UserQuest
 from app.models.academic import Class, ClassStudent
 from app.models.journal import Grade
@@ -74,7 +73,7 @@ async def update_quest_progress(db: AsyncSession, user_id: int) -> None:
         progress = await _grade_progress(db, user_id, quest.quest_type, uq.started_at)
         if progress != uq.progress:
             uq.progress = progress
-            uq.last_updated = datetime.utcnow()
+            uq.last_updated = utc_now()
             changed = True
         if progress >= uq.target and uq.status == "active":
             uq.status = "ready"
@@ -181,7 +180,7 @@ async def complete_quest(db: AsyncSession, user: User, user_quest_id: int) -> di
     if uq.status != "ready":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Квест ещё не готов к завершению")
     uq.status = "completed"
-    uq.completed_at = datetime.utcnow()
+    uq.completed_at = utc_now()
     await db.commit()
     return {"success": True, "message": "Квест успешно завершён!"}
 
@@ -198,7 +197,7 @@ async def claim_reward(db: AsyncSession, user: User, user_quest_id: int) -> dict
     new_balance = max((db_user.balance or 0) + quest.reward, 0)
     db_user.balance = new_balance
     uq.status = "completed"
-    uq.completed_at = uq.completed_at or datetime.utcnow()
+    uq.completed_at = uq.completed_at or utc_now()
     uq.reward_claimed = 1
     db.add(Transaction(
         school_id=db_user.school_id, user_id=user.id, amount=quest.reward, balance_after=new_balance,

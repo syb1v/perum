@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -28,7 +28,7 @@ async def classes(user: User = Depends(require_teacher), db: AsyncSession = Depe
 async def class_students(
     class_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    return {"students": await service.class_students(db, await _school(user, db), class_id)}
+    return {"students": await service.class_students(db, await _school(user, db), user, class_id)}
 
 
 @router.get("/subjects")
@@ -51,9 +51,9 @@ async def my_class(user: User = Depends(require_teacher), db: AsyncSession = Dep
 
 
 class BulkBalancePayload(BaseModel):
-    student_ids: list[int]
-    amount: int
-    comment: str | None = None
+    student_ids: list[int] = Field(min_length=1)
+    amount: int = Field(ge=1, le=10_000)
+    comment: str | None = Field(default=None, max_length=255)
 
 
 @router.post("/my-class/bulk-balance")

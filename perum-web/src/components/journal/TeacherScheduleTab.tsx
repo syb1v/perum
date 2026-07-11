@@ -3,6 +3,7 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import styles from './TeacherScheduleTab.module.css';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import type { LessonOccurrenceStatus } from '@/types';
 
 // Types for the Teacher Diary Response
 interface HomeworkInfo {
@@ -30,6 +31,8 @@ interface TeacherLesson {
     end_time?: string;
     homework: HomeworkInfo[];
     control_work: ControlWorkInfo | null;
+    occurrence_id: number | null;
+    status: LessonOccurrenceStatus;
 }
 
 interface TeacherDiaryDay {
@@ -241,7 +244,12 @@ export default function TeacherScheduleTab({ onLessonSelect, refreshTrigger = 0 
                                                                     </div>
 
                                                                     <div className={styles.lessonSubjectRow}>
-                                                                        <span className={styles.lessonSubject}>{lesson.subject_name}</span>
+                                                                     <span className={styles.lessonSubject}>{lesson.subject_name}</span>
+                                                                        {lesson.status !== 'scheduled' && (
+                                                                            <span style={{ fontSize: '10px', fontWeight: 600, color: lesson.status === 'cancelled' ? '#dc2626' : '#16a34a' }}>
+                                                                                {lesson.status === 'cancelled' ? 'Отменён' : 'Проведён'}
+                                                                            </span>
+                                                                        )}
                                                                         <div className={styles.lessonMeta}>
                                                                             {lesson.class_name && (
                                                                                 <span className={styles.teacherName}>

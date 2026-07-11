@@ -21,6 +21,7 @@ from app.models.academic import (
     ClassStudent,
     LessonGroup,
     LessonGroupStudent,
+    LessonOccurrence,
     Schedule,
     Topic,
     WorkType,
@@ -75,6 +76,13 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
                 select(BellScheduleItem).where(BellScheduleItem.bell_schedule_id == cls.bell_schedule_id)
             )
         ).scalars().all()
+    occurrences = (await db.execute(select(LessonOccurrence).where(
+        LessonOccurrence.school_id == school_id,
+        LessonOccurrence.class_id == cls.id,
+        LessonOccurrence.lesson_date >= week_start,
+        LessonOccurrence.lesson_date <= week_end,
+    ))).scalars().all()
+    occurrences_by_slot = {(o.lesson_date, o.lesson_number): o for o in occurrences}
 
     # Subgroups: which room / group name applies to this student per (day, lesson)
     group_rows = (
@@ -133,9 +141,16 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
             }
         )
 
-    # Class homework, grouped by subject (+ attachments)
+    # Class homework due during the selected week, grouped by subject and date
     homework = (
-        await db.execute(select(Homework).where(Homework.class_id == cls.id, Homework.school_id == school_id))
+        await db.execute(
+            select(Homework).where(
+                Homework.class_id == cls.id,
+                Homework.school_id == school_id,
+                Homework.due_date >= week_start_dt,
+                Homework.due_date <= week_end_dt,
+            )
+        )
     ).scalars().all()
     hw_ids = [h.id for h in homework]
     atts_by_hw: dict[int, list[dict]] = {}
@@ -147,9 +162,11 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
             atts_by_hw.setdefault(a.homework_id, []).append(
                 {"id": a.id, "filename": a.filename, "url_link": a.url_link}
             )
-    homework_map: dict[int, list[dict]] = {}
+    homework_map: dict[tuple[int, str], list[dict]] = {}
     for h in homework:
-        homework_map.setdefault(h.subject_id, []).append(
+        if h.due_date is None:
+            continue
+        homework_map.setdefault((h.subject_id, h.due_date.strftime("%Y-%m-%d")), []).append(
             {
                 "id": h.id,
                 "title": h.title,
@@ -260,8 +277,16 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
                 "end_time": bell.end_time if bell else "08:45",
                 "room": room,
                 "grades": grades_map.get((item.subject_id, date_str), []),
-                "homework": homework_map.get(item.subject_id, []),
+                "homework": homework_map.get((item.subject_id, date_str), []),
                 "control_work": cw_map.get((item.subject_id, date_str)),
+                "occurrence_id": (
+                    occurrences_by_slot[(day_date, item.lesson_number)].id
+                    if (day_date, item.lesson_number) in occurrences_by_slot else None
+                ),
+                "status": (
+                    occurrences_by_slot[(day_date, item.lesson_number)].status
+                    if (day_date, item.lesson_number) in occurrences_by_slot else "scheduled"
+                ),
             }
             if group_name:
                 lesson["group_name"] = group_name
@@ -369,6 +394,13 @@ async def get_analytics(db: AsyncSession, school_id: int, user: User) -> dict:
 
     period_type = "half_year" if (cls.grade_level or 1) >= 10 else "quarter"
     periods = [p for p in await _list_periods(db, school_id) if p.period_type == period_type]
+    today = datetime.now().date()
+    current_period = next(
+        (p for p in periods if _as_date(p.start_date) <= today <= _as_date(p.end_date)),
+        None,
+    )
+    if current_period is None:
+        current_period = next((p for p in reversed(periods) if _as_date(p.end_date) <= today), None)
 
     rows = (
         await db.execute(
@@ -425,6 +457,7 @@ async def get_analytics(db: AsyncSession, school_id: int, user: User) -> dict:
 
     return {
         "period_type": period_type,
+        "current_period": current_period.id if current_period else None,
         "periods": [
             {"id": p.id, "name": p.name, "start_date": p.start_date.isoformat(), "end_date": p.end_date.isoformat()}
             for p in periods

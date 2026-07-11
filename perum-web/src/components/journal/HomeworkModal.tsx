@@ -25,6 +25,7 @@ interface HomeworkModalProps {
     classNameStr?: string;
     subjectName?: string;
     defaultDueDate?: string;
+    lessonNumber?: number;
     existingHomework?: HomeworkInfo;
     onClose: () => void;
     onDelete?: () => void;
@@ -36,6 +37,7 @@ export default function HomeworkModal({
     classNameStr,
     subjectName,
     defaultDueDate,
+    lessonNumber,
     existingHomework,
     onClose,
     onDelete
@@ -130,7 +132,8 @@ export default function HomeworkModal({
                 await api.put(`/homework/${existingHomework.id}`, {
                     title,
                     description: description || null,
-                    due_date: dueDate ? `${dueDate}T00:00:00` : null
+                    due_date: dueDate ? `${dueDate}T00:00:00` : null,
+                    lesson_number: lessonNumber
                 });
             } else {
                 const res = await api.post<{ success: boolean; homework_id: number }>('/homework', {
@@ -138,7 +141,8 @@ export default function HomeworkModal({
                     subject_id: subjectId,
                     title,
                     description: description || null,
-                    due_date: dueDate ? `${dueDate}T00:00:00` : null
+                    due_date: dueDate ? `${dueDate}T00:00:00` : null,
+                    lesson_number: lessonNumber
                 });
                 hwId = res.homework_id;
             }

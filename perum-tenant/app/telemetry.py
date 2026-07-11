@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import httpx
 from sqlalchemy import distinct, func, select
@@ -18,6 +18,7 @@ from sqlalchemy import distinct, func, select
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.roles import DIRECTOR, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
+from app.core.time import utc_now
 from app.models import Grade, PageVisit, School, User
 
 logger = logging.getLogger("perum.telemetry")
@@ -43,7 +44,7 @@ async def collect_metrics(db, school_id: int) -> dict:
     )
     avg_grade = round(float(avg_raw), 2) if avg_raw is not None else None
 
-    since = datetime.utcnow() - timedelta(hours=24)
+    since = utc_now() - timedelta(hours=24)
     active_24h = int(await db.scalar(
         select(func.count(distinct(PageVisit.user_id))).where(
             PageVisit.school_id == school_id, PageVisit.user_id.isnot(None), PageVisit.created_at >= since

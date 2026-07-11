@@ -13,6 +13,7 @@ from app.models.academic import (
     Class,
     SchoolPeriod,
 )
+from app.models.journal import FinalGrade
 from app.modules.school_admin.schemas import (
     AcademicYearCreate,
     AcademicYearUpdate,
@@ -60,6 +61,7 @@ async def _get_year(db, school_id, year_id) -> AcademicYear:
 
 
 async def create_academic_year(db, school_id, data: AcademicYearCreate) -> AcademicYear:
+    _validate_dates(data.start_date, data.end_date)
     if data.is_current:
         await _clear_current_year(db, school_id)
     y = AcademicYear(
@@ -89,6 +91,7 @@ async def _clear_current_year(db, school_id):
 
 async def update_academic_year(db, school_id, year_id, data: AcademicYearUpdate) -> AcademicYear:
     y = await _get_year(db, school_id, year_id)
+    _validate_dates(data.start_date, data.end_date)
     if data.is_current and not y.is_current:
         await _clear_current_year(db, school_id)
     y.name, y.start_date, y.end_date, y.is_current = (
@@ -103,6 +106,8 @@ async def update_academic_year(db, school_id, year_id, data: AcademicYearUpdate)
 
 async def delete_academic_year(db, school_id, year_id) -> None:
     y = await _get_year(db, school_id, year_id)
+    if await db.scalar(select(SchoolPeriod.id).where(SchoolPeriod.academic_year_id == year_id).limit(1)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить учебный год с периодами")
     await db.delete(y)
     await db.commit()
 
@@ -149,6 +154,7 @@ async def _get_period(db, school_id, period_id) -> SchoolPeriod:
 
 
 async def create_school_period(db, school_id, data: SchoolPeriodCreate) -> SchoolPeriod:
+    await _validate_period(db, school_id, data.academic_year_id, data.start_date, data.end_date)
     p = SchoolPeriod(
         academic_year_id=data.academic_year_id,
         name=data.name,
@@ -166,6 +172,7 @@ async def create_school_period(db, school_id, data: SchoolPeriodCreate) -> Schoo
 
 async def update_school_period(db, school_id, period_id, data: SchoolPeriodUpdate) -> SchoolPeriod:
     p = await _get_period(db, school_id, period_id)
+    await _validate_period(db, school_id, data.academic_year_id, data.start_date, data.end_date)
     p.academic_year_id = data.academic_year_id
     p.name = data.name
     p.period_type = data.period_type
@@ -179,6 +186,12 @@ async def update_school_period(db, school_id, period_id, data: SchoolPeriodUpdat
 
 async def delete_school_period(db, school_id, period_id) -> None:
     p = await _get_period(db, school_id, period_id)
+    used = any(
+        await db.scalar(select(model.id).where(model.period_id == period_id).limit(1)) is not None
+        for model in (FinalGrade,)
+    )
+    if used:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить используемый период")
     await db.delete(p)
     await db.commit()
 
@@ -270,5 +283,21 @@ async def update_bell_schedule(db, school_id, bs_id, data: BellScheduleUpdate) -
 
 async def delete_bell_schedule(db, school_id, bs_id) -> None:
     bs = await _get_bell(db, school_id, bs_id)
+    if await db.scalar(select(Class.id).where(Class.bell_schedule_id == bs_id).limit(1)):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Расписание звонков используется классами")
     await db.delete(bs)
     await db.commit()
+
+
+def _validate_dates(start_date, end_date) -> None:
+    if start_date > end_date:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Дата начала должна быть не позже даты окончания")
+
+
+async def _validate_period(db, school_id, year_id, start_date, end_date) -> None:
+    _validate_dates(start_date, end_date)
+    if year_id is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Учебный год обязателен")
+    year = await _get_year(db, school_id, year_id)
+    if start_date < year.start_date or end_date > year.end_date:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Период должен находиться в пределах учебного года")

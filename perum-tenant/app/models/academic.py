@@ -8,16 +8,19 @@ string targets to avoid import ordering with the identity models.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
     Text,
+    CheckConstraint,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -115,6 +118,7 @@ class Class(Base):
 
 class ClassStudent(Base):
     __tablename__ = "class_students"
+    __table_args__ = (UniqueConstraint("student_id", name="uq_class_students_student"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     class_id: Mapped[int] = mapped_column(
@@ -128,6 +132,9 @@ class ClassStudent(Base):
 
 class TeacherSubject(Base):
     __tablename__ = "teacher_subjects"
+    __table_args__ = (
+        UniqueConstraint("school_id", "teacher_id", "subject_id", "class_id", name="uq_teacher_subject_scope"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     school_id: Mapped[int | None] = mapped_column(
@@ -147,6 +154,11 @@ class TeacherSubject(Base):
 
 class Schedule(Base):
     __tablename__ = "schedules"
+    __table_args__ = (
+        UniqueConstraint("class_id", "day_of_week", "lesson_number", name="uq_schedule_class_slot"),
+        CheckConstraint("day_of_week BETWEEN 0 AND 5", name="ck_schedule_day"),
+        CheckConstraint("lesson_number BETWEEN 1 AND 8", name="ck_schedule_lesson"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     school_id: Mapped[int | None] = mapped_column(
@@ -167,8 +179,40 @@ class Schedule(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
+class LessonOccurrence(Base):
+    __tablename__ = "lesson_occurrences"
+    __table_args__ = (
+        UniqueConstraint(
+            "school_id", "class_id", "lesson_date", "lesson_number",
+            name="uq_lesson_occurrence_slot",
+        ),
+        CheckConstraint("lesson_number BETWEEN 1 AND 8", name="ck_lesson_occurrence_number"),
+        CheckConstraint(
+            "status IN ('scheduled', 'cancelled', 'completed')",
+            name="ck_lesson_occurrence_status",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), index=True)
+    class_id: Mapped[int] = mapped_column(ForeignKey("classes.id", ondelete="CASCADE"), index=True)
+    subject_id: Mapped[int] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"), index=True)
+    schedule_id: Mapped[int | None] = mapped_column(ForeignKey("schedules.id", ondelete="SET NULL"), nullable=True)
+    lesson_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    lesson_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    teacher_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled", server_default="scheduled")
+    topic_id: Mapped[int | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"), nullable=True)
+    work_type_id: Mapped[int | None] = mapped_column(ForeignKey("work_types.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
 class LessonGroup(Base):
     __tablename__ = "lesson_groups"
+    __table_args__ = (
+        CheckConstraint("day_of_week BETWEEN 0 AND 5", name="ck_lesson_group_day"),
+        CheckConstraint("lesson_number BETWEEN 1 AND 8", name="ck_lesson_group_lesson"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     school_id: Mapped[int | None] = mapped_column(
@@ -189,6 +233,7 @@ class LessonGroup(Base):
 
 class LessonGroupStudent(Base):
     __tablename__ = "lesson_group_students"
+    __table_args__ = (UniqueConstraint("group_id", "student_id", name="uq_lesson_group_student"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     group_id: Mapped[int] = mapped_column(
@@ -202,6 +247,7 @@ class LessonGroupStudent(Base):
 
 class AcademicYear(Base):
     __tablename__ = "academic_years"
+    __table_args__ = (CheckConstraint("start_date <= end_date", name="ck_academic_year_dates"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     school_id: Mapped[int | None] = mapped_column(
@@ -216,6 +262,7 @@ class AcademicYear(Base):
 
 class SchoolPeriod(Base):
     __tablename__ = "school_periods"
+    __table_args__ = (CheckConstraint("start_date <= end_date", name="ck_school_period_dates"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     academic_year_id: Mapped[int | None] = mapped_column(

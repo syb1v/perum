@@ -12,6 +12,7 @@ interface GradeModalProps {
     subject: Subject | null;
     classId: number;
     date: string; // YYYY-MM-DD
+    lessonNumber?: number;
     defaultWorkTypeId?: string;
     defaultTopicId?: string;
     onClose: () => void;
@@ -27,7 +28,7 @@ const ATTENDANCE_MARKS = [
     { value: 'точка', label: 'Долг (Точка)', color: '#dc2626', bg: '#fee2e2', display: '•' },
 ];
 
-export default function GradeModal({ student, subject, classId, date, defaultWorkTypeId, defaultTopicId, onClose, onSave }: GradeModalProps) {
+export default function GradeModal({ student, subject, classId, date, lessonNumber, defaultWorkTypeId, defaultTopicId, onClose, onSave }: GradeModalProps) {
     const { showError, showSuccess } = useToast();
     const [gradeValue, setGradeValue] = useState<number | null>(null);
     const [attendanceMark, setAttendanceMark] = useState<string | null>(null);
@@ -93,6 +94,7 @@ export default function GradeModal({ student, subject, classId, date, defaultWor
                 attendance_mark: attendanceMark || null,
                 topic_id: topicId ? Number(topicId) : null,
                 lesson_date: date,
+                lesson_number: lessonNumber,
                 comment: comment || null
             });
             showSuccess(attendanceMark ? `Пометка «${attendanceMark}» выставлена` : 'Оценка выставлена');

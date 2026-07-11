@@ -280,6 +280,9 @@ function TeacherJournalContent() {
                     subjectId={selectedLesson.subject_id}
                     subjectName={selectedLesson.subject_name}
                     date={selectedLessonDate}
+                    lessonNumber={selectedLesson.lesson_number}
+                    occurrenceId={selectedLesson.occurrence_id}
+                    occurrenceStatus={selectedLesson.status}
                     homework={selectedLesson.homework || []}
                     onClose={() => setLessonModalOpen(false)}
                     onUpdate={() => {

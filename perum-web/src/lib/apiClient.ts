@@ -5,7 +5,7 @@
 
 
 
-class ApiClientError extends Error {
+export class ApiClientError extends Error {
     status: number;
     originalErrorData?: unknown;
 
@@ -94,11 +94,12 @@ function getHeaders(): Record<string, string> {
 }
 
 export const api = {
-    async get<T>(endpoint: string): Promise<T> {
+    async get<T>(endpoint: string, signal?: AbortSignal): Promise<T> {
         const res = await fetch(`/api${endpoint}`, {
             method: 'GET',
             headers: getHeaders(),
             credentials: 'include',
+            signal,
         });
         return handleResponse<T>(res);
     },
@@ -155,5 +156,4 @@ export const api = {
     },
 };
 
-export { ApiClientError };
 export default api;

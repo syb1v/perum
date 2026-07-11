@@ -243,7 +243,7 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 86 | 2026-06-18 16:20 | d02ab1f | docs — обновлён README с инфраструктурным управлением |
 | 87 | 2026-06-18 16:25 | 71b04ad | docs — обновлён IP прод-сервера на 87.232.119.17 |
 | 88 | 2026-06-18 17:00 | efc458e | feat(web) — инфраструктура интегрирована в админки: platform/infrastructure и org/infrastructure
-| 101 | 2026-06-20 | _______ | fix: 500 bootstrap-скрипта, nullable enrollment_token.org_id, редизайн нод (remnawave-стиль, offline-индикатор)
+| 101 | 2026-06-20 | a05446f | fix: 500 bootstrap-скрипта, nullable enrollment_token.org_id, редизайн нод (remnawave-стиль, offline-индикатор)
 | 102 | 2026-06-20 | 6332173 | feat(news/support): новости с таргетингом + колокол уведомлений у организатора + плавающий чат и тикеты поддержки (раздел «Поддержка» в ядре)
 | 103 | 2026-06-20 | d9e1379 | feat(ota): версии x.y.z из perum-tenant/VERSION + дедуп fetch-latest (up_to_date) + скрытые настройки источника + fix наблюдаемости/диагностики апдейта школ
 | 104 | 2026-06-20 | eec2a0a | docs(web): актуализирован FAQ управления нодами (скрипт установки, авто-железо/статусы, питание/перезагрузка/массовые действия) + VERSION=1.1.0 + не залипающее предупреждение об откате апдейта (прод-конфиг OTA исправлен вручную)
@@ -280,3 +280,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 135 | 2026-07-08 | 1adfbf9 | fix(dns): DNS cleanup on archive + update on IP change + auto-sweep + org_admin status; fix(tests): StackSpec field order + telemetry tests |
 | 136 | 2026-07-08 | 27a2c40 | fix(web+tenant): remove dead SupportInbox + clear-cache btn, fix ControlWorksSection URL, add enable-all-exchange endpoint |
 | 137 | 2026-07-08 | daf79aa | feat(web+tenant): HW stub-fixes (teacher lesson modal/works/activity feed) + grades with lesson topic end-to-end |
+| 138 | 2026-07-11 | _______ | feat(web+tenant): незакоммиченный цикл учебной целостности, экземпляров уроков, родительского кабинета, аналитики и portable-миграций |

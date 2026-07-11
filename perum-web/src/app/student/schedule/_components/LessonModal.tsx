@@ -18,6 +18,11 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
 
     return (
         <Modal isOpen={true} onClose={onClose} title={lesson.subject_name || 'Урок'}>
+            {lesson.status && lesson.status !== 'scheduled' && (
+                <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: lesson.status === 'cancelled' ? '#fee2e2' : '#dcfce7', color: lesson.status === 'cancelled' ? '#b91c1c' : '#166534', fontWeight: 600 }}>
+                    {lesson.status === 'cancelled' ? 'Урок отменён' : 'Урок завершён'}
+                </div>
+            )}
             <div className={styles.lessonInfoGrid}>
                 <div className={styles.infoItem}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

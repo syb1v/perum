@@ -23,9 +23,11 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Subject, User
-from app.models.academic import AcademicYear, Class, ClassStudent, Schedule, SchoolPeriod
+from app.models import ParentStudent
+from app.models.academic import AcademicYear, Class, ClassStudent, Schedule, SchoolPeriod, TeacherSubject
 from app.models.journal import ControlWork, Homework, HomeworkAttachment
 from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkUpdate
+from app.modules.academic.occurrences import get_or_create_occurrence
 from app.modules.journal.service import _assigned, _is_admin
 
 DAY_NAMES_ACC = ["понедельник", "вторник", "среду", "четверг", "пятницу", "субботу"]
@@ -57,21 +59,69 @@ async def _attachments_by_hw(db: AsyncSession, hw_ids: list[int]) -> dict[int, l
 
 
 # ---- homework ----
+async def _allowed_class_ids(db: AsyncSession, school_id: int, user: User) -> set[int]:
+    if user.role in {"school_admin", "director"}:
+        stmt = select(Class.id).where(Class.school_id == school_id)
+    elif user.role == "teacher":
+        stmt = select(Class.id).where(
+            Class.school_id == school_id,
+            (Class.teacher_id == user.id)
+            | Class.id.in_(
+                select(TeacherSubject.class_id).where(
+                    TeacherSubject.teacher_id == user.id,
+                    TeacherSubject.school_id == school_id,
+                )
+            ),
+        )
+    elif user.role == "student":
+        stmt = (
+            select(Class.id)
+            .join(ClassStudent, ClassStudent.class_id == Class.id)
+            .where(
+                Class.school_id == school_id,
+                ClassStudent.student_id == user.id,
+                user.school_id == school_id,
+                user.is_active,
+            )
+        )
+    elif user.role == "parent":
+        stmt = (
+            select(Class.id)
+            .join(ClassStudent, ClassStudent.class_id == Class.id)
+            .join(User, User.id == ClassStudent.student_id)
+            .join(ParentStudent, ParentStudent.student_id == User.id)
+            .where(
+                Class.school_id == school_id,
+                ParentStudent.parent_id == user.id,
+                User.school_id == school_id,
+                User.role == "student",
+                User.is_active.is_(True),
+                user.school_id == school_id,
+                user.is_active,
+            )
+        )
+    else:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа")
+    return set((await db.execute(stmt)).scalars().all())
+
+
+async def _scoped_class_ids(
+    db: AsyncSession, school_id: int, user: User, class_id: int | None
+) -> set[int]:
+    allowed = await _allowed_class_ids(db, school_id, user)
+    return allowed if class_id is None else allowed & {class_id}
+
+
 async def list_homework(
     db: AsyncSession, school_id: int, user: User, class_id: int | None, subject_id: int | None
 ) -> dict:
-    target_class = class_id
-    if user.role == "student":
-        link = (
-            await db.execute(select(ClassStudent).where(ClassStudent.student_id == user.id))
-        ).scalar_one_or_none()
-        if link is None:
-            return {"homework": []}
-        target_class = link.class_id
+    class_ids = await _scoped_class_ids(db, school_id, user, class_id)
+    if not class_ids:
+        return {"homework": []}
 
-    stmt = select(Homework).where(Homework.school_id == school_id).order_by(Homework.created_at.desc())
-    if target_class is not None:
-        stmt = stmt.where(Homework.class_id == target_class)
+    stmt = select(Homework).where(
+        Homework.school_id == school_id, Homework.class_id.in_(class_ids)
+    ).order_by(Homework.created_at.desc())
     if subject_id is not None:
         stmt = stmt.where(Homework.subject_id == subject_id)
     rows = (await db.execute(stmt)).scalars().all()
@@ -142,6 +192,12 @@ async def create_homework(db: AsyncSession, school_id: int, payload: HomeworkCre
     if not await _assigned(db, user, payload.class_id, payload.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Вы не ведёте этот предмет в данном классе")
     await _validate_due_date(db, school_id, payload.class_id, payload.subject_id, payload.due_date)
+    occurrence = None
+    if payload.lesson_number is not None and payload.due_date is not None:
+        occurrence = await get_or_create_occurrence(
+            db, school_id, payload.class_id, payload.subject_id,
+            payload.due_date.date(), payload.lesson_number,
+        )
 
     hw = Homework(
         school_id=school_id,
@@ -151,6 +207,7 @@ async def create_homework(db: AsyncSession, school_id: int, payload: HomeworkCre
         title=payload.title,
         description=payload.description,
         due_date=payload.due_date,
+        occurrence_id=occurrence.id if occurrence else None,
     )
     db.add(hw)
     await db.commit()
@@ -255,13 +312,19 @@ async def delete_attachment(db: AsyncSession, school_id: int, att_id: int, user:
     return {"success": True, "message": "Вложение удалено"}
 
 
-async def get_attachment_file(db: AsyncSession, school_id: int, att_id: int) -> HomeworkAttachment:
-    """Return a downloadable attachment (any authenticated user in the school)."""
+async def get_attachment_file(
+    db: AsyncSession, school_id: int, att_id: int, user: User
+) -> HomeworkAttachment:
+    class_ids = await _allowed_class_ids(db, school_id, user)
     row = (
         await db.execute(
             select(HomeworkAttachment)
             .join(Homework, Homework.id == HomeworkAttachment.homework_id)
-            .where(HomeworkAttachment.id == att_id, Homework.school_id == school_id)
+            .where(
+                HomeworkAttachment.id == att_id,
+                Homework.school_id == school_id,
+                Homework.class_id.in_(class_ids),
+            )
         )
     ).scalar_one_or_none()
     if row is None or not row.file_path or not os.path.exists(row.file_path):
@@ -273,18 +336,13 @@ async def get_attachment_file(db: AsyncSession, school_id: int, att_id: int) -> 
 async def list_control_works(
     db: AsyncSession, school_id: int, user: User, class_id: int | None, subject_id: int | None
 ) -> dict:
-    target_class = class_id
-    if user.role == "student":
-        link = (
-            await db.execute(select(ClassStudent).where(ClassStudent.student_id == user.id))
-        ).scalar_one_or_none()
-        if link is None:
-            return {"control_works": []}
-        target_class = link.class_id
+    class_ids = await _scoped_class_ids(db, school_id, user, class_id)
+    if not class_ids:
+        return {"control_works": []}
 
-    stmt = select(ControlWork).where(ControlWork.school_id == school_id).order_by(ControlWork.work_date.desc())
-    if target_class is not None:
-        stmt = stmt.where(ControlWork.class_id == target_class)
+    stmt = select(ControlWork).where(
+        ControlWork.school_id == school_id, ControlWork.class_id.in_(class_ids)
+    ).order_by(ControlWork.work_date.desc())
     if subject_id is not None:
         stmt = stmt.where(ControlWork.subject_id == subject_id)
     rows = (await db.execute(stmt)).scalars().all()
@@ -358,6 +416,13 @@ async def create_control_work(db: AsyncSession, school_id: int, payload: Control
         if holiday:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Нельзя планировать работу на каникулярный день")
 
+    occurrence = None
+    if payload.lesson_number is not None:
+        occurrence = await get_or_create_occurrence(
+            db, school_id, payload.class_id, payload.subject_id,
+            work_day, payload.lesson_number,
+        )
+
     cw = ControlWork(
         school_id=school_id,
         class_id=payload.class_id,
@@ -366,6 +431,7 @@ async def create_control_work(db: AsyncSession, school_id: int, payload: Control
         work_type=payload.work_type,
         title=payload.title or payload.work_type.capitalize(),
         work_date=payload.work_date,
+        occurrence_id=occurrence.id if occurrence else None,
     )
     db.add(cw)
     await db.commit()

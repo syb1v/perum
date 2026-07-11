@@ -49,6 +49,8 @@ const TEACHER_NAV = [
     { href: '/homeroom', label: 'Мой класс', icon: 'users' },
 ];
 
+const PARENT_NAV = [{ href: '/parent', label: 'Дети', icon: 'users' }];
+
 interface Notification {
     id: string;
     title: string;
@@ -73,7 +75,7 @@ export default function Header() {
     const notifRef = useRef<HTMLDivElement>(null);
 
     const role = user?.role || 'student';
-    const navItems = ['teacher', 'homeroom_teacher', 'class_teacher'].includes(role || '') ? TEACHER_NAV : (role === 'student' ? STUDENT_NAV : []);
+    const navItems = role === 'teacher' ? TEACHER_NAV : (role === 'student' ? STUDENT_NAV : (role === 'parent' ? PARENT_NAV : []));
     const displayName = [user?.last_name, user?.first_name].filter(Boolean).join(' ') || user?.login || 'Пользователь';
 
     useEffect(() => {

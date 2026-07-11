@@ -8,13 +8,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.roles import ADMIN_ROLES
+from app.core.time import utc_now
 from app.models import GradeAppeal, ParentStudent, Subject, User
 from app.models.journal import Grade
 
@@ -141,7 +140,7 @@ async def resolve_appeal(db: AsyncSession, user: User, school_id: int, appeal_id
 
     appeal.status = new_status
     appeal.teacher_comment = (comment or "").strip() or None
-    appeal.resolved_at = datetime.utcnow()
+    appeal.resolved_at = utc_now()
     await db.commit()
     await db.refresh(appeal)
     return await _serialize(db, appeal)

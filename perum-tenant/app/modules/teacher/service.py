@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import func, select
+from fastapi import HTTPException, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
@@ -12,11 +13,12 @@ from app.models.academic import (
     BellScheduleItem,
     Class,
     ClassStudent,
+    LessonOccurrence,
     Schedule,
     Subject,
     TeacherSubject,
 )
-from app.models.journal import ControlWork, Grade, Homework, HomeworkAttachment
+from app.models.journal import ControlWork, Grade, Homework, HomeworkAttachment, Transaction
 
 
 def _as_date(value):
@@ -89,12 +91,37 @@ async def teacher_subjects(db: AsyncSession, school_id: int, user: User) -> list
     ]
 
 
-async def class_students(db: AsyncSession, school_id: int, class_id: int) -> list[dict]:
+async def class_students(db: AsyncSession, school_id: int, user: User, class_id: int) -> list[dict]:
+    cls = (
+        await db.execute(
+            select(Class).where(
+                Class.id == class_id,
+                Class.school_id == school_id,
+                or_(
+                    _is_admin(user),
+                    Class.teacher_id == user.id,
+                    Class.id.in_(
+                        select(TeacherSubject.class_id).where(
+                            TeacherSubject.teacher_id == user.id,
+                            TeacherSubject.school_id == school_id,
+                        )
+                    ),
+                ),
+            )
+        )
+    ).scalar_one_or_none()
+    if cls is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к классу")
     rows = (
         await db.execute(
             select(User)
             .join(ClassStudent, ClassStudent.student_id == User.id)
-            .where(ClassStudent.class_id == class_id)
+            .where(
+                ClassStudent.class_id == class_id,
+                User.school_id == school_id,
+                User.role == "student",
+                User.is_active.is_(True),
+            )
             .order_by(User.last_name, User.first_name)
         )
     ).scalars().all()
@@ -153,6 +180,17 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                 .where(Schedule.teacher_id == user.id if not _is_admin(user) else True)
             )
         ).scalars().all()
+    occurrences = []
+    if teacher_classes_all:
+        occurrences = (await db.execute(select(LessonOccurrence).where(
+            LessonOccurrence.school_id == school_id,
+            LessonOccurrence.class_id.in_(class_ids),
+            LessonOccurrence.lesson_date >= week_start,
+            LessonOccurrence.lesson_date <= week_end,
+        ))).scalars().all()
+    occurrences_by_slot = {
+        (o.class_id, o.lesson_date, o.lesson_number): o for o in occurrences
+    }
 
     # Bell schedules by class
     bell_map: dict[int, list[BellScheduleItem]] = {}
@@ -179,6 +217,8 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                 select(Homework).where(
                     Homework.class_id.in_(class_ids),
                     Homework.school_id == school_id,
+                    Homework.due_date >= datetime.combine(week_start, datetime.min.time()),
+                    Homework.due_date < datetime.combine(week_end + timedelta(days=1), datetime.min.time()),
                 )
             )
         ).scalars().all()
@@ -193,7 +233,7 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                     {"id": a.id, "filename": a.filename, "url_link": a.url_link}
                 )
         for h in all_hw:
-            hw_map.setdefault((h.class_id, h.subject_id), []).append({
+            hw_map.setdefault((h.class_id, h.subject_id, h.due_date.date().isoformat()), []).append({
                 "id": h.id,
                 "title": h.title,
                 "description": h.description,
@@ -245,6 +285,7 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                         break
             subj = subj_map.get(item.subject_id)
             cw_key = (item.class_id, item.subject_id, date_str)
+            occurrence = occurrences_by_slot.get((item.class_id, day_date, item.lesson_number))
             lessons.append({
                 "lesson_number": item.lesson_number,
                 "subject_id": item.subject_id,
@@ -254,8 +295,10 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                 "room": item.room,
                 "start_time": bell.start_time if bell else "08:00",
                 "end_time": bell.end_time if bell else "08:45",
-                "homework": hw_map.get((item.class_id, item.subject_id), []),
+                "homework": hw_map.get((item.class_id, item.subject_id, date_str), []),
                 "control_work": cw_map.get(cw_key),
+                "occurrence_id": occurrence.id if occurrence else None,
+                "status": occurrence.status if occurrence else "scheduled",
             })
 
         diary[str(day)] = {
@@ -362,29 +405,47 @@ async def bulk_balance(db: AsyncSession, school_id: int, user: User,
     if cls is None:
         return {"message": "У вас нет классного руководства"}
 
-    # Verify all students belong to this class
-    cs_rows = (
+    students = (
         await db.execute(
-            select(ClassStudent).where(
+            select(User)
+            .join(ClassStudent, ClassStudent.student_id == User.id)
+            .where(
                 ClassStudent.class_id == cls.id,
-                ClassStudent.student_id.in_(student_ids),
+                User.id.in_(set(student_ids)),
+                User.school_id == school_id,
+                User.role == "student",
+                User.is_active.is_(True),
             )
+            .with_for_update()
         )
     ).scalars().all()
-    valid_ids = {cs.student_id for cs in cs_rows}
 
-    if not valid_ids:
+    if not students:
         return {"message": "Нет подходящих учеников"}
 
-    for sid in valid_ids:
-        student = await db.get(User, sid)
-        if student:
-            student.balance = (student.balance or 0) + amount
+    reason = comment.strip() or "Массовое начисление от классного руководителя"
+    changed = 0
+    for student in students:
+        old_balance = max(student.balance or 0, 0)
+        new_balance = max(old_balance + amount, 0)
+        actual_amount = new_balance - old_balance
+        if actual_amount == 0:
+            continue
+        student.balance = new_balance
+        db.add(Transaction(
+            school_id=school_id,
+            user_id=student.id,
+            amount=actual_amount,
+            balance_after=new_balance,
+            type="teacher_bulk_balance",
+            reason=reason,
+            created_by=user.id,
+        ))
+        changed += 1
 
     await db.commit()
 
-    reason = comment or f"Массовое начисление от классного руководителя"
-    return {"message": f"Баланс обновлён для {len(valid_ids)} учеников (+{amount} ливок)"}
+    return {"message": f"Баланс обновлён для {changed} учеников (+{amount} ливок)"}
 
 
 async def teacher_homework(

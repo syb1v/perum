@@ -125,16 +125,20 @@ async def get_class_students(db: AsyncSession, school_id: int, class_id: int) ->
 
 async def add_student(db: AsyncSession, school_id: int, class_id: int, student_id: int) -> None:
     await get_class(db, school_id, class_id)
+    student = await db.get(User, student_id)
+    if not student or student.school_id != school_id or student.role != "student" or not student.is_active:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный ученик школы не найден")
     exists = (
         await db.execute(
-            select(ClassStudent).where(
-                ClassStudent.class_id == class_id, ClassStudent.student_id == student_id
-            )
+            select(ClassStudent).where(ClassStudent.student_id == student_id)
         )
     ).scalar_one_or_none()
-    if exists is None:
-        db.add(ClassStudent(class_id=class_id, student_id=student_id))
-        await db.commit()
+    if exists is not None:
+        if exists.class_id == class_id:
+            return
+        raise HTTPException(status.HTTP_409_CONFLICT, "Ученик уже состоит в другом классе")
+    db.add(ClassStudent(class_id=class_id, student_id=student_id))
+    await db.commit()
 
 
 async def remove_student(db: AsyncSession, school_id: int, class_id: int, student_id: int) -> None:
@@ -208,6 +212,10 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
     slots: set = set()
     teachers: set = set()
     rooms: set = set()
+    validated: list[tuple[dict, int, int, int]] = []
+    class_student_ids = set(
+        (await db.execute(select(ClassStudent.student_id).where(ClassStudent.class_id == class_id))).scalars().all()
+    )
     for it in items:
         d, ln = int(it["day_of_week"]), int(it["lesson_number"])
         if not (0 <= d <= 5):
@@ -217,8 +225,14 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
         if (d, ln) in slots:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Два урока на одно время: День {d}, Урок {ln}")
         slots.add((d, ln))
+        subject_id = int(it["subject_id"])
+        if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Предмет {subject_id} не найден")
         tid = it.get("teacher_id")
         if tid:
+            teacher = await db.get(User, tid)
+            if not teacher or teacher.school_id != school_id or teacher.role != "teacher" or not teacher.is_active:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный учитель школы не найден")
             if (d, ln, tid) in teachers:
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Учитель на 2 урока сразу: День {d}, Урок {ln}")
             teachers.add((d, ln, tid))
@@ -227,6 +241,20 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
             if (d, ln, room) in rooms:
                 raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Кабинет {room} занят дважды: День {d}, Урок {ln}")
             rooms.add((d, ln, room))
+        assigned: set[int] = set()
+        for group in it.get("groups") or []:
+            group_teacher_id = group.get("teacher_id")
+            if group_teacher_id:
+                teacher = await db.get(User, group_teacher_id)
+                if not teacher or teacher.school_id != school_id or teacher.role != "teacher" or not teacher.is_active:
+                    raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный учитель подгруппы не найден")
+            student_ids = group.get("student_ids") or []
+            if len(student_ids) != len(set(student_ids)) or assigned.intersection(student_ids):
+                raise HTTPException(status.HTTP_409_CONFLICT, "Ученик повторно указан в подгруппах урока")
+            if not set(student_ids).issubset(class_student_ids):
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, "В подгруппе есть ученик не из этого класса")
+            assigned.update(student_ids)
+        validated.append((it, d, ln, subject_id))
 
     # Полная замена: чистим старое расписание + подгруппы класса.
     await db.execute(delete(Schedule).where(Schedule.class_id == class_id))
@@ -236,15 +264,7 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
         await db.execute(delete(LessonGroup).where(LessonGroup.class_id == class_id))
 
     warnings: list[str] = []
-    class_student_ids = set(
-        (await db.execute(select(ClassStudent.student_id).where(ClassStudent.class_id == class_id))).scalars().all()
-    )
-
-    for it in items:
-        subject_id = it["subject_id"]
-        if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
-            raise HTTPException(status.HTTP_404_NOT_FOUND, f"Предмет {subject_id} не найден")
-        d, ln = int(it["day_of_week"]), int(it["lesson_number"])
+    for it, d, ln, subject_id in validated:
         db.add(Schedule(
             school_id=school_id, class_id=class_id, subject_id=subject_id,
             teacher_id=it.get("teacher_id"), day_of_week=d, lesson_number=ln, room=it.get("room"),

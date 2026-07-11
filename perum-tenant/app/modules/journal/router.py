@@ -12,7 +12,15 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.grade_import import service as import_service
 from app.modules.journal import service
-from app.modules.journal.schemas import AddGradeRequest, TopicCreate, TopicUpdate, UpdateGradeRequest
+from app.modules.journal.schemas import (
+    AddGradeRequest,
+    FinalGradeRequest,
+    LessonTemplateUpdate,
+    LessonOccurrenceUpdate,
+    TopicCreate,
+    TopicUpdate,
+    UpdateGradeRequest,
+)
 from app.modules.school_admin.service import resolve_school_id
 from app.services.parsers.dtos import (
     ImportExecutionRequest,
@@ -57,7 +65,7 @@ async def create_topic(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.create_topic(db, await _school(user, db), subject_id, payload.name)
+    return await service.create_topic(db, await _school(user, db), subject_id, payload.name, user)
 
 
 @router.put("/topics/{topic_id}")
@@ -67,7 +75,7 @@ async def update_topic(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.update_topic(db, topic_id, payload.name)
+    return await service.update_topic(db, await _school(user, db), topic_id, payload.name, user)
 
 
 @router.delete("/topics/{topic_id}")
@@ -76,7 +84,47 @@ async def delete_topic(
     user: User = Depends(require_teacher),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.delete_topic(db, topic_id)
+    return await service.delete_topic(db, await _school(user, db), topic_id, user)
+
+
+@router.put("/{class_id}/{subject_id}/lesson-templates/{lesson_date}")
+async def set_lesson_template(
+    class_id: int,
+    subject_id: int,
+    lesson_date: str,
+    payload: LessonTemplateUpdate,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.set_lesson_template(
+        db, await _school(user, db), class_id, subject_id, lesson_date, payload, user
+    )
+
+
+@router.delete("/{class_id}/{subject_id}/lesson-templates/{lesson_date}")
+async def clear_lesson_template(
+    class_id: int,
+    subject_id: int,
+    lesson_date: str,
+    lesson_number: int | None = None,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.clear_lesson_template(
+        db, await _school(user, db), class_id, subject_id, lesson_date, lesson_number, user
+    )
+
+
+@router.patch("/lesson-occurrences/{occurrence_id}")
+async def update_lesson_occurrence(
+    occurrence_id: int,
+    payload: LessonOccurrenceUpdate,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.update_lesson_occurrence(
+        db, await _school(user, db), occurrence_id, payload, user
+    )
 
 
 @router.post("/grades")
@@ -90,7 +138,7 @@ async def add_grade(
 async def get_grade(
     grade_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    return await service.get_grade(db, await _school(user, db), grade_id)
+    return await service.get_grade(db, await _school(user, db), grade_id, user)
 
 
 @router.put("/grades/{grade_id}")
@@ -108,6 +156,30 @@ async def delete_grade(
     grade_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await service.delete_grade(db, await _school(user, db), grade_id, user)
+
+
+@router.post("/grades/final/{class_id}/{subject_id}")
+async def set_final_grade(
+    class_id: int,
+    subject_id: int,
+    payload: FinalGradeRequest,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.set_final_grade(
+        db, await _school(user, db), class_id, subject_id, payload, user
+    )
+
+
+@router.delete("/grades/final/{final_grade_id}")
+async def delete_final_grade(
+    final_grade_id: int,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.delete_final_grade(
+        db, await _school(user, db), final_grade_id, user
+    )
 
 
 async def _require_assigned(db: AsyncSession, user: User, class_id: int, subject_id: int) -> None:

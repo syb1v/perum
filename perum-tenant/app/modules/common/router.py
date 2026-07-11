@@ -66,6 +66,7 @@ async def periods(
     all_periods = await _list_periods(db, school_id)
     keep = {period_type, "holiday", "vacation"}
     visible = [p for p in all_periods if p.period_type in keep]
+    academic_periods = [p for p in visible if p.period_type == period_type]
 
     def _dump(p) -> dict:
         return {
@@ -78,13 +79,13 @@ async def periods(
 
     today = datetime.now().date()
     current = None
-    for p in visible:
-        if p.period_type in {"quarter", "half_year"} and _as_date(p.start_date) <= today <= _as_date(p.end_date):
+    for p in academic_periods:
+        if _as_date(p.start_date) <= today <= _as_date(p.end_date):
             current = _dump(p)
             break
     if current is None:  # fall back to the most recent finished period
-        for p in reversed(visible):
-            if p.period_type in {"quarter", "half_year"} and _as_date(p.end_date) <= today:
+        for p in reversed(academic_periods):
+            if _as_date(p.end_date) <= today:
                 current = _dump(p)
                 break
 

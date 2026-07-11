@@ -12,26 +12,54 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ParentStudent, Subject, User
-from app.models.academic import Class, ClassStudent, WorkType
+from app.models import ParentStudent, User
+from app.models.academic import Class, ClassStudent
 from app.models.journal import Grade, Transaction
+from app.modules.student import service as student_service
 
 
-async def _ensure_link(db: AsyncSession, parent_id: int, student_id: int) -> None:
-    link = (
+async def _linked_student(db: AsyncSession, school_id: int, parent: User, student_id: int) -> User:
+    student = (
         await db.execute(
-            select(ParentStudent.id).where(
-                ParentStudent.parent_id == parent_id, ParentStudent.student_id == student_id
+            select(User)
+            .select_from(ParentStudent)
+            .join(User, User.id == ParentStudent.student_id)
+            .where(
+                ParentStudent.parent_id == parent.id,
+                ParentStudent.student_id == student_id,
+                parent.role == "parent",
+                parent.school_id == school_id,
+                parent.is_active,
+                User.role == "student",
+                User.school_id == school_id,
+                User.is_active.is_(True),
             )
         )
     ).scalar_one_or_none()
-    if link is None:
+    if student is None:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Это не ваш ребёнок")
+    return student
 
 
-async def list_children(db: AsyncSession, parent: User) -> dict:
+async def _ensure_link(db: AsyncSession, school_id: int, parent: User, student_id: int) -> None:
+    await _linked_student(db, school_id, parent, student_id)
+
+
+async def list_children(db: AsyncSession, school_id: int, parent: User) -> dict:
     student_ids = (
-        await db.execute(select(ParentStudent.student_id).where(ParentStudent.parent_id == parent.id))
+        await db.execute(
+            select(ParentStudent.student_id)
+            .join(User, User.id == ParentStudent.student_id)
+            .where(
+                ParentStudent.parent_id == parent.id,
+                parent.role == "parent",
+                parent.school_id == school_id,
+                parent.is_active,
+                User.school_id == school_id,
+                User.role == "student",
+                User.is_active.is_(True),
+            )
+        )
     ).scalars().all()
     children = []
     for sid in student_ids:
@@ -42,18 +70,22 @@ async def list_children(db: AsyncSession, parent: User) -> dict:
             await db.execute(
                 select(Class)
                 .join(ClassStudent, ClassStudent.class_id == Class.id)
-                .where(ClassStudent.student_id == sid)
+                .where(ClassStudent.student_id == sid, Class.school_id == school_id)
             )
         ).scalar_one_or_none()
         avg_grade = (
             await db.scalar(
                 select(func.avg(Grade.grade_value)).where(
-                    Grade.student_id == sid, Grade.grade_value.isnot(None)
+                    Grade.student_id == sid, Grade.school_id == school_id, Grade.grade_value.isnot(None)
                 )
             )
         ) or 0
         total = (
-            await db.scalar(select(func.count()).select_from(Grade).where(Grade.student_id == sid))
+            await db.scalar(
+                select(func.count()).select_from(Grade).where(
+                    Grade.student_id == sid, Grade.school_id == school_id
+                )
+            )
         ) or 0
         children.append(
             {
@@ -64,7 +96,7 @@ async def list_children(db: AsyncSession, parent: User) -> dict:
                 "balance": student.balance,
                 "class_name": cls.name if cls else None,
                 "class_id": cls.id if cls else None,
-                "avg_grade": round(float(avg_grade), 2),
+                "average": round(float(avg_grade), 2),
                 "total_grades": total,
                 "enrollment_status": "active",
             }
@@ -72,42 +104,39 @@ async def list_children(db: AsyncSession, parent: User) -> dict:
     return {"children": children}
 
 
-async def child_grades(db: AsyncSession, parent: User, student_id: int) -> dict:
-    await _ensure_link(db, parent.id, student_id)
-    rows = (
-        await db.execute(
-            select(Grade, Subject)
-            .join(Subject, Subject.id == Grade.subject_id)
-            .where(Grade.student_id == student_id)
-            .order_by(Grade.created_at.desc())
-            .limit(100)
-        )
-    ).all()
-    wt = {
-        w.id: w.name
-        for w in (await db.execute(select(WorkType))).scalars().all()
-    }
-    return {
-        "grades": [
-            {
-                "id": g.id,
-                "value": g.grade_value,
-                "subject_name": subj.name,
-                "work_type": wt.get(g.work_type_id, "ответ"),
-                "comment": g.comment,
-                "created_at": g.created_at.isoformat() if g.created_at else None,
-            }
-            for g, subj in rows
-        ]
-    }
+async def child_diary(db: AsyncSession, school_id: int, parent: User, student_id: int, week_offset: int) -> dict:
+    student = await _linked_student(db, school_id, parent, student_id)
+    return await student_service.get_diary(db, school_id, student, week_offset)
 
 
-async def child_transactions(db: AsyncSession, parent: User, student_id: int) -> dict:
-    await _ensure_link(db, parent.id, student_id)
+async def child_grades(
+    db: AsyncSession, school_id: int, parent: User, student_id: int, subject_id: int | None = None
+) -> dict:
+    student = await _linked_student(db, school_id, parent, student_id)
+    return await student_service.get_grades(db, school_id, student, subject_id)
+
+
+async def child_grades_summary(db: AsyncSession, school_id: int, parent: User, student_id: int) -> dict:
+    student = await _linked_student(db, school_id, parent, student_id)
+    return await student_service.get_summary(db, school_id, student)
+
+
+async def child_grades_analytics(db: AsyncSession, school_id: int, parent: User, student_id: int) -> dict:
+    student = await _linked_student(db, school_id, parent, student_id)
+    return await student_service.get_analytics(db, school_id, student)
+
+
+async def child_grades_finals(db: AsyncSession, school_id: int, parent: User, student_id: int) -> dict:
+    student = await _linked_student(db, school_id, parent, student_id)
+    return await student_service.get_finals(db, school_id, student)
+
+
+async def child_transactions(db: AsyncSession, school_id: int, parent: User, student_id: int) -> dict:
+    await _ensure_link(db, school_id, parent, student_id)
     rows = (
         await db.execute(
             select(Transaction)
-            .where(Transaction.user_id == student_id)
+            .where(Transaction.user_id == student_id, Transaction.school_id == school_id)
             .order_by(Transaction.created_at.desc())
             .limit(50)
         )

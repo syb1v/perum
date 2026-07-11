@@ -15,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import School, Subject, User, WorkType
 from app.models.academic import Class
 from app.models.journal import ControlWork, Grade, Homework
+from app.core.roles import SCHOOL_LEVEL_ROLES
+from app.models.academic import Schedule, TeacherSubject, Topic
 from app.modules.school_admin.schemas import (
     SubjectCreate,
     SubjectUpdate,
@@ -28,6 +30,8 @@ async def resolve_school_id(user: User, db: AsyncSession) -> int:
     # своей школе. org_admin сюда не попадает — он не работает внутри школы.
     if user.school_id is not None:
         return user.school_id
+    if user.role in SCHOOL_LEVEL_ROLES:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Пользователь не привязан к школе")
     result = await db.execute(select(School.id).order_by(School.id).limit(1))
     school_id = result.scalar_one_or_none()
     if school_id is None:
@@ -91,6 +95,12 @@ async def update_subject(
 
 async def delete_subject(db: AsyncSession, school_id: int, subject_id: int) -> None:
     subject = await _get_subject(db, school_id, subject_id)
+    used = any(
+        await db.scalar(select(model.id).where(model.subject_id == subject_id).limit(1)) is not None
+        for model in (TeacherSubject, Schedule, Topic, Grade, Homework, ControlWork)
+    )
+    if used:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить используемый предмет")
     await db.delete(subject)
     await db.commit()
 

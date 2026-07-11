@@ -136,19 +136,31 @@ export default function StudentSchedule() {
                                                     if (!lesson) return <div key={num} className={`${styles.lessonItem} ${styles.emptyLesson}`}><div className={styles.lessonNumWrapper}><span className={styles.lessonNum}>{num}</span></div><div className={styles.lessonDetails}>Окно</div></div>;
 
                                                     return (
-                                                        <div key={`${num}-${lesson.subject_id}`} className={styles.lessonItem} style={{ cursor: 'pointer' }} onClick={() => setSelectedLesson(lesson)}>
+                                                        <div
+                                                            key={`${num}-${lesson.subject_id}`}
+                                                            className={styles.lessonItem}
+                                                            style={{ cursor: 'pointer', opacity: lesson.status === 'cancelled' ? 0.55 : 1 }}
+                                                            onClick={() => setSelectedLesson(lesson)}
+                                                        >
                                                             <div className={styles.lessonNumWrapper}><span className={styles.lessonNum}>{num}</span></div>
                                                             <div className={styles.lessonDetails}>
                                                                 <div className={styles.lessonHeaderRow}>
                                                                     <div className={styles.lessonMainInfo}>
-                                                                        <span className={styles.lessonSubject}>{lesson.subject_name}</span>
+                                                                        <span className={styles.lessonSubject} style={{ textDecoration: lesson.status === 'cancelled' ? 'line-through' : undefined }}>
+                                                                            {lesson.subject_name}
+                                                                        </span>
                                                                         <div className={styles.lessonMeta}>
                                                                             <span className={styles.timeRange}>{lesson.start_time} - {lesson.end_time}</span>
                                                                             {lesson.room && <span className={styles.roomBadge}>Каб. {lesson.room}</span>}
                                                                         </div>
                                                                     </div>
-                                                                    <div className={styles.lessonStatus}>
-                                                                        {lesson.grades?.map((g, gi) => <span key={gi} className={styles.gradeMini} style={{ backgroundColor: g.color }}>{g.value}</span>)}
+                                                                     <div className={styles.lessonStatus}>
+                                                                         {lesson.status && lesson.status !== 'scheduled' && (
+                                                                             <span className={styles.hwIndicator}>
+                                                                                 {lesson.status === 'cancelled' ? 'Отменён' : 'Завершён'}
+                                                                             </span>
+                                                                         )}
+                                                                         {lesson.grades?.map((g, gi) => <span key={gi} className={styles.gradeMini} style={{ backgroundColor: g.color }}>{g.value}</span>)}
                                                                         {lesson.homework?.length > 0 && <span className={styles.hwIndicator}>ДЗ</span>}
                                                                     </div>
                                                                 </div>

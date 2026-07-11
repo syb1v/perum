@@ -59,6 +59,7 @@ async def list_teachers(db: AsyncSession, school_id: int) -> list[dict]:
 
 
 async def assign(db: AsyncSession, school_id: int, data: TeacherSubjectAssign) -> TeacherSubject:
+    await _validate_assignment_refs(db, school_id, data.teacher_id, data.subject_id, data.class_id)
     exists = (
         await db.execute(
             select(TeacherSubject).where(
@@ -80,6 +81,16 @@ async def assign(db: AsyncSession, school_id: int, data: TeacherSubjectAssign) -
     await db.commit()
     await db.refresh(ts)
     return ts
+
+
+async def _validate_assignment_refs(db, school_id, teacher_id, subject_id, class_id) -> None:
+    teacher = await db.get(User, teacher_id)
+    if not teacher or teacher.school_id != school_id or teacher.role != TEACHER or not teacher.is_active:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный учитель школы не найден")
+    if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
+    if not await db.scalar(select(Class.id).where(Class.id == class_id, Class.school_id == school_id)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
 
 
 async def delete_assignment(db: AsyncSession, school_id: int, assignment_id: int) -> None:
@@ -159,6 +170,9 @@ async def sync_assignments(
 
     created = deleted = 0
     target_c = set(class_ids)
+    for class_id in target_c:
+        if not await db.scalar(select(Class.id).where(Class.id == class_id, Class.school_id == school_id)):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
 
     if context == "subject":
         subject_id = context_id
@@ -169,6 +183,10 @@ async def sync_assignments(
                 TeacherSubject.school_id == school_id, TeacherSubject.subject_id == subject_id))
         ).scalars().all()
         target_t = set(teacher_ids)
+        for teacher_id in target_t:
+            teacher = await db.get(User, teacher_id)
+            if not teacher or teacher.school_id != school_id or teacher.role != TEACHER or not teacher.is_active:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный учитель школы не найден")
         t_removed, c_removed = {a.teacher_id for a in existing} - target_t, {a.class_id for a in existing} - target_c
         for a in existing:
             if a.teacher_id in t_removed or a.class_id in c_removed:
@@ -182,13 +200,16 @@ async def sync_assignments(
     else:  # teacher
         teacher_id = context_id
         teacher = await db.get(User, teacher_id)
-        if not teacher or (teacher.school_id is not None and teacher.school_id != school_id):
+        if not teacher or teacher.school_id != school_id or teacher.role != TEACHER or not teacher.is_active:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Учитель не найден")
         existing = (
             await db.execute(select(TeacherSubject).where(
                 TeacherSubject.school_id == school_id, TeacherSubject.teacher_id == teacher_id))
         ).scalars().all()
         target_s = set(subject_ids)
+        for subject_id in target_s:
+            if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
         s_removed, c_removed = {a.subject_id for a in existing} - target_s, {a.class_id for a in existing} - target_c
         for a in existing:
             if a.subject_id in s_removed or a.class_id in c_removed:
@@ -250,6 +271,7 @@ async def update_teacher_schedule(db: AsyncSession, school_id: int, teacher_id: 
         if (d, ln) in slots:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Два урока на одно время: День {d}, Урок {ln}")
         slots.add((d, ln))
+        await _validate_assignment_refs(db, school_id, teacher_id, int(it["subject_id"]), int(it["class_id"]))
 
     await db.execute(delete(Schedule).where(Schedule.school_id == school_id, Schedule.teacher_id == teacher_id))
     for it in items:

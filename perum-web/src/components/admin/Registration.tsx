@@ -177,7 +177,6 @@ export default function Registration() {
                             <select value={role} onChange={(e) => setRole(e.target.value)}>
                                 <option value="student">Ученик</option>
                                 <option value="teacher">Учитель</option>
-                                <option value="class_teacher">Классный руководитель</option>
                                 <option value="parent">Родитель</option>
                                 <option value="admin">Администратор</option>
                             </select>

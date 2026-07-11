@@ -8,7 +8,7 @@ interface FinalGradeModalProps {
     subject: Subject | null;
     classId: number;
     period: PeriodInfo | null;
-    existingGrade: { value: number; type: string; comment?: string } | null;
+    existingGrade: { id: number; value: number; type: string; comment?: string } | null;
     recommendedGrade: number | null;
     onClose: () => void;
     onSave: () => void;
@@ -28,6 +28,7 @@ export default function FinalGradeModal({
     const [gradeType, setGradeType] = useState<string>(existingGrade?.type || 'quarter');
     const [comment, setComment] = useState(existingGrade?.comment || '');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState('');
 
     if (!student || !subject || !period) return null;
@@ -53,10 +54,25 @@ export default function FinalGradeModal({
             onSave();
             onClose();
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Ошибка при выставлении итоговой оценки');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ошибка при выставлении итоговой оценки');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!existingGrade || !window.confirm('Удалить итоговую оценку?')) return;
+        setIsDeleting(true);
+        setError('');
+        try {
+            await api.del(`/journal/grades/final/${existingGrade.id}`);
+            onSave();
+            onClose();
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ошибка удаления итоговой оценки');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -132,10 +148,11 @@ export default function FinalGradeModal({
                     </div>
 
                     <div className={styles.formActions}>
-                        <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting}>
-                            Отмена
-                        </button>
-                        <button type="submit" className={styles.submitBtn} disabled={isSubmitting || !gradeValue}>
+                        {existingGrade && <button type="button" className={styles.cancelBtn} onClick={handleDelete} disabled={isSubmitting || isDeleting}>
+                            {isDeleting ? 'Удаление...' : 'Удалить'}
+                        </button>}
+                        <button type="button" className={styles.cancelBtn} onClick={onClose} disabled={isSubmitting || isDeleting}>Отмена</button>
+                        <button type="submit" className={styles.submitBtn} disabled={isSubmitting || isDeleting || !gradeValue}>
                             {isSubmitting ? 'Сохранение...' : 'Сохранить'}
                         </button>
                     </div>

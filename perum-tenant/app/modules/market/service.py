@@ -7,12 +7,11 @@ school-scoped; purchases/equips act on the caller's own user.
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time import utc_now
 from app.models import ShopItem, Transaction, User, UserInventory
 
 EQUIPPABLE = {"avatar", "background"}
@@ -83,7 +82,7 @@ async def get_catalog(
         stmt = stmt.where(ShopItem.price >= min_price)
     if max_price is not None:
         stmt = stmt.where(ShopItem.price <= max_price)
-    now = datetime.utcnow()
+    now = utc_now()
     rows = (await db.execute(stmt)).scalars().all()
     return [_item_dict(i) for i in rows if not i.available_from or i.available_from <= now]
 
@@ -111,7 +110,7 @@ async def purchase_item(db: AsyncSession, school_id: int, user: User, item_id: i
     item = await _get_item(db, school_id, item_id)
     if not item.is_active or item.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Товар снят с продажи")
-    if item.available_from and item.available_from > datetime.utcnow():
+    if item.available_from and item.available_from > utc_now():
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Товар ещё не поступил в продажу")
     if (user.balance or 0) < item.price:
         raise HTTPException(

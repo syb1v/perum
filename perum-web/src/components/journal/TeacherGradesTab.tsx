@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
+import api from '@/lib/apiClient';
 import { JournalData, JournalStudent, ClassInfo, Subject } from '@/types';
 import JournalControls from '@/components/journal/JournalControls';
 import GradeModal from '@/components/journal/GradeModal';
@@ -9,6 +10,7 @@ import AttestationModal from '@/components/journal/AttestationModal';
 import DayTemplateModal from '@/components/journal/DayTemplateModal';
 import ImportJournalModal from '@/components/journal/ImportJournalModal';
 import styles from '../../app/teacher/journal/page.module.css';
+import { useToast } from '@/context/ToastContext';
 
 export interface PeriodOption {
     id: number;
@@ -80,25 +82,24 @@ export default function TeacherGradesTab({
     const [attestationModalOpen, setAttestationModalOpen] = React.useState(false);
     const [importModalOpen, setImportModalOpen] = React.useState(false);
 
-    const storageKey = `dayTemplates_${selectedClassId}_${selectedSubjectId}`;
+    const { showSuccess } = useToast();
     const [dayTemplates, setDayTemplates] = React.useState<Record<string, { workTypeId: string, topicId: string, shortName: string }>>({});
 
-    // Load templates from localStorage whenever the subject/class changes
     React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem(storageKey);
-            setDayTemplates(saved ? JSON.parse(saved) : {});
-        }
-    }, [storageKey]);
-
-    // Persist templates to localStorage when they change
-    React.useEffect(() => {
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(storageKey, JSON.stringify(dayTemplates));
-        }
-    }, [dayTemplates, storageKey]);
+        const templates = journal?.lesson_templates || {};
+        setDayTemplates(Object.fromEntries(Object.values(templates).map((template) => {
+            return [`${template.lesson_date}:${template.lesson_number ?? 0}`, {
+                workTypeId: template.work_type_id?.toString() || '',
+                topicId: template.topic_id?.toString() || '',
+                shortName: template.topic_id ? 'Т' : 'Р',
+            }];
+        })));
+    }, [journal?.lesson_templates]);
 
     const [dayTemplateModalDate, setDayTemplateModalDate] = React.useState<string | null>(null);
+    const [dayTemplateLessonNumber, setDayTemplateLessonNumber] = React.useState(0);
+
+    const templateFor = (date: string, lessonNumber: number) => dayTemplates[`${date}:${lessonNumber}`];
 
     // Handlers
     const handleAddGradeClick = (student: JournalStudent, date: string) => {
@@ -293,14 +294,20 @@ export default function TeacherGradesTab({
                                     {sortedDates.map(date => {
                                         const cw = journal?.control_works?.find(w => w.work_date.startsWith(date));
                                         const isHoliday = isHolidayDate(date);
-                                        const dt = dayTemplates[date];
+                                         const slots = journal.schedule_slots?.[date] || [];
+                                         const dt = slots.map(number => templateFor(date, number)).find(Boolean) || templateFor(date, 0);
                                         return (
                                             <th
                                                 key={date}
                                                 className={`${styles.gradeCol} ${date === selectedDate ? styles.gradeColToday : ''} ${isHoliday ? styles.gradeColHoliday : ''}`}
                                                 title={isHoliday ? 'Каникулы' : 'Нажмите чтобы настроить шаблон дня'}
                                                 style={{ cursor: 'pointer', position: 'relative' }}
-                                                onClick={() => !isHoliday && setDayTemplateModalDate(date)}
+                                                 onClick={() => {
+                                                     if (!isHoliday) {
+                                                         setDayTemplateLessonNumber(slots[0] ?? 0);
+                                                         setDayTemplateModalDate(date);
+                                                     }
+                                                 }}
                                             >
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
                                                     <span>{date.split('-').slice(1).reverse().join('.')}</span>
@@ -468,8 +475,9 @@ export default function TeacherGradesTab({
                     subject={currentSubject || null}
                     classId={selectedClassId}
                     date={gradeDate || selectedDate}
-                    defaultWorkTypeId={dayTemplates[gradeDate || selectedDate]?.workTypeId}
-                    defaultTopicId={dayTemplates[gradeDate || selectedDate]?.topicId}
+                    lessonNumber={(journal?.schedule_slots?.[gradeDate || selectedDate] || [])[0]}
+                    defaultWorkTypeId={templateFor(gradeDate || selectedDate, (journal?.schedule_slots?.[gradeDate || selectedDate] || [0])[0])?.workTypeId}
+                    defaultTopicId={templateFor(gradeDate || selectedDate, (journal?.schedule_slots?.[gradeDate || selectedDate] || [0])[0])?.topicId}
                     onClose={() => setGradeModalOpen(false)}
                     onSave={() => {
                         onLoad();
@@ -506,7 +514,7 @@ export default function TeacherGradesTab({
                     existingGrade={
                         (() => {
                             const fg = journal?.final_grades?.find(fg => fg.student_id === selectedStudentForFinalGrade?.id);
-                            return fg ? { value: fg.grade_value, type: fg.grade_type, comment: fg.comment || undefined } : null;
+                            return fg ? { id: fg.id, value: fg.grade_value, type: fg.grade_type, comment: fg.comment || undefined } : null;
                         })()
                     }
                     recommendedGrade={selectedStudentForFinalGrade?.average || null}
@@ -580,25 +588,29 @@ export default function TeacherGradesTab({
                 <DayTemplateModal
                     date={dayTemplateModalDate}
                     subject={currentSubject}
-                    initialWorkTypeId={dayTemplates[dayTemplateModalDate]?.workTypeId}
-                    initialTopicId={dayTemplates[dayTemplateModalDate]?.topicId}
+                    lessonNumbers={journal?.schedule_slots?.[dayTemplateModalDate] || [dayTemplateLessonNumber]}
+                    initialLessonNumber={dayTemplateLessonNumber}
+                    initialWorkTypeId={templateFor(dayTemplateModalDate, dayTemplateLessonNumber)?.workTypeId}
+                    initialTopicId={templateFor(dayTemplateModalDate, dayTemplateLessonNumber)?.topicId}
+                    hasTemplate={Boolean(templateFor(dayTemplateModalDate, dayTemplateLessonNumber))}
+                    onLessonChange={setDayTemplateLessonNumber}
                     onClose={() => setDayTemplateModalDate(null)}
-                    onClear={() => {
-                        const newTemplates = { ...dayTemplates };
-                        delete newTemplates[dayTemplateModalDate];
-                        setDayTemplates(newTemplates);
+                    onClear={async (lessonNumber) => {
+                        const query = lessonNumber ? `?lesson_number=${lessonNumber}` : '';
+                        await api.del(`/journal/${selectedClassId}/${selectedSubjectId}/lesson-templates/${dayTemplateModalDate}${query}`);
+                        showSuccess('Шаблон урока удалён');
                         setDayTemplateModalDate(null);
+                        onLoad();
                     }}
-                    onSave={(wtId, tId, shortName) => {
-                        setDayTemplates({
-                            ...dayTemplates,
-                            [dayTemplateModalDate]: {
-                                workTypeId: wtId,
-                                topicId: tId,
-                                shortName: shortName
-                            }
+                    onSave={async (wtId, tId, lessonNumber) => {
+                        await api.put(`/journal/${selectedClassId}/${selectedSubjectId}/lesson-templates/${dayTemplateModalDate}`, {
+                            work_type_id: wtId ? Number(wtId) : null,
+                            topic_id: tId ? Number(tId) : null,
+                            lesson_number: lessonNumber || null,
                         });
+                        showSuccess('Шаблон урока сохранён');
                         setDayTemplateModalDate(null);
+                        onLoad();
                     }}
                 />
             )}

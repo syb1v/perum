@@ -96,6 +96,7 @@ from app.models.academic import (  # noqa: E402,F401
     ClassStudent,
     LessonGroup,
     LessonGroupStudent,
+    LessonOccurrence,
     Schedule,
     SchoolPeriod,
     Subject,
@@ -111,6 +112,7 @@ from app.models.journal import (  # noqa: E402,F401
     Grade,
     Homework,
     HomeworkAttachment,
+    LessonTemplate,
     Transaction,
 )
 

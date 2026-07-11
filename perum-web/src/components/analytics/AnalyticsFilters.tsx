@@ -9,6 +9,7 @@ interface AnalyticsFiltersProps {
     selectedClassId: number;
     selectedSubjectId: number;
     selectedPeriod: string;
+    periods: { id: number; name: string }[];
     onClassChange: (id: number) => void;
     onSubjectChange: (id: number) => void;
     onPeriodChange: (period: string) => void;
@@ -20,6 +21,7 @@ export default function AnalyticsFilters({
     selectedClassId,
     selectedSubjectId,
     selectedPeriod,
+    periods,
     onClassChange,
     onSubjectChange,
     onPeriodChange
@@ -59,14 +61,9 @@ export default function AnalyticsFilters({
                     value={selectedPeriod}
                     onChange={(e) => onPeriodChange(e.target.value)}
                 >
-                    <option value="current">Текущая четверть</option>
-                    <option value="quarter-1">1 четверть</option>
-                    <option value="quarter-2">2 четверть</option>
-                    <option value="quarter-3">3 четверть</option>
-                    <option value="quarter-4">4 четверть</option>
-                    <option value="half-year-1">1 полугодие</option>
-                    <option value="half-year-2">2 полугодие</option>
-                    <option value="year">Весь год</option>
+                    {periods.map((period) => (
+                        <option key={period.id} value={String(period.id)}>{period.name}</option>
+                    ))}
                 </select>
             </div>
         </div>

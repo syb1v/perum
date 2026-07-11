@@ -41,6 +41,7 @@ _MONTHS = {
 
 # Взвешенный средний балл — общий для всех агрегатов учителя.
 _WEIGHTED_AVG = func.sum(Grade.grade_value * Grade.weight) / func.sum(Grade.weight)
+_EFFECTIVE_GRADE_DATE = func.coalesce(Grade.lesson_date, Grade.created_at)
 
 
 def parse_period(period: str | None) -> tuple[datetime, datetime]:
@@ -115,8 +116,8 @@ def _grade_filter(class_id: int, school_id: int, start: datetime, end: datetime,
     cond = and_(
         Grade.school_id == school_id,
         Grade.class_id == class_id,
-        Grade.created_at >= start,
-        Grade.created_at <= end,
+        _EFFECTIVE_GRADE_DATE >= start,
+        _EFFECTIVE_GRADE_DATE <= end,
     )
     if subject_id:
         cond = and_(cond, Grade.subject_id == subject_id)
@@ -488,10 +489,10 @@ async def deep_economy(db: AsyncSession, school_id: int, period_days: int) -> di
 
 async def performance(db: AsyncSession, school_id: int, period_days: int) -> dict:
     period_start = datetime.now() - timedelta(days=period_days)
-    eff_date = func.coalesce(Grade.lesson_date, Grade.created_at)
+    eff_date = _EFFECTIVE_GRADE_DATE
     base = and_(Grade.school_id == school_id, Grade.grade_value.isnot(None), eff_date >= period_start)
 
-    avg_grade = await db.scalar(select(func.avg(Grade.grade_value)).where(base)) or 0.0
+    avg_grade = await db.scalar(select(_WEIGHTED_AVG).where(base)) or 0.0
     total_grades = await db.scalar(select(func.count(Grade.id)).where(base)) or 0
 
     dist_rows = (
@@ -501,22 +502,22 @@ async def performance(db: AsyncSession, school_id: int, period_days: int) -> dic
     ).all()
     grade_distribution = [{"grade_value": int(g), "count": int(c)} for g, c in dist_rows]
 
-    grade_rows = (await db.execute(select(eff_date, Grade.grade_value).where(base))).all()
-    daily: dict[str, list[int]] = {}
+    grade_rows = (await db.execute(select(eff_date, Grade.grade_value, Grade.weight).where(base))).all()
+    daily: dict[str, list[float]] = {}
     for i in range(period_days + 1):
         daily[(period_start + timedelta(days=i)).strftime("%d.%m")] = [0, 0]
-    for dt, val in grade_rows:
+    for dt, val, weight in grade_rows:
         key = dt.strftime("%d.%m")
         if key in daily:
-            daily[key][0] += val
-            daily[key][1] += 1
+            daily[key][0] += val * weight
+            daily[key][1] += weight
     daily_stats = [
         {"date": k, "avg_grade": round(v[0] / v[1], 2) if v[1] else 0} for k, v in daily.items()
     ]
 
     subj_rows = (
         await db.execute(
-            select(Subject.name, func.avg(Grade.grade_value).label("avg"))
+            select(Subject.name, _WEIGHTED_AVG.label("avg"))
             .join(Subject, Grade.subject_id == Subject.id)
             .where(base)
             .group_by(Subject.name)
