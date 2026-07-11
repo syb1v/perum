@@ -280,4 +280,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 135 | 2026-07-08 | 1adfbf9 | fix(dns): DNS cleanup on archive + update on IP change + auto-sweep + org_admin status; fix(tests): StackSpec field order + telemetry tests |
 | 136 | 2026-07-08 | 27a2c40 | fix(web+tenant): remove dead SupportInbox + clear-cache btn, fix ControlWorksSection URL, add enable-all-exchange endpoint |
 | 137 | 2026-07-08 | daf79aa | feat(web+tenant): HW stub-fixes (teacher lesson modal/works/activity feed) + grades with lesson topic end-to-end |
-| 138 | 2026-07-11 | _______ | feat(web+tenant): незакоммиченный цикл учебной целостности, экземпляров уроков, родительского кабинета, аналитики и portable-миграций |
+| 138 | 2026-07-11 | 03c7c0c | feat(web+tenant): учебная целостность, экземпляры уроков, родительский кабинет, аналитика и portable-миграции |
