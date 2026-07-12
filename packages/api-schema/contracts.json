@@ -13,7 +13,13 @@
     "/api/journal/grades",
     "/api/homework",
     "/api/control-works",
-    "/api/parent/children"
+    "/api/parent/children",
+    "/api/social/settings",
+    "/api/social/students",
+    "/api/social/friend-requests",
+    "/api/social/friends",
+    "/api/social/blocks",
+    "/api/admin/social/settings"
   ],
   "core": [
     "/api/auth/login",

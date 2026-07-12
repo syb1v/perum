@@ -75,10 +75,11 @@ async def cancel(request_id: int, user: User = Depends(require_student), db: Asy
 async def friends(cursor: int | None = None, user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
     await service._social_context(db, user)
     rows = (await db.scalars(select(Friendship).where(Friendship.school_id == user.school_id, Friendship.ended_at.is_(None), or_(Friendship.user_low_id == user.id, Friendship.user_high_id == user.id)).order_by(Friendship.id))).all()
-    ids = [row.user_high_id if row.user_low_id == user.id else row.user_low_id for row in rows]
+    ids = sorted(row.user_high_id if row.user_low_id == user.id else row.user_low_id for row in rows)
     ids = [id_ for id_ in ids if cursor is None or id_ > cursor]
-    profiles = await _profiles(db, ids[:21]); page_ids = ids[:20]
-    return {"items": [profiles[id_] for id_ in page_ids], "next_cursor": ids[20] if len(ids) > 20 else None}
+    page_ids = ids[:20]
+    profiles = await _profiles(db, page_ids)
+    return {"items": [profiles[id_] for id_ in page_ids], "next_cursor": page_ids[-1] if len(ids) > 20 else None}
 
 
 @router.delete("/friends/{student_id}", status_code=204)
