@@ -281,3 +281,6 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 136 | 2026-07-08 | 27a2c40 | fix(web+tenant): remove dead SupportInbox + clear-cache btn, fix ControlWorksSection URL, add enable-all-exchange endpoint |
 | 137 | 2026-07-08 | daf79aa | feat(web+tenant): HW stub-fixes (teacher lesson modal/works/activity feed) + grades with lesson topic end-to-end |
 | 138 | 2026-07-11 | 03c7c0c | feat(web+tenant): учебная целостность, экземпляры уроков, родительский кабинет, аналитика и portable-миграции |
+| 139 | 2026-07-11 | _______ | feat(shared+mobile): workspaces, API contracts, tenant discovery, rotating refresh sessions и mobile compatibility |
+| 140 | 2026-07-12 | _______ | feat(web): UI настроек social и страницы друзей ученика |
+| 141 | 2026-07-12 | _______ | feat(tenant): social friends backend vertical slice |

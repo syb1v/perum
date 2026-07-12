@@ -1,95 +1,186 @@
-# План реализации друзей и личных чатов
+# Утверждённый план друзей и личных чатов
 
-## Цель
+> Статус: продуктовые решения утверждены 2026-07-11. Этот документ является
+> источником требований для реализации social-модуля в `perum-tenant`, web и
+> React Native.
 
-Добавить ученикам безопасные связи внутри одной школы: поиск одноклассников и учеников школы, заявки в друзья, список друзей и личные диалоги только между подтверждёнными друзьями.
+## 1. Настройки школы
 
-## Ограничения первой версии
+Все социальные функции управляются `school_admin` и `director`. Эти роли имеют
+одинаковые полномочия модератора.
 
-- Общение только между активными учениками одной школы.
-- Личный диалог один-на-один; групповые чаты и файлы не входят в первую версию.
-- Отправка сообщений разрешена только подтверждённым друзьям.
-- Удаление из друзей закрывает отправку новых сообщений, но сохраняет историю.
-- Заблокированный пользователь не может отправлять заявки и сообщения.
-- Текстовые сообщения ограничены по длине и проходят серверную валидацию.
+```text
+social_enabled                       bool, default false
+friend_scope                         classmates | school, default classmates
+social_min_grade                     int | null, default null
+social_max_grade                     int | null, default null
+parent_chat_visibility               disabled | metadata | full, default metadata
+message_retention_days               int, default 365
+message_links_allowed                false, неизменяемо в первой версии
+message_attachments_enabled          bool, default true
+social_quiet_hours_start/end         time | null
+social_moderation_enabled            bool, всегда true при social_enabled
+```
 
-## Модель данных
+- Администратор школы может включать social для любых классов через диапазон
+  `social_min_grade`/`social_max_grade`.
+- Область поиска и заявок выбирается между одноклассниками и всей школой.
+- Видимость переписки родителям настраивается школой: полностью выключена,
+  только метаданные или полный доступ.
+- Срок хранения задаётся школой. Минимум и максимум ограничиваются платформой,
+  чтобы школа не задала небезопасное или юридически недопустимое значение.
+- Ссылки запрещены: backend отклоняет URL, frontend не делает linkify/preview.
+- Вложения входят в первую production-версию, но проходят отдельный защищённый
+  upload pipeline.
+
+## 2. Модель данных
+
+### `friend_requests`
+
+- `id`, `school_id`, `requester_id`, `addressee_id`.
+- `status`: `pending`, `accepted`, `rejected`, `cancelled`, `expired`.
+- `client_request_id`, `created_at`, `responded_at`, `expires_at`.
+- Запрет заявки себе, cross-school и пользователю вне разрешённого scope.
+- Одна активная заявка на нормализованную пару пользователей.
 
 ### `friendships`
 
-- `id`, `school_id`, `requester_id`, `addressee_id`.
-- `status`: `pending`, `accepted`, `rejected`, `blocked`.
-- `created_at`, `responded_at`.
-- Уникальная нормализованная пара пользователей, запрет дружбы с самим собой.
+- `id`, `school_id`, `user_low_id`, `user_high_id`.
+- `created_from_request_id`, `created_at`, `ended_at`, `ended_by_id`,
+  `end_reason`.
+- Одна активная дружба на нормализованную пару.
 
-### `conversations`
+### `user_blocks`
 
-- `id`, `school_id`, `user1_id`, `user2_id`, `created_at`, `last_message_at`.
-- Уникальная нормализованная пара участников.
+- `id`, `school_id`, `blocker_id`, `blocked_id`.
+- `source`: `user`, `moderator`, `system`.
+- `reason_code`, `created_at`, `released_at`.
+- Блокировка отменяет заявки, завершает дружбу и блокирует сообщения, но не
+  удаляет историю.
+
+### `conversations` и `conversation_members`
+
+- Direct conversation: одна пара учеников, одна школа.
+- `state`: `active`, `locked`, `archived`.
+- Участник хранит `last_read_message_id`, mute/archive и notification settings.
+- После удаления из друзей история доступна только для чтения.
 
 ### `messages`
 
-- `id`, `school_id`, `conversation_id`, `sender_id`, `text`.
-- `created_at`, `read_at`, `deleted_at`.
-- Индексы по `conversation_id + created_at` и непрочитанным сообщениям.
+- `id`, `school_id`, `conversation_id`, `sender_id`.
+- `client_message_id` для идемпотентной offline-отправки.
+- `kind`: `text`, `attachment`, `system`.
+- `body`, `created_at`, `edited_at`, `deleted_at`, `moderation_state`.
+- `reply_to_message_id`.
+- Plain text; URL запрещаются серверным валидатором.
 
-## Backend и API
+### Вложения
 
-Новый модуль `app/modules/social/` со схемами, сервисом и роутером `/api/social`.
+`message_attachments`:
+
+- object key, исходное имя, MIME, размер, checksum;
+- uploader, message, scan status, timestamps;
+- whitelist форматов и лимит размера;
+- magic-byte проверка, antivirus/quarantine;
+- короткоживущие signed download URL;
+- никакого filesystem path в API.
+
+### Модерация
+
+- `message_reports` для жалоб.
+- `moderation_cases` для расследований.
+- `moderation_actions` как append-only аудит.
+- `school_admin` и `director` имеют одинаковую moderator capability.
+- Доступ к сообщениям выполняется через moderation case либо в соответствии с
+  `parent_chat_visibility`, а не через свободный просмотр всех диалогов.
+
+## 3. API
+
+### Настройки и поиск
+
+```http
+GET   /api/social/settings
+PATCH /api/admin/social/settings
+GET   /api/social/students?query=&cursor=&limit=
+```
 
 ### Друзья
 
-- `GET /students?query=` — поиск доступных учеников школы без раскрытия лишних персональных данных.
-- `GET /friends` — подтверждённые друзья.
-- `GET /friend-requests` — входящие и исходящие заявки.
-- `POST /friend-requests/{student_id}` — отправить заявку.
-- `POST /friend-requests/{request_id}/accept` — принять.
-- `POST /friend-requests/{request_id}/reject` — отклонить.
-- `DELETE /friends/{student_id}` — удалить из друзей.
-- `POST /students/{student_id}/block` и `DELETE /students/{student_id}/block` — блокировка.
+```http
+GET    /api/social/friend-requests?direction=incoming|outgoing
+POST   /api/social/friend-requests
+POST   /api/social/friend-requests/{id}/accept
+POST   /api/social/friend-requests/{id}/reject
+POST   /api/social/friend-requests/{id}/cancel
+GET    /api/social/friends?cursor=
+DELETE /api/social/friends/{student_id}
+GET    /api/social/blocks
+POST   /api/social/blocks
+DELETE /api/social/blocks/{student_id}
+```
 
 ### Чаты
 
-- `GET /conversations` — список диалогов, последнее сообщение и счётчик непрочитанных.
-- `POST /conversations/{friend_id}` — получить или создать диалог с другом.
-- `GET /conversations/{id}/messages?cursor=` — история с cursor-пагинацией.
-- `POST /conversations/{id}/messages` — отправить сообщение.
-- `POST /conversations/{id}/read` — отметить сообщения прочитанными.
+```http
+GET  /api/social/conversations?cursor=
+POST /api/social/conversations
+GET  /api/social/conversations/{id}/messages?before=&limit=
+POST /api/social/conversations/{id}/messages
+POST /api/social/conversations/{id}/read
+POST /api/social/conversations/{id}/archive
+POST /api/social/conversations/{id}/mute
+POST /api/social/reports
+```
 
-Каждый сервисный метод проверяет `school_id`, роль `student`, участие в диалоге, дружбу и блокировки. На отправку заявок и сообщений нужен rate limit.
+### Модерация
 
-## Frontend
+```http
+GET  /api/admin/social/moderation/cases
+GET  /api/admin/social/moderation/cases/{id}
+POST /api/admin/social/moderation/cases/{id}/actions
+```
 
-- Маршрут `/student/friends`: вкладки «Друзья», «Заявки», «Найти».
-- Маршрут `/student/messages`: список диалогов и область переписки.
-- На мобильном экране список и диалог открываются последовательно; на desktop используются две колонки.
-- React Query хранит списки, заявки, сообщения и счётчики непрочитанных.
-- Первая версия использует polling списка диалогов и активного чата; WebSocket добавляется после стабилизации REST-контракта.
-- Карточка «Друзья» в профиле перестаёт быть заглушкой и ведёт на `/student/friends`.
+## 4. Realtime, push и offline
 
-## Безопасность
+1. REST и cursor pagination являются источником истины.
+2. Первый rollout может использовать visibility-aware polling.
+3. Production realtime: short-lived single-use ticket для `/ws/social`.
+4. Каждое событие имеет `event_id`, `version`, `occurred_at`, `school_id`.
+5. Web использует IndexedDB outbox, mobile использует локальную SQLite/outbox.
+6. Сообщение всегда имеет `client_message_id`; retry не создаёт дубль.
+7. Push preview включён по утверждённому требованию: показывает отправителя и
+   текст. Пользователь и школа могут отключить preview; на заблокированном
+   экране ОС содержимое защищается настройками платформы настолько, насколько
+   это позволяют APNs/FCM/Expo.
+8. Push не является источником данных: приложение загружает сообщение через API.
 
-- Запрет cross-school доступа во всех запросах и индексах выборки.
-- Нельзя передать произвольный `sender_id`: отправитель всегда берётся из токена.
-- Экранирование текста выполняет React; backend не принимает HTML.
-- Лимиты длины, частоты сообщений и количества заявок.
-- Жалобы и модерация проектируются до включения чатов на production.
-- События блокировки и модерации записываются в аудит.
+## 5. Web и React Native
 
-## Этапы
+Web:
 
-1. Миграция, модели дружбы, API заявок и unit-тесты состояний.
-2. UI друзей, поиска и заявок.
-3. Модели диалогов/сообщений, REST API, пагинация и проверки доступа.
-4. UI чатов, polling и непрочитанные сообщения.
-5. Блокировки, rate limit, аудит, жалобы и ручные тесты двух учеников.
-6. Нагрузочная проверка и решение о переходе с polling на WebSocket.
+- `/student/friends`;
+- `/student/messages`;
+- moderation inbox в админке школы;
+- badge непрочитанных в Header/MobileNav.
 
-## Критерии готовности
+React Native:
 
-- Два ученика одной школы проходят полный сценарий заявка → принятие → чат.
-- Ученик другой школы не обнаруживается поиском и получает 404/403 по чужим ID.
-- Без подтверждённой дружбы сообщение отправить невозможно.
-- Блокировка немедленно запрещает новые заявки и сообщения.
-- История сообщений пагинируется без пропусков и дублей.
-- Счётчики непрочитанных согласованы между списком диалогов и открытым чатом.
+- нативные Friends и Messages screens;
+- optimistic outbox и retry;
+- push/deep link в conversation;
+- безопасный file picker/upload/download;
+- block/report доступны из меню диалога и сообщения.
+
+## 6. Критерии готовности
+
+- Настройки школы реально ограничивают API, не только UI.
+- Cross-school запросы возвращают 404/403 без раскрытия данных.
+- Без дружбы сообщение невозможно.
+- Block немедленно закрывает отправку.
+- URL отклоняется backend.
+- Вложения проходят quarantine/scan до скачивания.
+- Parent visibility соответствует настройке школы.
+- Модераторы ограничены `school_admin` и `director`.
+- Offline retry идемпотентен.
+- Unread/read cursor согласован между web и native.
+- Retention job протестирован на активных, удалённых и reported сообщениях.

@@ -83,6 +83,8 @@ from app.modules.news.router import router as news_router  # noqa: E402
 from app.modules.parent.router import router as parent_router  # noqa: E402
 from app.modules.quests.router import router as quests_router  # noqa: E402
 from app.modules.school_admin.router import router as school_admin_router  # noqa: E402
+from app.modules.social.router import admin_router as social_admin_router  # noqa: E402
+from app.modules.social.router import router as social_router  # noqa: E402
 from app.modules.student.router import router as student_router  # noqa: E402
 from app.modules.teacher.router import router as teacher_router  # noqa: E402
 from app.modules.user_admin.router import router as user_admin_router  # noqa: E402
@@ -92,6 +94,8 @@ app.include_router(internal_router, prefix="/internal", tags=["internal"])
 app.include_router(common_router, prefix="/api", tags=["common"])
 app.include_router(coursework_router, prefix="/api", tags=["coursework"])
 app.include_router(school_admin_router, prefix="/api/admin", tags=["school_admin"])
+app.include_router(social_admin_router, prefix="/api/admin", tags=["social-admin"])
+app.include_router(social_router, prefix="/api", tags=["social"])
 app.include_router(user_admin_router, prefix="/api/admin", tags=["user-admin"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(student_router, prefix="/api/student", tags=["student"])

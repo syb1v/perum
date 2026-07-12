@@ -33,6 +33,7 @@ const STUDENT_PAGES: Record<string, string> = {
     '/exchange': '/student/exchange',
     '/market': '/student/market',
     '/schedule': '/student/schedule',
+    '/friends': '/student/friends',
 };
 
 const TEACHER_PAGES: Record<string, string> = {
@@ -48,6 +49,7 @@ const LEGACY_REDIRECTS: Record<string, string> = {
     '/student/exchange': '/exchange',
     '/student/market': '/market',
     '/student/schedule': '/schedule',
+    '/student/friends': '/friends',
     '/teacher': '/dashboard',
     '/teacher/profile': '/profile',
     '/teacher/journal': '/journal',
@@ -180,7 +182,7 @@ export function proxy(request: NextRequest) {
         const referer = request.headers.get('referer') ?? '';
         const isInternalNav = [
             '/dashboard', '/profile', '/exchange', '/market',
-            '/schedule', '/journal', '/analytics', '/topics',
+            '/schedule', '/friends', '/journal', '/analytics', '/topics',
         ].some(p => referer.includes(p));
         if (!isInternalNav) {
             const cleanUrl = LEGACY_REDIRECTS[pathname];

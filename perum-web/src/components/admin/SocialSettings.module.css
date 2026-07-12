@@ -1,0 +1,18 @@
+.card { background: var(--bg-secondary, #fff); border: 1px solid var(--border-color, #e5e7eb); border-radius: 16px; padding: 24px; color: var(--text-primary, #172033); }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.heading h2 { margin: 0 0 6px; font-size: 22px; }
+.heading p { margin: 0; color: var(--text-secondary, #667085); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.grid label { display: flex; flex-direction: column; gap: 8px; color: var(--text-secondary, #667085); font-size: 14px; font-weight: 600; }
+.grid input, .grid select { width: 100%; min-height: 42px; padding: 9px 12px; border: 1px solid var(--border-color, #d9dde5); border-radius: 10px; background: var(--bg-primary, #fff); color: var(--text-primary, #172033); font: inherit; }
+.grid .check { flex-direction: row; align-items: center; align-self: end; min-height: 42px; color: var(--text-primary, #172033); }
+.check input { width: 18px; min-height: 18px; }
+.switch input { position: absolute; opacity: 0; }
+.switch span { display: block; width: 48px; height: 28px; border-radius: 99px; background: #c8ced8; padding: 3px; cursor: pointer; transition: .2s; }
+.switch span::after { content: ''; display: block; width: 22px; height: 22px; border-radius: 50%; background: white; transition: .2s; box-shadow: 0 1px 4px #0003; }
+.switch input:checked + span { background: var(--accent-primary, #6d5dfc); }
+.switch input:checked + span::after { transform: translateX(20px); }
+.footer { display: flex; align-items: center; justify-content: flex-end; gap: 18px; min-height: 42px; margin-top: 24px; color: var(--text-secondary, #667085); }
+.footer button { border: 0; border-radius: 10px; padding: 11px 20px; background: var(--accent-primary, #6d5dfc); color: white; font-weight: 700; cursor: pointer; }
+.footer button:disabled { opacity: .55; cursor: default; }
+@media (max-width: 700px) { .card { padding: 18px; } .grid { grid-template-columns: 1fr; } .heading { align-items: flex-start; } .footer { align-items: stretch; flex-direction: column; } }

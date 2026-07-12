@@ -73,7 +73,8 @@ export default function AdminSidebar({ activeSection, onSectionChange, onLogout,
         {
             title: 'Система',
             items: [
-                { id: 'school-settings', label: 'Настройки школы', icon: <SettingsIcon /> }
+                { id: 'school-settings', label: 'Настройки школы', icon: <SettingsIcon /> },
+                { id: 'social-settings', label: 'Общение учеников', icon: <UsersIcon /> }
             ]
         }
     ];

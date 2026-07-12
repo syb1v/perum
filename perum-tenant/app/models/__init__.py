@@ -87,6 +87,27 @@ class User(Base):
     school: Mapped[School | None] = relationship(back_populates="users")
 
 
+class RefreshSession(Base):
+    __tablename__ = "refresh_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    refresh_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    previous_refresh_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    device_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    device_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    device_platform: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    app_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    last_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    last_used_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 # Academic-core models (Phase 5) — registered on Base.metadata for migrations.
 from app.models.academic import (  # noqa: E402,F401
     AcademicYear,
@@ -145,3 +166,4 @@ from app.models.appeals import GradeAppeal  # noqa: E402,F401
 
 # Misc school models (Phase 8 tails): settings, notifications, inquiries.
 from app.models.misc import ContactInquiry, Notification, SchoolSetting  # noqa: E402,F401
+from app.models.social import FriendRequest, Friendship, SocialSettings, UserBlock  # noqa: E402,F401

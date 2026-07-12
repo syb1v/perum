@@ -16,6 +16,7 @@ const STUDENT_TABS = [
     { href: '/schedule', label: 'Учёба', icon: 'book' },
     { href: '/exchange', label: 'Биржа', icon: 'trending' },
     { href: '/market', label: 'Маркет', icon: 'shop' },
+    { href: '/friends', label: 'Друзья', icon: 'users' },
 ];
 
 const TEACHER_TABS = [

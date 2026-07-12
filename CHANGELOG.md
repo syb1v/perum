@@ -6,6 +6,14 @@
 
 ## [Unreleased] — 2026-07-11
 
+- Добавлен web UI social API: админские настройки общения и адаптивная страница друзей ученика с заявками, поиском, блокировками, действиями и clean URL `/friends`.
+- Реализован tenant backend vertical slice друзей: школьные social-настройки, поиск учеников по scope и диапазону классов, идемпотентные заявки, дружба и блокировки с изоляцией школ и нормализованными уникальными парами.
+- Добавлен совместимый фундамент мобильной аутентификации tenant: хешированные rotating refresh-токены, управление устройствами/сессиями, отзыв при смене пароля и session-backed JWT с сохранением поддержки legacy JWT до истечения.
+- Добавлен публичный core discovery для мобильных клиентов: безопасная нормализация tenant-host, поиск по домену школы с fallback на поддомен организации и ограниченный контракт совместимости/capabilities.
+- Утверждены продуктовые решения и создан единый `docs/PRODUCT_MASTER_PLAN.md` для social, школьной/платформенной поддержки, биллинга ЮKassa и полного React Native parity. Обновлён `docs/FRIENDS_CHAT_PLAN.md`: настройки школы, модерация, retention, push preview, offline и защищённые вложения.
+- Заложен общий web/mobile foundation: корневые npm workspaces, platform-neutral `@perum/api-client`, общие `@perum/domain` и `@perum/design-tokens`, отдельные сгенерированные OpenAPI-контракты core/tenant и drift-check в CI. `perum-web` переведён на общий transport через browser adapter без изменения auth UX.
+- Закрыты все high/critical npm audit findings: Next.js и Sentry обновлены, уязвимый `xlsx` заменён на безопасный CSV-export, Quill/DOMPurify удалены в пользу plain-text редактора новостей. В CI добавлен fail gate для high/critical; остаётся временное moderate-исключение встроенного `postcss@8.4.31` в стабильном Next.js 16.2.10 до upstream-релиза.
+
 ### Устранение предупреждений инструментов
 
 - Tenant использует совместимый с naive `DateTime` helper UTC; конфигурации Alembic и Next.js приведены к актуальным ключам, middleware переименован в proxy по соглашению Next.js 16, а локальный JWT secret увеличен до рекомендуемой длины.
