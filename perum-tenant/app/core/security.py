@@ -28,7 +28,7 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(*, subject: str, extra: dict | None = None) -> str:
+def create_access_token(*, subject: str, extra: dict | None = None, session_backed: bool = False) -> str:
     now = datetime.now(timezone.utc)
     payload: dict = {
         "sub": subject,
@@ -38,9 +38,18 @@ def create_access_token(*, subject: str, extra: dict | None = None) -> str:
     }
     if extra:
         payload.update(extra)
+    if session_backed:
+        payload.update({"iss": settings.JWT_ISSUER, "aud": settings.JWT_AUDIENCE, "typ": "access"})
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
 def decode_access_token(token: str) -> dict:
     """Decode + verify a token. Raises jwt.PyJWTError on invalid/expired."""
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    payload = jwt.decode(
+        token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM],
+        options={"verify_aud": False, "verify_iss": False},
+    )
+    if payload.get("typ") == "access":
+        if payload.get("iss") != settings.JWT_ISSUER or payload.get("aud") != settings.JWT_AUDIENCE:
+            raise jwt.InvalidTokenError("invalid issuer or audience")
+    return payload

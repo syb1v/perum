@@ -25,6 +25,9 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "dev-secret-change-me-perum-tenant"
     ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
+    REFRESH_TOKEN_TTL_DAYS: int = 30
+    JWT_ISSUER: str = "perum-tenant"
+    JWT_AUDIENCE: str = "perum-mobile"
     JWT_ALGORITHM: str = "HS256"
     TELEMETRY_TOKEN: str = ""
     # Отдельный токен для входящего /internal-RPC от ядра (управление учётками

@@ -12,13 +12,15 @@ from collections.abc import Callable
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.roles import DIRECTOR, ORG_ADMIN, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.security import decode_access_token
-from app.models import User
+from app.core.time import utc_now
+from app.models import RefreshSession, User
 
 settings = get_settings()
 
@@ -47,6 +49,16 @@ async def get_current_user(
     user = await db.get(User, int(sub)) if sub is not None else None
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "user not found or inactive", _UNAUTH)
+    if payload.get("typ") == "access":
+        session = await db.scalar(select(RefreshSession).where(
+            RefreshSession.user_id == user.id,
+            RefreshSession.session_token == payload.get("session_token"),
+            RefreshSession.token_version == payload.get("token_version"),
+            RefreshSession.revoked_at.is_(None),
+            RefreshSession.expires_at > utc_now(),
+        ))
+        if session is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session expired or revoked", _UNAUTH)
     return user
 
 

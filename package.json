@@ -1,0 +1,27 @@
+{
+  "name": "perum",
+  "private": true,
+  "workspaces": [
+    "perum-web",
+    "packages/*"
+  ],
+  "overrides": {
+    "next": {
+      "postcss": "8.5.10"
+    }
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test:shared": "npm test --workspaces --if-present",
+    "typecheck:web": "npm run typecheck --workspace perum-web",
+    "build:web": "npm run build --workspace perum-web",
+    "contracts:generate": "npm run contracts:generate --workspace @perum/api-schema",
+    "contracts:check": "npm run contracts:check --workspace @perum/api-schema",
+    "audit:ci": "npm audit --audit-level=high"
+  },
+  "devDependencies": {
+    "brace-expansion": "^5.0.7",
+    "dompurify": "^3.4.11",
+    "postcss": "^8.5.10"
+  }
+}

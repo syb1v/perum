@@ -1,0 +1,25 @@
+{
+  "tenant": [
+    "/api/login",
+    "/api/auth/refresh",
+    "/api/auth/sessions",
+    "/api/auth/devices",
+    "/api/auth/logout-all",
+    "/api/mobile/compatibility",
+    "/api/mobile/capabilities",
+    "/api/user/me",
+    "/api/student/diary",
+    "/api/student/grades",
+    "/api/journal/grades",
+    "/api/homework",
+    "/api/control-works",
+    "/api/parent/children"
+  ],
+  "core": [
+    "/api/auth/login",
+    "/api/public/tenant-discovery",
+    "/api/organizations",
+    "/api/schools",
+    "/api/support/tickets"
+  ]
+}

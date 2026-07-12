@@ -1,0 +1,17 @@
+{
+  "name": "@perum/api-schema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./tenant": "./generated/tenant.ts",
+    "./core": "./generated/core.ts"
+  },
+  "scripts": {
+    "contracts:generate": "bash scripts/generate.sh",
+    "contracts:check": "node scripts/check-contracts.mjs"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}

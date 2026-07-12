@@ -188,6 +188,9 @@ async def update_school_admin(uid: int, payload: SchoolAdminPatch, db: AsyncSess
         u.login = payload.email
     if payload.is_active is not None:
         u.is_active = payload.is_active
+        if not payload.is_active:
+            from app.modules.auth.service import revoke_all
+            await revoke_all(db, u.id)
     await db.commit()
     await db.refresh(u)
     return _admin_dict(u)
@@ -209,5 +212,7 @@ async def reset_school_admin_password(uid: int, db: AsyncSession = Depends(get_d
     temp_password = secrets.token_urlsafe(9)
     u.password_hash = hash_password(temp_password)
     u.must_change_password = True
+    from app.modules.auth.service import revoke_all
+    await revoke_all(db, u.id)
     await db.commit()
     return {"id": u.id, "login": u.login, "temporary_password": temp_password}

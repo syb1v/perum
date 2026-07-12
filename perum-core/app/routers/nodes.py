@@ -399,7 +399,8 @@ async def get_node_utilization(node_id: int, db: AsyncSession = Depends(get_db))
     return await planner.get_utilization(node)
 
 
-@platform_router.api_route("/{node_id}/bootstrap-script", methods=["GET", "POST"], response_model=BootstrapScriptResponse, operation_id="generate_node_bootstrap_script")
+@platform_router.get("/{node_id}/bootstrap-script", response_model=BootstrapScriptResponse, operation_id="get_node_bootstrap_script")
+@platform_router.post("/{node_id}/bootstrap-script", response_model=BootstrapScriptResponse, operation_id="create_node_bootstrap_script")
 async def generate_node_bootstrap_script(node_id: int, db: AsyncSession = Depends(get_db)) -> BootstrapScriptResponse:
     node = await db.get(Node, node_id)
     if not node:

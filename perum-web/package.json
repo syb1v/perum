@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "perum-web",
   "version": "2.3.5",
   "private": true,
   "scripts": {
@@ -8,10 +8,14 @@
     "build:prod": "next build --no-lint",
     "start": "next start",
     "lint": "next lint",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.43.0",
+    "@perum/api-client": "*",
+    "@perum/design-tokens": "*",
+    "@perum/domain": "*",
+    "@sentry/nextjs": "^10.65.0",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
     "chart.js": "^4.5.1",
@@ -19,14 +23,12 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",
     "mobile-drag-drop": "^3.0.0-rc.0",
-    "next": "^16",
+    "next": "^16.2.10",
     "openapi-fetch": "^0.17.0",
     "openapi-typescript": "^7.13.0",
     "react": "^19",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19",
-    "react-quill-new": "^3.3.4",
-    "xlsx": "^0.18.5"
+    "react-dom": "^19"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

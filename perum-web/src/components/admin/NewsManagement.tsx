@@ -7,13 +7,6 @@ import api from '@/lib/apiClient';
 import styles from '@/app/admin/page.module.css';
 import Modal from '@/components/ui/Modal';
 import { NewsItem } from '@/types';
-import dynamic from 'next/dynamic';
-import 'react-quill-new/dist/quill.snow.css';
-
-const ReactQuill = dynamic(() => import('react-quill-new'), {
-    ssr: false,
-    loading: () => <p>Загрузка редактора...</p>
-});
 
 interface MediaFile {
     url: string;
@@ -206,10 +199,9 @@ export default function NewsManagement() {
                                     {formatDate(item.created_at)}
                                 </span>
                             </div>
-                            <div
-                                style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px', maxHeight: '100px', overflow: 'hidden', textOverflow: 'ellipsis' }}
-                                dangerouslySetInnerHTML={{ __html: item.content }}
-                            />
+                            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '16px', maxHeight: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre-wrap' }}>
+                                {item.content.replace(/<[^>]*>/g, '')}
+                            </div>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                 <button className={styles.actionBtn} onClick={() => handleOpenModal(item)}>✏️ Ред.</button>
                                 <button className={`${styles.actionBtn} ${styles.danger}`} onClick={() => handleDelete(item.id)}>🗑️ Удал.</button>
@@ -241,13 +233,13 @@ export default function NewsManagement() {
                     </div>
                     <div className={styles.formGroup}>
                         <label>Содержание</label>
-                        <div style={{ backgroundColor: 'white', color: 'black', borderRadius: '4px', marginTop: '4px' }}>
-                            <ReactQuill
-                                theme="snow"
-                                value={formData.content}
-                                onChange={(val) => setFormData({ ...formData, content: val })}
-                            />
-                        </div>
+                        <textarea
+                            value={formData.content.replace(/<[^>]*>/g, '')}
+                            onChange={(event) => setFormData({ ...formData, content: event.target.value })}
+                            rows={10}
+                            maxLength={10000}
+                            placeholder="Текст новости"
+                        />
                     </div>
 
                     <div className={styles.formGroup} style={{ marginTop: '16px', display: 'flex', alignItems: 'center' }}>

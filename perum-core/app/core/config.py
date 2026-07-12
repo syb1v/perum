@@ -15,7 +15,7 @@ class Settings(BaseSettings):
         description="Async SQLAlchemy URL for the control plane DB",
     )
 
-    SECRET_KEY: str = Field(default="dev-secret-change-me")
+    SECRET_KEY: str = Field(default="dev-secret-change-me-perum-core-v2")
     ACCESS_TOKEN_TTL_MINUTES: int = 60 * 24 * 7
     JWT_ALGORITHM: str = "HS256"
 
@@ -135,7 +135,7 @@ class Settings(BaseSettings):
         if self.ENVIRONMENT != "prod":
             return self
         insecure = []
-        if self.SECRET_KEY in ("dev-secret-change-me", "", "dev"):
+        if self.SECRET_KEY in ("dev-secret-change-me", "dev-secret-change-me-perum-core", "dev-secret-change-me-perum-core-v2", "", "dev"):
             insecure.append("SECRET_KEY")
         if not self.SECRETS_ENCRYPTION_KEY:
             insecure.append("SECRETS_ENCRYPTION_KEY")

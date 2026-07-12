@@ -1,159 +1,55 @@
-/**
- * ПЭРУМ API Client
- * Typed fetch wrapper with auth, error handling, and CSRF support
- */
+import { ApiClientError, createApiClient } from '@perum/api-client';
 
-
-
-export class ApiClientError extends Error {
-    status: number;
-    originalErrorData?: unknown;
-
-    constructor(message: string, status: number, originalErrorData?: unknown) {
-        super(message);
-        this.name = 'ApiClientError';
-        this.status = status;
-        this.originalErrorData = originalErrorData;
-    }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-    let data: unknown;
-    try {
-        data = await response.json();
-    } catch {
-        data = {};
-    }
-
-    if (response.status === 401) {
-        // Only clear auth token if it's not the initial auth check
-        // (otherwise we'd wipe tokens during login credential failures)
-        const errorData = data as Record<string, unknown>;
-        const errorMessage = (errorData?.detail as string) || 'Сессия истекла';
-        if (typeof window !== 'undefined' && !response.url.includes('/user/me') && !response.url.includes('/login')) {
-            localStorage.removeItem('auth_token');
-            sessionStorage.removeItem('auth_token');
-            window.dispatchEvent(new CustomEvent('auth_error', { detail: { message: errorMessage } }));
-        }
-        throw new ApiClientError(errorMessage, 401, data);
-    }
-
-    if (response.status === 429) {
-        const errorData = data as Record<string, unknown>;
-        throw new ApiClientError((errorData?.detail as string) || 'Слишком много запросов. Подождите немного.', 429, data);
-    }
-
-    if (response.status === 403) {
-        const errorData = data as Record<string, unknown>;
-        throw new ApiClientError((errorData?.detail as string) || 'Доступ запрещён', 403, data);
-    }
-
-    if (!response.ok) {
-        const errorData = data as Record<string, unknown>;
-        let message = `Ошибка ${response.status}`;
-
-        if (errorData?.detail) {
-            if (typeof errorData.detail === 'string') {
-                message = errorData.detail;
-            } else if (Array.isArray(errorData.detail)) {
-                // Pydantic validation errors: [{loc: [...], msg: "...", type: "..."}]
-                message = (errorData.detail as Array<{ loc?: string[]; msg?: string }>)
-                    .map(e => {
-                        const field = e.loc ? e.loc[e.loc.length - 1] : '';
-                        return field ? `${field}: ${e.msg}` : (e.msg || '');
-                    })
-                    .filter(Boolean)
-                    .join('; ') || message;
-            }
-        }
-
-        throw new ApiClientError(message, response.status, data);
-    }
-
-    return data as T;
-}
-
-function getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-    };
-
-    if (typeof window !== 'undefined') {
+const tokenProvider = {
+    getAccessToken(): string | null {
+        if (typeof window === 'undefined') return null;
         const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-        if (token && token !== 'null') {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta) {
-            headers['X-CSRF-Token'] = csrfMeta.getAttribute('content') || '';
-        }
-    }
-
-    return headers;
-}
-
-export const api = {
-    async get<T>(endpoint: string, signal?: AbortSignal): Promise<T> {
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'GET',
-            headers: getHeaders(),
-            credentials: 'include',
-            signal,
-        });
-        return handleResponse<T>(res);
+        return token && token !== 'null' ? token : null;
     },
-
-    async post<T>(endpoint: string, data?: unknown): Promise<T> {
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'POST',
-            headers: getHeaders(),
-            credentials: 'include',
-            body: data ? JSON.stringify(data) : undefined,
-        });
-        return handleResponse<T>(res);
-    },
-
-    async postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
-        const headers = getHeaders();
-        delete headers['Content-Type']; // Let browser set multipart with boundary
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'POST',
-            headers,
-            credentials: 'include',
-            body: formData,
-        });
-        return handleResponse<T>(res);
-    },
-
-    async put<T>(endpoint: string, data?: unknown): Promise<T> {
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'PUT',
-            headers: getHeaders(),
-            credentials: 'include',
-            body: data ? JSON.stringify(data) : undefined,
-        });
-        return handleResponse<T>(res);
-    },
-
-    async patch<T>(endpoint: string, data?: unknown): Promise<T> {
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'PATCH',
-            headers: getHeaders(),
-            credentials: 'include',
-            body: data ? JSON.stringify(data) : undefined,
-        });
-        return handleResponse<T>(res);
-    },
-
-    async del<T>(endpoint: string): Promise<T> {
-        const res = await fetch(`/api${endpoint}`, {
-            method: 'DELETE',
-            headers: getHeaders(),
-            credentials: 'include',
-        });
-        return handleResponse<T>(res);
+    clear(): void {
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem('auth_token');
+        sessionStorage.removeItem('auth_token');
     },
 };
 
+const client = createApiClient({
+    baseUrl: '/api',
+    tokenProvider,
+    credentials: 'include',
+    getAdditionalHeaders(): Record<string, string> {
+        if (typeof document === 'undefined') return {};
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        return csrfToken ? { 'X-CSRF-Token': csrfToken } : {};
+    },
+    async onUnauthorized(error, response) {
+        if (typeof window === 'undefined') return;
+        if (response.url.includes('/user/me') || response.url.includes('/login')) return;
+        await tokenProvider.clear();
+        window.dispatchEvent(new CustomEvent('auth_error', { detail: { message: error.message } }));
+    },
+});
+
+export const api = {
+    get<T>(endpoint: string, signal?: AbortSignal): Promise<T> {
+        return client.get<T>(endpoint, { signal });
+    },
+    post<T>(endpoint: string, data?: unknown): Promise<T> {
+        return client.post<T>(endpoint, data);
+    },
+    postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+        return client.postFormData<T>(endpoint, formData);
+    },
+    put<T>(endpoint: string, data?: unknown): Promise<T> {
+        return client.put<T>(endpoint, data);
+    },
+    patch<T>(endpoint: string, data?: unknown): Promise<T> {
+        return client.patch<T>(endpoint, data);
+    },
+    del<T>(endpoint: string): Promise<T> {
+        return client.del<T>(endpoint);
+    },
+};
+
+export { ApiClientError };
 export default api;

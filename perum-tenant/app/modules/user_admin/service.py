@@ -104,6 +104,8 @@ async def update_user(db: AsyncSession, admin: User, school_id: int, user_id: in
             setattr(user, field, payload[field])
     if payload.get("password"):
         user.password_hash = hash_password(payload["password"])
+        from app.modules.auth.service import revoke_all
+        await revoke_all(db, user.id)
 
     await db.commit()
     return {"success": True, "message": "Данные пользователя обновлены"}
