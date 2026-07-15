@@ -284,4 +284,5 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 139 | 2026-07-11 | d12eba7 | feat(platform): подготовлена portable-основа для mobile |
 | 140 | 2026-07-12 | 2871e35 | feat(social): реализован раздел друзей |
 | 141 | 2026-07-12 | de6e695 | fix(social): стабилизирована пагинация и опубликованы API-контракты |
-| 142 | 2026-07-15 | _______ | feat(platform): реализованы mobile, chats, media foundation и school support по master plan |
+| 142 | 2026-07-15 | 5047c49 | feat(platform): реализованы mobile, chats, media foundation и school support по master plan |
+| 143 | 2026-07-15 | _______ | docs(versions): зафиксирован хеш продуктового цикла |
