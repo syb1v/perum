@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import HelpModal from '@/components/modals/HelpModal';
+import { useEffect } from 'react';
+import api from '@/lib/apiClient';
+import SchoolSupportModal from '@/components/support/SchoolSupportModal';
+import type { SupportUnread } from '@/types/support';
 import styles from './SupportFAB.module.css';
 
 /**
@@ -10,6 +13,15 @@ import styles from './SupportFAB.module.css';
  */
 export default function SupportFAB() {
     const [open, setOpen] = useState(false);
+    const [unread, setUnread] = useState(0);
+
+    useEffect(() => {
+        const load = () => api.get<SupportUnread>('/support/unread-count').then(data => setUnread(data.messages)).catch(() => undefined);
+        void load();
+        const timer = window.setInterval(load, 30000);
+        window.addEventListener('focus', load);
+        return () => { window.clearInterval(timer); window.removeEventListener('focus', load); };
+    }, []);
 
     return (
         <>
@@ -26,9 +38,10 @@ export default function SupportFAB() {
                     <path d="M12 7v2" />
                     <path d="M12 13h.01" />
                 </svg>
+                {unread > 0 && <span className={styles.badge}>{unread > 99 ? '99+' : unread}</span>}
             </button>
 
-            {open && <HelpModal onClose={() => setOpen(false)} />}
+            {open && <SchoolSupportModal onClose={() => { setOpen(false); api.get<SupportUnread>('/support/unread-count').then(data => setUnread(data.messages)).catch(() => undefined); }} />}
         </>
     );
 }

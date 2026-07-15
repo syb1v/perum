@@ -31,13 +31,6 @@ class NotifySend(BaseModel):
     user_id: int | None = None
 
 
-class ReplyEmail(BaseModel):
-    to_email: str | None = None
-    subject: str | None = None
-    content: str | None = None
-    in_reply_to: int | None = None
-
-
 # ---- Настройки школы ----
 
 @admin_router.get("/school-settings")
@@ -75,18 +68,6 @@ async def inquiry_read(inquiry_id: int, user: User = Depends(require_admin), db:
 @admin_router.delete("/inquiries/{inquiry_id}")
 async def inquiry_delete(inquiry_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.delete_inquiry(db, await _school(user, db), inquiry_id)
-
-
-# ---- Поддержка-почта (внешний ящик в школьном стеке не настроен — честная заглушка) ----
-
-@admin_router.get("/support/emails")
-async def support_emails(limit: int = 100, user: User = Depends(require_admin)) -> dict:
-    return {"success": True, "emails": []}
-
-
-@admin_router.post("/support/emails/reply")
-async def support_reply(payload: ReplyEmail, user: User = Depends(require_admin)) -> dict:
-    return {"success": False, "message": "Почтовый ящик школы не настроен (SMTP не подключён)"}
 
 
 @admin_router.get("/online-users")

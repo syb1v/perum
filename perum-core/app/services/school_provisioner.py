@@ -132,9 +132,14 @@ async def _bootstrap_admin(spec: StackSpec, admin_email: str | None) -> tuple[st
     return data.get("login"), data.get("temporary_password")
 
 
-async def _safe_cleanup(label_slug: str, docker: DockerClient, caddy: CaddyAdmin) -> None:
+async def _safe_cleanup(label_slug: str, docker: DockerClient, caddy: CaddyAdmin, created_volumes: list[str] | None = None) -> None:
     try:
-        await docker.remove_stack(label_slug)
+        if created_volumes is None:
+            await docker.remove_stack(label_slug)
+        else:
+            await docker.remove_containers(label_slug)
+            for volume in created_volumes:
+                await docker.remove_volume(volume)
     except Exception as exc:  # noqa: BLE001
         logger.error("school %s: cleanup remove_stack failed: %s", label_slug, exc)
     try:
@@ -144,6 +149,7 @@ async def _safe_cleanup(label_slug: str, docker: DockerClient, caddy: CaddyAdmin
 
 
 async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker: DockerClient, caddy: CaddyAdmin, admin_email: str | None) -> SchoolProvisionOutcome:
+    created_volumes: list[str] = []
     try:
         await docker.create_network(spec.network, slug=label_slug)
         await docker.ensure_image(spec.postgres_image)
@@ -151,6 +157,8 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         await docker.ensure_image(spec.tenant_image)
         await docker.remove_containers(label_slug)
 
+        if not await docker.volume_exists(spec.volume):
+            created_volumes.append(spec.volume)
         await docker.create_volume(spec.volume, slug=label_slug)
         await docker.run_container(
             name=spec.db_container, image=spec.postgres_image, slug=label_slug, role="db",
@@ -167,8 +175,10 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
             network=spec.network,
         )
 
-        # Том для файлов приложения (вложения) — переживает OTA-пересоздание app.
-        await docker.create_volume(school_appdata_volume_name(spec.slug), slug=label_slug)
+        appdata_volume = school_appdata_volume_name(spec.slug)
+        if not await docker.volume_exists(appdata_volume):
+            created_volumes.append(appdata_volume)
+        await docker.create_volume(appdata_volume, slug=label_slug)
         await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
@@ -192,7 +202,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         return SchoolProvisionOutcome(school=None, host=host, admin_login=admin_login, admin_temp_password=admin_pw)  # type: ignore[arg-type]
     except Exception as exc:
         logger.warning("school %s: provisioning failed, cleaning up: %s", spec.slug, exc)
-        await _safe_cleanup(label_slug, docker, caddy)
+        await _safe_cleanup(label_slug, docker, caddy, created_volumes)
         raise
 
 
@@ -201,9 +211,19 @@ async def _upsert_subdomain(school: School, host: str, db: AsyncSession) -> None
     domain = result.scalar_one_or_none()
     now = datetime.utcnow()
     if domain is None:
-        db.add(SchoolDomain(school_id=school.id, domain=host, domain_type="subdomain", status="active", activated_at=now))
+        db.add(
+            SchoolDomain(
+                school_id=school.id,
+                domain=host,
+                domain_type="subdomain",
+                status="active",
+                is_primary=True,
+                activated_at=now,
+            )
+        )
     else:
         domain.status = "active"
+        domain.is_primary = True
         domain.activated_at = now
 
 

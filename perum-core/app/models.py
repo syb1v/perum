@@ -9,8 +9,9 @@ described by SQLAlchemy models inside `perum-tenant/app/models/`.
 """
 
 from datetime import datetime
+from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, Uuid, func
 
 from app.core.crypto import EncryptedString
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -60,6 +61,7 @@ class Organization(Base):
     __tablename__ = "organizations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), default=uuid4, nullable=False, unique=True, index=True)
     # Идентичность организации — её ДОМЕН (он же лендинг). slug — внутренний
     # производный токен от домена (имена контейнеров/маршрутов/БД), наружу не виден.
     slug: Mapped[str] = mapped_column(String(40), unique=True, index=True, nullable=False)
@@ -216,6 +218,7 @@ class School(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), default=uuid4, nullable=False, unique=True, index=True)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -299,6 +302,7 @@ class SchoolDomain(Base):
     )
     domain: Mapped[str] = mapped_column(String(255), nullable=False)
     domain_type: Mapped[str] = mapped_column(String(20), nullable=False, comment="subdomain | custom")
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     status: Mapped[str] = mapped_column(
         String(30), nullable=False, default="pending_dns", server_default="pending_dns"
     )

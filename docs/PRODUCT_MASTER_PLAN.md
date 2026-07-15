@@ -1,7 +1,8 @@
 # PERUM: утверждённый master-plan функций, биллинга и приложений
 
-> Статус: продуктовые решения утверждены 2026-07-11. План задаёт порядок
-> реализации backend, API, web и React Native от миграций до production rollout.
+> Статус: продуктовые решения утверждены 2026-07-11; фактический прогресс и
+> схема tenant discovery обновлены 2026-07-12. План задаёт порядок реализации
+> backend, API, web и React Native от миграций до production rollout.
 
 ## 1. Зафиксированные решения
 
@@ -22,6 +23,9 @@
 | ОС | Только актуальные версии; старые версии не поддерживаются |
 | Push preview | Показывать отправителя и содержимое, с настройкой отключения |
 | Вложения support/social | В первой версии, с защищённым upload pipeline |
+| Mobile routing | Один global Core discovery URL; клиент не строит tenant URL самостоятельно |
+| Выбор школы | Полный school host, QR/invite link или пара organization domain + school code |
+| Публичность школ | Полный список школ организации анонимно не публикуется |
 
 ## 2. Workstreams
 
@@ -247,15 +251,16 @@ query layer и design tokens.
 ### WS7. Mobile-ready auth и discovery
 
 ```http
-POST /api/mobile/discover-school
-POST /api/auth/login
-POST /api/auth/refresh
-POST /api/auth/logout
-GET  /api/auth/sessions
-DELETE /api/auth/sessions/{id}
-PUT/DELETE /api/devices/{installation_id}
-GET /api/mobile/compatibility
-GET /api/mobile/capabilities
+GET  CORE   /api/public/tenant-discovery?host={school_host}
+POST CORE   /api/public/tenant-discovery
+POST CORE   /api/auth/login
+POST TENANT /api/login
+POST TENANT /api/auth/refresh
+POST TENANT /api/logout
+GET  TENANT /api/auth/sessions
+DELETE TENANT /api/auth/sessions/{id}
+GET  TENANT /api/mobile/compatibility
+GET  TENANT /api/mobile/capabilities
 ```
 
 - Short-lived access token в памяти.
@@ -264,6 +269,97 @@ GET /api/mobile/capabilities
 - Canonical tenant URL только через core discovery.
 - Cache namespace включает tenant и user.
 - Logout/password reset очищает токены, кеш, outbox и push registration.
+
+#### Каноническая схема входа и маршрутизации
+
+У приложения есть один build-time адрес control plane, например
+`https://admin.perum.app`. Это единственный заранее известный backend. Домены
+организаций и школ не зашиваются в приложение и не выводятся клиентом из slug.
+
+```text
+                         global Core
+                    discovery + core auth
+                           /        \
+          org/platform account      school account
+                 Core session       tenant discovery
+                                           |
+                              https://school.org-domain/api
+                                           |
+                              tenant session + role routing
+```
+
+Поддерживаются три способа найти школу:
+
+1. Полный school host или URL: `school.organization.ru` либо custom domain.
+2. QR/invite link, выданный школой: он содержит opaque public school ID или
+   одноразовый discovery code, но не credentials.
+3. Домен организации + короткий school code. Core разрешает пару серверно и не
+   раскрывает анонимному клиенту полный каталог школ организации.
+
+Не использовать глобальный поиск пользователей по логину: одинаковый логин
+может существовать в разных tenant-базах, а такой поиск раскрывает membership.
+Если пользователь не знает школу, UI предлагает обратиться к школе или
+отсканировать её QR-код.
+
+Flow школьного пользователя:
+
+1. Клиент отправляет известный host в существующий
+   `GET /api/public/tenant-discovery` либо пару `organization_domain` +
+   `school_code`/invite token в новый `POST` того же ресурса.
+2. Core нормализует ввод, ищет только active `OrganizationDomain`,
+   `Organization`, `School` и `SchoolDomain`, затем возвращает versioned
+   discovery response.
+3. Клиент проверяет compatibility, сохраняет tenant descriptor и создаёт
+   API client с выданным `api_base_url`.
+4. Login выполняется непосредственно в tenant через `POST /api/login`.
+5. После `GET /api/user/me` роль определяет native navigation. Сессии разных
+   школ изолированы и могут храниться параллельно.
+
+Flow `org_admin` и `platform_admin` не проходит через school tenant: login и
+дальнейшие запросы остаются в Core. Переключение школы org admin является
+выбором контекста управления, а не входом под школьным пользователем.
+
+Discovery response должен содержать:
+
+```json
+{
+  "tenant_id": "opaque-stable-id",
+  "organization_id": "opaque-stable-id",
+  "school_id": "opaque-stable-id",
+  "organization_name": "Организация",
+  "school_name": "Школа",
+  "matched_host": "alias.example.ru",
+  "primary_host": "school.organization.ru",
+  "api_base_url": "https://school.organization.ru/api",
+  "web_base_url": "https://school.organization.ru",
+  "compatibility": {},
+  "capabilities": {}
+}
+```
+
+`tenant_id`, `organization_id` и `school_id` являются opaque public UUID, а не
+последовательными database ID. `matched_host` нужен для диагностики alias,
+`primary_host` является каноническим адресом. SecureStore, query cache, outbox,
+push registration и telemetry partition key используют `tenant_id + user_id`,
+а не hostname: смена домена не должна создавать дубликат аккаунта.
+
+Deep/universal link сначала извлекает public school ID, затем подтверждает
+актуальный URL через Core. Нельзя открывать сохранённый tenant URL без
+rediscovery, если descriptor устарел. Custom schemes остаются fallback;
+основной production-маршрут использует HTTPS Universal Links/App Links на
+стабильном platform link domain.
+
+Backend hardening для discovery:
+
+- материализовать primary host каждой школы в `SchoolDomain` и удалить O(N)
+  fallback по всем школам;
+- учитывать active `OrganizationDomain` при разрешении organization domain;
+- добавить public UUID и primary/matched host в response;
+- объединить compatibility/capabilities core и tenant в versioned schema;
+- добавить rate limit, generic unavailable errors и audit без утечки school
+  membership;
+- поддержать смену primary domain и rediscovery по stable public ID;
+- не передавать tenant access/refresh token в Core, URL или deep link.
 
 ### WS8. React Native
 
@@ -317,12 +413,13 @@ desktop grid. Infrastructure destructive actions требуют step-up authenti
 Deep links:
 
 ```text
-perum://school/{school}/schedule
-perum://school/{school}/grades/{id}
-perum://school/{school}/messages/{conversation}
-perum://school/{school}/support/{ticket}
-perum://org/{org}/billing
-perum://platform/support/{ticket}
+https://link.perum.app/s/{school_public_id}/schedule
+https://link.perum.app/s/{school_public_id}/grades/{id}
+https://link.perum.app/s/{school_public_id}/messages/{conversation}
+https://link.perum.app/s/{school_public_id}/support/{ticket}
+https://link.perum.app/o/{organization_public_id}/billing
+https://link.perum.app/platform/support/{ticket}
+perum://... (fallback после проверки через Core)
 ```
 
 ### WS10. Магазины и ОС
@@ -438,6 +535,44 @@ Flow:
 
 Работы выполняются параллельно несколькими командами; оценки указаны в
 календарных неделях для одного основного потока и требуют уточнения после ADR.
+
+### Фактический статус и оставшиеся работы на 2026-07-12
+
+Обозначения: `готово` означает реализованный и проверенный базовый контур;
+`частично` означает, что foundation или vertical slice есть, но workstream ещё
+не соответствует Definition of Done.
+
+| Приоритет | Направление | Статус | Что осталось |
+|---:|---|---|---|
+| P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
+| P0 | Tenant discovery | Частично | public UUID, org-domain + school-code flow, primary/matched host, indexed lookup, rediscovery при смене домена |
+| P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
+| P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
+| P1 | Учебный hardening | Частично | optimistic versions, safe lesson transfer, offline mutation contracts и conflict QA |
+| P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
+| P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
+| P1 | School support | Частично | text-only tenant tickets/messages/shared read/audit/notifications, web requester/admin UI и native requester с offline outbox готовы; остаются assignment и version-safe metadata workflow, attachments, push, native admin inbox и SLA/observability |
+| P1 | Core support escalation | Не начато | org approval, core inbox, bidirectional transactional outbox/inbox, correlation/audit |
+| P2 | Chats/moderation | Частично | 1:1 student text chats, read state, offline outbox, reports, evidence-scoped moderation/audit, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
+| P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements, org/platform UI, enforcement |
+| P2 | Push/deep links | Не начато | device registration, APNs/FCM/RuStore/Huawei abstraction, universal links и cold-start tests |
+| P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |
+| P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
+
+Ближайшая последовательность реализации:
+
+1. Принять ADR tenant identity/discovery и добавить public UUID в Core.
+2. Подключить готовые discovery contract и tenant-scoped single-flight refresh
+   adapter в первый мобильный vertical slice.
+3. Создать `perum-mobile`: discovery, login, session restore, role routing,
+   tenant/account switcher и logout как первый end-to-end vertical slice.
+4. Параллельно закрыть Friends до Definition of Done и реализовать media
+   pipeline, поскольку он блокирует support и chats.
+5. Завершить учебные offline/version contracts до teacher mobile journal.
+6. Реализовать school support, затем organization-gated core escalation.
+7. Реализовать chats/moderation, billing и mobile parity по ролям.
+8. Закрыть push/deep links, store compliance, security/accessibility и staged
+   production rollout.
 
 ## 5. CI и release gates
 

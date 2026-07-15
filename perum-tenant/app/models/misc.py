@@ -39,6 +39,8 @@ class Notification(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String(20), nullable=False, default="info")
+    ref_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    ref_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 

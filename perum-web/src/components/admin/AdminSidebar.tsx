@@ -9,12 +9,13 @@ interface AdminSidebarProps {
     onSectionChange: (section: string) => void;
     onLogout: () => void;
     inquiriesCount?: number;
+    supportCount?: number;
 }
 
 type NavItem = { id: string; label: string; icon: React.ReactNode; badge?: number };
 type NavCategory = { title: string; items: NavItem[] };
 
-export default function AdminSidebar({ activeSection, onSectionChange, onLogout, inquiriesCount = 0 }: AdminSidebarProps) {
+export default function AdminSidebar({ activeSection, onSectionChange, onLogout, inquiriesCount = 0, supportCount = 0 }: AdminSidebarProps) {
     const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
         'Аналитика и Дашборд': true,
         'Учебный процесс': true,
@@ -67,6 +68,7 @@ export default function AdminSidebar({ activeSection, onSectionChange, onLogout,
                 { id: 'register', label: 'Регистрация', icon: <RegisterIcon /> },
                 { id: 'notifications', label: 'Уведомления', icon: <BellIcon /> },
                 { id: 'inquiries', label: 'Обращения', icon: <MailIcon />, badge: inquiriesCount },
+                { id: 'school-support', label: 'Поддержка школы', icon: <MailIcon />, badge: supportCount },
                 { id: 'news', label: 'Новости', icon: <NewspaperIcon /> }
             ]
         },
@@ -74,7 +76,8 @@ export default function AdminSidebar({ activeSection, onSectionChange, onLogout,
             title: 'Система',
             items: [
                 { id: 'school-settings', label: 'Настройки школы', icon: <SettingsIcon /> },
-                { id: 'social-settings', label: 'Общение учеников', icon: <UsersIcon /> }
+                { id: 'social-settings', label: 'Общение учеников', icon: <UsersIcon /> },
+                { id: 'social-moderation', label: 'Модерация общения', icon: <MailIcon /> }
             ]
         }
     ];

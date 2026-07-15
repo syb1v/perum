@@ -116,7 +116,8 @@ export interface paths {
         /** Discover Tenant */
         get: operations["discover_tenant_api_public_tenant_discovery_get"];
         put?: never;
-        post?: never;
+        /** Discover Tenant Post */
+        post: operations["discover_tenant_post_api_public_tenant_discovery_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2635,12 +2636,44 @@ export interface components {
             /** Minimum Mobile Api Version */
             minimum_mobile_api_version: number;
         };
+        /** TenantDiscoveryRequest */
+        TenantDiscoveryRequest: {
+            /** Host */
+            host?: string | null;
+            /** Organization Domain */
+            organization_domain?: string | null;
+            /** School Code */
+            school_code?: string | null;
+            /** School Public Id */
+            school_public_id?: string | null;
+        };
         /** TenantDiscoveryResponse */
         TenantDiscoveryResponse: {
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /**
+             * Organization Id
+             * Format: uuid
+             */
+            organization_id: string;
+            /**
+             * School Id
+             * Format: uuid
+             */
+            school_id: string;
+            /** Organization Name */
+            organization_name: string;
             /** School Name */
             school_name: string;
             /** Canonical Host */
             canonical_host: string;
+            /** Primary Host */
+            primary_host: string;
+            /** Matched Host */
+            matched_host: string;
             /** Api Base Url */
             api_base_url: string;
             /** Web Base Url */
@@ -2853,6 +2886,39 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantDiscoveryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discover_tenant_post_api_public_tenant_discovery_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantDiscoveryRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

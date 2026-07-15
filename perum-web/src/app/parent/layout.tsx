@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import Header from '@/components/layout/Header';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { ROLES, getDashboardPath } from '@/lib/roles';
+import SupportFAB from '@/components/ui/SupportFAB';
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
     const { user, isLoading } = useAuth();
@@ -27,6 +28,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
             <main style={{ paddingTop: 'var(--header-height, 90px)', paddingBottom: 40, minHeight: '100vh' }}>
                 {children}
             </main>
+            <SupportFAB />
         </div>
     );
 }

@@ -166,4 +166,7 @@ from app.models.appeals import GradeAppeal  # noqa: E402,F401
 
 # Misc school models (Phase 8 tails): settings, notifications, inquiries.
 from app.models.misc import ContactInquiry, Notification, SchoolSetting  # noqa: E402,F401
-from app.models.social import FriendRequest, Friendship, SocialSettings, UserBlock  # noqa: E402,F401
+from app.models.media import MediaAuditEvent, MediaBinding, MediaObject, MediaScanResult, UploadSession  # noqa: E402,F401
+from app.models.social import Conversation, ConversationMember, FriendRequest, Friendship, Message, SocialRealtimeTicket, SocialSettings, UserBlock  # noqa: E402,F401
+from app.models.support import SupportEvent, SupportMessage, SupportParticipant, SupportTicket  # noqa: E402,F401
+from app.models.user_preferences import IdempotencyReceipt, UserPreferences  # noqa: E402,F401

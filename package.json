@@ -3,9 +3,12 @@
   "private": true,
   "workspaces": [
     "perum-web",
+    "perum-mobile",
     "packages/*"
   ],
   "overrides": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
     "next": {
       "postcss": "8.5.10"
     }

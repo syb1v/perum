@@ -1,0 +1,62 @@
+import NetInfo from '@react-native-community/netinfo';
+import { ApiClientError } from '@perum/api-client';
+import { useQueryClient } from '@tanstack/react-query';
+import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
+import { AppState } from 'react-native';
+import { useAuth } from '../auth/AuthProvider';
+import { queryKeys } from '../query/queryKeys';
+import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
+import { sqliteSupportOutbox } from './sqliteOutbox';
+import type { SupportMessage, SupportMutation } from './types';
+
+type Core = ReturnType<typeof createSupportOutboxCore>;
+type Value = { pending: SupportMutation[]; enqueue: (ticketId: string, body: string) => Promise<void>; retry: (id: string) => Promise<void> };
+const Context = createContext<Value | null>(null);
+
+export function SupportProvider({ children }: PropsWithChildren) {
+  const { account, apiClient } = useAuth();
+  const queryClient = useQueryClient();
+  const coreRef = useRef<Core | null>(null);
+  const [pending, setPending] = useState<SupportMutation[]>([]);
+
+  useEffect(() => {
+    if (!account || !apiClient) { coreRef.current = null; setPending([]); return; }
+    let alive = true;
+    const accountId = account.id;
+    const refresh = async () => { const rows = await sqliteSupportOutbox.getByAccount(accountId); if (alive) setPending(rows); };
+    const send = async (item: SupportMutation): Promise<SupportSendResult> => {
+      try {
+        return { type: 'success', message: await apiClient.post<SupportMessage>(`/api/support/tickets/${item.ticketId}/messages`, { client_message_id: item.clientMessageId, body: item.body }) };
+      } catch (error) {
+        if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
+        return { type: 'http', status: error.status, message: error.message };
+      }
+    };
+    const core = createSupportOutboxCore({
+      store: sqliteSupportOutbox,
+      send,
+      onChange: refresh,
+      onSuccess: (_, ticketId) => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.supportThread(accountId, ticketId) });
+      },
+    });
+    coreRef.current = core;
+    const run = async () => { await core.run(accountId); await refresh(); };
+    void core.recover().then(run);
+    void refresh();
+    const network = NetInfo.addEventListener((state) => { if (state.isConnected !== false) void run(); });
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void run(); });
+    const timer = setInterval(() => void run(), 5_000);
+    return () => { alive = false; coreRef.current = null; network(); appState.remove(); clearInterval(timer); };
+  }, [account?.id, apiClient, queryClient]);
+
+  if (!account) return children;
+  return <Context.Provider value={{ pending, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;
+}
+
+export function useSupportSync() {
+  const value = useContext(Context);
+  if (!value) throw new Error('SupportProvider is missing');
+  return value;
+}

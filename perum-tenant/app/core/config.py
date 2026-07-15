@@ -38,6 +38,16 @@ class Settings(BaseSettings):
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
     # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
     TELEMETRY_INTERVAL_S: int = 60
+    SOCIAL_RETENTION_INTERVAL_S: int = 3600
+    SOCIAL_RETENTION_BATCH_SIZE: int = 500
+    MEDIA_ENABLED: bool = False
+    MEDIA_ROOT: str = "/app/data/media"
+    MEDIA_MAX_BYTES: int = 10 * 1024 * 1024
+    MEDIA_SESSION_TTL_S: int = 3600
+    MEDIA_CLEANUP_INTERVAL_S: int = 300
+    MEDIA_UNBOUND_TTL_S: int = 86400
+    MEDIA_OWNER_GRACE_S: int = 3600
+    MEDIA_CLEANUP_BATCH_SIZE: int = 100
 
     @property
     def async_database_url(self) -> str:

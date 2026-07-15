@@ -42,11 +42,23 @@ async def lifespan(app: FastAPI):
     # Фоновая телеметрия в ядро (агрегаты без PII). Запускается, только если задан
     # TELEMETRY_TOKEN и интервал > 0; иначе тихо пропускается (dev/standalone).
     task = None
+    retention_task = None
+    media_task = None
     if settings.TELEMETRY_TOKEN and settings.TELEMETRY_INTERVAL_S > 0:
         from app.telemetry import telemetry_loop
 
         task = asyncio.create_task(telemetry_loop())
         logger.info("telemetry loop started (interval=%ss)", settings.TELEMETRY_INTERVAL_S)
+    if settings.SOCIAL_RETENTION_INTERVAL_S > 0:
+        from app.modules.social.retention import retention_loop
+
+        retention_task = asyncio.create_task(retention_loop(settings.SOCIAL_RETENTION_INTERVAL_S, settings.SOCIAL_RETENTION_BATCH_SIZE))
+        logger.info("social retention loop started (interval=%ss)", settings.SOCIAL_RETENTION_INTERVAL_S)
+    if settings.MEDIA_ENABLED and settings.MEDIA_CLEANUP_INTERVAL_S > 0:
+        from app.modules.media.service import media_loop
+
+        media_task = asyncio.create_task(media_loop(settings.MEDIA_CLEANUP_INTERVAL_S))
+        logger.info("media maintenance loop started (interval=%ss)", settings.MEDIA_CLEANUP_INTERVAL_S)
     try:
         yield
     finally:
@@ -54,6 +66,14 @@ async def lifespan(app: FastAPI):
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        if retention_task is not None:
+            retention_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await retention_task
+        if media_task is not None:
+            media_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await media_task
 
 
 app = FastAPI(
@@ -76,6 +96,7 @@ from app.modules.journal.router import router as journal_router  # noqa: E402
 from app.modules.leaderboard.router import router as leaderboard_router  # noqa: E402
 from app.modules.market.admin import router as market_admin_router  # noqa: E402
 from app.modules.market.router import router as market_router  # noqa: E402
+from app.modules.media.router import router as media_router  # noqa: E402
 from app.modules.misc.router import admin_router as misc_admin_router  # noqa: E402
 from app.modules.misc.router import user_router as misc_user_router  # noqa: E402
 from app.modules.news.router import admin_router as news_admin_router  # noqa: E402
@@ -85,9 +106,13 @@ from app.modules.quests.router import router as quests_router  # noqa: E402
 from app.modules.school_admin.router import router as school_admin_router  # noqa: E402
 from app.modules.social.router import admin_router as social_admin_router  # noqa: E402
 from app.modules.social.router import router as social_router  # noqa: E402
+from app.modules.social.realtime import websocket_endpoint as social_websocket_endpoint  # noqa: E402
 from app.modules.student.router import router as student_router  # noqa: E402
+from app.modules.support.router import admin_router as support_admin_router  # noqa: E402
+from app.modules.support.router import router as support_router  # noqa: E402
 from app.modules.teacher.router import router as teacher_router  # noqa: E402
 from app.modules.user_admin.router import router as user_admin_router  # noqa: E402
+from app.modules.user_preferences.router import router as user_preferences_router  # noqa: E402
 
 app.include_router(auth_router, prefix="/api", tags=["auth"])
 app.include_router(internal_router, prefix="/internal", tags=["internal"])
@@ -95,6 +120,8 @@ app.include_router(common_router, prefix="/api", tags=["common"])
 app.include_router(coursework_router, prefix="/api", tags=["coursework"])
 app.include_router(school_admin_router, prefix="/api/admin", tags=["school_admin"])
 app.include_router(social_admin_router, prefix="/api/admin", tags=["social-admin"])
+app.include_router(support_admin_router, prefix="/api/admin", tags=["support-admin"])
+app.include_router(support_router, prefix="/api", tags=["support"])
 app.include_router(social_router, prefix="/api", tags=["social"])
 app.include_router(user_admin_router, prefix="/api/admin", tags=["user-admin"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
@@ -103,6 +130,7 @@ app.include_router(parent_router, prefix="/api/parent", tags=["parent"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["leaderboard"])
 app.include_router(market_router, prefix="/api/market", tags=["market"])
 app.include_router(market_admin_router, prefix="/api/admin/market", tags=["market-admin"])
+app.include_router(media_router, prefix="/api", tags=["media"])
 app.include_router(quests_router, prefix="/api/quests", tags=["quests"])
 app.include_router(exchange_router, prefix="/api/exchange", tags=["exchange"])
 app.include_router(news_router, prefix="/api/news", tags=["news"])
@@ -113,6 +141,8 @@ app.include_router(appeals_router, prefix="/api/appeals", tags=["appeals"])
 app.include_router(misc_admin_router, prefix="/api/admin", tags=["misc-admin"])
 app.include_router(misc_user_router, prefix="/api/user", tags=["misc-user"])
 app.include_router(teacher_router, prefix="/api/teacher", tags=["teacher"])
+app.include_router(user_preferences_router, prefix="/api", tags=["user-preferences"])
+app.add_api_websocket_route("/ws/social", social_websocket_endpoint)
 
 
 @app.get("/health")

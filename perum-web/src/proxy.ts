@@ -34,6 +34,7 @@ const STUDENT_PAGES: Record<string, string> = {
     '/market': '/student/market',
     '/schedule': '/student/schedule',
     '/friends': '/student/friends',
+    '/messages': '/student/messages',
 };
 
 const TEACHER_PAGES: Record<string, string> = {
@@ -50,6 +51,7 @@ const LEGACY_REDIRECTS: Record<string, string> = {
     '/student/market': '/market',
     '/student/schedule': '/schedule',
     '/student/friends': '/friends',
+    '/student/messages': '/messages',
     '/teacher': '/dashboard',
     '/teacher/profile': '/profile',
     '/teacher/journal': '/journal',
@@ -170,6 +172,12 @@ export function proxy(request: NextRequest) {
         return rewriteTo(request, STUDENT_PAGES[pathname]);
     }
 
+    if (pathname.startsWith('/messages/')) {
+        if (!role) return redirectToLogin(request);
+        if (role !== ROLES.STUDENT) return redirectTo(request, ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard');
+        return rewriteTo(request, `/student${pathname}`);
+    }
+
     if (TEACHER_PAGES[pathname]) {
         if (!role) return redirectToLogin(request);
         if (!isTeacher(role)) {
@@ -182,7 +190,7 @@ export function proxy(request: NextRequest) {
         const referer = request.headers.get('referer') ?? '';
         const isInternalNav = [
             '/dashboard', '/profile', '/exchange', '/market',
-            '/schedule', '/friends', '/journal', '/analytics', '/topics',
+            '/schedule', '/friends', '/messages', '/journal', '/analytics', '/topics',
         ].some(p => referer.includes(p));
         if (!isInternalNav) {
             const cleanUrl = LEGACY_REDIRECTS[pathname];

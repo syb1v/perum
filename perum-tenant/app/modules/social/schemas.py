@@ -19,6 +19,12 @@ class SettingsOut(BaseModel):
     social_moderation_enabled: bool
 
 
+class RealtimeTicketOut(BaseModel):
+    ticket: str
+    expires_at: datetime
+    websocket_path: str
+
+
 class SettingsPatch(BaseModel):
     social_enabled: bool | None = None
     friend_scope: Literal["classmates", "school"] | None = None
@@ -72,3 +78,71 @@ class BlockOut(BaseModel):
     student: StudentProfile
     reason_code: str | None
     created_at: datetime
+
+
+class ConversationCreate(BaseModel):
+    student_id: int
+
+
+class MessageCreate(BaseModel):
+    client_message_id: str = Field(min_length=1, max_length=64)
+    body: str = Field(min_length=1, max_length=4000)
+
+
+class MessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    sender_id: int
+    client_message_id: str
+    body: str | None
+    created_at: datetime
+    expires_at: datetime
+
+
+class MessagePage(BaseModel):
+    items: list[MessageOut]
+    next_cursor: int | None
+
+
+class ConversationOut(BaseModel):
+    id: int
+    peer: StudentProfile
+    last_message: MessageOut | None
+    unread_count: int
+    can_send: bool
+    disabled_reason: Literal["unavailable"] | None
+    created_at: datetime
+
+
+class ConversationPage(BaseModel):
+    items: list[ConversationOut]
+    next_cursor: int | None
+
+
+class ReadCreate(BaseModel):
+    message_id: int
+
+
+class UnreadCountOut(BaseModel):
+    unread_count: int
+
+
+class ReportCreate(BaseModel):
+    message_id: int
+    category: Literal["harassment", "bullying", "threats", "hate", "sexual", "spam", "other"]
+    comment: str | None = Field(None, max_length=1000)
+    client_report_id: str = Field(min_length=1, max_length=64)
+
+
+class ReportOut(BaseModel):
+    id: int
+    message_id: int
+    category: str
+    created_at: datetime
+
+
+class ModerationActionCreate(BaseModel):
+    action: Literal["dismiss", "hide_reported_message", "lock_conversation", "unlock_conversation"]
+    reason: str = Field(min_length=1, max_length=1000)
+    client_action_id: str = Field(min_length=1, max_length=64)
+    expected_version: int = Field(ge=1)

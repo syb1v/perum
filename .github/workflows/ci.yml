@@ -62,6 +62,29 @@ jobs:
       - name: Typecheck
         run: npm run typecheck:web
 
+  mobile-checks:
+    name: perum-mobile (tsc + tests + export)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install deps
+        run: npm ci
+      - name: Typecheck
+        run: npm run typecheck --workspace perum-mobile
+      - name: Run unit tests
+        run: npm test --workspace perum-mobile
+      - name: Validate Expo config
+        run: npm run validate:config --workspace perum-mobile
+      - name: Export Android bundle
+        run: npm run export:android --workspace perum-mobile
+      - name: Export iOS bundle
+        run: npm run export:ios --workspace perum-mobile
+
   api-contracts:
     name: OpenAPI contracts
     runs-on: ubuntu-latest

@@ -1,6 +1,6 @@
 from datetime import datetime, time
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Time, UniqueConstraint, text, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, Time, UniqueConstraint, text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -29,6 +29,19 @@ class SocialSettings(Base):
     social_quiet_hours_start: Mapped[time | None] = mapped_column(Time)
     social_quiet_hours_end: Mapped[time | None] = mapped_column(Time)
     social_moderation_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
+
+class SocialRealtimeTicket(Base):
+    __tablename__ = "social_realtime_tickets"
+    __table_args__ = (Index("ix_social_realtime_tickets_user_active", "school_id", "user_id", "expires_at", "consumed_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    token_digest: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class FriendRequest(Base):
@@ -88,3 +101,110 @@ class UserBlock(Base):
     reason_code: Mapped[str | None] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     released_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+    __table_args__ = (
+        CheckConstraint("user_low_id < user_high_id", name="ck_conversations_pair_order"),
+        UniqueConstraint("school_id", "user_low_id", "user_high_id", name="uq_conversations_pair"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_low_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_high_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_message_id: Mapped[int | None] = mapped_column(Integer)
+    last_message_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    is_locked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+
+
+class ConversationMember(Base):
+    __tablename__ = "conversation_members"
+    __table_args__ = (UniqueConstraint("conversation_id", "user_id", name="uq_conversation_members_user"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    last_read_message_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    __table_args__ = (UniqueConstraint("conversation_id", "sender_id", "client_message_id", name="uq_messages_client_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    sender_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    client_message_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+
+
+class ModerationReport(Base):
+    __tablename__ = "social_moderation_reports"
+    __table_args__ = (
+        CheckConstraint("category IN ('harassment', 'bullying', 'threats', 'hate', 'sexual', 'spam', 'other')", name="ck_social_reports_category"),
+        UniqueConstraint("school_id", "reporter_id", "client_report_id", name="uq_social_reports_client_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reported_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id", ondelete="RESTRICT"), nullable=False)
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    comment: Mapped[str | None] = mapped_column(String(1000))
+    client_report_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class ModerationCase(Base):
+    __tablename__ = "social_moderation_cases"
+    __table_args__ = (CheckConstraint("status IN ('open', 'dismissed', 'actioned')", name="ck_social_cases_status"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_id: Mapped[int] = mapped_column(ForeignKey("social_moderation_reports.id", ondelete="RESTRICT"), nullable=False, unique=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="RESTRICT"), nullable=False)
+    reported_message_id: Mapped[int] = mapped_column(ForeignKey("messages.id", ondelete="RESTRICT"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open", server_default="open")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class EvidenceHold(Base):
+    __tablename__ = "social_evidence_holds"
+    __table_args__ = (UniqueConstraint("case_id", "message_id", name="uq_social_evidence_case_message"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("social_moderation_cases.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(ForeignKey("messages.id", ondelete="RESTRICT"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime)
+    release_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class ModerationAuditEvent(Base):
+    __tablename__ = "social_moderation_audit_events"
+    __table_args__ = (UniqueConstraint("school_id", "actor_id", "client_action_id", name="uq_social_audit_client_action"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id: Mapped[int] = mapped_column(ForeignKey("social_moderation_cases.id", ondelete="RESTRICT"), nullable=False)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(1000))
+    client_action_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    expected_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    resulting_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

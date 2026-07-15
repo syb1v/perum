@@ -4,8 +4,26 @@
 
 > Проект на ранней стадии (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Рабочих функций для конечных пользователей — учеников, учителей — пока нет, они появятся в фазах 5–8 (см. [docs/PLAN.md](docs/PLAN.md)).
 
+## [Unreleased] — 2026-07-14
+
+- Реализован end-to-end basic School Support: student/parent/teacher создают несколько text-only обращений и переписываются со shared inbox school_admin/director; tenant обеспечивает idempotency, unread/read, notifications, audit и school isolation, web покрывает обе стороны, а mobile requester использует account-scoped cache и durable SQLite outbox.
+- Добавлен защищённый media foundation tenant и shared client: приватное quarantine/clean-хранилище, строгая MIME/extension/magic/size/SHA-256 валидация потоковых загрузок, fail-closed scanner contract, school-scoped авторизация, внутренние bindings, аудит, очистка и единый multipart/binary transport с rotating refresh.
+- Реализован end-to-end realtime v1 для social/chat: одноразовые 60-секундные WebSocket tickets хранятся только как SHA-256 digest, tenant доставляет участникам только content-free события после успешных транзакций, а web/mobile выполняют account-scoped REST reconciliation с новым ticket на reconnect и сохраняют polling fallback.
+
 ## [Unreleased] — 2026-07-12
 
+- Добавлен tenant moderation/retention-контур личных чатов: жалоба создаёт ограниченный evidence case без свободного доступа к перепискам, просмотры и version-safe действия school_admin/director аудируются, сообщения скрываются tombstone-ом, conversation lock запрещает отправку, а конкурентно безопасный worker удаляет только истёкший контент без active hold и восстанавливает cursors.
+- Добавлен web UI модерации личных чатов: ученики видят скрытые сообщения и блокировку диалога, могут идемпотентно пожаловаться только на видимое чужое сообщение; школьные администраторы получили content-free очередь, ограниченные материалы обращения и version-safe действия без optimistic updates.
+- Реализован end-to-end MVP личных чатов учеников: tenant хранит единственный диалог пары друзей, cursor-историю, unread/read state и duplicate-safe сообщения с запретом ссылок и динамическими social policy checks; web и native mobile получили списки диалогов, переписку, optimistic send, а mobile также durable offline message outbox.
+- Реализован первый end-to-end offline mutation contract для пользовательской настройки push preview: tenant API использует durable idempotency receipts, ETag/If-Match и атомарный version CAS, а mobile SQLite outbox сохраняет мутации между запусками, изолирует аккаунты, повторяет временные ошибки и предоставляет явное разрешение конфликтов двух устройств.
+- Подготовлен защищённый manual workflow EAS preview builds для Android/iOS: добавлены стабильные native identifiers, dynamic Expo project linkage через repository variable, preflight секретов, mobile gates, environment protection, concurrency cancellation и асинхронный запуск без хранения Expo credentials в репозитории.
+- В CI добавлен отдельный mobile gate на совместимом с Expo SDK 57 Node.js 22.13: TypeScript, unit-тесты persisted cache, валидация Expo config и Metro exports для Android/iOS выполняются без EAS credentials.
+- Добавлен account-scoped persisted read cache мобильного клиента: успешные tenant-запросы сохраняются в Expo SQLite по stable `tenant_id:user_id`, безопасно гидратируются при запуске и переключении аккаунта, очищаются адресно при logout и показывают явные offline/stale состояния.
+- Создан `perum-mobile` на Expo SDK 57 и Expo Router: tenant discovery, login, cold-start session restore с rotating refresh, безопасное хранение refresh-токенов, role routing, несколько изолированных аккаунтов, account switcher и локально гарантированный logout.
+- Curated OpenAPI-контракт дополнен tenant logout и перегенерирован после расширения Core discovery; общий npm workspace выравнивает React typings web/mobile и проверяет оба приложения единым typecheck.
+- В общий API client добавлен tenant/account-scoped mobile auth adapter: rotating refresh-токены сохраняются атомарно, параллельные 401 объединяются в один refresh flight с одним retry, а ошибки и logout изолированы namespace с concurrency-тестами.
+- Tenant discovery переведён на стабильные public UUID организаций и школ: добавлены индексированные selectors по host, UUID школы и паре домен организации/код школы, primary-domain для canonical URL и миграция существующих доменов без линейного fallback.
+- Обновлён product master-plan: зафиксирована безопасная tenant discovery-схема для разных доменов организаций и школ, разделение core/tenant-сессий, stable public IDs, universal links и фактический roadmap оставшихся работ.
 - Social API добавлен в curated OpenAPI-контракт для общих web/mobile-клиентов; cursor друзей исправлен на стабильный student-id cursor без пропуска записи между страницами.
 - Добавлен web UI social API: админские настройки общения и адаптивная страница друзей ученика с заявками, поиском, блокировками, действиями и clean URL `/friends`.
 - Реализован tenant backend vertical slice друзей: школьные social-настройки, поиск учеников по scope и диапазону классов, идемпотентные заявки, дружба и блокировки с изоляцией школ и нормализованными уникальными парами.

@@ -308,6 +308,16 @@ class DockerClient:
 
         return await asyncio.to_thread(_check)
 
+    async def remove_volume(self, name: str) -> bool:
+        def _remove() -> bool:
+            try:
+                self.client.volumes.get(name).remove(force=True)
+                return True
+            except NotFound:
+                return False
+
+        return await asyncio.to_thread(_remove)
+
     async def stop_containers(self, slug: str) -> list[str]:
         """Stop (но НЕ удалять) все контейнеры стека — для заморозки школы.
         Тома и сами контейнеры сохраняются; start_containers поднимает обратно."""

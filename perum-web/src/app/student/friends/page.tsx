@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import type { Conversation } from '@/types/messages';
 import api from '@/lib/apiClient';
 import styles from './page.module.css';
 
@@ -13,6 +15,7 @@ type Tab = 'friends' | 'requests' | 'search' | 'blocks';
 const tabs: { id: Tab; label: string }[] = [{ id: 'friends', label: 'Друзья' }, { id: 'requests', label: 'Заявки' }, { id: 'search', label: 'Поиск' }, { id: 'blocks', label: 'Блокировки' }];
 
 export default function FriendsPage() {
+    const router = useRouter();
     const [tab, setTab] = useState<Tab>('friends');
     const [friends, setFriends] = useState<StudentDto[]>([]);
     const [incoming, setIncoming] = useState<RequestDto[]>([]);
@@ -59,7 +62,7 @@ export default function FriendsPage() {
 
     let content: React.ReactNode;
     if (loading) content = <div className={styles.empty}>Загрузка...</div>;
-    else if (tab === 'friends') content = friends.length ? friends.map(student => card(student, <>{button('Удалить', `remove-${student.id}`, () => api.del(`/social/friends/${student.id}`), true)}{button('Заблокировать', `block-${student.id}`, () => api.post('/social/blocks', { student_id: student.id }))}</>)) : <div className={styles.empty}>Здесь появятся ваши друзья</div>;
+    else if (tab === 'friends') content = friends.length ? friends.map(student => card(student, <>{button('Написать', `message-${student.id}`, async () => { const conversation = await api.post<Conversation>('/social/conversations', { student_id: student.id }); router.push(`/messages/${conversation.id}`); })}{button('Удалить', `remove-${student.id}`, () => api.del(`/social/friends/${student.id}`), true)}{button('Заблокировать', `block-${student.id}`, () => api.post('/social/blocks', { student_id: student.id }))}</>)) : <div className={styles.empty}>Здесь появятся ваши друзья</div>;
     else if (tab === 'requests') content = incoming.length || outgoing.length ? <><h2>Входящие</h2>{incoming.map(request => card(request.student, <>{button('Принять', `accept-${request.id}`, () => api.post(`/social/friend-requests/${request.id}/accept`))}{button('Отклонить', `reject-${request.id}`, () => api.post(`/social/friend-requests/${request.id}/reject`), true)}</>))}<h2>Исходящие</h2>{outgoing.map(request => card(request.student, button('Отменить', `cancel-${request.id}`, () => api.post(`/social/friend-requests/${request.id}/cancel`), true)))}</> : <div className={styles.empty}>Нет новых заявок</div>;
     else if (tab === 'blocks') content = blocks.length ? blocks.map(block => card(block.student, button('Разблокировать', `unblock-${block.student.id}`, () => api.del(`/social/blocks/${block.student.id}`), true))) : <div className={styles.empty}>Список блокировок пуст</div>;
     else content = <><div className={styles.search}><input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Имя или класс" aria-label="Поиск учеников" /></div>{results.length ? results.map(student => card(student, <>{button('Добавить', `send-${student.id}`, () => api.post('/social/friend-requests', { student_id: student.id, client_request_id: crypto.randomUUID() }))}{button('Заблокировать', `block-${student.id}`, () => api.post('/social/blocks', { student_id: student.id }), true)}</>)) : <div className={styles.empty}>Введите имя, чтобы найти ученика</div>}</>;

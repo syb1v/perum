@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts"
   },
+  "dependencies": {
+    "@perum/api-schema": "*"
+  },
   "devDependencies": {
     "tsx": "^4.20.6",
     "typescript": "^5"

@@ -34,6 +34,8 @@ const MarketManagement = dynamic(() => import('@/components/admin/MarketManageme
 const SchoolPeriods = dynamic(() => import('@/components/admin/SchoolPeriods'), { loading: () => <LoadingScreen /> });
 const SystemSettings = dynamic(() => import('@/components/admin/SystemSettings'), { loading: () => <LoadingScreen /> });
 const SocialSettings = dynamic(() => import('@/components/admin/SocialSettings'), { loading: () => <LoadingScreen /> });
+const SocialModeration = dynamic(() => import('@/components/admin/SocialModeration'), { loading: () => <LoadingScreen /> });
+const SchoolSupportInbox = dynamic(() => import('@/components/admin/SchoolSupportInbox'), { loading: () => <LoadingScreen /> });
 const WorkTypeManagement = dynamic(() => import('@/components/admin/WorkTypeManagement'), { loading: () => <LoadingScreen /> });
 
 const AcademicYearSection = dynamic(() => import('@/components/admin/AcademicYearSection'), { loading: () => <LoadingScreen /> });
@@ -51,7 +53,7 @@ const BellSchedulesManager = dynamic(() => import('@/components/admin/BellSchedu
 // const InquiriesSection = () => <div className={styles.card}>Inquiries (Coming Soon)</div>;
 // const NewsSection = () => <div className={styles.card}>News (Coming Soon)</div>;
 
-type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'social-settings' | 'schools';
+type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'school-support' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'social-settings' | 'social-moderation' | 'schools';
 
 export default function AdminDashboard() {
     const { user, isLoading, logout } = useAuth();
@@ -65,6 +67,14 @@ export default function AdminDashboard() {
 
     const [activeSection, setActiveSection] = useState<AdminSection>(initializeSection);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [supportUnread, setSupportUnread] = useState(0);
+
+    useEffect(() => {
+        const load = () => api.get<{ messages: number }>('/admin/support/unread-count').then(data => setSupportUnread(data.messages)).catch(() => undefined);
+        void load();
+        const timer = window.setInterval(load, 30000);
+        return () => window.clearInterval(timer);
+    }, []);
 
     const handleSectionChange = useCallback((s: string) => {
         setActiveSection(s as AdminSection);
@@ -113,6 +123,8 @@ export default function AdminDashboard() {
             case 'work-types': return <WorkTypeManagement />;
             case 'school-settings': return <SystemSettings />;
             case 'social-settings': return <SocialSettings />;
+            case 'social-moderation': return <SocialModeration />;
+            case 'school-support': return <SchoolSupportInbox onUnreadChange={setSupportUnread} />;
             default: return <UserManagement />;
         }
     };
@@ -139,6 +151,8 @@ export default function AdminDashboard() {
         'work-types': 'Виды работ',
         'school-settings': 'Настройки школы',
         'social-settings': 'Общение учеников',
+        'social-moderation': 'Модерация общения',
+        'school-support': 'Поддержка школы',
         schools: 'Школы организации'
     };
 
@@ -152,6 +166,7 @@ export default function AdminDashboard() {
                     activeSection={activeSection}
                     onSectionChange={handleSectionChange}
                     onLogout={logout}
+                    supportCount={supportUnread}
                 />
             </div>
 
