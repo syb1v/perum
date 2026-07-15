@@ -551,11 +551,11 @@ Flow:
 | P1 | Учебный hardening | Частично | optimistic versions, safe lesson transfer, offline mutation contracts и conflict QA |
 | P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
-| P1 | School support | Частично | text-only tenant tickets/messages/shared read/audit/notifications, web requester/admin UI и native requester с offline outbox готовы; остаются assignment и version-safe metadata workflow, attachments, push, native admin inbox и SLA/observability |
-| P1 | Core support escalation | Не начато | org approval, core inbox, bidirectional transactional outbox/inbox, correlation/audit |
+| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI и native requester offline outbox готовы; остаются attachments, push, native admin inbox и SLA/observability |
+| P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate, reply pull/ack inbox, correlation/audit и web workflows готовы; остаются production delivery observability/SLA и native admin/org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, read state, offline outbox, reports, evidence-scoped moderation/audit, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements, org/platform UI, enforcement |
-| P2 | Push/deep links | Не начато | device registration, APNs/FCM/RuStore/Huawei abstraction, universal links и cold-start tests |
+| P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, encrypted installation/account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
 | P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
 

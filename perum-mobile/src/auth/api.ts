@@ -13,6 +13,11 @@ export async function discoverTenant(host: string): Promise<Discovery> {
   return client.get<Discovery>(`/public/tenant-discovery?host=${encodeURIComponent(host.trim().toLowerCase())}`);
 }
 
+export async function discoverTenantById(schoolPublicId: string): Promise<Discovery> {
+  const client = createApiClient({ baseUrl: coreApiUrl });
+  return client.post<Discovery>('/public/tenant-discovery', { school_public_id: schoolPublicId });
+}
+
 export async function tenantLogin(discovery: Discovery, body: LoginRequest) {
   const client = createApiClient({ baseUrl: normalizeApiUrl(discovery.api_base_url) });
   return client.post<LoginResponse>('/login', body);

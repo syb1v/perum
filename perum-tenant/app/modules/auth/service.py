@@ -57,6 +57,8 @@ async def rotate_refresh(db: AsyncSession, refresh_token: str) -> tuple[str, str
     if session is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid refresh token")
     if session.previous_refresh_token_hash == token_hash:
+        from app.modules.push.service import revoke_for_session
+        await revoke_for_session(db, session.user_id, session.id)
         session.revoked_at = now
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh token reuse detected")
@@ -73,6 +75,8 @@ async def rotate_refresh(db: AsyncSession, refresh_token: str) -> tuple[str, str
 
 
 async def revoke_all(db: AsyncSession, user_id: int) -> None:
+    from app.modules.push.service import revoke_for_user
+    await revoke_for_user(db, user_id)
     await db.execute(update(RefreshSession).where(
         RefreshSession.user_id == user_id, RefreshSession.revoked_at.is_(None)
     ).values(revoked_at=utc_now()))
@@ -83,6 +87,8 @@ async def revoke_session(db: AsyncSession, user_id: int, session_token: str) -> 
         RefreshSession.user_id == user_id, RefreshSession.session_token == session_token
     ))
     if session and session.revoked_at is None:
+        from app.modules.push.service import revoke_for_session
+        await revoke_for_session(db, user_id, session.id)
         session.revoked_at = utc_now()
         return True
     return False

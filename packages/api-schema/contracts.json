@@ -8,6 +8,8 @@
     "/api/logout",
     "/api/mobile/compatibility",
     "/api/mobile/capabilities",
+    "/api/push/registration",
+    "/api/push/installations/{installation_id}/registration",
     "/api/media/upload-sessions",
     "/api/media/upload-sessions/{session_id}",
     "/api/media/upload-sessions/{session_id}/content",
@@ -24,6 +26,10 @@
     "/api/admin/support/tickets/{ticket_id}",
     "/api/admin/support/tickets/{ticket_id}/messages",
     "/api/admin/support/tickets/{ticket_id}/read",
+    "/api/admin/support/tickets/{ticket_id}/assign",
+    "/api/admin/support/tickets/{ticket_id}/events",
+    "/api/admin/support/tickets/{ticket_id}/escalate",
+    "/api/admin/support/assignees",
     "/api/admin/support/unread-count",
     "/api/student/diary",
     "/api/student/grades",
@@ -54,5 +60,9 @@
     "/api/organizations",
     "/api/schools",
     "/api/support/tickets"
+    ,"/api/support/escalations/pending"
+    ,"/api/support/escalations/{ticket_id}"
+    ,"/api/support/escalations/{ticket_id}/approve"
+    ,"/api/support/escalations/{ticket_id}/reject"
   ]
 }

@@ -173,6 +173,7 @@ def build_school_stack_spec(
         # «одна школа»; до тех пор школьный стек идентифицируется slug-ом школы.
         "ORG_SLUG": slug,
         "ORG_NAME": school.name,
+        "SCHOOL_PUBLIC_ID": str(school.public_id),
         "DATABASE_URL": database_url,
         "REDIS_URL": redis_url,
         "CONTROL_PLANE_URL": settings.CONTROL_PLANE_URL,

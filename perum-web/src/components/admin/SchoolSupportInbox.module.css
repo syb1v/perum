@@ -36,3 +36,13 @@
 .composer small { grid-column: 1 / -1; color: var(--text-secondary); }
 .closed { padding: 16px; color: var(--text-secondary); background: var(--bg-tertiary); text-align: center; }
 @media (max-width: 800px) { .workspace { height: auto; min-height: calc(100dvh - 125px); grid-template-columns: 1fr; } .inbox { min-height: 520px; border-right: 0; } .detail { position: fixed; inset: 0; z-index: 1200; background: var(--bg-secondary); } .placeholder { display: none; } .messages { min-height: 50dvh; } }
+ .controls { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+ .controls label { display: grid; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+ .controls select { min-width: 0; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+ .history { padding: 10px 16px; border-top: 1px solid var(--border); }
+ .history div { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; font-size: 12px; color: var(--text-secondary); }
+
+ @media (max-width: 900px) { .controls { grid-template-columns: 1fr 1fr; } }
+ .escalation { display: grid; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border); }
+ .escalation p { margin: 0; font-size: 12px; color: var(--text-secondary); }
+ .escalation textarea { resize: vertical; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }

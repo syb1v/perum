@@ -9,6 +9,7 @@ import { colors } from '../theme';
 import { Screen } from './Screen';
 import { preferencesSnapshot, usePreferencesSync } from '../preferences/PreferencesProvider';
 import type { Preferences, PreferencesSnapshot } from '../preferences/types';
+import { usePush } from '../push/PushProvider';
 
 const roleNames: Record<string, string> = { student: 'Ученик', parent: 'Родитель', teacher: 'Учитель', admin: 'Администратор', school_admin: 'Администратор школы', director: 'Директор' };
 
@@ -22,6 +23,7 @@ export function HomeScreen() {
 function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullable<ReturnType<typeof useAuth>['account']>; apiClient: NonNullable<ReturnType<typeof useAuth>['apiClient']>; signOut: () => Promise<void>; busy: boolean }) {
   const network = useNetInfo();
   const sync = usePreferencesSync();
+  const push = usePush();
   const me = useQuery({
     queryKey: queryKeys.me(account.id),
     queryFn: () => apiClient.get<TenantUser>('/user/me'),
@@ -48,6 +50,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
       <Text style={styles.cacheStatus}>{status}</Text>
       <Pressable disabled={me.isFetching} onPress={() => void me.refetch()}><Text style={styles.refresh}>{me.isFetching ? 'Обновление…' : 'Обновить вручную'}</Text></Pressable>
     </View>
+    <View style={styles.card}><Text style={styles.cardTitle}>Push-уведомления</Text><Text style={styles.cardBody}>{push.registered ? 'Устройство зарегистрировано. Доставка включится после настройки провайдера школой.' : 'Уведомления включаются только по вашему запросу.'}</Text>{push.error ? <Text style={styles.error}>{push.error}</Text> : null}<Pressable disabled={push.busy} onPress={() => void (push.registered ? push.revoke() : push.enable())}><Text style={styles.refresh}>{push.busy ? 'Проверяем…' : push.registered ? 'Отключить на этом устройстве' : 'Включить уведомления'}</Text></Pressable></View>
     <View style={styles.card}>
       <View style={styles.settingRow}>
         <View style={styles.settingText}><Text style={styles.cardTitle}>Превью push-уведомлений</Text><Text style={styles.cardBody}>Показывать содержание уведомления на экране устройства.</Text></View>
@@ -88,4 +91,5 @@ const styles = StyleSheet.create({
   primaryText: { color: colors.white, fontSize: 16, fontWeight: '700' },
   secondary: { padding: 17, alignItems: 'center', marginTop: 6 },
   secondaryText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  error: { color: colors.danger, fontSize: 13, marginTop: 8 },
 });

@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     # падает обратно на TELEMETRY_TOKEN (совместимость со старым ядром).
     INTERNAL_RPC_TOKEN: str = ""
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
+    SCHOOL_PUBLIC_ID: str = ""
+    SUPPORT_ESCALATION_INTERVAL_S: int = 15
     # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
     TELEMETRY_INTERVAL_S: int = 60
     SOCIAL_RETENTION_INTERVAL_S: int = 3600
@@ -48,6 +50,9 @@ class Settings(BaseSettings):
     MEDIA_UNBOUND_TTL_S: int = 86400
     MEDIA_OWNER_GRACE_S: int = 3600
     MEDIA_CLEANUP_BATCH_SIZE: int = 100
+    PUSH_TOKEN_ENCRYPTION_KEY: str = ""
+    PUSH_TOKEN_HASH_KEY: str = ""
+    PUSH_DELIVERY_ENABLED: bool = False
 
     @property
     def async_database_url(self) -> str:

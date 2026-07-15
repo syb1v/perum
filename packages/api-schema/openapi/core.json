@@ -156,6 +156,211 @@
         }
       }
     },
+    "/internal/support/escalations": {
+      "post": {
+        "tags": [
+          "internal-support"
+        ],
+        "summary": "Intake Escalation",
+        "operationId": "intake_escalation_internal_support_escalations_post",
+        "parameters": [
+          {
+            "name": "x-internal-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationIntake"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Intake Escalation Internal Support Escalations Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/support/escalations/outbound": {
+      "get": {
+        "tags": [
+          "internal-support"
+        ],
+        "summary": "Outbound Escalation",
+        "operationId": "outbound_escalation_internal_support_escalations_outbound_get",
+        "parameters": [
+          {
+            "name": "school_public_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "School Public Id"
+            }
+          },
+          {
+            "name": "correlation_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "title": "Correlation Id"
+            }
+          },
+          {
+            "name": "since_cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Since Cursor"
+            }
+          },
+          {
+            "name": "x-internal-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Outbound Escalation Internal Support Escalations Outbound Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/internal/support/escalations/outbound/ack": {
+      "post": {
+        "tags": [
+          "internal-support"
+        ],
+        "summary": "Ack Outbound",
+        "operationId": "ack_outbound_internal_support_escalations_outbound_ack_post",
+        "parameters": [
+          {
+            "name": "x-internal-token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutboundAck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Ack Outbound Internal Support Escalations Outbound Ack Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/auth/login": {
       "post": {
         "tags": [
@@ -5955,6 +6160,223 @@
         }
       }
     },
+    "/api/support/escalations/pending": {
+      "get": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Pending Escalations",
+        "operationId": "pending_escalations_api_support_escalations_pending_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Pending Escalations Api Support Escalations Pending Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/support/escalations/{ticket_id}": {
+      "get": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Escalation Detail",
+        "operationId": "escalation_detail_api_support_escalations__ticket_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Full"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Escalation Detail Api Support Escalations  Ticket Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/support/escalations/{ticket_id}/approve": {
+      "post": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Approve Escalation",
+        "operationId": "approve_escalation_api_support_escalations__ticket_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Approve Escalation Api Support Escalations  Ticket Id  Approve Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/support/escalations/{ticket_id}/reject": {
+      "post": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Reject Escalation",
+        "operationId": "reject_escalation_api_support_escalations__ticket_id__reject_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Reject Escalation Api Support Escalations  Ticket Id  Reject Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -6850,6 +7272,91 @@
         ],
         "title": "EnrollmentTokenOut"
       },
+      "EscalationAction": {
+        "properties": {
+          "client_action_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Client Action Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_action_id",
+          "expected_version"
+        ],
+        "title": "EscalationAction"
+      },
+      "EscalationIntake": {
+        "properties": {
+          "school_public_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "School Public Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Correlation Id"
+          },
+          "tenant_ticket_public_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Ticket Public Id"
+          },
+          "subject": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 2,
+            "title": "Subject"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Message"
+          },
+          "client_message_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message Id"
+          },
+          "redacted_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Redacted Snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "school_public_id",
+          "correlation_id",
+          "subject",
+          "message"
+        ],
+        "title": "EscalationIntake"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6885,6 +7392,7 @@
         "properties": {
           "body": {
             "type": "string",
+            "maxLength": 4000,
             "minLength": 1,
             "title": "Body"
           }
@@ -8012,6 +8520,33 @@
         "type": "object",
         "title": "OtaConfigUpdate"
       },
+      "OutboundAck": {
+        "properties": {
+          "school_public_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "School Public Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Correlation Id"
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "school_public_id",
+          "correlation_id",
+          "cursor"
+        ],
+        "title": "OutboundAck"
+      },
       "PlanUpdate": {
         "properties": {
           "plan": {
@@ -8477,6 +9012,7 @@
           },
           "message": {
             "type": "string",
+            "maxLength": 4000,
             "minLength": 1,
             "title": "Message"
           }

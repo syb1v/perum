@@ -285,4 +285,8 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 140 | 2026-07-12 | 2871e35 | feat(social): реализован раздел друзей |
 | 141 | 2026-07-12 | de6e695 | fix(social): стабилизирована пагинация и опубликованы API-контракты |
 | 142 | 2026-07-15 | 5047c49 | feat(platform): реализованы mobile, chats, media foundation и school support по master plan |
-| 143 | 2026-07-15 | _______ | docs(versions): зафиксирован хеш продуктового цикла |
+| 143 | 2026-07-15 | 431482e | docs(versions): зафиксирован хеш продуктового цикла |
+| 144 | 2026-07-15 | _______ | feat(support): завершён version-safe metadata workflow школьной поддержки |
+| 145 | 2026-07-15 | _______ | feat(support): реализована organization-gated эскалация в Core |
+| 146 | 2026-07-15 | _______ | feat(mobile): добавлен безопасный deep-link foundation |
+| 147 | 2026-07-15 | _______ | feat(push): добавлен provider-neutral registration foundation |

@@ -4,6 +4,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 SupportCategory = Literal["general", "technical", "account", "academic", "safety", "other"]
+SupportStatus = Literal["open", "in_progress", "waiting_requester", "resolved", "closed"]
+SupportPriority = Literal["low", "normal", "high", "urgent"]
+EscalationStatus = Literal["none", "pending_delivery", "pending_org_approval", "approved", "rejected", "delivery_error"]
 
 
 class StrictModel(BaseModel):
@@ -27,11 +30,32 @@ class ReadCreate(StrictModel):
     message_id: str = Field(min_length=36, max_length=36)
 
 
+class TicketPatch(StrictModel):
+    client_action_id: str = Field(min_length=1, max_length=64)
+    expected_version: int = Field(ge=1)
+    status: SupportStatus | None = None
+    category: SupportCategory | None = None
+    priority: SupportPriority | None = None
+
+
+class AssignCreate(StrictModel):
+    client_action_id: str = Field(min_length=1, max_length=64)
+    expected_version: int = Field(ge=1)
+    assignee_id: int | None = None
+
+
+class EscalateCreate(StrictModel):
+    client_action_id: str = Field(min_length=1, max_length=64)
+    expected_version: int = Field(ge=1)
+    redacted_summary: str = Field(min_length=1, max_length=4000)
+
+
 class MessageOut(BaseModel):
     id: str
     sender_id: int | None
     side: str
     body: str
+    sender_snapshot: str | None = None
     created_at: datetime
 
 
@@ -42,6 +66,7 @@ class TicketOut(BaseModel):
     category: str
     status: str
     priority: str
+    escalation_status: EscalationStatus
     version: int
     last_message_at: datetime | None
     unread: bool
@@ -68,3 +93,27 @@ class TicketCreateOut(BaseModel):
 class UnreadOut(BaseModel):
     tickets: int
     messages: int
+
+
+class AdminUnreadOut(UnreadOut):
+    unassigned: int
+    urgent: int
+
+
+class AssigneeOut(BaseModel):
+    id: int
+    name: str
+    role: str
+
+
+class EventOut(BaseModel):
+    id: str
+    action: str
+    actor_id: int | None
+    metadata: dict | list | None
+    created_at: datetime
+
+
+class EventPage(BaseModel):
+    items: list[EventOut]
+    next_cursor: str | None = None

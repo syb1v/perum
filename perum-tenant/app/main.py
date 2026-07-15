@@ -44,6 +44,7 @@ async def lifespan(app: FastAPI):
     task = None
     retention_task = None
     media_task = None
+    escalation_task = None
     if settings.TELEMETRY_TOKEN and settings.TELEMETRY_INTERVAL_S > 0:
         from app.telemetry import telemetry_loop
 
@@ -59,6 +60,11 @@ async def lifespan(app: FastAPI):
 
         media_task = asyncio.create_task(media_loop(settings.MEDIA_CLEANUP_INTERVAL_S))
         logger.info("media maintenance loop started (interval=%ss)", settings.MEDIA_CLEANUP_INTERVAL_S)
+    if settings.SCHOOL_PUBLIC_ID and settings.INTERNAL_RPC_TOKEN and settings.SUPPORT_ESCALATION_INTERVAL_S > 0:
+        from app.modules.support.escalation import escalation_loop
+
+        escalation_task = asyncio.create_task(escalation_loop())
+        logger.info("support escalation loop started (interval=%ss)", settings.SUPPORT_ESCALATION_INTERVAL_S)
     try:
         yield
     finally:
@@ -74,6 +80,10 @@ async def lifespan(app: FastAPI):
             media_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await media_task
+        if escalation_task is not None:
+            escalation_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await escalation_task
 
 
 app = FastAPI(
@@ -102,6 +112,7 @@ from app.modules.misc.router import user_router as misc_user_router  # noqa: E40
 from app.modules.news.router import admin_router as news_admin_router  # noqa: E402
 from app.modules.news.router import router as news_router  # noqa: E402
 from app.modules.parent.router import router as parent_router  # noqa: E402
+from app.modules.push.router import router as push_router  # noqa: E402
 from app.modules.quests.router import router as quests_router  # noqa: E402
 from app.modules.school_admin.router import router as school_admin_router  # noqa: E402
 from app.modules.social.router import admin_router as social_admin_router  # noqa: E402
@@ -127,6 +138,7 @@ app.include_router(user_admin_router, prefix="/api/admin", tags=["user-admin"])
 app.include_router(journal_router, prefix="/api/journal", tags=["journal"])
 app.include_router(student_router, prefix="/api/student", tags=["student"])
 app.include_router(parent_router, prefix="/api/parent", tags=["parent"])
+app.include_router(push_router, prefix="/api", tags=["push"])
 app.include_router(leaderboard_router, prefix="/api/leaderboard", tags=["leaderboard"])
 app.include_router(market_router, prefix="/api/market", tags=["market"])
 app.include_router(market_admin_router, prefix="/api/admin/market", tags=["market-admin"])

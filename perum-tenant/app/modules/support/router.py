@@ -6,7 +6,7 @@ from app.core.deps import require_admin, require_roles
 from app.core.roles import PARENT, STUDENT, TEACHER
 from app.models import User
 from app.modules.support import service
-from app.modules.support.schemas import MessageCreate, MessageOut, MessagePage, ReadCreate, TicketCreate, TicketCreateOut, TicketOut, TicketPage, UnreadOut
+from app.modules.support.schemas import AdminUnreadOut, AssignCreate, AssigneeOut, EscalateCreate, EventPage, MessageCreate, MessageOut, MessagePage, ReadCreate, TicketCreate, TicketCreateOut, TicketOut, TicketPage, TicketPatch, UnreadOut
 
 router = APIRouter(prefix="/support")
 admin_router = APIRouter(prefix="/support")
@@ -58,6 +58,26 @@ async def admin_detail(ticket_id: str, user: User = Depends(require_admin), db: 
     return await service.get_ticket(db, user, ticket_id, True)
 
 
+@admin_router.patch("/tickets/{ticket_id}", response_model=TicketOut)
+async def admin_patch(ticket_id: str, data: TicketPatch, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.patch_ticket(db, user, ticket_id, data)
+
+
+@admin_router.post("/tickets/{ticket_id}/assign", response_model=TicketOut)
+async def admin_assign(ticket_id: str, data: AssignCreate, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.assign_ticket(db, user, ticket_id, data)
+
+
+@admin_router.post("/tickets/{ticket_id}/escalate", response_model=TicketOut)
+async def admin_escalate(ticket_id: str, data: EscalateCreate, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.escalate_ticket(db, user, ticket_id, data)
+
+
+@admin_router.get("/tickets/{ticket_id}/events", response_model=EventPage)
+async def admin_events(ticket_id: str, after: str | None = None, limit: int = Query(100, ge=1, le=200), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.events(db, user, ticket_id, after, limit)
+
+
 @admin_router.get("/tickets/{ticket_id}/messages", response_model=MessagePage)
 async def admin_thread(ticket_id: str, before: str | None = None, limit: int = Query(50, ge=1, le=100), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     return await service.messages(db, user, ticket_id, True, before, limit)
@@ -73,6 +93,11 @@ async def admin_read(ticket_id: str, data: ReadCreate, user: User = Depends(requ
     await service.mark_read(db, user, ticket_id, data.message_id, True)
 
 
-@admin_router.get("/unread-count", response_model=UnreadOut)
+@admin_router.get("/assignees", response_model=list[AssigneeOut])
+async def admin_assignees(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.assignees(db, user)
+
+
+@admin_router.get("/unread-count", response_model=AdminUnreadOut)
 async def admin_unread(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    return await service.unread(db, user, True)
+    return await service.admin_unread(db, user)

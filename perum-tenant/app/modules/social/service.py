@@ -210,6 +210,8 @@ async def send_message(db: AsyncSession, user: User, conversation_id: int, clien
     now = utc_now()
     message = Message(school_id=user.school_id, conversation_id=conversation.id, sender_id=user.id, client_message_id=client_message_id, body=canonical, expires_at=now + timedelta(days=settings.message_retention_days))
     db.add(message); await db.flush(); conversation.last_message_id = message.id; conversation.last_message_at = message.created_at or now
+    from app.modules.push.service import enqueue
+    await enqueue(db, user.school_id, peer_id, f"chat:{message.id}", "chat_message", f"conversation:{conversation.id}")
     await db.commit()
     from app.modules.social.realtime import publish_conversation
     await publish_conversation("message.created", user.school_id, conversation.id, {conversation.user_low_id, conversation.user_high_id}, message_id=message.id, sender_id=user.id)

@@ -1,12 +1,14 @@
+from hashlib import sha256
 from uuid import uuid4
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
-from app.models import Notification, SupportEvent, SupportMessage, SupportParticipant, SupportTicket, User
-from app.modules.support.schemas import MessageCreate, MessageOut, MessagePage, TicketCreate, TicketCreateOut, TicketOut, TicketPage, UnreadOut
+from app.core.config import get_settings
+from app.models import Notification, SupportEscalationOutbox, SupportEvent, SupportMessage, SupportParticipant, SupportTicket, User
+from app.modules.support.schemas import AdminUnreadOut, AssignCreate, AssigneeOut, EscalateCreate, EventOut, EventPage, MessageCreate, MessageOut, MessagePage, TicketCreate, TicketCreateOut, TicketOut, TicketPage, TicketPatch, UnreadOut
 
 
 def _body(value: str) -> str:
@@ -42,7 +44,7 @@ async def _out(db: AsyncSession, ticket: SupportTicket, kind: str) -> TicketOut:
     unread_side = "shared_inbox" if kind == "requester" else "requester"
     unread_after = True if participant.last_read_message_id is None else or_(SupportMessage.created_at > participant.read_at, and_(SupportMessage.created_at == participant.read_at, SupportMessage.id > participant.last_read_message_id))
     unread = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket.id, SupportMessage.side == unread_side, unread_after))
-    return TicketOut(id=ticket.public_id, correlation_id=ticket.correlation_id, subject=ticket.subject, category=ticket.category, status=ticket.status, priority=ticket.priority, version=ticket.version, last_message_at=ticket.last_message_at, unread=bool(unread), created_at=ticket.created_at, updated_at=ticket.updated_at)
+    return TicketOut(id=ticket.public_id, correlation_id=ticket.correlation_id, subject=ticket.subject, category=ticket.category, status=ticket.status, priority=ticket.priority, escalation_status=ticket.escalation_status, version=ticket.version, last_message_at=ticket.last_message_at, unread=bool(unread), created_at=ticket.created_at, updated_at=ticket.updated_at)
 
 
 async def create_ticket(db: AsyncSession, user: User, data: TicketCreate) -> TicketCreateOut:
@@ -61,7 +63,7 @@ async def create_ticket(db: AsyncSession, user: User, data: TicketCreate) -> Tic
     await db.flush()
     ticket.last_message_id = message.id
     ticket.last_message_side = message.side
-    db.add_all([SupportParticipant(school_id=user.school_id, ticket_id=ticket.id, kind="requester", user_id=user.id, last_read_message_id=message.id, read_at=now), SupportParticipant(school_id=user.school_id, ticket_id=ticket.id, kind="shared_inbox"), SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_created", metadata_json={"message_id": message.id})])
+    db.add_all([SupportParticipant(school_id=user.school_id, ticket_id=ticket.id, kind="requester", user_id=user.id, last_read_message_id=message.id, read_at=now), SupportParticipant(school_id=user.school_id, ticket_id=ticket.id, kind="shared_inbox"), SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_created", metadata_json={"message_id": message.id}, created_at=now)])
     await db.commit()
     return TicketCreateOut(ticket=await _out(db, ticket, "requester"), initial_message=MessageOut.model_validate(message, from_attributes=True), replayed=False)
 
@@ -116,9 +118,11 @@ async def send(db: AsyncSession, user: User, public_id: str, data: MessageCreate
     if admin:
         ticket.status = "waiting_requester"
         db.add(Notification(school_id=user.school_id, user_id=ticket.creator_id, title=f"Ответ школы: {ticket.subject}", text=body[:255], type="support", ref_type="school_support_ticket", ref_id=ticket.public_id))
+        from app.modules.push.service import enqueue
+        await enqueue(db, user.school_id, ticket.creator_id, f"support:{message.id}", "support_reply", f"support_ticket:{ticket.public_id}")
     elif ticket.status in {"waiting_requester", "resolved"}:
         ticket.status = "open"
-    db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="message_created", metadata_json={"message_id": message.id, "side": side}))
+    db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="message_created", metadata_json={"message_id": message.id, "side": side}, created_at=now))
     await db.commit()
     return MessageOut.model_validate(message, from_attributes=True)
 
@@ -132,7 +136,7 @@ async def mark_read(db: AsyncSession, user: User, public_id: str, message_id: st
     if participant.read_at is None or message.created_at > participant.read_at or message.created_at == participant.read_at and (participant.last_read_message_id is None or message.id > participant.last_read_message_id):
         participant.last_read_message_id = message.id
         participant.read_at = message.created_at
-        db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_read", metadata_json={"message_id": message.id}))
+        db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_read", metadata_json={"message_id": message.id}, created_at=utc_now()))
     if not admin:
         notifications = list((await db.scalars(select(Notification).where(Notification.user_id == user.id, Notification.ref_type == "school_support_ticket", Notification.ref_id == ticket.public_id, Notification.is_read.is_(False)))).all())
         for notification in notifications:
@@ -156,3 +160,123 @@ async def unread(db: AsyncSession, user: User, admin: bool) -> UnreadOut:
             tickets += 1
             messages += count
     return UnreadOut(tickets=tickets, messages=messages)
+
+
+async def _replay(db: AsyncSession, ticket: SupportTicket, client_action_id: str, fingerprint: dict) -> TicketOut | None:
+    event = await db.scalar(select(SupportEvent).where(SupportEvent.ticket_id == ticket.id, SupportEvent.client_action_id == client_action_id))
+    if event is None:
+        return None
+    if not isinstance(event.metadata_json, dict) or event.metadata_json.get("fingerprint") != fingerprint:
+        raise HTTPException(status.HTTP_409_CONFLICT, "client_action_id reused")
+    return await _out(db, ticket, "shared_inbox")
+
+
+async def patch_ticket(db: AsyncSession, user: User, public_id: str, data: TicketPatch) -> TicketOut:
+    ticket = await _admin_ticket(db, user, public_id)
+    changes = data.model_dump(exclude={"client_action_id", "expected_version"}, exclude_none=True)
+    if not changes:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "at least one field is required")
+    fingerprint = {"action": "ticket_updated", "expected_version": data.expected_version, "changes": changes}
+    replay = await _replay(db, ticket, data.client_action_id, fingerprint)
+    if replay:
+        return replay
+    values = {**changes, "version": data.expected_version + 1, "updated_at": utc_now()}
+    if "status" in changes:
+        values["closed_at"] = utc_now() if changes["status"] == "closed" else None
+    result = await db.execute(update(SupportTicket).where(SupportTicket.id == ticket.id, SupportTicket.school_id == user.school_id, SupportTicket.version == data.expected_version).values(**values))
+    if result.rowcount != 1:
+        await db.rollback()
+        current = await _admin_ticket(db, user, public_id)
+        replay = await _replay(db, current, data.client_action_id, fingerprint)
+        if replay:
+            return replay
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": current.version})
+    db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_updated", client_action_id=data.client_action_id, metadata_json={"fingerprint": fingerprint, "changes": changes}, created_at=utc_now()))
+    await db.commit()
+    return await _out(db, await _admin_ticket(db, user, public_id), "shared_inbox")
+
+
+async def assign_ticket(db: AsyncSession, user: User, public_id: str, data: AssignCreate) -> TicketOut:
+    ticket = await _admin_ticket(db, user, public_id)
+    fingerprint = {"action": "ticket_assigned", "expected_version": data.expected_version, "assignee_id": data.assignee_id}
+    replay = await _replay(db, ticket, data.client_action_id, fingerprint)
+    if replay:
+        return replay
+    if data.assignee_id is not None:
+        assignee = await db.scalar(select(User).where(User.id == data.assignee_id, User.school_id == user.school_id, User.is_active.is_(True), User.role.in_(("school_admin", "director"))))
+        if assignee is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Сотрудник не найден")
+    result = await db.execute(update(SupportTicket).where(SupportTicket.id == ticket.id, SupportTicket.school_id == user.school_id, SupportTicket.version == data.expected_version).values(assignee_id=data.assignee_id, version=data.expected_version + 1, updated_at=utc_now()))
+    if result.rowcount != 1:
+        await db.rollback()
+        current = await _admin_ticket(db, user, public_id)
+        replay = await _replay(db, current, data.client_action_id, fingerprint)
+        if replay:
+            return replay
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": current.version})
+    db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_assigned" if data.assignee_id else "ticket_unassigned", client_action_id=data.client_action_id, metadata_json={"fingerprint": fingerprint}, created_at=utc_now()))
+    await db.commit()
+    return await _out(db, await _admin_ticket(db, user, public_id), "shared_inbox")
+
+
+async def escalate_ticket(db: AsyncSession, user: User, public_id: str, data: EscalateCreate) -> TicketOut:
+    ticket = await _admin_ticket(db, user, public_id)
+    summary = _body(data.redacted_summary)
+    fingerprint = {"action": "ticket_escalated", "expected_version": data.expected_version, "redacted_summary_sha256": sha256(summary.encode()).hexdigest()}
+    replay = await _replay(db, ticket, data.client_action_id, fingerprint)
+    if replay:
+        return replay
+    if ticket.status == "closed":
+        raise HTTPException(status.HTTP_409_CONFLICT, "ticket is closed")
+    if ticket.escalation_status != "none":
+        raise HTTPException(status.HTTP_409_CONFLICT, "ticket already escalated")
+    settings = get_settings()
+    if not settings.SCHOOL_PUBLIC_ID:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "school public id is not configured")
+    now = utc_now()
+    result = await db.execute(update(SupportTicket).where(SupportTicket.id == ticket.id, SupportTicket.school_id == user.school_id, SupportTicket.version == data.expected_version, SupportTicket.status != "closed", SupportTicket.escalation_status == "none").values(escalation_status="pending_delivery", escalation_requested_at=now, escalation_requested_by=user.id, version=data.expected_version + 1, updated_at=now))
+    if result.rowcount != 1:
+        await db.rollback()
+        current = await _admin_ticket(db, user, public_id)
+        replay = await _replay(db, current, data.client_action_id, fingerprint)
+        if replay:
+            return replay
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": current.version})
+    payload = {
+        "school_public_id": settings.SCHOOL_PUBLIC_ID,
+        "correlation_id": ticket.correlation_id,
+        "tenant_ticket_public_id": ticket.public_id,
+        "subject": ticket.subject,
+        "message": summary,
+        "client_message_id": data.client_action_id,
+        "redacted_snapshot": {"category": ticket.category, "priority": ticket.priority, "correlation_id": ticket.correlation_id},
+    }
+    db.add_all([
+        SupportEscalationOutbox(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, payload_json=payload, next_attempt_at=now, created_at=now, updated_at=now),
+        SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_escalated", client_action_id=data.client_action_id, metadata_json={"fingerprint": fingerprint}, created_at=now),
+    ])
+    await db.commit()
+    return await _out(db, await _admin_ticket(db, user, public_id), "shared_inbox")
+
+
+async def assignees(db: AsyncSession, user: User) -> list[AssigneeOut]:
+    rows = list((await db.scalars(select(User).where(User.school_id == user.school_id, User.is_active.is_(True), User.role.in_(("school_admin", "director"))).order_by(User.last_name, User.first_name, User.id))).all())
+    return [AssigneeOut(id=row.id, name=" ".join(filter(None, (row.first_name, row.last_name))) or row.login, role=row.role) for row in rows]
+
+
+async def events(db: AsyncSession, user: User, public_id: str, after: str | None, limit: int) -> EventPage:
+    ticket = await _admin_ticket(db, user, public_id)
+    query = select(SupportEvent).where(SupportEvent.school_id == user.school_id, SupportEvent.ticket_id == ticket.id)
+    if after:
+        marker = await db.scalar(select(SupportEvent).where(SupportEvent.id == after, SupportEvent.ticket_id == ticket.id))
+        if marker:
+            query = query.where(or_(SupportEvent.created_at > marker.created_at, and_(SupportEvent.created_at == marker.created_at, SupportEvent.id > marker.id)))
+    rows = list((await db.scalars(query.order_by(SupportEvent.created_at, SupportEvent.id).limit(limit + 1))).all())
+    return EventPage(items=[EventOut(id=row.id, action=row.action, actor_id=row.actor_id, metadata=row.metadata_json, created_at=row.created_at) for row in rows[:limit]], next_cursor=rows[limit - 1].id if len(rows) > limit else None)
+
+
+async def admin_unread(db: AsyncSession, user: User) -> AdminUnreadOut:
+    base = await unread(db, user, True)
+    unassigned = await db.scalar(select(func.count(SupportTicket.id)).where(SupportTicket.school_id == user.school_id, SupportTicket.assignee_id.is_(None), SupportTicket.status != "closed"))
+    urgent = await db.scalar(select(func.count(SupportTicket.id)).where(SupportTicket.school_id == user.school_id, SupportTicket.priority == "urgent", SupportTicket.status != "closed"))
+    return AdminUnreadOut(tickets=base.tickets, messages=base.messages, unassigned=unassigned or 0, urgent=urgent or 0)

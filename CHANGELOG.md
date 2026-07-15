@@ -4,6 +4,13 @@
 
 > Проект на ранней стадии (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Рабочих функций для конечных пользователей — учеников, учителей — пока нет, они появятся в фазах 5–8 (см. [docs/PLAN.md](docs/PLAN.md)).
 
+## [Unreleased] — 2026-07-15
+
+- Добавлен provider-neutral push foundation: tenant шифрует registration tokens через AES-GCM только при настроенном keyring, привязывает installation к refresh session и отзывает её сервером, chat/support создают privacy-safe suppressed outbox events; mobile запрашивает permission только явно, регистрирует Expo token, отслеживает rotation и направляет tap в строгий deep-link resolver.
+- Добавлен deep-link foundation: mobile принимает только allowlisted HTTPS/fallback links со stable school UUID, всегда выполняет Core rediscovery, безопасно переключает tenant account или откладывает role-aware target до login; web публикует fallback route и параметризованные AASA/Asset Links без выдуманных store credentials.
+- Реализована organization-gated эскалация школьной поддержки: school_admin/director отправляет только явное обезличенное резюме через durable tenant outbox, Core принимает его идемпотентно и скрывает от platform до решения org_admin, а ответы platform дедуплицируются и возвращаются в исходный tenant ticket через pull/ack inbox.
+- Завершён metadata workflow школьной поддержки: school_admin/director управляют status/category/priority и назначением через atomic version CAS и exact idempotent replay, видят content-free audit history и расширенные inbox counters; web admin получил conflict-safe controls без optimistic updates.
+
 ## [Unreleased] — 2026-07-14
 
 - Реализован end-to-end basic School Support: student/parent/teacher создают несколько text-only обращений и переписываются со shared inbox school_admin/director; tenant обеспечивает idempotency, unread/read, notifications, audit и school isolation, web покрывает обе стороны, а mobile requester использует account-scoped cache и durable SQLite outbox.

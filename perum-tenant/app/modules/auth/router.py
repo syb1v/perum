@@ -109,4 +109,5 @@ async def mobile_compatibility() -> dict:
 
 @router.get("/mobile/capabilities")
 async def mobile_capabilities() -> dict:
-    return {"refresh_sessions": True, "session_management": True, "push_tokens": False}
+    from app.modules.push.service import capability
+    return {"refresh_sessions": True, "session_management": True, "push_tokens": capability()}

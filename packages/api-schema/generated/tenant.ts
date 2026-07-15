@@ -956,6 +956,58 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Admin Patch */
+        patch: operations["admin_patch_api_admin_support_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/api/admin/support/tickets/{ticket_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Assign */
+        post: operations["admin_assign_api_admin_support_tickets__ticket_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/support/tickets/{ticket_id}/escalate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Escalate */
+        post: operations["admin_escalate_api_admin_support_tickets__ticket_id__escalate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/support/tickets/{ticket_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Events */
+        get: operations["admin_events_api_admin_support_tickets__ticket_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -988,6 +1040,23 @@ export interface paths {
         put?: never;
         /** Admin Read */
         post: operations["admin_read_api_admin_support_tickets__ticket_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/support/assignees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Assignees */
+        get: operations["admin_assignees_api_admin_support_assignees_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1970,6 +2039,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/push/registration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Registration */
+        get: operations["get_registration_api_push_registration_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/push/installations/{installation_id}/registration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put Registration */
+        put: operations["put_registration_api_push_installations__installation_id__registration_put"];
+        post?: never;
+        /** Delete Registration */
+        delete: operations["delete_registration_api_push_installations__installation_id__registration_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3357,6 +3461,17 @@ export interface components {
             /** Student Id */
             student_id: number;
         };
+        /** AdminUnreadOut */
+        AdminUnreadOut: {
+            /** Tickets */
+            tickets: number;
+            /** Messages */
+            messages: number;
+            /** Unassigned */
+            unassigned: number;
+            /** Urgent */
+            urgent: number;
+        };
         /** AppealCreate */
         AppealCreate: {
             /** Grade Id */
@@ -3370,6 +3485,24 @@ export interface components {
             status: string;
             /** Teacher Comment */
             teacher_comment?: string | null;
+        };
+        /** AssignCreate */
+        AssignCreate: {
+            /** Client Action Id */
+            client_action_id: string;
+            /** Expected Version */
+            expected_version: number;
+            /** Assignee Id */
+            assignee_id?: number | null;
+        };
+        /** AssigneeOut */
+        AssigneeOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
         };
         /** BellItem */
         BellItem: {
@@ -3567,6 +3700,40 @@ export interface components {
             items: components["schemas"]["ConversationOut"][];
             /** Next Cursor */
             next_cursor: number | null;
+        };
+        /** EscalateCreate */
+        EscalateCreate: {
+            /** Client Action Id */
+            client_action_id: string;
+            /** Expected Version */
+            expected_version: number;
+            /** Redacted Summary */
+            redacted_summary: string;
+        };
+        /** EventOut */
+        EventOut: {
+            /** Id */
+            id: string;
+            /** Action */
+            action: string;
+            /** Actor Id */
+            actor_id: number | null;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            } | unknown[] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** EventPage */
+        EventPage: {
+            /** Items */
+            items: components["schemas"]["EventOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
         };
         /** FinalGradeRequest */
         FinalGradeRequest: {
@@ -3928,6 +4095,32 @@ export interface components {
         RegisterUsersRequest: {
             /** Users */
             users: components["schemas"]["RegisterUserItem"][];
+        };
+        /** RegistrationPut */
+        RegistrationPut: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "expo" | "fcm" | "apns" | "rustore" | "huawei";
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "ios" | "android";
+            /**
+             * Environment
+             * @enum {string}
+             */
+            environment: "development" | "production";
+            /** Token */
+            token: string;
+            /** App Id */
+            app_id: string;
+            /** App Version */
+            app_version?: string | null;
+            /** Device Name */
+            device_name?: string | null;
         };
         /** ReportCreate */
         ReportCreate: {
@@ -4369,6 +4562,11 @@ export interface components {
             status: string;
             /** Priority */
             priority: string;
+            /**
+             * Escalation Status
+             * @enum {string}
+             */
+            escalation_status: "none" | "pending_delivery" | "pending_org_approval" | "approved" | "rejected" | "delivery_error";
             /** Version */
             version: number;
             /** Last Message At */
@@ -4392,6 +4590,19 @@ export interface components {
             items: components["schemas"]["TicketOut"][];
             /** Next Cursor */
             next_cursor?: string | null;
+        };
+        /** TicketPatch */
+        TicketPatch: {
+            /** Client Action Id */
+            client_action_id: string;
+            /** Expected Version */
+            expected_version: number;
+            /** Status */
+            status?: ("open" | "in_progress" | "waiting_requester" | "resolved" | "closed") | null;
+            /** Category */
+            category?: ("general" | "technical" | "account" | "academic" | "safety" | "other") | null;
+            /** Priority */
+            priority?: ("low" | "normal" | "high" | "urgent") | null;
         };
         /** TogglePayload */
         TogglePayload: {
@@ -4650,6 +4861,8 @@ export interface components {
             side: string;
             /** Body */
             body: string;
+            /** Sender Snapshot */
+            sender_snapshot?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -7064,6 +7277,145 @@ export interface operations {
             };
         };
     };
+    admin_patch_api_admin_support_tickets__ticket_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_assign_api_admin_support_tickets__ticket_id__assign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_escalate_api_admin_support_tickets__ticket_id__escalate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EscalateCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_events_api_admin_support_tickets__ticket_id__events_get: {
+        parameters: {
+            query?: {
+                after?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_thread_api_admin_support_tickets__ticket_id__messages_get: {
         parameters: {
             query?: {
@@ -7166,6 +7518,26 @@ export interface operations {
             };
         };
     };
+    admin_assignees_api_admin_support_assignees_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssigneeOut"][];
+                };
+            };
+        };
+    };
     admin_unread_api_admin_support_unread_count_get: {
         parameters: {
             query?: never;
@@ -7181,7 +7553,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UnreadOut"];
+                    "application/json": components["schemas"]["AdminUnreadOut"];
                 };
             };
         };
@@ -9281,6 +9653,98 @@ export interface operations {
             header?: never;
             path: {
                 student_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_registration_api_push_registration_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_registration_api_push_installations__installation_id__registration_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegistrationPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_registration_api_push_installations__installation_id__registration_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                installation_id: string;
             };
             cookie?: never;
         };

@@ -8,3 +8,5 @@ export type SupportMessage = components['schemas']['app__modules__support__schem
 export type SupportMessagePage = components['schemas']['app__modules__support__schemas__MessagePage'];
 export type SupportUnread = components['schemas']['UnreadOut'];
 export type SupportCategory = SupportTicketCreate['category'];
+export type SupportAssignee = components['schemas']['AssigneeOut'];
+export type SupportEventPage = components['schemas']['EventPage'];

@@ -283,6 +283,7 @@ app.include_router(health.router)
 app.include_router(metrics.router)
 # On-demand TLS gate для Caddy (/internal/validate-domain) — по внутренней сети.
 app.include_router(internal_domains.router, prefix="/internal", tags=["internal"])
+app.include_router(support.internal_router, prefix="/internal/support", tags=["internal-support"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(public.router, prefix="/api/public", tags=["public"])
 # Лиды лендинга: POST публичный (форма «Связаться»), GET/PATCH — platform_admin.

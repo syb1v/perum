@@ -62,6 +62,29 @@ async def get_current_user(
     return user
 
 
+async def get_current_refresh_session(
+    user: User = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> RefreshSession:
+    try:
+        payload = decode_access_token(credentials.credentials if credentials else "")
+    except jwt.PyJWTError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session-backed access token required", _UNAUTH)
+    if payload.get("typ") != "access" or not payload.get("session_token"):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session-backed access token required", _UNAUTH)
+    session = await db.scalar(select(RefreshSession).where(
+        RefreshSession.user_id == user.id,
+        RefreshSession.session_token == payload["session_token"],
+        RefreshSession.token_version == payload.get("token_version"),
+        RefreshSession.revoked_at.is_(None),
+        RefreshSession.expires_at > utc_now(),
+    ))
+    if session is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session expired or revoked", _UNAUTH)
+    return session
+
+
 def require_roles(*roles: str) -> Callable:
     async def _dep(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:

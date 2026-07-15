@@ -4,14 +4,15 @@ import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput,
 import { useAuth } from '../src/auth/AuthProvider';
 import { colors } from '../src/theme';
 import { Screen } from '../src/components/Screen';
+import { targetRoute, type LinkTarget } from '../src/links/core';
 
 export default function Login() {
   const { account, busy, error, signIn, clearError } = useAuth();
-  const { add } = useLocalSearchParams<{ add?: string }>();
-  const [host, setHost] = useState('');
+  const { add, host: initialHost, target } = useLocalSearchParams<{ add?: string; host?: string; target?: LinkTarget['target'] }>();
+  const [host, setHost] = useState(initialHost ?? '');
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
-  if (account && add !== '1') return <Redirect href="/" />;
+  if (account && add !== '1') return <Redirect href={(targetRoute(target ?? 'home', account.user.role) ?? '/') as never} />;
   const disabled = busy || !host.trim() || !login.trim() || !password;
   return <Screen><KeyboardAvoidingView style={styles.page} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={styles.brand}><Text style={styles.brandText}>PERUM</Text></View>

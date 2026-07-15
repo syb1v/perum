@@ -11,7 +11,7 @@ described by SQLAlchemy models inside `perum-tenant/app/models/`.
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, Uuid, func
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, Enum, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, Uuid, func
 
 from app.core.crypto import EncryptedString
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -665,11 +665,38 @@ class SupportTicket(Base):
     показывают, у кого есть непрочитанное (для бейджа ядра и колокола орг)."""
 
     __tablename__ = "support_tickets"
+    __table_args__ = (
+        CheckConstraint("source IN ('direct', 'school')", name="ck_support_tickets_source"),
+        CheckConstraint(
+            "approval_status IN ('not_required', 'pending', 'approved', 'rejected')",
+            name="ck_support_tickets_approval_status",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     org_id: Mapped[int] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    source: Mapped[str] = mapped_column(String(20), nullable=False, default="direct", server_default="direct")
+    school_id: Mapped[int | None] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    tenant_ticket_public_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    correlation_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    redacted_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    approval_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="not_required", server_default="not_required"
+    )
+    approval_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    approved_by_org_admin_id: Mapped[int | None] = mapped_column(
+        ForeignKey("org_admins.id", ondelete="SET NULL"), nullable=True
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    rejected_by_org_admin_id: Mapped[int | None] = mapped_column(
+        ForeignKey("org_admins.id", ondelete="SET NULL"), nullable=True
+    )
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    outbound_ack_cursor: Mapped[int | None] = mapped_column(Integer, nullable=True)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="open", server_default="open",
@@ -699,6 +726,8 @@ class SupportMessage(Base):
     __tablename__ = "support_messages"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), default=uuid4, nullable=False, unique=True, index=True)
+    client_message_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     ticket_id: Mapped[int] = mapped_column(
         ForeignKey("support_tickets.id", ondelete="CASCADE"), nullable=False, index=True
     )
@@ -708,3 +737,21 @@ class SupportMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
     ticket: Mapped[SupportTicket] = relationship(back_populates="messages")
+
+
+class SupportEscalationEvent(Base):
+    __tablename__ = "support_escalation_events"
+    __table_args__ = (UniqueConstraint("ticket_id", "client_action_id", name="uq_support_escalation_action"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    org_admin_id: Mapped[int] = mapped_column(
+        ForeignKey("org_admins.id", ondelete="CASCADE"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(20), nullable=False)
+    client_action_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    from_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    to_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)

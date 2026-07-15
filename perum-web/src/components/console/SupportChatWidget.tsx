@@ -14,6 +14,7 @@ type Ticket = {
   created_at: string | null;
 };
 type Msg = { id: number; sender_type: string; body: string; created_at: string | null };
+type Escalation = Ticket & { approval_status: string; approval_version: number; source: string };
 
 const POLL_MS = 15_000;
 const STATUS_LABEL: Record<string, string> = { open: "открыт", pending: "в работе", closed: "закрыт" };
@@ -40,18 +41,28 @@ export default function SupportChatWidget() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(false);
+  const [escalations, setEscalations] = useState<Escalation[]>([]);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
 
   const loadTickets = useCallback(async () => {
     try {
-      const r = await papi("/api/support/tickets");
+      const [r, pending] = await Promise.all([papi("/api/support/tickets"), papi("/api/support/escalations/pending")]);
       const list: Ticket[] = r.tickets || [];
       setTickets(list);
+      setEscalations(pending.tickets || []);
       setUnread(list.some((t) => t.org_unread));
     } catch { /* non-fatal */ }
   }, []);
+
+  async function decideEscalation(ticket: Escalation, action: "approve" | "reject") {
+    setBusy(true);
+    try {
+      await papi(`/api/support/escalations/${ticket.id}/${action}`, { method: "POST", body: JSON.stringify({ client_action_id: crypto.randomUUID(), expected_version: ticket.approval_version }) });
+      await loadTickets();
+    } finally { setBusy(false); }
+  }
 
   // Фоновый поллинг непрочитанного (даже когда панель закрыта) — подсветка кнопки.
   useEffect(() => {
@@ -126,6 +137,8 @@ export default function SupportChatWidget() {
             <>
               <div className={styles.body}>
                 {tickets === null && <div className={styles.muted}>Загрузка…</div>}
+                {escalations.length > 0 && <div className={styles.muted}>Эскалации школ на согласование</div>}
+                {escalations.map((ticket) => <div key={`e-${ticket.id}`} className={styles.ticketRow}><span className={styles.ticketSubj}>{ticket.subject}</span><span className={styles.ticketMeta}><button disabled={busy} onClick={() => void decideEscalation(ticket, "approve")}>Одобрить</button><button disabled={busy} onClick={() => void decideEscalation(ticket, "reject")}>Отклонить</button></span></div>)}
                 {tickets && tickets.length === 0 && <div className={styles.muted}>У вас пока нет обращений. Задайте вопрос — поддержка ответит здесь.</div>}
                 {tickets?.map((t) => (
                   <button key={t.id} className={styles.ticketRow} onClick={() => openThread(t.id)}>

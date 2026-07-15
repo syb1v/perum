@@ -3680,6 +3680,250 @@
             }
           }
         }
+      },
+      "patch": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Patch",
+        "operationId": "admin_patch_api_admin_support_tickets__ticket_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TicketPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/support/tickets/{ticket_id}/assign": {
+      "post": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Assign",
+        "operationId": "admin_assign_api_admin_support_tickets__ticket_id__assign_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/support/tickets/{ticket_id}/escalate": {
+      "post": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Escalate",
+        "operationId": "admin_escalate_api_admin_support_tickets__ticket_id__escalate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalateCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/support/tickets/{ticket_id}/events": {
+      "get": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Events",
+        "operationId": "admin_events_api_admin_support_tickets__ticket_id__events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/admin/support/tickets/{ticket_id}/messages": {
@@ -3862,6 +4106,36 @@
         }
       }
     },
+    "/api/admin/support/assignees": {
+      "get": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Assignees",
+        "operationId": "admin_assignees_api_admin_support_assignees_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssigneeOut"
+                  },
+                  "type": "array",
+                  "title": "Response Admin Assignees Api Admin Support Assignees Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/admin/support/unread-count": {
       "get": {
         "tags": [
@@ -3875,7 +4149,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UnreadOut"
+                  "$ref": "#/components/schemas/AdminUnreadOut"
                 }
               }
             }
@@ -7270,6 +7544,142 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Child Transactions Api Parent Children  Student Id  Transactions Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/push/registration": {
+      "get": {
+        "tags": [
+          "push"
+        ],
+        "summary": "Get Registration",
+        "operationId": "get_registration_api_push_registration_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Get Registration Api Push Registration Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/push/installations/{installation_id}/registration": {
+      "put": {
+        "tags": [
+          "push"
+        ],
+        "summary": "Put Registration",
+        "operationId": "put_registration_api_push_installations__installation_id__registration_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Installation Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegistrationPut"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Put Registration Api Push Installations  Installation Id  Registration Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "push"
+        ],
+        "summary": "Delete Registration",
+        "operationId": "delete_registration_api_push_installations__installation_id__registration_delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "installation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Installation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Delete Registration Api Push Installations  Installation Id  Registration Delete"
                 }
               }
             }
@@ -11940,6 +12350,34 @@
         ],
         "title": "AddStudentRequest"
       },
+      "AdminUnreadOut": {
+        "properties": {
+          "tickets": {
+            "type": "integer",
+            "title": "Tickets"
+          },
+          "messages": {
+            "type": "integer",
+            "title": "Messages"
+          },
+          "unassigned": {
+            "type": "integer",
+            "title": "Unassigned"
+          },
+          "urgent": {
+            "type": "integer",
+            "title": "Urgent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tickets",
+          "messages",
+          "unassigned",
+          "urgent"
+        ],
+        "title": "AdminUnreadOut"
+      },
       "AppealCreate": {
         "properties": {
           "grade_id": {
@@ -11981,6 +12419,62 @@
           "status"
         ],
         "title": "AppealResolve"
+      },
+      "AssignCreate": {
+        "properties": {
+          "client_action_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Client Action Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "assignee_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "client_action_id",
+          "expected_version"
+        ],
+        "title": "AssignCreate"
+      },
+      "AssigneeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "role"
+        ],
+        "title": "AssigneeOut"
       },
       "BellItem": {
         "properties": {
@@ -12525,6 +13019,115 @@
           "next_cursor"
         ],
         "title": "ConversationPage"
+      },
+      "EscalateCreate": {
+        "properties": {
+          "client_action_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Client Action Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "redacted_summary": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Redacted Summary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "client_action_id",
+          "expected_version",
+          "redacted_summary"
+        ],
+        "title": "EscalateCreate"
+      },
+      "EventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "actor_id",
+          "metadata",
+          "created_at"
+        ],
+        "title": "EventOut"
+      },
+      "EventPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "EventPage"
       },
       "FinalGradeRequest": {
         "properties": {
@@ -13612,6 +14215,85 @@
           "users"
         ],
         "title": "RegisterUsersRequest"
+      },
+      "RegistrationPut": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "expo",
+              "fcm",
+              "apns",
+              "rustore",
+              "huawei"
+            ],
+            "title": "Provider"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "title": "Platform"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "development",
+              "production"
+            ],
+            "title": "Environment"
+          },
+          "token": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 16,
+            "title": "Token"
+          },
+          "app_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9._-]+$",
+            "title": "App Id"
+          },
+          "app_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 50,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "device_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "platform",
+          "environment",
+          "token",
+          "app_id"
+        ],
+        "title": "RegistrationPut"
       },
       "ReportCreate": {
         "properties": {
@@ -14846,6 +15528,18 @@
             "type": "string",
             "title": "Priority"
           },
+          "escalation_status": {
+            "type": "string",
+            "enum": [
+              "none",
+              "pending_delivery",
+              "pending_org_approval",
+              "approved",
+              "rejected",
+              "delivery_error"
+            ],
+            "title": "Escalation Status"
+          },
           "version": {
             "type": "integer",
             "title": "Version"
@@ -14885,6 +15579,7 @@
           "category",
           "status",
           "priority",
+          "escalation_status",
           "version",
           "last_message_at",
           "unread",
@@ -14919,6 +15614,82 @@
           "items"
         ],
         "title": "TicketPage"
+      },
+      "TicketPatch": {
+        "properties": {
+          "client_action_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Client Action Id"
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "in_progress",
+                  "waiting_requester",
+                  "resolved",
+                  "closed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "general",
+                  "technical",
+                  "account",
+                  "academic",
+                  "safety",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "normal",
+                  "high",
+                  "urgent"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "client_action_id",
+          "expected_version"
+        ],
+        "title": "TicketPatch"
       },
       "TogglePayload": {
         "properties": {
@@ -15698,6 +16469,17 @@
           "body": {
             "type": "string",
             "title": "Body"
+          },
+          "sender_snapshot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender Snapshot"
           },
           "created_at": {
             "type": "string",
