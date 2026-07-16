@@ -352,6 +352,13 @@ export interface DiaryHomework {
     title: string;
     description?: string;
     due_date?: string;
+    deadline_at?: string | null;
+    is_overdue?: boolean;
+    student_state?: {
+        status: 'not_started' | 'in_progress' | 'completed';
+        version: number;
+        completed_at: string | null;
+    };
     completed?: boolean;
     attachments?: {
         id: number;

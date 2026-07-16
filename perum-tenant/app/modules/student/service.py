@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Subject, User
@@ -26,7 +26,8 @@ from app.models.academic import (
     Topic,
     WorkType,
 )
-from app.models.journal import ControlWork, FinalGrade, Grade, Homework, HomeworkAttachment
+from app.models.journal import ControlWork, FinalGrade, Grade, Homework, HomeworkAttachment, HomeworkStudentState
+from app.core.time import utc_now
 from app.modules.journal.service import _list_periods
 from app.services.points_calculator import grade_color
 
@@ -141,14 +142,29 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
             }
         )
 
-    # Class homework due during the selected week, grouped by subject and date
+    # Homework targets a lesson occurrence; legacy rows fall back to due_date.
     homework = (
         await db.execute(
             select(Homework).where(
                 Homework.class_id == cls.id,
                 Homework.school_id == school_id,
-                Homework.due_date >= week_start_dt,
-                Homework.due_date <= week_end_dt,
+                or_(
+                    Homework.target_occurrence_id.in_([item.id for item in occurrences]),
+                    (
+                        Homework.target_occurrence_id.is_(None)
+                        & (Homework.due_date >= week_start_dt)
+                        & (Homework.due_date <= week_end_dt)
+                    ),
+                ),
+                or_(
+                    Homework.published_at <= utc_now(),
+                    (
+                        Homework.published_at.is_(None)
+                        & Homework.assigned_occurrence_id.is_(None)
+                        & Homework.target_occurrence_id.is_(None)
+                        & Homework.deadline_at.is_(None)
+                    ),
+                ),
             )
         )
     ).scalars().all()
@@ -162,16 +178,31 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
             atts_by_hw.setdefault(a.homework_id, []).append(
                 {"id": a.id, "filename": a.filename, "url_link": a.url_link}
             )
+    states = {
+        state.homework_id: state
+        for state in (await db.scalars(select(HomeworkStudentState).where(
+            HomeworkStudentState.school_id == school_id,
+            HomeworkStudentState.student_id == user.id,
+            HomeworkStudentState.homework_id.in_(hw_ids),
+        ))).all()
+    } if hw_ids else {}
+    occurrences_by_id = {item.id: item for item in occurrences}
     homework_map: dict[tuple[int, str], list[dict]] = {}
     for h in homework:
-        if h.due_date is None:
+        target = occurrences_by_id.get(h.target_occurrence_id) if h.target_occurrence_id else None
+        target_date = target.lesson_date if target else h.due_date.date() if h.due_date else None
+        if target_date is None:
             continue
-        homework_map.setdefault((h.subject_id, h.due_date.strftime("%Y-%m-%d")), []).append(
+        state = states.get(h.id)
+        homework_map.setdefault((h.subject_id, target_date.isoformat()), []).append(
             {
                 "id": h.id,
                 "title": h.title,
                 "description": h.description,
                 "due_date": h.due_date.isoformat() if h.due_date else None,
+                "deadline_at": h.deadline_at.isoformat() if h.deadline_at else None,
+                "is_overdue": bool((h.deadline_at or h.due_date) and (h.deadline_at or h.due_date) < utc_now()),
+                "student_state": {"status": state.status, "version": state.version, "completed_at": state.completed_at.isoformat() if state.completed_at else None} if state else {"status": "not_started", "version": 0, "completed_at": None},
                 "attachments": atts_by_hw.get(h.id, []),
             }
         )

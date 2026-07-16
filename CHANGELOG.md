@@ -7,6 +7,7 @@
 ## [Unreleased] — 2026-07-16
 
 - Teacher web UI переведён на новую Homework-семантику: выбранный occurrence задаёт целевой урок, deadline включает точное время и timezone, задание можно сохранить черновиком или сразу опубликовать; при отсутствии server occurrence UI не создаёт ложную привязку.
+- Student diary показывает опубликованные ДЗ по target occurrence, использует точный deadline и позволяет ученику явно менять version-safe статус «не начато / в процессе / готово»; legacy-задания продолжают группироваться по `due_date`.
 - Push installation защищена proof-of-possession: mobile хранит отдельный 256-битный секрет в SecureStore, tenant хранит только SHA-256 digest и не позволяет пользователю той же школы перехватить endpoint по известному installation UUID; proof отзыва передаётся в заголовке, а не URL.
 - Восстановлена privacy boundary эскалации поддержки: raw-ответ platform admin остаётся в Core, org admin готовит отдельный идемпотентный relay для школы, tenant хранит его в admin-only inbox, а requester получает ответ только после явного сообщения school admin/director.
 - Homework получил новую семантическую основу: отдельно хранятся урок выдачи, целевой урок, публикация и timezone-aware deadline; deadline больше не создаёт occurrence, legacy `due_date` остаётся совместимым, draft скрыт от ученика, а персональный статус выполнения обновляется через version CAS.

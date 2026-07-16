@@ -2,6 +2,8 @@
 
 import Modal from '@/components/ui/Modal';
 import { FlatLesson } from '@/hooks/useSchedule';
+import api from '@/lib/apiClient';
+import { useState } from 'react';
 import styles from '../page.module.css';
 
 const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -15,6 +17,19 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
     const now = new Date();
     const grades = lesson.grades || [];
     const homework = lesson.homework || [];
+    const [states, setStates] = useState(() => Object.fromEntries(homework.map(item => [item.id, item.student_state ?? { status: 'not_started' as const, version: 0, completed_at: null }])));
+    const [stateLoading, setStateLoading] = useState<number | null>(null);
+
+    async function setHomeworkState(homeworkId: number, status: 'not_started' | 'in_progress' | 'completed') {
+        const current = states[homeworkId] ?? { status: 'not_started', version: 0, completed_at: null };
+        setStateLoading(homeworkId);
+        try {
+            const next = await api.put<{ status: typeof status; version: number; completed_at: string | null }>(`/homework/${homeworkId}/state`, { version: current.version, status });
+            setStates(value => ({ ...value, [homeworkId]: next }));
+        } finally {
+            setStateLoading(null);
+        }
+    }
 
     return (
         <Modal isOpen={true} onClose={onClose} title={lesson.subject_name || 'Урок'}>
@@ -106,7 +121,8 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
                     </h4>
                     <div className={styles.modalHomeworkList}>
                         {homework.map((hw, i) => {
-                            const dueDate = hw.due_date ? new Date(hw.due_date) : null;
+                            const dueDate = hw.deadline_at ? new Date(hw.deadline_at) : hw.due_date ? new Date(hw.due_date) : null;
+                            const state = states[hw.id] ?? { status: 'not_started', version: 0, completed_at: null };
                             let dueText = '';
                             let dueClass = '';
                             if (dueDate) {
@@ -138,6 +154,11 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
                                         </div>
                                     )}
                                     {dueText && <div className={`${styles.hwDue} ${dueClass}`}>Срок: {dueText}</div>}
+                                    <div style={{ display: 'flex', gap: '6px', marginTop: '10px', flexWrap: 'wrap' }}>
+                                        {([['not_started', 'Не начато'], ['in_progress', 'В процессе'], ['completed', 'Готово']] as const).map(([value, label]) => (
+                                            <button key={value} type="button" disabled={stateLoading === hw.id || state.status === value} onClick={() => void setHomeworkState(hw.id, value)} style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: state.status === value ? 'var(--accent-primary)' : 'var(--bg-secondary)', color: state.status === value ? 'white' : 'var(--text-primary)' }}>{label}</button>
+                                        ))}
+                                    </div>
                                 </div>
                             );
                         })}
