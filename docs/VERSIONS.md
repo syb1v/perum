@@ -302,3 +302,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 157 | 2026-07-16 | _______ | feat(mobile): добавлен offline outbox статусов Homework |
 | 158 | 2026-07-16 | _______ | feat(tenant): добавлен безопасный occurrence backfill |
 | 159 | 2026-07-16 | _______ | feat(tenant): темы и предметы переведены в архив |
+| 160 | 2026-07-16 | _______ | fix(web): закрыт stored XSS в школьных новостях |

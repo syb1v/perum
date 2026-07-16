@@ -15,6 +15,7 @@ function NewsModal({ item, onClose, onLikeToggle }: { item: NewsItem; onClose: (
     try {
         if (item.media) mediaFiles = JSON.parse(item.media);
     } catch { }
+    const content = item.content.replace(/<[^>]*>/g, '');
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -27,10 +28,7 @@ function NewsModal({ item, onClose, onLikeToggle }: { item: NewsItem; onClose: (
                 <span>{new Date(item.created_at || '').toLocaleDateString('ru-RU')}</span>
                 {item.author_name && <span>{item.author_name}</span>}
             </div>
-            <div
-                className={styles.modalText}
-                dangerouslySetInnerHTML={{ __html: item.content }}
-            />
+            <div className={styles.modalText}>{content}</div>
             {mediaFiles.length > 0 && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '16px' }}>
                     {mediaFiles.map((m, idx) => (
@@ -196,10 +194,7 @@ export default function NewsWidget({ className = '', limit = 5 }: NewsWidgetProp
                                     </div>
                                 </div>
                                 <div className={styles.newsTitle}>{item.title}</div>
-                                <div
-                                    className={styles.newsExcerpt}
-                                    dangerouslySetInnerHTML={{ __html: item.content }}
-                                />
+                                <div className={styles.newsExcerpt}>{item.content.replace(/<[^>]*>/g, '')}</div>
                             </div>
                         ))
                     )}
