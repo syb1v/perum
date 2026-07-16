@@ -1597,6 +1597,80 @@
         }
       }
     },
+    "/api/admin/maintenance/occurrence-backfill": {
+      "get": {
+        "tags": [
+          "school_admin"
+        ],
+        "summary": "Occurrence Backfill Preview",
+        "operationId": "occurrence_backfill_preview_api_admin_maintenance_occurrence_backfill_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Occurrence Backfill Preview Api Admin Maintenance Occurrence Backfill Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "school_admin"
+        ],
+        "summary": "Occurrence Backfill Apply",
+        "operationId": "occurrence_backfill_apply_api_admin_maintenance_occurrence_backfill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OccurrenceBackfillApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Occurrence Backfill Apply Api Admin Maintenance Occurrence Backfill Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/admin/dashboard/overview": {
       "get": {
         "tags": [
@@ -1654,25 +1728,47 @@
         ],
         "summary": "Get Subjects",
         "operationId": "get_subjects_api_admin_subjects_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "include_archived",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Archived"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
                   "type": "object",
+                  "additionalProperties": true,
                   "title": "Response Get Subjects Api Admin Subjects Get"
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
@@ -1680,15 +1776,20 @@
         ],
         "summary": "Create Subject",
         "operationId": "create_subject_api_admin_subjects_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SubjectCreate"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1696,8 +1797,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
                   "type": "object",
+                  "additionalProperties": true,
                   "title": "Response Create Subject Api Admin Subjects Post"
                 }
               }
@@ -1713,12 +1814,7 @@
               }
             }
           }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
+        }
       }
     },
     "/api/admin/subjects/{subject_id}": {
@@ -1810,6 +1906,55 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Delete Subject Api Admin Subjects  Subject Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/subjects/{subject_id}/restore": {
+      "post": {
+        "tags": [
+          "school_admin"
+        ],
+        "summary": "Restore Subject",
+        "operationId": "restore_subject_api_admin_subjects__subject_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "subject_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Subject Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Restore Subject Api Admin Subjects  Subject Id  Restore Post"
                 }
               }
             }
@@ -6296,6 +6441,55 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Delete Topic Api Journal Topics  Topic Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/journal/topics/{topic_id}/restore": {
+      "post": {
+        "tags": [
+          "journal"
+        ],
+        "summary": "Restore Topic",
+        "operationId": "restore_topic_api_journal_topics__topic_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "topic_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Topic Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Restore Topic Api Journal Topics  Topic Id  Restore Post"
                 }
               }
             }
@@ -13427,6 +13621,12 @@
       },
       "HomeworkStateUpdate": {
         "properties": {
+          "client_action_id": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Client Action Id"
+          },
           "version": {
             "type": "integer",
             "minimum": 0.0,
@@ -13440,6 +13640,7 @@
         },
         "type": "object",
         "required": [
+          "client_action_id",
           "version",
           "status"
         ],
@@ -14029,6 +14230,19 @@
           "message"
         ],
         "title": "NotifySend"
+      },
+      "OccurrenceBackfillApply": {
+        "properties": {
+          "plan_token": {
+            "type": "string",
+            "title": "Plan Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_token"
+        ],
+        "title": "OccurrenceBackfillApply"
       },
       "ParsedGradeRaw": {
         "properties": {

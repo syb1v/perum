@@ -451,6 +451,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/maintenance/occurrence-backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Occurrence Backfill Preview */
+        get: operations["occurrence_backfill_preview_api_admin_maintenance_occurrence_backfill_get"];
+        put?: never;
+        /** Occurrence Backfill Apply */
+        post: operations["occurrence_backfill_apply_api_admin_maintenance_occurrence_backfill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/dashboard/overview": {
         parameters: {
             query?: never;
@@ -499,6 +517,23 @@ export interface paths {
         post?: never;
         /** Delete Subject */
         delete: operations["delete_subject_api_admin_subjects__subject_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/subjects/{subject_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Subject */
+        post: operations["restore_subject_api_admin_subjects__subject_id__restore_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1679,6 +1714,23 @@ export interface paths {
         post?: never;
         /** Delete Topic */
         delete: operations["delete_topic_api_journal_topics__topic_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/journal/topics/{topic_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Topic */
+        post: operations["restore_topic_api_journal_topics__topic_id__restore_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3823,6 +3875,8 @@ export interface components {
         };
         /** HomeworkStateUpdate */
         HomeworkStateUpdate: {
+            /** Client Action Id */
+            client_action_id: string;
             /** Version */
             version: number;
             /** Status */
@@ -4006,6 +4060,11 @@ export interface components {
             role?: string | null;
             /** User Id */
             user_id?: number | null;
+        };
+        /** OccurrenceBackfillApply */
+        OccurrenceBackfillApply: {
+            /** Plan Token */
+            plan_token: string;
         };
         /** ParsedGradeRaw */
         ParsedGradeRaw: {
@@ -5916,6 +5975,63 @@ export interface operations {
             };
         };
     };
+    occurrence_backfill_preview_api_admin_maintenance_occurrence_backfill_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    occurrence_backfill_apply_api_admin_maintenance_occurrence_backfill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OccurrenceBackfillApply"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dashboard_overview_api_admin_dashboard_overview_get: {
         parameters: {
             query?: {
@@ -5951,7 +6067,9 @@ export interface operations {
     };
     get_subjects_api_admin_subjects_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5967,6 +6085,15 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6044,6 +6171,39 @@ export interface operations {
         };
     };
     delete_subject_api_admin_subjects__subject_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_subject_api_admin_subjects__subject_id__restore_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -8929,6 +9089,39 @@ export interface operations {
         };
     };
     delete_topic_api_journal_topics__topic_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topic_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_topic_api_journal_topics__topic_id__restore_post: {
         parameters: {
             query?: never;
             header?: never;
