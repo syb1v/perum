@@ -23,6 +23,7 @@ from app.modules.school_admin.schemas import (
     WorkTypeCreate,
     WorkTypeUpdate,
 )
+from app.core.time import utc_now
 
 
 async def resolve_school_id(user: User, db: AsyncSession) -> int:
@@ -51,15 +52,19 @@ def _subject_dict(s: Subject) -> dict:
         "exchange_coefficient": s.exchange_coefficient,
         "profile_weight": s.profile_weight,
         "is_profile_track": s.is_profile_track,
+        "is_archived": s.is_archived,
         "teacher_count": 0,  # filled when teacher assignments land
         "assignments": [],
         "created_at": s.created_at.isoformat() if s.created_at else None,
     }
 
 
-async def list_subjects(db: AsyncSession, school_id: int) -> list[dict]:
+async def list_subjects(db: AsyncSession, school_id: int, include_archived: bool = False) -> list[dict]:
+    query = select(Subject).where(Subject.school_id == school_id)
+    if not include_archived:
+        query = query.where(Subject.is_archived.is_(False))
     result = await db.execute(
-        select(Subject).where(Subject.school_id == school_id).order_by(Subject.name)
+        query.order_by(Subject.name)
     )
     return [_subject_dict(s) for s in result.scalars().all()]
 
@@ -93,15 +98,26 @@ async def update_subject(
     return subject
 
 
-async def delete_subject(db: AsyncSession, school_id: int, subject_id: int) -> None:
+async def delete_subject(db: AsyncSession, school_id: int, subject_id: int, user_id: int) -> None:
     subject = await _get_subject(db, school_id, subject_id)
-    used = any(
-        await db.scalar(select(model.id).where(model.subject_id == subject_id).limit(1)) is not None
-        for model in (TeacherSubject, Schedule, Topic, Grade, Homework, ControlWork)
-    )
-    if used:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить используемый предмет")
-    await db.delete(subject)
+    now = utc_now()
+    subject.is_archived = True
+    subject.archived_at = now
+    subject.archived_by = user_id
+    subject.in_exchange = False
+    topics = (await db.scalars(select(Topic).where(Topic.school_id == school_id, Topic.subject_id == subject_id, Topic.is_archived.is_(False)))).all()
+    for topic in topics:
+        topic.is_archived = True
+        topic.archived_at = now
+        topic.archived_by = user_id
+    await db.commit()
+
+
+async def restore_subject(db: AsyncSession, school_id: int, subject_id: int) -> None:
+    subject = await _get_subject(db, school_id, subject_id)
+    subject.is_archived = False
+    subject.archived_at = None
+    subject.archived_by = None
     await db.commit()
 
 

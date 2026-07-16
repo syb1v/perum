@@ -87,6 +87,11 @@ async def delete_topic(
     return await service.delete_topic(db, await _school(user, db), topic_id, user)
 
 
+@router.post("/topics/{topic_id}/restore")
+async def restore_topic(topic_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)) -> dict:
+    return await service.restore_topic(db, await _school(user, db), topic_id, user)
+
+
 @router.put("/{class_id}/{subject_id}/lesson-templates/{lesson_date}")
 async def set_lesson_template(
     class_id: int,

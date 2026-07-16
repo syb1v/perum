@@ -111,8 +111,8 @@ async def dashboard_overview(
 
 # ============ Subjects ============
 @router.get("/subjects")
-async def get_subjects(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
-    return {"subjects": await service.list_subjects(db, await _school(user, db))}
+async def get_subjects(include_archived: bool = False, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    return {"subjects": await service.list_subjects(db, await _school(user, db), include_archived)}
 
 
 @router.post("/subjects")
@@ -142,8 +142,14 @@ async def update_subject(
 async def delete_subject(
     subject_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    await service.delete_subject(db, await _school(user, db), subject_id)
-    return {"success": True, "message": "Предмет удалён"}
+    await service.delete_subject(db, await _school(user, db), subject_id, user.id)
+    return {"success": True, "message": "Предмет архивирован", "is_archived": True}
+
+
+@router.post("/subjects/{subject_id}/restore")
+async def restore_subject(subject_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    await service.restore_subject(db, await _school(user, db), subject_id)
+    return {"success": True, "message": "Предмет восстановлен"}
 
 
 @router.post("/subjects/enable-all-exchange")

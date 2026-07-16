@@ -22,6 +22,8 @@ def test_alembic_upgrade_head_on_sqlite(tmp_path, monkeypatch) -> None:
     assert "version" in {column["name"] for column in inspector.get_columns("lesson_occurrences")}
     assert {"assigned_occurrence_id", "target_occurrence_id", "published_at", "deadline_at"} <= {column["name"] for column in inspector.get_columns("homework")}
     assert "homework_student_states" in inspector.get_table_names()
+    assert {"is_archived", "archived_at", "archived_by"} <= {column["name"] for column in inspector.get_columns("subjects")}
+    assert {"is_archived", "archived_at", "archived_by"} <= {column["name"] for column in inspector.get_columns("topics")}
     assert {"user_preferences", "idempotency_receipts"} <= set(inspector.get_table_names())
     assert {"conversations", "conversation_members", "messages"} <= set(inspector.get_table_names())
     assert "social_realtime_tickets" in inspector.get_table_names()

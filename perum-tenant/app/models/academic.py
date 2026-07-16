@@ -42,6 +42,9 @@ class Subject(Base):
     exchange_coefficient: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     profile_weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     is_profile_track: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
+    archived_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
@@ -70,6 +73,9 @@ class Topic(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     order_num: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    is_archived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime)
+    archived_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 

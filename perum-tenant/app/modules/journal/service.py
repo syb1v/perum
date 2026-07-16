@@ -126,7 +126,7 @@ async def list_work_types(db: AsyncSession, school_id: int) -> list[dict]:
 async def list_subjects(db: AsyncSession, school_id: int) -> list[dict]:
     rows = (
         await db.execute(
-            select(Subject).where(Subject.school_id == school_id).order_by(Subject.name)
+            select(Subject).where(Subject.school_id == school_id, Subject.is_archived.is_(False)).order_by(Subject.name)
         )
     ).scalars().all()
     return [
@@ -137,12 +137,13 @@ async def list_subjects(db: AsyncSession, school_id: int) -> list[dict]:
 
 async def list_topics(db: AsyncSession, school_id: int, subject_id: int) -> list[dict]:
     subject = await db.get(Subject, subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     rows = (
         await db.execute(
             select(Topic).where(
                 Topic.school_id == school_id, Topic.subject_id == subject_id
+                , Topic.is_archived.is_(False)
             ).order_by(Topic.order_num)
         )
     ).scalars().all()
@@ -161,7 +162,7 @@ async def create_topic(
     db: AsyncSession, school_id: int, subject_id: int, name: str, user: User
 ) -> dict:
     subject = await db.get(Subject, subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _can_mutate_subject(db, user, subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
@@ -195,13 +196,27 @@ async def delete_topic(db: AsyncSession, school_id: int, topic_id: int, user: Us
         raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
     if not await _can_mutate_subject(db, user, topic.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
-    if await db.scalar(select(Grade.id).where(Grade.topic_id == topic_id).limit(1)) or await db.scalar(
-        select(LessonTemplate.id).where(LessonTemplate.topic_id == topic_id).limit(1)
-    ):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Нельзя удалить используемую тему")
-    await db.delete(topic)
+    topic.is_archived = True
+    topic.archived_at = utc_now()
+    topic.archived_by = user.id
     await db.commit()
-    return {"detail": "ok"}
+    return {"detail": "ok", "is_archived": True}
+
+
+async def restore_topic(db: AsyncSession, school_id: int, topic_id: int, user: User) -> dict:
+    topic = await db.get(Topic, topic_id)
+    if not topic or topic.school_id != school_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "topic not found")
+    if not await _can_mutate_subject(db, user, topic.subject_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет назначения на этот предмет")
+    subject = await db.get(Subject, topic.subject_id)
+    if subject is None or subject.is_archived:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Сначала восстановите предмет")
+    topic.is_archived = False
+    topic.archived_at = None
+    topic.archived_by = None
+    await db.commit()
+    return {"detail": "ok", "is_archived": False}
 
 
 def _parse_lesson_date(value: str) -> date:
