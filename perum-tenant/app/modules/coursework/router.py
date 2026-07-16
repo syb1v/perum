@@ -16,7 +16,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user, require_teacher
 from app.models import User
 from app.modules.coursework import service
-from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkUpdate
+from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkStateUpdate, HomeworkUpdate
 from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
@@ -59,6 +59,16 @@ async def delete_homework(
     homework_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await service.delete_homework(db, await _school(user, db), homework_id, user)
+
+
+@router.put("/homework/{homework_id}/state")
+async def update_homework_state(
+    homework_id: int,
+    payload: HomeworkStateUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.update_homework_state(db, await _school(user, db), homework_id, payload, user)
 
 
 @router.post("/homework/{homework_id}/attachments")

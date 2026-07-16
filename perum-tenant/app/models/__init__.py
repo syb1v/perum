@@ -133,6 +133,7 @@ from app.models.journal import (  # noqa: E402,F401
     Grade,
     Homework,
     HomeworkAttachment,
+    HomeworkStudentState,
     LessonTemplate,
     Transaction,
 )

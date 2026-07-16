@@ -1963,6 +1963,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/support/escalations/{ticket_id}/relay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Relay Escalation Reply */
+        post: operations["relay_escalation_reply_api_support_escalations__ticket_id__relay_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -2305,6 +2322,13 @@ export interface components {
             redacted_snapshot?: {
                 [key: string]: unknown;
             };
+        };
+        /** EscalationRelay */
+        EscalationRelay: {
+            /** Client Message Id */
+            client_message_id: string;
+            /** Body */
+            body: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -7001,6 +7025,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["EscalationAction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    relay_escalation_reply_api_support_escalations__ticket_id__relay_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EscalationRelay"];
             };
         };
         responses: {

@@ -6377,6 +6377,65 @@
         }
       }
     },
+    "/api/support/escalations/{ticket_id}/relay": {
+      "post": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Relay Escalation Reply",
+        "operationId": "relay_escalation_reply_api_support_escalations__ticket_id__relay_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EscalationRelay"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Relay Escalation Reply Api Support Escalations  Ticket Id  Relay Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Root",
@@ -7356,6 +7415,28 @@
           "message"
         ],
         "title": "EscalationIntake"
+      },
+      "EscalationRelay": {
+        "properties": {
+          "client_message_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Client Message Id"
+          },
+          "body": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Body"
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_message_id",
+          "body"
+        ],
+        "title": "EscalationRelay"
       },
       "HTTPValidationError": {
         "properties": {

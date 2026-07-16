@@ -1219,6 +1219,65 @@
         }
       }
     },
+    "/api/homework/{homework_id}/state": {
+      "put": {
+        "tags": [
+          "coursework"
+        ],
+        "summary": "Update Homework State",
+        "operationId": "update_homework_state_api_homework__homework_id__state_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "homework_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Homework Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeworkStateUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Update Homework State Api Homework  Homework Id  State Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/homework/{homework_id}/attachments": {
       "post": {
         "tags": [
@@ -7678,6 +7737,17 @@
               "format": "uuid",
               "title": "Installation Id"
             }
+          },
+          {
+            "name": "X-Installation-Proof",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 43,
+              "maxLength": 128,
+              "title": "X-Installation-Proof"
+            }
           }
         ],
         "responses": {
@@ -13297,6 +13367,54 @@
               }
             ],
             "title": "Lesson Number"
+          },
+          "assigned_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Occurrence Id"
+          },
+          "target_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Occurrence Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
           }
         },
         "type": "object",
@@ -13306,6 +13424,26 @@
           "title"
         ],
         "title": "HomeworkCreate"
+      },
+      "HomeworkStateUpdate": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "pattern": "^(not_started|in_progress|completed)$",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "status"
+        ],
+        "title": "HomeworkStateUpdate"
       },
       "HomeworkUpdate": {
         "properties": {
@@ -13342,6 +13480,54 @@
               }
             ],
             "title": "Due Date"
+          },
+          "assigned_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Occurrence Id"
+          },
+          "target_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Occurrence Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
           }
         },
         "type": "object",
@@ -14260,6 +14446,13 @@
       },
       "RegistrationPut": {
         "properties": {
+          "installation_secret": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 43,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Installation Secret"
+          },
           "provider": {
             "type": "string",
             "enum": [
@@ -14329,6 +14522,7 @@
         },
         "type": "object",
         "required": [
+          "installation_secret",
           "provider",
           "platform",
           "environment",

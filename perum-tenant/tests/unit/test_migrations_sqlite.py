@@ -20,6 +20,8 @@ def test_alembic_upgrade_head_on_sqlite(tmp_path, monkeypatch) -> None:
     assert {index["name"] for index in inspector.get_indexes("friend_requests")} >= {"uq_friend_requests_pending_pair"}
     assert {column["name"] for column in inspector.get_columns("grades")} >= {"occurrence_id"}
     assert "version" in {column["name"] for column in inspector.get_columns("lesson_occurrences")}
+    assert {"assigned_occurrence_id", "target_occurrence_id", "published_at", "deadline_at"} <= {column["name"] for column in inspector.get_columns("homework")}
+    assert "homework_student_states" in inspector.get_table_names()
     assert {"user_preferences", "idempotency_receipts"} <= set(inspector.get_table_names())
     assert {"conversations", "conversation_members", "messages"} <= set(inspector.get_table_names())
     assert "social_realtime_tickets" in inspector.get_table_names()

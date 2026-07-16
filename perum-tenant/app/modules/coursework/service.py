@@ -16,17 +16,18 @@ from __future__ import annotations
 import os
 import secrets
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Subject, User
 from app.models import ParentStudent
-from app.models.academic import AcademicYear, Class, ClassStudent, Schedule, SchoolPeriod, TeacherSubject
-from app.models.journal import ControlWork, Homework, HomeworkAttachment
-from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkUpdate
+from app.core.time import utc_now
+from app.models.academic import AcademicYear, Class, ClassStudent, LessonOccurrence, Schedule, SchoolPeriod, TeacherSubject
+from app.models.journal import ControlWork, Homework, HomeworkAttachment, HomeworkStudentState
+from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkStateUpdate, HomeworkUpdate
 from app.modules.academic.occurrences import get_or_create_occurrence
 from app.modules.journal.service import _assigned, _is_admin
 
@@ -40,6 +41,14 @@ ALLOWED_EXTENSIONS = {
     ".xls", ".xlsx", ".ppt", ".pptx", ".csv",
     ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".zip",
 }
+
+
+def _utc_naive(value: datetime | None) -> datetime | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _att_dict(a: HomeworkAttachment) -> dict:
@@ -122,6 +131,17 @@ async def list_homework(
     stmt = select(Homework).where(
         Homework.school_id == school_id, Homework.class_id.in_(class_ids)
     ).order_by(Homework.created_at.desc())
+    if user.role in {"student", "parent"}:
+        now = utc_now()
+        stmt = stmt.where(or_(
+            Homework.published_at <= now,
+            (
+                Homework.published_at.is_(None)
+                & Homework.assigned_occurrence_id.is_(None)
+                & Homework.target_occurrence_id.is_(None)
+                & Homework.deadline_at.is_(None)
+            ),
+        ))
     if subject_id is not None:
         stmt = stmt.where(Homework.subject_id == subject_id)
     rows = (await db.execute(stmt)).scalars().all()
@@ -139,6 +159,16 @@ async def list_homework(
         else {}
     )
     atts = await _attachments_by_hw(db, [h.id for h in rows])
+    states: dict[int, HomeworkStudentState] = {}
+    if user.role == "student" and rows:
+        states = {
+            state.homework_id: state
+            for state in (await db.scalars(select(HomeworkStudentState).where(
+                HomeworkStudentState.school_id == school_id,
+                HomeworkStudentState.student_id == user.id,
+                HomeworkStudentState.homework_id.in_([h.id for h in rows]),
+            ))).all()
+        }
 
     return {
         "homework": [
@@ -151,6 +181,15 @@ async def list_homework(
                 "title": h.title,
                 "description": h.description,
                 "due_date": h.due_date.isoformat() if h.due_date else None,
+                "assigned_occurrence_id": h.assigned_occurrence_id,
+                "target_occurrence_id": h.target_occurrence_id,
+                "published_at": h.published_at.isoformat() if h.published_at else None,
+                "deadline_at": h.deadline_at.isoformat() if h.deadline_at else None,
+                "is_overdue": bool((h.deadline_at or h.due_date) and (h.deadline_at or h.due_date) < utc_now()),
+                "student_state": (
+                    {"status": states[h.id].status, "version": states[h.id].version, "completed_at": states[h.id].completed_at.isoformat() if states[h.id].completed_at else None}
+                    if h.id in states else ({"status": "not_started", "version": 0, "completed_at": None} if user.role == "student" else None)
+                ),
                 "created_at": h.created_at.isoformat() if h.created_at else None,
                 "attachments": atts.get(h.id, []),
             }
@@ -183,21 +222,36 @@ async def _validate_due_date(db: AsyncSession, school_id: int, class_id: int, su
         )
 
 
+async def _homework_occurrence(
+    db: AsyncSession, school_id: int, class_id: int, subject_id: int, occurrence_id: int | None,
+) -> LessonOccurrence | None:
+    if occurrence_id is None:
+        return None
+    occurrence = await db.scalar(select(LessonOccurrence).where(
+        LessonOccurrence.id == occurrence_id,
+        LessonOccurrence.school_id == school_id,
+        LessonOccurrence.class_id == class_id,
+        LessonOccurrence.subject_id == subject_id,
+    ))
+    if occurrence is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Урок не относится к выбранному классу и предмету")
+    return occurrence
+
+
 async def create_homework(db: AsyncSession, school_id: int, payload: HomeworkCreate, user: User) -> dict:
     cls = (
         await db.execute(select(Class).where(Class.id == payload.class_id, Class.school_id == school_id))
     ).scalar_one_or_none()
     if cls is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
+    subject = await db.scalar(select(Subject).where(Subject.id == payload.subject_id, Subject.school_id == school_id))
+    if subject is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _assigned(db, user, payload.class_id, payload.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Вы не ведёте этот предмет в данном классе")
     await _validate_due_date(db, school_id, payload.class_id, payload.subject_id, payload.due_date)
-    occurrence = None
-    if payload.lesson_number is not None and payload.due_date is not None:
-        occurrence = await get_or_create_occurrence(
-            db, school_id, payload.class_id, payload.subject_id,
-            payload.due_date.date(), payload.lesson_number,
-        )
+    assigned_occurrence = await _homework_occurrence(db, school_id, payload.class_id, payload.subject_id, payload.assigned_occurrence_id)
+    target_occurrence = await _homework_occurrence(db, school_id, payload.class_id, payload.subject_id, payload.target_occurrence_id)
 
     hw = Homework(
         school_id=school_id,
@@ -207,7 +261,11 @@ async def create_homework(db: AsyncSession, school_id: int, payload: HomeworkCre
         title=payload.title,
         description=payload.description,
         due_date=payload.due_date,
-        occurrence_id=occurrence.id if occurrence else None,
+        occurrence_id=target_occurrence.id if target_occurrence else None,
+        assigned_occurrence_id=assigned_occurrence.id if assigned_occurrence else None,
+        target_occurrence_id=target_occurrence.id if target_occurrence else None,
+        published_at=_utc_naive(payload.published_at),
+        deadline_at=_utc_naive(payload.deadline_at),
     )
     db.add(hw)
     await db.commit()
@@ -235,8 +293,82 @@ async def update_homework(db: AsyncSession, school_id: int, hw_id: int, payload:
         hw.title = payload.title
     if payload.description is not None:
         hw.description = payload.description
+    if "assigned_occurrence_id" in payload.model_fields_set:
+        assigned = await _homework_occurrence(db, school_id, hw.class_id, hw.subject_id, payload.assigned_occurrence_id)
+        hw.assigned_occurrence_id = assigned.id if assigned else None
+    if "target_occurrence_id" in payload.model_fields_set:
+        target = await _homework_occurrence(db, school_id, hw.class_id, hw.subject_id, payload.target_occurrence_id)
+        hw.target_occurrence_id = target.id if target else None
+        hw.occurrence_id = target.id if target else None
+    if "published_at" in payload.model_fields_set:
+        hw.published_at = _utc_naive(payload.published_at)
+    if "deadline_at" in payload.model_fields_set:
+        if payload.deadline_at is not None and payload.target_occurrence_id is None and hw.target_occurrence_id is None:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "target_occurrence_id is required with deadline_at")
+        hw.deadline_at = _utc_naive(payload.deadline_at)
     await db.commit()
     return {"success": True, "message": "Задание обновлено"}
+
+
+async def update_homework_state(
+    db: AsyncSession, school_id: int, homework_id: int, payload: HomeworkStateUpdate, user: User,
+) -> dict:
+    if user.role != "student" or user.school_id != school_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Доступно только ученику")
+    homework = await db.scalar(
+        select(Homework)
+        .join(ClassStudent, ClassStudent.class_id == Homework.class_id)
+        .where(
+            Homework.id == homework_id,
+            Homework.school_id == school_id,
+            ClassStudent.student_id == user.id,
+        )
+    )
+    if homework is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Задание не найдено")
+    now = utc_now()
+    if payload.version == 0:
+        existing = await db.scalar(select(HomeworkStudentState).where(
+            HomeworkStudentState.homework_id == homework_id,
+            HomeworkStudentState.student_id == user.id,
+        ))
+        if existing is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": existing.version})
+        state = HomeworkStudentState(
+            school_id=school_id,
+            homework_id=homework_id,
+            student_id=user.id,
+            status=payload.status,
+            completed_at=now if payload.status == "completed" else None,
+        )
+        db.add(state)
+        await db.commit()
+        await db.refresh(state)
+    else:
+        result = await db.execute(update(HomeworkStudentState).where(
+            HomeworkStudentState.school_id == school_id,
+            HomeworkStudentState.homework_id == homework_id,
+            HomeworkStudentState.student_id == user.id,
+            HomeworkStudentState.version == payload.version,
+        ).values(
+            status=payload.status,
+            completed_at=now if payload.status == "completed" else None,
+            updated_at=now,
+            version=HomeworkStudentState.version + 1,
+        ))
+        if result.rowcount != 1:
+            await db.rollback()
+            current = await db.scalar(select(HomeworkStudentState.version).where(
+                HomeworkStudentState.homework_id == homework_id,
+                HomeworkStudentState.student_id == user.id,
+            ))
+            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": current})
+        await db.commit()
+        state = await db.scalar(select(HomeworkStudentState).where(
+            HomeworkStudentState.homework_id == homework_id,
+            HomeworkStudentState.student_id == user.id,
+        ))
+    return {"homework_id": homework_id, "status": state.status, "version": state.version, "completed_at": state.completed_at.isoformat() if state.completed_at else None}
 
 
 async def delete_homework(db: AsyncSession, school_id: int, hw_id: int, user: User) -> dict:

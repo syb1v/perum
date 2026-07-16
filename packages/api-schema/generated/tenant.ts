@@ -348,6 +348,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/homework/{homework_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Homework State */
+        put: operations["update_homework_state_api_homework__homework_id__state_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/homework/{homework_id}/attachments": {
         parameters: {
             query?: never;
@@ -3795,6 +3812,21 @@ export interface components {
             due_date?: string | null;
             /** Lesson Number */
             lesson_number?: number | null;
+            /** Assigned Occurrence Id */
+            assigned_occurrence_id?: number | null;
+            /** Target Occurrence Id */
+            target_occurrence_id?: number | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Deadline At */
+            deadline_at?: string | null;
+        };
+        /** HomeworkStateUpdate */
+        HomeworkStateUpdate: {
+            /** Version */
+            version: number;
+            /** Status */
+            status: string;
         };
         /** HomeworkUpdate */
         HomeworkUpdate: {
@@ -3804,6 +3836,14 @@ export interface components {
             description?: string | null;
             /** Due Date */
             due_date?: string | null;
+            /** Assigned Occurrence Id */
+            assigned_occurrence_id?: number | null;
+            /** Target Occurrence Id */
+            target_occurrence_id?: number | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Deadline At */
+            deadline_at?: string | null;
         };
         /** ImportExecutionResponse */
         ImportExecutionResponse: {
@@ -4104,6 +4144,8 @@ export interface components {
         };
         /** RegistrationPut */
         RegistrationPut: {
+            /** Installation Secret */
+            installation_secret: string;
             /**
              * Provider
              * @enum {string}
@@ -5611,6 +5653,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_homework_state_api_homework__homework_id__state_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                homework_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HomeworkStateUpdate"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -9752,7 +9831,9 @@ export interface operations {
     delete_registration_api_push_installations__installation_id__registration_delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "X-Installation-Proof": string;
+            };
             path: {
                 installation_id: string;
             };

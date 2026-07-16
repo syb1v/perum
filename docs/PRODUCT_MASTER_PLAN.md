@@ -551,7 +551,7 @@ Flow:
 | P0 | Tenant discovery | Частично | public UUID, org-domain + school-code flow, primary/matched host, indexed lookup, rediscovery при смене домена |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
-| P1 | Учебный hardening | Частично | optimistic locking Grade update/delete находится в `main` (`0e9ccc7`); version-safe LessonOccurrence и safe lesson transfer реализованы и проверены в рабочем цикле 2026-07-16, остаются Homework semantics/state, occurrence backfill, offline mutation contracts и расширенный conflict QA |
+| P1 | Учебный hardening | Частично | optimistic locking Grade и version-safe LessonOccurrence/safe transfer готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с legacy compatibility, остаются UI/outbox, occurrence backfill, архивирование и расширенный conflict QA |
 | P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI и native requester offline outbox готовы; остаются attachments, push, native admin inbox и SLA/observability |
@@ -585,8 +585,8 @@ Flow:
 `LessonOccurrence` реализованы поверх optimistic locking `Grade`. Изменения ещё
 не считаются находящимися в `main`, пока не создан отдельный проверенный коммит.
 
-Следующий изолированный шаг: разделение Homework semantics и персонального
-статуса выполнения без смешивания с occurrence backfill.
+Следующий изолированный шаг: подключение Homework semantics/state к web и
+mobile outbox без смешивания с occurrence backfill.
 
 Текущее состояние кода:
 

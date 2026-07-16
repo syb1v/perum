@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import CheckConstraint, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -162,13 +162,35 @@ class Homework(Base):
         ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True
     )
     occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
+    assigned_occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
+    target_occurrence_id: Mapped[int | None] = mapped_column(ForeignKey("lesson_occurrences.id", ondelete="SET NULL"), nullable=True, index=True)
     teacher_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     due_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    deadline_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
+class HomeworkStudentState(Base):
+    __tablename__ = "homework_student_states"
+    __table_args__ = (
+        UniqueConstraint("homework_id", "student_id", name="uq_homework_student_state"),
+        CheckConstraint("status IN ('not_started', 'in_progress', 'completed')", name="ck_homework_student_state_status"),
+        CheckConstraint("version > 0", name="ck_homework_student_state_version"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    homework_id: Mapped[int] = mapped_column(ForeignKey("homework.id", ondelete="CASCADE"), nullable=False, index=True)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="not_started", server_default="not_started")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 
 class HomeworkAttachment(Base):
