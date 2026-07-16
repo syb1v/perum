@@ -288,6 +288,7 @@ export interface Topic {
 
 export interface Grade {
     id: number;
+    version: number;
     value: number;
     subject_name: string;
     subject_id: number;

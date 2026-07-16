@@ -1,7 +1,7 @@
 # PERUM: утверждённый master-plan функций, биллинга и приложений
 
 > Статус: продуктовые решения утверждены 2026-07-11; фактический прогресс и
-> схема tenant discovery обновлены 2026-07-12. План задаёт порядок реализации
+> учебный optimistic locking обновлены 2026-07-16. План задаёт порядок реализации
 > backend, API, web и React Native от миграций до production rollout.
 
 ## 1. Зафиксированные решения
@@ -548,7 +548,7 @@ Flow:
 | P0 | Tenant discovery | Частично | public UUID, org-domain + school-code flow, primary/matched host, indexed lookup, rediscovery при смене домена |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
-| P1 | Учебный hardening | Частично | optimistic versions, safe lesson transfer, offline mutation contracts и conflict QA |
+| P1 | Учебный hardening | Частично | optimistic locking Grade update/delete готов; остаются version-safe LessonOccurrence, safe lesson transfer, offline mutation contracts и conflict QA |
 | P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI и native requester offline outbox готовы; остаются attachments, push, native admin inbox и SLA/observability |
@@ -568,7 +568,8 @@ Flow:
    tenant/account switcher и logout как первый end-to-end vertical slice.
 4. Параллельно закрыть Friends до Definition of Done и реализовать media
    pipeline, поскольку он блокирует support и chats.
-5. Завершить учебные offline/version contracts до teacher mobile journal.
+5. Добавить version-safe перенос LessonOccurrence, затем завершить учебные
+   offline mutation contracts и conflict QA до teacher mobile journal.
 6. Реализовать school support, затем organization-gated core escalation.
 7. Реализовать chats/moderation, billing и mobile parity по ролям.
 8. Закрыть push/deep links, store compliance, security/accessibility и staged

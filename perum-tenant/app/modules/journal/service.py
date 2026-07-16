@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -821,6 +821,7 @@ async def get_grade(db: AsyncSession, school_id: int, grade_id: int, user: User)
     topic = await db.get(Topic, g.topic_id) if g.topic_id else None
     return {
         "id": g.id,
+        "version": g.version,
         "grade_value": g.grade_value,
         "points": g.value,
         "grade_type": "",
@@ -859,14 +860,26 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     )
     diff = new_points - g.value
 
-    g.grade_value = payload.grade_value
-    g.work_type_id = payload.work_type_id
-    g.attendance_mark = payload.attendance_mark
-    g.comment = payload.comment
-    g.topic_id = payload.topic_id
-    g.weight = weight
-    g.value = new_points
-    await db.flush()
+    result = await db.execute(
+        update(Grade)
+        .where(Grade.id == grade_id, Grade.school_id == school_id, Grade.version == payload.version)
+        .values(
+            grade_value=payload.grade_value,
+            work_type_id=payload.work_type_id,
+            attendance_mark=payload.attendance_mark,
+            comment=payload.comment,
+            topic_id=payload.topic_id,
+            weight=weight,
+            value=new_points,
+            version=Grade.version + 1,
+        )
+    )
+    if result.rowcount != 1:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Оценка уже изменена другим пользователем. Обновите данные и повторите действие",
+        )
 
     if diff:
         new_balance, applied_diff = await _award(db, g.student_id, diff)
@@ -882,22 +895,36 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     await db.commit()
     return {
         "success": True,
-        "grade_value": g.grade_value,
+        "version": payload.version + 1,
+        "grade_value": payload.grade_value,
         "points": new_points,
         "points_diff": applied_diff,
         "new_balance": new_balance,
-        "color": grade_color(g.grade_value, g.attendance_mark),
+        "color": grade_color(payload.grade_value, payload.attendance_mark),
     }
 
 
-async def delete_grade(db: AsyncSession, school_id: int, grade_id: int, user: User) -> dict:
+async def delete_grade(
+    db: AsyncSession, school_id: int, grade_id: int, version: int, user: User
+) -> dict:
     g = await _get_grade(db, school_id, grade_id)
     if not await _assigned(db, user, g.class_id, g.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этой оценке")
     refund = -g.value
     student_id = g.student_id
-    await db.delete(g)
-    await db.flush()
+    result = await db.execute(
+        delete(Grade).where(
+            Grade.id == grade_id,
+            Grade.school_id == school_id,
+            Grade.version == version,
+        )
+    )
+    if result.rowcount != 1:
+        await db.rollback()
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Оценка уже изменена другим пользователем. Обновите данные и повторите действие",
+        )
     if refund:
         new_balance, applied_refund = await _award(db, student_id, refund)
         if applied_refund:

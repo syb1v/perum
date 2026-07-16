@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-15
 
+- Удаление оценок защищено optimistic locking: tenant атомарно сверяет версию записи и возвращает `409 Conflict` при конкурентном изменении, а web передаёт актуальную версию из модального окна.
 - Добавлен provider-neutral push foundation: tenant шифрует registration tokens через AES-GCM только при настроенном keyring, привязывает installation к refresh session и отзывает её сервером, chat/support создают privacy-safe suppressed outbox events; mobile запрашивает permission только явно, регистрирует Expo token, отслеживает rotation и направляет tap в строгий deep-link resolver.
 - Добавлен deep-link foundation: mobile принимает только allowlisted HTTPS/fallback links со stable school UUID, всегда выполняет Core rediscovery, безопасно переключает tenant account или откладывает role-aware target до login; web публикует fallback route и параметризованные AASA/Asset Links без выдуманных store credentials.
 - Реализована organization-gated эскалация школьной поддержки: school_admin/director отправляет только явное обезличенное резюме через durable tenant outbox, Core принимает его идемпотентно и скрывает от platform до решения org_admin, а ответы platform дедуплицируются и возвращаются в исходный tenant ticket через pull/ack inbox.

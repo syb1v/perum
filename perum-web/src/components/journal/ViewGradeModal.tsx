@@ -77,6 +77,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
         }
         try {
             await api.put(`/journal/grades/${gradeId}`, {
+                version: grade.version,
                 grade_value: editValue,
                 work_type_id: editAttendanceMark ? null : editWorkTypeId,
                 grade_type: editType, // Fallback if no work types
@@ -95,7 +96,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
 
     const handleDelete = async () => {
         try {
-            await api.del(`/journal/grades/${gradeId}`);
+            await api.del(`/journal/grades/${gradeId}?version=${grade.version}`);
             showSuccess('Оценка удалена');
             onUpdate();
             onClose();

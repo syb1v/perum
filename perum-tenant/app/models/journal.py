@@ -42,6 +42,7 @@ class Grade(Base):
     attendance_mark: Mapped[str | None] = mapped_column(String(10), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     lesson_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 

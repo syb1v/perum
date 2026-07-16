@@ -153,9 +153,12 @@ async def update_grade(
 
 @router.delete("/grades/{grade_id}")
 async def delete_grade(
-    grade_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
+    grade_id: int,
+    version: int,
+    user: User = Depends(require_teacher),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
-    return await service.delete_grade(db, await _school(user, db), grade_id, user)
+    return await service.delete_grade(db, await _school(user, db), grade_id, version, user)
 
 
 @router.post("/grades/final/{class_id}/{subject_id}")

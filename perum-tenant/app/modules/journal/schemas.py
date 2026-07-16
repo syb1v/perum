@@ -16,6 +16,7 @@ class AddGradeRequest(BaseModel):
 
 
 class UpdateGradeRequest(BaseModel):
+    version: int
     grade_value: int | None = None
     work_type_id: int | None = None
     grade_type: str | None = None

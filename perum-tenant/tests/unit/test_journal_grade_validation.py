@@ -11,6 +11,7 @@ from app.modules.journal.service import (
     _validate_grade_values,
     _validate_student,
     _work_type_weight,
+    delete_grade,
 )
 
 
@@ -92,3 +93,52 @@ async def _test_award_reports_actual_amount_applied_at_zero_floor() -> None:
     assert await _award(db, 20, -10) == (0, -3)
     assert student.balance == 0
     assert await _award(db, 20, 5) == (5, 5)
+
+
+def test_delete_grade_rejects_stale_version_before_refund() -> None:
+    asyncio.run(_test_delete_grade_rejects_stale_version_before_refund())
+
+
+async def _test_delete_grade_rejects_stale_version_before_refund() -> None:
+    grade = SimpleNamespace(class_id=1, subject_id=2, value=5, student_id=20)
+    db = SimpleNamespace(
+        execute=AsyncMock(side_effect=[
+            SimpleNamespace(scalar_one_or_none=lambda: grade),
+            SimpleNamespace(rowcount=0),
+        ]),
+        rollback=AsyncMock(),
+        flush=AsyncMock(),
+        add=AsyncMock(),
+    )
+    user = SimpleNamespace(id=10, role="school_admin")
+
+    with pytest.raises(HTTPException) as exc:
+        await delete_grade(db, 1, 30, 2, user)
+
+    assert exc.value.status_code == 409
+    db.rollback.assert_awaited_once()
+    db.flush.assert_not_awaited()
+    db.add.assert_not_called()
+
+
+def test_delete_grade_accepts_matching_version() -> None:
+    asyncio.run(_test_delete_grade_accepts_matching_version())
+
+
+async def _test_delete_grade_accepts_matching_version() -> None:
+    grade = SimpleNamespace(class_id=1, subject_id=2, value=0, student_id=20)
+    db = SimpleNamespace(
+        execute=AsyncMock(side_effect=[
+            SimpleNamespace(scalar_one_or_none=lambda: grade),
+            SimpleNamespace(rowcount=1),
+        ]),
+        commit=AsyncMock(),
+        add=AsyncMock(),
+    )
+    user = SimpleNamespace(id=10, role="school_admin")
+
+    result = await delete_grade(db, 1, 30, 2, user)
+
+    assert result["success"] is True
+    db.commit.assert_awaited_once()
+    db.add.assert_not_called()
