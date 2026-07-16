@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-16
 
+- Mobile Homework получил явное разрешение version conflicts: backend возвращает актуальное server state, SQLite хранит конфликт, а ученик выбирает серверную версию или создаёт новую mutation поверх свежей версии без silent overwrite.
 - Teacher web UI переведён на новую Homework-семантику: выбранный occurrence задаёт целевой урок, deadline включает точное время и timezone, задание можно сохранить черновиком или сразу опубликовать; при отсутствии server occurrence UI не создаёт ложную привязку.
 - Student diary показывает опубликованные ДЗ по target occurrence, использует точный deadline и позволяет ученику явно менять version-safe статус «не начато / в процессе / готово»; legacy-задания продолжают группироваться по `due_date`.
 - Mobile получил экран Homework и account-scoped SQLite outbox статусов: mutation сохраняет стабильный `client_action_id`, переживает перезапуск и сеть, backend дедуплицирует потерянные ответы durable receipt, а version conflict не перезаписывается молча.

@@ -22,3 +22,13 @@ test('keeps version conflict for explicit user resolution', async () => {
   await core.enqueue('account', 4, 1, 'completed'); await core.run('account');
   assert.equal(data.rows.get('conflict')?.state, 'failed_permanent');
 });
+
+test('resolves version conflict with server or a new local action', async () => {
+  const data = store(); let sent = 0; const ids = ['first', 'second'];
+  const core = createHomeworkOutbox({ store: data, key: () => ids.shift()!, send: async item => { sent += 1; return sent === 1 ? { type: 'http', status: 409, serverState: { status: 'in_progress', version: 3, completed_at: null } } : { type: 'success', state: { status: item.status, version: 4, completed_at: null } }; } });
+  await core.enqueue('account', 4, 1, 'completed'); await core.run('account');
+  assert.equal(data.rows.get('first')?.state, 'conflict');
+  await core.resolve('account', 'first', 'local');
+  assert.equal(data.rows.size, 0);
+  assert.equal(sent, 2);
+});

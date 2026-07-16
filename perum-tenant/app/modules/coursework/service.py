@@ -374,7 +374,16 @@ async def update_homework_state(
                 HomeworkStudentState.homework_id == homework_id,
                 HomeworkStudentState.student_id == user.id,
             ))
-            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": current})
+            current_state = await db.scalar(select(HomeworkStudentState).where(
+                HomeworkStudentState.homework_id == homework_id,
+                HomeworkStudentState.student_id == user.id,
+            ))
+            raise HTTPException(status.HTTP_409_CONFLICT, {
+                "code": "VERSION_CONFLICT",
+                "current_version": current,
+                "current_status": current_state.status if current_state else "not_started",
+                "current_completed_at": current_state.completed_at.isoformat() if current_state and current_state.completed_at else None,
+            })
         await db.commit()
         state = await db.scalar(select(HomeworkStudentState).where(
             HomeworkStudentState.homework_id == homework_id,
