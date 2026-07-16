@@ -291,4 +291,5 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 146 | 2026-07-15 | 3f927e3 | feat(mobile): добавлен безопасный deep-link foundation |
 | 147 | 2026-07-15 | 3f927e3 | feat(push): добавлен provider-neutral registration foundation |
 | 148 | 2026-07-15 | 0e9ccc7 | fix(journal): добавлен optimistic locking при удалении оценки |
-| 149 | 2026-07-16 | _______ | fix(platform): закрыты OpSec-дефекты и добавлен version-safe перенос урока |
+| 149 | 2026-07-16 | ce74acd | fix(platform): закрыты OpSec-дефекты и добавлен version-safe перенос урока |
+| 150 | 2026-07-16 | _______ | docs(versions): зафиксирован хеш OpSec и учебного цикла |
