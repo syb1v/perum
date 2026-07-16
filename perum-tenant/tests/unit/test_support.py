@@ -510,7 +510,7 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 if request.url.path.endswith("/outbound/ack"):
                     calls["ack"] += 1
                     return httpx.Response(200, json={"ok": True, "cursor": 11})
-                return httpx.Response(200, json={"approval_status": "approved", "status": "open", "version": 1, "messages": [{"id": 11, "public_id": "x", "sender_type": "platform_admin", "body": "Platform answer", "created_at": "2026-07-15T12:00:00"}], "cursor": 11})
+                return httpx.Response(200, json={"approval_status": "approved", "status": "open", "version": 1, "messages": [{"id": 11, "public_id": "x", "sender_type": "org_school_relay", "body": "Organization answer", "created_at": "2026-07-15T12:00:00"}], "cursor": 11})
 
             async with AsyncClient(transport=httpx.MockTransport(handler), base_url="http://core") as core_client:
                 await escalation.deliver_outbox(core_client)
@@ -532,13 +532,12 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 assert ticket.escalation_status == "approved"
                 assert ticket.last_core_message_cursor == 11
                 assert await db.scalar(select(func.count(SupportEscalationReceipt.id))) == 1
-                platform_messages = list((await db.scalars(select(SupportMessage).where(SupportMessage.sender_snapshot == "platform_support"))).all())
-                assert len(platform_messages) == 1
-                assert platform_messages[0].side == "shared_inbox"
-                assert platform_messages[0].sender_id is None
-                notifications = list((await db.scalars(select(Notification).where(Notification.text == "Platform answer"))).all())
-                assert len(notifications) == 1
-                assert notifications[0].user_id == users["student"].id
+                organization_messages = list((await db.scalars(select(SupportMessage).where(SupportMessage.sender_snapshot == "organization_support"))).all())
+                assert len(organization_messages) == 1
+                assert organization_messages[0].side == "admin_inbox"
+                assert organization_messages[0].sender_id is None
+                notifications = list((await db.scalars(select(Notification).where(Notification.text == "Organization answer"))).all())
+                assert notifications == []
                 assert calls == {"intake": 2, "ack": 2}
 
             current["value"] = users["student"].id
@@ -547,8 +546,11 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 assert detail.json()["escalation_status"] == "approved"
                 assert "core_ticket_id" not in detail.json()
                 thread = await client.get(f"/api/support/tickets/{ticket_id}/messages")
-                platform = [item for item in thread.json()["items"] if item["body"] == "Platform answer"]
-                assert platform == [{**platform[0], "sender_id": None, "side": "shared_inbox", "sender_snapshot": "platform_support"}]
+                assert all(item["body"] != "Organization answer" for item in thread.json()["items"])
+                current["value"] = users["admin"].id
+                admin_thread = await client.get(f"/api/admin/support/tickets/{ticket_id}/messages")
+                relayed = [item for item in admin_thread.json()["items"] if item["body"] == "Organization answer"]
+                assert relayed == [{**relayed[0], "sender_id": None, "side": "admin_inbox", "sender_snapshot": "organization_support"}]
         finally:
             get_settings.cache_clear()
             await engine.dispose()

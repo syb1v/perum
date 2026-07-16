@@ -41,9 +41,9 @@ async def _admin_ticket(db: AsyncSession, user: User, public_id: str) -> Support
 
 async def _out(db: AsyncSession, ticket: SupportTicket, kind: str) -> TicketOut:
     participant = await _participant(db, ticket.id, kind)
-    unread_side = "shared_inbox" if kind == "requester" else "requester"
+    unread_sides = ("shared_inbox",) if kind == "requester" else ("requester", "admin_inbox")
     unread_after = True if participant.last_read_message_id is None else or_(SupportMessage.created_at > participant.read_at, and_(SupportMessage.created_at == participant.read_at, SupportMessage.id > participant.last_read_message_id))
-    unread = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket.id, SupportMessage.side == unread_side, unread_after))
+    unread = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket.id, SupportMessage.side.in_(unread_sides), unread_after))
     return TicketOut(id=ticket.public_id, correlation_id=ticket.correlation_id, subject=ticket.subject, category=ticket.category, status=ticket.status, priority=ticket.priority, escalation_status=ticket.escalation_status, version=ticket.version, last_message_at=ticket.last_message_at, unread=bool(unread), created_at=ticket.created_at, updated_at=ticket.updated_at)
 
 
@@ -87,6 +87,8 @@ async def get_ticket(db: AsyncSession, user: User, public_id: str, admin: bool) 
 async def messages(db: AsyncSession, user: User, public_id: str, admin: bool, before: str | None, limit: int) -> MessagePage:
     ticket = await (_admin_ticket(db, user, public_id) if admin else _requester_ticket(db, user, public_id))
     query = select(SupportMessage).where(SupportMessage.school_id == user.school_id, SupportMessage.ticket_id == ticket.id)
+    if not admin:
+        query = query.where(SupportMessage.side != "admin_inbox")
     if before:
         marker = await db.scalar(select(SupportMessage).where(SupportMessage.id == before, SupportMessage.ticket_id == ticket.id))
         if marker:
@@ -146,7 +148,7 @@ async def mark_read(db: AsyncSession, user: User, public_id: str, message_id: st
 
 async def unread(db: AsyncSession, user: User, admin: bool) -> UnreadOut:
     kind = "shared_inbox" if admin else "requester"
-    unread_side = "requester" if admin else "shared_inbox"
+    unread_sides = ("requester", "admin_inbox") if admin else ("shared_inbox",)
     query = select(SupportTicket.id, SupportParticipant.last_read_message_id, SupportParticipant.read_at).join(SupportParticipant, SupportParticipant.ticket_id == SupportTicket.id).where(SupportTicket.school_id == user.school_id, SupportParticipant.kind == kind)
     if not admin:
         query = query.where(SupportTicket.creator_id == user.id)
@@ -155,7 +157,7 @@ async def unread(db: AsyncSession, user: User, admin: bool) -> UnreadOut:
     messages = 0
     for ticket_id, last_read_message_id, read_at in rows:
         unread_after = True if last_read_message_id is None else or_(SupportMessage.created_at > read_at, and_(SupportMessage.created_at == read_at, SupportMessage.id > last_read_message_id))
-        count = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket_id, SupportMessage.side == unread_side, unread_after))
+        count = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket_id, SupportMessage.side.in_(unread_sides), unread_after))
         if count:
             tickets += 1
             messages += count

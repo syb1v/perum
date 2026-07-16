@@ -724,6 +724,7 @@ class SupportMessage(Base):
     """Сообщение в тикете. sender_type — кто написал (org_admin | platform_admin)."""
 
     __tablename__ = "support_messages"
+    __table_args__ = (UniqueConstraint("ticket_id", "client_message_id", name="uq_support_message_client"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), default=uuid4, nullable=False, unique=True, index=True)

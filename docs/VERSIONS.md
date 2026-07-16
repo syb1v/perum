@@ -294,3 +294,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 149 | 2026-07-16 | ce74acd | fix(platform): закрыты OpSec-дефекты и добавлен version-safe перенос урока |
 | 150 | 2026-07-16 | _______ | docs(versions): зафиксирован хеш OpSec и учебного цикла |
 | 151 | 2026-07-16 | _______ | fix(push): защищена принадлежность mobile installation |
+| 152 | 2026-07-16 | _______ | fix(support): восстановлена org-gated видимость ответов |

@@ -42,6 +42,8 @@ export default function SupportChatWidget() {
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(false);
   const [escalations, setEscalations] = useState<Escalation[]>([]);
+  const [activeEscalation, setActiveEscalation] = useState<{ ticket: Escalation; messages: Msg[] } | null>(null);
+  const [relayDraft, setRelayDraft] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
@@ -60,6 +62,26 @@ export default function SupportChatWidget() {
     setBusy(true);
     try {
       await papi(`/api/support/escalations/${ticket.id}/${action}`, { method: "POST", body: JSON.stringify({ client_action_id: crypto.randomUUID(), expected_version: ticket.approval_version }) });
+      await loadTickets();
+    } finally { setBusy(false); }
+  }
+
+  async function openEscalation(ticket: Escalation) {
+    setBusy(true);
+    try {
+      const detail = await papi(`/api/support/escalations/${ticket.id}?full=true`);
+      setActiveEscalation(detail);
+      setRelayDraft("");
+    } finally { setBusy(false); }
+  }
+
+  async function relayEscalation() {
+    if (!activeEscalation || !relayDraft.trim()) return;
+    setBusy(true);
+    try {
+      await papi(`/api/support/escalations/${activeEscalation.ticket.id}/relay`, { method: "POST", body: JSON.stringify({ client_message_id: crypto.randomUUID(), body: relayDraft.trim() }) });
+      setActiveEscalation(null);
+      setRelayDraft("");
       await loadTickets();
     } finally { setBusy(false); }
   }
@@ -138,7 +160,8 @@ export default function SupportChatWidget() {
               <div className={styles.body}>
                 {tickets === null && <div className={styles.muted}>Загрузка…</div>}
                 {escalations.length > 0 && <div className={styles.muted}>Эскалации школ на согласование</div>}
-                {escalations.map((ticket) => <div key={`e-${ticket.id}`} className={styles.ticketRow}><span className={styles.ticketSubj}>{ticket.subject}</span><span className={styles.ticketMeta}><button disabled={busy} onClick={() => void decideEscalation(ticket, "approve")}>Одобрить</button><button disabled={busy} onClick={() => void decideEscalation(ticket, "reject")}>Отклонить</button></span></div>)}
+                {escalations.map((ticket) => <div key={`e-${ticket.id}`} className={styles.ticketRow}><button className={styles.ticketSubj} disabled={busy} onClick={() => void openEscalation(ticket)}>{ticket.subject}</button><span className={styles.ticketMeta}>{ticket.approval_status === "pending" ? <><button disabled={busy} onClick={() => void decideEscalation(ticket, "approve")}>Одобрить</button><button disabled={busy} onClick={() => void decideEscalation(ticket, "reject")}>Отклонить</button></> : <button disabled={busy} onClick={() => void openEscalation(ticket)}>Подготовить ответ школе</button>}</span></div>)}
+                {activeEscalation && <div><div className={styles.muted}>Переписка платформы доступна только организации. Школа получит только подготовленный ниже текст.</div>{activeEscalation.messages.map((message) => <div key={`relay-${message.id}`} className={styles.msg}><div className={styles.msgBubble}>{message.body}</div><div className={styles.msgTime}>{message.sender_type === "platform_admin" ? "PERUM" : "организация"} · {fmt(message.created_at)}</div></div>)}{activeEscalation.ticket.approval_status === "approved" && <><textarea className={styles.textarea} value={relayDraft} onChange={(event) => setRelayDraft(event.target.value)} placeholder="Ответ, который увидит администрация школы" maxLength={4000} rows={4} /><button className={styles.primaryBtn} disabled={busy || !relayDraft.trim()} onClick={() => void relayEscalation()}>Передать школе</button></>}</div>}
                 {tickets && tickets.length === 0 && <div className={styles.muted}>У вас пока нет обращений. Задайте вопрос — поддержка ответит здесь.</div>}
                 {tickets?.map((t) => (
                   <button key={t.id} className={styles.ticketRow} onClick={() => openThread(t.id)}>

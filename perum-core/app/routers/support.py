@@ -54,6 +54,11 @@ class EscalationAction(BaseModel):
     expected_version: int = Field(ge=0)
 
 
+class EscalationRelay(BaseModel):
+    client_message_id: str = Field(min_length=1, max_length=128)
+    body: str = Field(min_length=1, max_length=4000)
+
+
 class OutboundAck(BaseModel):
     school_public_id: UUID
     correlation_id: str = Field(min_length=1, max_length=128)
@@ -272,7 +277,7 @@ async def admin_reply(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "обращение не найдено")
     now = datetime.utcnow()
     db.add(SupportMessage(ticket_id=t.id, sender_type="platform_admin", sender_id=admin.id, body=payload.body))
-    t.org_unread = t.source == "direct"
+    t.org_unread = True
     t.last_message_at = now
     if t.status == "open":
         t.status = "pending"
@@ -372,7 +377,7 @@ async def outbound_escalation(
         await db.execute(
             select(SupportMessage).where(
                 SupportMessage.ticket_id == ticket.id,
-                SupportMessage.sender_type == "platform_admin",
+                SupportMessage.sender_type == "org_school_relay",
                 SupportMessage.id > since_cursor,
             ).order_by(SupportMessage.id)
         )
@@ -398,7 +403,7 @@ async def ack_outbound(
         await db.execute(
             select(func.max(SupportMessage.id)).where(
                 SupportMessage.ticket_id == ticket.id,
-                SupportMessage.sender_type == "platform_admin",
+                SupportMessage.sender_type == "org_school_relay",
             )
         )
     ).scalar_one()
@@ -419,7 +424,10 @@ async def pending_escalations(
             select(SupportTicket).where(
                 SupportTicket.org_id == admin.org_id,
                 SupportTicket.source == "school",
-                SupportTicket.approval_status == "pending",
+                or_(
+                    SupportTicket.approval_status == "pending",
+                    (SupportTicket.approval_status == "approved") & (SupportTicket.org_unread.is_(True)),
+                ),
             ).order_by(SupportTicket.created_at)
         )
     ).scalars().all()
@@ -526,3 +534,41 @@ async def reject_escalation(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await _decide_escalation(ticket_id, "rejected", payload, admin, db)
+
+
+@router.post("/escalations/{ticket_id}/relay", dependencies=[Depends(require_org_admin)])
+async def relay_escalation_reply(
+    ticket_id: int,
+    payload: EscalationRelay,
+    admin: OrgAdmin = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    ticket = await db.get(SupportTicket, ticket_id)
+    if ticket is None or ticket.org_id != admin.org_id or ticket.source != "school":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "escalation not found")
+    if ticket.approval_status != "approved":
+        raise HTTPException(status.HTTP_409_CONFLICT, "escalation is not approved")
+    body = payload.body.strip()
+    if not body:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "message is empty")
+    existing = await db.scalar(select(SupportMessage).where(
+        SupportMessage.ticket_id == ticket.id,
+        SupportMessage.client_message_id == payload.client_message_id,
+    ))
+    if existing is not None:
+        if existing.sender_type != "org_school_relay" or existing.sender_id != admin.id or existing.body != body:
+            raise HTTPException(status.HTTP_409_CONFLICT, "client message id already used")
+        return {"id": existing.id, "replayed": True}
+    message = SupportMessage(
+        ticket_id=ticket.id,
+        sender_type="org_school_relay",
+        sender_id=admin.id,
+        client_message_id=payload.client_message_id,
+        body=body,
+    )
+    db.add(message)
+    ticket.last_message_at = datetime.utcnow()
+    ticket.org_unread = False
+    await db.commit()
+    await db.refresh(message)
+    return {"id": message.id, "replayed": False}

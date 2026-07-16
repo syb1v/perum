@@ -46,7 +46,7 @@ class SupportTicket(Base):
 class SupportMessage(Base):
     __tablename__ = "support_messages"
     __table_args__ = (
-        CheckConstraint("side IN ('requester', 'shared_inbox')", name="ck_support_messages_side"),
+        CheckConstraint("side IN ('requester', 'shared_inbox', 'admin_inbox')", name="ck_support_messages_side"),
         UniqueConstraint("ticket_id", "sender_id", "client_message_id", name="uq_support_messages_client"),
         Index("ix_support_messages_ticket_created", "ticket_id", "created_at", "id"),
     )

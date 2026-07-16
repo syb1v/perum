@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import SupportEscalationEvent, SupportMessage, SupportTicket
-from app.routers.support import EscalationIntake, MessageCreate, TicketCreate, _authenticate_school, _platform_visible
+from app.routers.support import EscalationIntake, MessageCreate, TicketCreate, outbound_escalation, _authenticate_school, _platform_visible
 
 client = TestClient(app)
 
@@ -22,6 +22,7 @@ def test_escalation_routes_and_auth_gates():
     assert "/api/support/escalations/{ticket_id}" in paths
     assert "/api/support/escalations/{ticket_id}/approve" in paths
     assert "/api/support/escalations/{ticket_id}/reject" in paths
+    assert "/api/support/escalations/{ticket_id}/relay" in paths
     assert client.get("/api/support/escalations/pending").status_code in (401, 403)
     assert client.post(
         "/internal/support/escalations",
@@ -66,6 +67,34 @@ def test_platform_visibility_requires_school_approval():
 def test_escalation_audit_action_is_unique_per_ticket():
     constraints = {constraint.name for constraint in SupportEscalationEvent.__table__.constraints}
     assert "uq_support_escalation_action" in constraints
+
+
+def test_outbound_returns_only_org_approved_school_relays():
+    class Db:
+        async def execute(self, query):
+            sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+            assert "support_messages.sender_type = 'org_school_relay'" in sql
+            assert "support_messages.sender_type = 'platform_admin'" not in sql
+            return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: []))
+
+    from app.routers import support
+    original_auth = support._authenticate_school
+    original_ticket = support._school_ticket
+
+    async def auth(*_args):
+        return SimpleNamespace(id=1)
+
+    async def ticket(*_args):
+        return SimpleNamespace(id=2, approval_status="approved", status="open", approval_version=1)
+
+    support._authenticate_school = auth
+    support._school_ticket = ticket
+    try:
+        result = asyncio.run(outbound_escalation(uuid4(), "correlation", 0, "token", Db()))
+    finally:
+        support._authenticate_school = original_auth
+        support._school_ticket = original_ticket
+    assert result["messages"] == []
 
 
 class _AuthDb:
