@@ -26,7 +26,7 @@ from app.models import Subject, User
 from app.models import ParentStudent
 from app.core.time import utc_now
 from app.models.academic import AcademicYear, Class, ClassStudent, LessonOccurrence, Schedule, SchoolPeriod, TeacherSubject
-from app.models.journal import ControlWork, Homework, HomeworkAttachment, HomeworkStudentState
+from app.models.journal import ControlWork, Homework, HomeworkAttachment, HomeworkStateReceipt, HomeworkStudentState
 from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkStateUpdate, HomeworkUpdate
 from app.modules.academic.occurrences import get_or_create_occurrence
 from app.modules.journal.service import _assigned, _is_admin
@@ -315,6 +315,18 @@ async def update_homework_state(
 ) -> dict:
     if user.role != "student" or user.school_id != school_id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Доступно только ученику")
+    receipt = await db.scalar(select(HomeworkStateReceipt).where(
+        HomeworkStateReceipt.student_id == user.id,
+        HomeworkStateReceipt.client_action_id == payload.client_action_id,
+    ))
+    if receipt is not None:
+        if receipt.homework_id != homework_id or receipt.expected_version != payload.version or receipt.requested_status != payload.status:
+            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "CLIENT_ACTION_CONFLICT"})
+        state = await db.scalar(select(HomeworkStudentState).where(
+            HomeworkStudentState.homework_id == homework_id,
+            HomeworkStudentState.student_id == user.id,
+        ))
+        return {"homework_id": homework_id, "status": state.status, "version": receipt.resulting_version, "completed_at": state.completed_at.isoformat() if state.completed_at else None, "replayed": True}
     homework = await db.scalar(
         select(Homework)
         .join(ClassStudent, ClassStudent.class_id == Homework.class_id)
@@ -368,7 +380,17 @@ async def update_homework_state(
             HomeworkStudentState.homework_id == homework_id,
             HomeworkStudentState.student_id == user.id,
         ))
-    return {"homework_id": homework_id, "status": state.status, "version": state.version, "completed_at": state.completed_at.isoformat() if state.completed_at else None}
+    db.add(HomeworkStateReceipt(
+        school_id=school_id,
+        homework_id=homework_id,
+        student_id=user.id,
+        client_action_id=payload.client_action_id,
+        expected_version=payload.version,
+        requested_status=payload.status,
+        resulting_version=state.version,
+    ))
+    await db.commit()
+    return {"homework_id": homework_id, "status": state.status, "version": state.version, "completed_at": state.completed_at.isoformat() if state.completed_at else None, "replayed": False}
 
 
 async def delete_homework(db: AsyncSession, school_id: int, hw_id: int, user: User) -> dict:

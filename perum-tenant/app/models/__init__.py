@@ -134,6 +134,7 @@ from app.models.journal import (  # noqa: E402,F401
     Homework,
     HomeworkAttachment,
     HomeworkStudentState,
+    HomeworkStateReceipt,
     LessonTemplate,
     Transaction,
 )

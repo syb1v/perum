@@ -7,6 +7,7 @@ import { PreferencesProvider } from '../preferences/PreferencesProvider';
 import { MessagesProvider } from '../messages/MessagesProvider';
 import { RealtimeProvider } from '../realtime/RealtimeProvider';
 import { SupportProvider } from '../support/SupportProvider';
+import { HomeworkProvider } from '../homework/HomeworkProvider';
 
 onlineManager.setEventListener((setOnline) => NetInfo.addEventListener((state) => setOnline(state.isConnected !== false)));
 
@@ -40,5 +41,5 @@ export function AccountQueryProvider({ children }: PropsWithChildren) {
 
   if (!account) return children;
   if (!active || active.accountId !== account.id) return null;
-  return <QueryClientProvider client={active.client}><PreferencesProvider><MessagesProvider><SupportProvider><RealtimeProvider>{children}</RealtimeProvider></SupportProvider></MessagesProvider></PreferencesProvider></QueryClientProvider>;
+  return <QueryClientProvider client={active.client}><PreferencesProvider><MessagesProvider><SupportProvider><HomeworkProvider><RealtimeProvider>{children}</RealtimeProvider></HomeworkProvider></SupportProvider></MessagesProvider></PreferencesProvider></QueryClientProvider>;
 }

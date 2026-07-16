@@ -24,7 +24,7 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
         const current = states[homeworkId] ?? { status: 'not_started', version: 0, completed_at: null };
         setStateLoading(homeworkId);
         try {
-            const next = await api.put<{ status: typeof status; version: number; completed_at: string | null }>(`/homework/${homeworkId}/state`, { version: current.version, status });
+            const next = await api.put<{ status: typeof status; version: number; completed_at: string | null }>(`/homework/${homeworkId}/state`, { client_action_id: crypto.randomUUID(), version: current.version, status });
             setStates(value => ({ ...value, [homeworkId]: next }));
         } finally {
             setStateLoading(null);

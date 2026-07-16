@@ -9,4 +9,5 @@ export const queryKeys = {
   supportTickets: (accountId: string) => [...queryKeys.account(accountId), 'support', 'tickets'] as const,
   supportTicket: (accountId: string, ticketId: string) => [...queryKeys.supportTickets(accountId), ticketId] as const,
   supportThread: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support', 'messages', ticketId] as const,
+  homework: (accountId: string) => [...queryKeys.account(accountId), 'homework'] as const,
 };

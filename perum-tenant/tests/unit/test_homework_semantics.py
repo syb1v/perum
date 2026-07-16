@@ -90,11 +90,11 @@ def test_legacy_due_date_does_not_create_target_occurrence_and_state_is_versione
             visible = (await list_homework(db, school.id, student, cls.id, subject.id))["homework"]
             assert [item["id"] for item in visible] == [homework.id]
 
-            state = await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(version=0, status="completed"), student)
+            state = await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(client_action_id="complete-1", version=0, status="completed"), student)
             assert state["version"] == 1
             assert state["completed_at"] is not None
             with pytest.raises(HTTPException) as stale:
-                await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(version=0, status="in_progress"), student)
+                await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(client_action_id="progress-1", version=0, status="in_progress"), student)
             assert stale.value.status_code == 409
             row = await db.scalar(select(HomeworkStudentState).where(HomeworkStudentState.homework_id == homework.id))
             assert row.status == "completed"

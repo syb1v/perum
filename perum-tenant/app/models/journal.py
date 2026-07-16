@@ -193,6 +193,21 @@ class HomeworkStudentState(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 
+class HomeworkStateReceipt(Base):
+    __tablename__ = "homework_state_receipts"
+    __table_args__ = (UniqueConstraint("student_id", "client_action_id", name="uq_homework_state_receipt_action"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    homework_id: Mapped[int] = mapped_column(ForeignKey("homework.id", ondelete="CASCADE"), nullable=False)
+    student_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    client_action_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    expected_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    requested_status: Mapped[str] = mapped_column(String(20), nullable=False)
+    resulting_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
 class HomeworkAttachment(Base):
     __tablename__ = "homework_attachments"
 

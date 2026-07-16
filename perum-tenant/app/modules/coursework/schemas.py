@@ -49,6 +49,7 @@ class HomeworkUpdate(BaseModel):
 
 
 class HomeworkStateUpdate(BaseModel):
+    client_action_id: str = Field(min_length=1, max_length=64)
     version: int = Field(ge=0)
     status: str = Field(pattern=r"^(not_started|in_progress|completed)$")
 
