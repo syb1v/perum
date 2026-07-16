@@ -541,7 +541,7 @@ Flow:
 Работы выполняются параллельно несколькими командами; оценки указаны в
 календарных неделях для одного основного потока и требуют уточнения после ADR.
 
-### Фактический статус и оставшиеся работы на 2026-07-16
+### Фактический статус и оставшиеся работы на 2026-07-17
 
 Обозначения: `готово` означает реализованный и проверенный базовый контур;
 `частично` означает, что foundation или vertical slice есть, но workstream ещё
@@ -550,7 +550,7 @@ Flow:
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
-| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, content revision и TTL descriptor-а; новые mobile accounts сохраняют school UUID и обновляют endpoint через Core с offline fallback. Остаются dynamic compatibility/capabilities, rediscovery до первого tenant-запроса после expiry, migration legacy accounts без school UUID и mobile lifecycle tests |
+| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, content revision и TTL descriptor-а; Mobile выполняет compatibility/TTL preflight до authenticated запроса, pinning tenant identity и lazy migration legacy accounts. Остаются dynamic versioned compatibility/capabilities по release manifest, ограниченный grace period и provider/store lifecycle tests; исполнимый план зафиксирован в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
@@ -566,11 +566,12 @@ Flow:
 
 Ближайшая последовательность реализации:
 
-1. Довести discovery до Definition of Done: dynamic compatibility/capabilities,
-   проверка compatibility в mobile и rediscovery до первого tenant-запроса после
-   expiry descriptor-а.
-2. Добавить migration legacy accounts без school UUID и mobile lifecycle tests;
-   фоновая TTL rediscovery новых accounts уже подключена.
+1. Реализовать `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`: release manifest в Core,
+   versioned compatibility/capabilities, tenant contract parity, mobile gating и
+   ограниченный 24-часовой grace period.
+2. Добавить provider/store lifecycle tests для cold start, resume, account switch,
+   release upgrade/downgrade и expiry grace; unit preflight и lazy migration
+   legacy accounts уже готовы.
 3. Расширить offline mutation coverage: перенести read states в SQLite outbox,
    поддержать конфликт двух устройств во всех контурах, добавить support ticket
    creation outbox.
@@ -584,7 +585,7 @@ Flow:
 8. Закрыть push/deep links, store compliance, security/accessibility и staged
    production rollout.
 
-### Точка передачи на 2026-07-16
+### Точка передачи на 2026-07-17
 
 Учебный vertical slice находится в `main`: Homework разделён на урок выдачи и
 целевой урок, публикацию и timezone-aware deadline; персональный статус ученика
@@ -608,12 +609,19 @@ tenant всегда возвращает server snapshot, web восстанав
 - после expiry фоновая rediscovery по stable school UUID обновляет endpoint без
   повторного login, а при недоступности Core сохраняет последний рабочий endpoint.
 
-Discovery остаётся частичным: cold start пока восстанавливает tenant session до
-rediscovery просроченного descriptor-а, legacy accounts без school UUID используют
-hostname fallback, compatibility не проверяется клиентом, dynamic capabilities и
-mobile lifecycle tests не реализованы. Следующий изолированный шаг — закрыть эти
-ограничения, затем продолжить offline teacher journal и расширенный conflict QA
-учебного контура.
+Mobile descriptor preflight теперь выполняется до первого authenticated tenant
+request при cold start и переключении account: свежий descriptor проверяется
+локально, просроченный обновляется через Core по stable school UUID, legacy account
+проходит lazy migration через hostname, а identity и API compatibility проверяются
+до создания рабочего API client. Временная недоступность Core использует только
+ранее сохранённый endpoint; refresh token мутирует account closure лишь после
+атомарного сохранения.
+
+Discovery остаётся частичным: Core пока публикует статические compatibility и
+capabilities, Tenant использует другой контракт, Mobile не сохраняет capabilities,
+а fallback ещё не ограничен grace period. Следующий изолированный шаг описан в
+`DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`; после него выполняются durable read cursors,
+offline support ticket creation и расширенный multi-device conflict QA.
 
 ## 5. CI и release gates
 

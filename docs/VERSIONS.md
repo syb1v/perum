@@ -316,4 +316,5 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 171 | 2026-07-16 | edb1a56 | fix(core): discovery поддерживает активные aliases домена организации |
 | 172 | 2026-07-16 | 8a89273 | fix(core): discovery ограничен rate limit по IP |
 | 173 | 2026-07-16 | e59d937 | feat(discovery): добавлено TTL-обновление tenant descriptor |
-| 174 | 2026-07-17 | _______ | fix(mobile): descriptor preflight и атомарная ротация refresh token |
+| 174 | 2026-07-17 | e315144 | fix(mobile): descriptor preflight и атомарная ротация refresh token |
+| 175 | 2026-07-17 | _______ | docs(plan): спроектирован динамический mobile descriptor |

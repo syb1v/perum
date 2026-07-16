@@ -7,6 +7,7 @@
 ## [Unreleased] — 2026-07-17
 
 - Mobile проверяет TTL и API-совместимость tenant descriptor до любого authenticated запроса при cold start и переключении аккаунта, обновляет routing через Core с tenant identity pinning и использует last-known-good descriptor при временной недоступности Core; rotating refresh больше не мутирует замыкание аккаунта до атомарного сохранения токена.
+- Сформирован исполнимый план динамического versioned mobile descriptor: release manifest в Core вместо live tenant query, безопасное пересечение deployment capabilities, tenant contract parity, mobile feature gating и 24-часовой grace period для last-known-good routing.
 
 ## [Unreleased] — 2026-07-16
 
