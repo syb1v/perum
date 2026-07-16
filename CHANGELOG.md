@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-16
 
+- Homework version conflict унифицирован между tenant, web и mobile: `409 VERSION_CONFLICT` всегда содержит актуальный server snapshot, первый конкурентный переход не теряется, web восстанавливает состояние с явным сообщением, mobile сохраняет конфликт для выбора пользователя.
 - Mobile Homework получил явное разрешение version conflicts: backend возвращает актуальное server state, SQLite хранит конфликт, а ученик выбирает серверную версию или создаёт новую mutation поверх свежей версии без silent overwrite.
 - School admin получил web-интерфейс occurrence backfill: summary и ambiguity report видны до записи, apply требует явного подтверждения и preview token, а изменившийся план не применяется вслепую.
 - Occurrence backfill дополнительно проверяет school scope и metadata conflicts, переносит только однозначные topic/work type, обнаруживает изменение плана между preview/apply и преобразует concurrent slot race в стабильный `BACKFILL_PLAN_CHANGED`.

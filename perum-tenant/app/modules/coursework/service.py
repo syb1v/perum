@@ -345,7 +345,12 @@ async def update_homework_state(
             HomeworkStudentState.student_id == user.id,
         ))
         if existing is not None:
-            raise HTTPException(status.HTTP_409_CONFLICT, {"code": "VERSION_CONFLICT", "current_version": existing.version})
+            raise HTTPException(status.HTTP_409_CONFLICT, {
+                "code": "VERSION_CONFLICT",
+                "current_version": existing.version,
+                "current_status": existing.status,
+                "current_completed_at": existing.completed_at.isoformat() if existing.completed_at else None,
+            })
         state = HomeworkStudentState(
             school_id=school_id,
             homework_id=homework_id,

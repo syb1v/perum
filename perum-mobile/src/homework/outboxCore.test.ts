@@ -17,7 +17,7 @@ test('keeps stable action id across retry and publishes success', async () => {
   await core.run('account'); assert.equal(data.rows.size, 0); assert.equal(successVersion, 2);
 });
 
-test('keeps version conflict for explicit user resolution', async () => {
+test('marks a 409 without server state as a permanent error', async () => {
   const data = store(); const core = createHomeworkOutbox({ store: data, key: () => 'conflict', send: async () => ({ type: 'http', status: 409, message: 'version conflict' }) });
   await core.enqueue('account', 4, 1, 'completed'); await core.run('account');
   assert.equal(data.rows.get('conflict')?.state, 'failed_permanent');
@@ -31,4 +31,11 @@ test('resolves version conflict with server or a new local action', async () => 
   await core.resolve('account', 'first', 'local');
   assert.equal(data.rows.size, 0);
   assert.equal(sent, 2);
+});
+
+test('keeps first-write conflict with server state for explicit resolution', async () => {
+  const data = store(); const core = createHomeworkOutbox({ store: data, key: () => 'first-write', send: async () => ({ type: 'http', status: 409, serverState: { status: 'completed', version: 1, completed_at: '2026-07-16T10:00:00' } }) });
+  await core.enqueue('account', 4, 0, 'in_progress'); await core.run('account');
+  assert.equal(data.rows.get('first-write')?.state, 'conflict');
+  assert.deepEqual(data.rows.get('first-write')?.serverState, { status: 'completed', version: 1, completed_at: '2026-07-16T10:00:00' });
 });

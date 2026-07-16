@@ -311,3 +311,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 166 | 2026-07-16 | abf2861 | fix(tenant): усилена безопасность occurrence backfill |
 | 167 | 2026-07-16 | 0077090 | fix(tenant): запрещено повторное использование архива |
 | 168 | 2026-07-16 | dd455ff | ci: расширены обязательные release gates |
+| 169 | 2026-07-16 | _______ | fix(homework): унифицирован контракт первого version conflict |

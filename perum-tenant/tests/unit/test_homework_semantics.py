@@ -96,8 +96,17 @@ def test_legacy_due_date_does_not_create_target_occurrence_and_state_is_versione
             with pytest.raises(HTTPException) as stale:
                 await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(client_action_id="progress-1", version=0, status="in_progress"), student)
             assert stale.value.status_code == 409
+            assert stale.value.detail == {
+                "code": "VERSION_CONFLICT",
+                "current_version": 1,
+                "current_status": "completed",
+                "current_completed_at": state["completed_at"],
+            }
+            replayed = await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(client_action_id="complete-1", version=0, status="completed"), student)
+            assert replayed == {**state, "replayed": True}
             row = await db.scalar(select(HomeworkStudentState).where(HomeworkStudentState.homework_id == homework.id))
             assert row.status == "completed"
+            assert row.version == 1
         finally:
             await db.close()
             await engine.dispose()

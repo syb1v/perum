@@ -2,7 +2,7 @@
 
 import Modal from '@/components/ui/Modal';
 import { FlatLesson } from '@/hooks/useSchedule';
-import api from '@/lib/apiClient';
+import api, { ApiClientError } from '@/lib/apiClient';
 import { useState } from 'react';
 import styles from '../page.module.css';
 
@@ -19,13 +19,23 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
     const homework = lesson.homework || [];
     const [states, setStates] = useState(() => Object.fromEntries(homework.map(item => [item.id, item.student_state ?? { status: 'not_started' as const, version: 0, completed_at: null }])));
     const [stateLoading, setStateLoading] = useState<number | null>(null);
+    const [stateError, setStateError] = useState<Record<number, string>>({});
 
     async function setHomeworkState(homeworkId: number, status: 'not_started' | 'in_progress' | 'completed') {
         const current = states[homeworkId] ?? { status: 'not_started', version: 0, completed_at: null };
         setStateLoading(homeworkId);
+        setStateError(value => ({ ...value, [homeworkId]: '' }));
         try {
             const next = await api.put<{ status: typeof status; version: number; completed_at: string | null }>(`/homework/${homeworkId}/state`, { client_action_id: crypto.randomUUID(), version: current.version, status });
             setStates(value => ({ ...value, [homeworkId]: next }));
+        } catch (error) {
+            const detail = error instanceof ApiClientError ? (error.originalErrorData as { detail?: { code?: string; current_version?: number; current_status?: typeof status; current_completed_at?: string | null } })?.detail : undefined;
+            if (error instanceof ApiClientError && error.status === 409 && detail?.code === 'VERSION_CONFLICT' && detail.current_version !== undefined && detail.current_status) {
+                setStates(value => ({ ...value, [homeworkId]: { status: detail.current_status!, version: detail.current_version!, completed_at: detail.current_completed_at ?? null } }));
+                setStateError(value => ({ ...value, [homeworkId]: 'Статус уже изменён на другом устройстве. Показано актуальное состояние.' }));
+            } else {
+                setStateError(value => ({ ...value, [homeworkId]: 'Не удалось изменить статус. Повторите попытку.' }));
+            }
         } finally {
             setStateLoading(null);
         }
@@ -159,6 +169,7 @@ export default function LessonModal({ lesson, onClose }: LessonModalProps) {
                                             <button key={value} type="button" disabled={stateLoading === hw.id || state.status === value} onClick={() => void setHomeworkState(hw.id, value)} style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: state.status === value ? 'var(--accent-primary)' : 'var(--bg-secondary)', color: state.status === value ? 'white' : 'var(--text-primary)' }}>{label}</button>
                                         ))}
                                     </div>
+                                    {stateError[hw.id] && <div style={{ marginTop: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{stateError[hw.id]}</div>}
                                 </div>
                             );
                         })}
