@@ -40,6 +40,15 @@ jobs:
       - name: Run unit tests
         working-directory: perum-tenant
         run: python -m pytest tests/unit -q
+      - name: Check Alembic single head
+        working-directory: perum-tenant
+        run: test "$(alembic heads | wc -l)" -eq 1
+      - name: SQLite migration smoke
+        working-directory: perum-tenant
+        run: python -m pytest tests/unit/test_migrations_sqlite.py -q
+      - name: Academic offline and backfill gates
+        working-directory: perum-tenant
+        run: python -m pytest tests/unit/test_homework_semantics.py tests/unit/test_occurrence_backfill.py tests/unit/test_academic_archiving.py -q
 
   web-typecheck:
     name: perum-web (tsc + build)
@@ -61,6 +70,8 @@ jobs:
         run: npm run audit:ci
       - name: Typecheck
         run: npm run typecheck:web
+      - name: Production build
+        run: npm run build:web
 
   mobile-checks:
     name: perum-mobile (tsc + tests + export)
@@ -107,3 +118,16 @@ jobs:
           npm run contracts:generate
           git diff --exit-code -- packages/api-schema/openapi packages/api-schema/generated
           npm run contracts:check
+
+  workflow-config:
+    name: Workflow config smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Parse workflow YAML
+        run: |
+          pip install pyyaml
+          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml')]"
