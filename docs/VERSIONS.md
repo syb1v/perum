@@ -307,3 +307,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 162 | 2026-07-16 | 0400aa1 | chore(contracts): синхронизирован tenant OpenAPI |
 | 163 | 2026-07-16 | _______ | docs(versions): зафиксированы хеши восьмишагового цикла |
 | 164 | 2026-07-16 | _______ | feat(mobile): добавлено разрешение конфликтов Homework |
+| 165 | 2026-07-16 | _______ | feat(web): добавлен интерфейс occurrence backfill |
