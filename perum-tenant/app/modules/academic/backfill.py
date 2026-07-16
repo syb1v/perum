@@ -5,9 +5,10 @@ from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.academic import LessonOccurrence, Schedule
+from app.models.academic import Class, LessonOccurrence, Schedule, Subject
 from app.models.journal import ControlWork, Grade, Homework, LessonTemplate
 
 
@@ -17,6 +18,7 @@ def _day(value) -> date | None:
 
 async def build_plan(db: AsyncSession, school_id: int) -> dict:
     groups: dict[tuple[int, int, date], dict[str, list[int]]] = defaultdict(lambda: defaultdict(list))
+    metadata: dict[tuple[int, int, date], dict[str, set[int]]] = defaultdict(lambda: {"topic_ids": set(), "work_type_ids": set()})
     missing: list[dict] = []
     sources = (
         ("grades", Grade, Grade.lesson_date),
@@ -30,11 +32,17 @@ async def build_plan(db: AsyncSession, school_id: int) -> dict:
             if lesson_date is None:
                 missing.append({"reason": "missing_legacy_date", "table": table, "ids": [row.id]})
             else:
-                groups[(row.class_id, row.subject_id, lesson_date)][table].append(row.id)
+                key = (row.class_id, row.subject_id, lesson_date)
+                groups[key][table].append(row.id)
+                if getattr(row, "topic_id", None): metadata[key]["topic_ids"].add(row.topic_id)
+                if getattr(row, "work_type_id", None): metadata[key]["work_type_ids"].add(row.work_type_id)
 
     safe: list[dict] = []
     ambiguities = list(missing)
     for (class_id, subject_id, lesson_date), rows in sorted(groups.items(), key=lambda item: (item[0][2], item[0][0], item[0][1])):
+        valid_class = await db.scalar(select(Class.id).where(Class.id == class_id, Class.school_id == school_id))
+        valid_subject = await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id))
+        item_metadata = metadata[(class_id, subject_id, lesson_date)]
         occurrences = (await db.scalars(select(LessonOccurrence).where(
             LessonOccurrence.school_id == school_id,
             LessonOccurrence.class_id == class_id,
@@ -45,8 +53,14 @@ async def build_plan(db: AsyncSession, school_id: int) -> dict:
         create = False
         candidates: list[dict] = []
         reason = None
-        if len(occurrences) == 1:
+        if valid_class is None or valid_subject is None:
+            reason = "invalid_school_scope"
+        elif len(item_metadata["topic_ids"]) > 1 or len(item_metadata["work_type_ids"]) > 1:
+            reason = "metadata_conflict"
+        elif len(occurrences) == 1:
             candidate = occurrences[0]
+            if item_metadata["topic_ids"] and candidate.topic_id not in (None, next(iter(item_metadata["topic_ids"]))) or item_metadata["work_type_ids"] and candidate.work_type_id not in (None, next(iter(item_metadata["work_type_ids"]))):
+                reason = "metadata_conflict"
         elif len(occurrences) > 1:
             reason = "multiple_existing_occurrences"
             candidates = [{"occurrence_id": item.id, "lesson_number": item.lesson_number} for item in occurrences]
@@ -72,7 +86,7 @@ async def build_plan(db: AsyncSession, school_id: int) -> dict:
                     create = True
             else:
                 reason = "no_schedule_candidate" if not schedules else "multiple_schedule_candidates"
-        item = {"class_id": class_id, "subject_id": subject_id, "lesson_date": lesson_date.isoformat(), "source_rows": {name: sorted(ids) for name, ids in sorted(rows.items())}, "candidates": candidates}
+        item = {"class_id": class_id, "subject_id": subject_id, "lesson_date": lesson_date.isoformat(), "source_rows": {name: sorted(ids) for name, ids in sorted(rows.items())}, "candidates": candidates, "topic_id": next(iter(item_metadata["topic_ids"]), None), "work_type_id": next(iter(item_metadata["work_type_ids"]), None)}
         if reason:
             ambiguities.append({**item, "reason": reason})
         else:
@@ -100,9 +114,13 @@ async def apply_plan(db: AsyncSession, school_id: int, plan_token: str) -> dict:
     for item in plan["safe"]:
         occurrence_id = item["occurrence_id"]
         if item["create"]:
-            occurrence = LessonOccurrence(school_id=school_id, class_id=item["class_id"], subject_id=item["subject_id"], schedule_id=item["schedule_id"], lesson_date=date.fromisoformat(item["lesson_date"]), lesson_number=item["lesson_number"])
+            occurrence = LessonOccurrence(school_id=school_id, class_id=item["class_id"], subject_id=item["subject_id"], schedule_id=item["schedule_id"], lesson_date=date.fromisoformat(item["lesson_date"]), lesson_number=item["lesson_number"], topic_id=item["topic_id"], work_type_id=item["work_type_id"])
             db.add(occurrence)
-            await db.flush()
+            try:
+                await db.flush()
+            except IntegrityError as error:
+                await db.rollback()
+                raise HTTPException(status.HTTP_409_CONFLICT, {"code": "BACKFILL_PLAN_CHANGED"}) from error
             occurrence_id = occurrence.id
             created += 1
         for table, model in (("grades", Grade), ("lesson_templates", LessonTemplate), ("control_works", ControlWork)):
