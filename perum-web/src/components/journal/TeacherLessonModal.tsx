@@ -18,6 +18,9 @@ interface HomeworkInfo {
     title: string;
     description: string;
     due_date?: string;
+    published_at?: string | null;
+    deadline_at?: string | null;
+    target_occurrence_id?: number | null;
     attachments?: HomeworkAttachmentInfo[];
 }
 
@@ -364,6 +367,7 @@ export default function TeacherLessonModal({
                     subjectName={subjectName}
                     defaultDueDate={date}
                     lessonNumber={lessonNumber}
+                    targetOccurrenceId={occurrenceId}
                     existingHomework={selectedHomework || undefined}
                     onClose={() => {
                         setHomeworkModalOpen(false);

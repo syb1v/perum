@@ -16,6 +16,9 @@ interface HomeworkInfo {
     id: number;
     title: string;
     description?: string;
+    published_at?: string | null;
+    deadline_at?: string | null;
+    target_occurrence_id?: number | null;
     attachments?: HomeworkAttachmentInfo[];
 }
 
@@ -26,6 +29,7 @@ interface HomeworkModalProps {
     subjectName?: string;
     defaultDueDate?: string;
     lessonNumber?: number;
+    targetOccurrenceId?: number | null;
     existingHomework?: HomeworkInfo;
     onClose: () => void;
     onDelete?: () => void;
@@ -38,6 +42,7 @@ export default function HomeworkModal({
     subjectName,
     defaultDueDate,
     lessonNumber,
+    targetOccurrenceId,
     existingHomework,
     onClose,
     onDelete
@@ -45,7 +50,10 @@ export default function HomeworkModal({
     const { showError, showSuccess } = useToast();
     const [title, setTitle] = useState(existingHomework?.title || '');
     const [description, setDescription] = useState(existingHomework?.description || '');
-    const [dueDate, setDueDate] = useState(defaultDueDate || '');
+    const existingDeadline = existingHomework?.deadline_at ? new Date(existingHomework.deadline_at) : null;
+    const effectiveTargetOccurrenceId = existingHomework?.target_occurrence_id ?? targetOccurrenceId ?? null;
+    const [deadline, setDeadline] = useState(existingDeadline ? new Date(existingDeadline.getTime() - existingDeadline.getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : defaultDueDate && effectiveTargetOccurrenceId ? `${defaultDueDate}T08:00` : '');
+    const [published, setPublished] = useState(existingHomework ? existingHomework.published_at !== null : true);
     const [loading, setLoading] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [existingAtts, setExistingAtts] = useState<HomeworkAttachmentInfo[]>(existingHomework?.attachments || []);
@@ -132,8 +140,9 @@ export default function HomeworkModal({
                 await api.put(`/homework/${existingHomework.id}`, {
                     title,
                     description: description || null,
-                    due_date: dueDate ? `${dueDate}T00:00:00` : null,
-                    lesson_number: lessonNumber
+                    target_occurrence_id: effectiveTargetOccurrenceId,
+                    deadline_at: deadline ? new Date(deadline).toISOString() : null,
+                    published_at: published ? (existingHomework.published_at ?? new Date().toISOString()) : null
                 });
             } else {
                 const res = await api.post<{ success: boolean; homework_id: number }>('/homework', {
@@ -141,8 +150,9 @@ export default function HomeworkModal({
                     subject_id: subjectId,
                     title,
                     description: description || null,
-                    due_date: dueDate ? `${dueDate}T00:00:00` : null,
-                    lesson_number: lessonNumber
+                    target_occurrence_id: effectiveTargetOccurrenceId,
+                    deadline_at: deadline ? new Date(deadline).toISOString() : null,
+                    published_at: published ? new Date().toISOString() : null
                 });
                 hwId = res.homework_id;
             }
@@ -210,12 +220,19 @@ export default function HomeworkModal({
                 <div className={styles.formGroup}>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Срок сдачи</label>
                     <input
-                        type="date"
+                        type="datetime-local"
                         style={{ width: '100%', padding: '10px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
-                        value={dueDate}
-                        onChange={e => setDueDate(e.target.value)}
+                        value={deadline}
+                        onChange={e => setDeadline(e.target.value)}
+                        disabled={!effectiveTargetOccurrenceId}
                     />
+                    {!effectiveTargetOccurrenceId && <div style={{ marginTop: '6px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Точный срок можно задать после создания урока на сервере.</div>}
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: 'var(--text-secondary)' }}>
+                    <input type="checkbox" checked={published} onChange={event => setPublished(event.target.checked)} />
+                    Опубликовать ученикам сразу
+                </label>
 
                 <div className={styles.formGroup}>
                     <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Прикрепить материалы (до 13 МБ)</label>

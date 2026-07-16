@@ -297,3 +297,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 152 | 2026-07-16 | 7fd9df5 | fix(support): восстановлена org-gated видимость ответов |
 | 153 | 2026-07-16 | 6c42486 | feat(homework): разделены уроки публикация и deadline |
 | 154 | 2026-07-16 | _______ | docs(versions): зафиксирован хеш push, support и homework цикла |
+| 155 | 2026-07-16 | _______ | feat(web): подключена новая Homework-семантика учителя |
