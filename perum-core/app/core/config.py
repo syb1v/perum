@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     LOGIN_RATE_LIMIT: int = Field(default=10)
     LOGIN_RATE_WINDOW_S: int = Field(default=60)
 
+    DISCOVERY_RATE_LIMIT: int = Field(default=60)
+    DISCOVERY_RATE_WINDOW_S: int = Field(default=60)
+
     # Защита /metrics: если задан — требуется Bearer/X-Metrics-Token. Пусто → открыт (dev).
     METRICS_TOKEN: str = Field(default="")
 

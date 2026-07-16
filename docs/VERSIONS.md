@@ -313,3 +313,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 168 | 2026-07-16 | dd455ff | ci: расширены обязательные release gates |
 | 169 | 2026-07-16 | _______ | fix(homework): унифицирован контракт первого version conflict |
 | 170 | 2026-07-16 | _______ | fix(core): discovery поддерживает активные aliases домена организации |
+| 171 | 2026-07-16 | _______ | fix(core): discovery ограничен rate limit по IP |

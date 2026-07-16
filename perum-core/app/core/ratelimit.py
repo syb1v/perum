@@ -15,6 +15,7 @@ from fastapi import HTTPException, Request, status
 from app.core.config import get_settings
 
 _hits: dict[str, deque[float]] = defaultdict(deque)
+_discovery_hits: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _client_ip(request: Request) -> str:
@@ -45,6 +46,24 @@ def check_login_rate(request: Request, login: str) -> None:
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             f"слишком много попыток входа, повторите через {window} с",
+            headers={"Retry-After": str(window)},
+        )
+    dq.append(now)
+
+
+def check_discovery_rate(request: Request) -> None:
+    s = get_settings()
+    limit, window = s.DISCOVERY_RATE_LIMIT, s.DISCOVERY_RATE_WINDOW_S
+    if limit <= 0:
+        return
+    dq = _discovery_hits[_client_ip(request)]
+    now = time.monotonic()
+    while dq and now - dq[0] > window:
+        dq.popleft()
+    if len(dq) >= limit:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            f"слишком много запросов discovery, повторите через {window} с",
             headers={"Retry-After": str(window)},
         )
     dq.append(now)

@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-16
 
+- Публичный tenant discovery ограничен независимым sliding-window лимитом по клиентскому IP для GET и POST, с `429` и `Retry-After` при исчерпании лимита.
 - Tenant discovery разрешает пару organization-domain/school-code через активные aliases `OrganizationDomain`, без обращения к устаревшему каноническому полю организации.
 - Homework version conflict унифицирован между tenant, web и mobile: `409 VERSION_CONFLICT` всегда содержит актуальный server snapshot, первый конкурентный переход не теряется, web восстанавливает состояние с явным сообщением, mobile сохраняет конфликт для выбора пользователя.
 - Mobile Homework получил явное разрешение version conflicts: backend возвращает актуальное server state, SQLite хранит конфликт, а ученик выбирает серверную версию или создаёт новую mutation поверх свежей версии без silent overwrite.
