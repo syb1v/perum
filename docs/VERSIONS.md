@@ -296,12 +296,13 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 151 | 2026-07-16 | 7b6f613 | fix(push): защищена принадлежность mobile installation |
 | 152 | 2026-07-16 | 7fd9df5 | fix(support): восстановлена org-gated видимость ответов |
 | 153 | 2026-07-16 | 6c42486 | feat(homework): разделены уроки публикация и deadline |
-| 154 | 2026-07-16 | _______ | docs(versions): зафиксирован хеш push, support и homework цикла |
-| 155 | 2026-07-16 | _______ | feat(web): подключена новая Homework-семантика учителя |
-| 156 | 2026-07-16 | _______ | feat(web): добавлен статус выполнения Homework ученика |
-| 157 | 2026-07-16 | _______ | feat(mobile): добавлен offline outbox статусов Homework |
-| 158 | 2026-07-16 | _______ | feat(tenant): добавлен безопасный occurrence backfill |
-| 159 | 2026-07-16 | _______ | feat(tenant): темы и предметы переведены в архив |
-| 160 | 2026-07-16 | _______ | fix(web): закрыт stored XSS в школьных новостях |
-| 161 | 2026-07-16 | _______ | fix(ci): release заблокирован успешным CI |
-| 162 | 2026-07-16 | _______ | chore(contracts): синхронизирован tenant OpenAPI |
+| 154 | 2026-07-16 | 4521d3d | docs(versions): зафиксирован хеш push, support и homework цикла |
+| 155 | 2026-07-16 | 28beb39 | feat(web): подключена новая Homework-семантика учителя |
+| 156 | 2026-07-16 | 113bfc1 | feat(web): добавлен статус выполнения Homework ученика |
+| 157 | 2026-07-16 | d1b836e | feat(mobile): добавлен offline outbox статусов Homework |
+| 158 | 2026-07-16 | 0e823c4 | feat(tenant): добавлен безопасный occurrence backfill |
+| 159 | 2026-07-16 | 325aa2e | feat(tenant): темы и предметы переведены в архив |
+| 160 | 2026-07-16 | 37bcb8d | fix(web): закрыт stored XSS в школьных новостях |
+| 161 | 2026-07-16 | e13d9ba | fix(ci): release заблокирован успешным CI |
+| 162 | 2026-07-16 | 0400aa1 | chore(contracts): синхронизирован tenant OpenAPI |
+| 163 | 2026-07-16 | _______ | docs(versions): зафиксированы хеши восьмишагового цикла |
