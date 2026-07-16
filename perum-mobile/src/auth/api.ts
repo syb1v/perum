@@ -49,8 +49,8 @@ export function createAccountClient(
     getRefreshToken: () => account.refreshToken,
     setTokens: async ({ accessToken, refreshToken }) => {
       accessTokens.set(account.id, accessToken);
-      account.refreshToken = refreshToken;
       await updateRefreshToken(refreshToken);
+      account.refreshToken = refreshToken;
     },
     clear: async () => {
       accessTokens.delete(account.id);

@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-17
+
+- Mobile проверяет TTL и API-совместимость tenant descriptor до любого authenticated запроса при cold start и переключении аккаунта, обновляет routing через Core с tenant identity pinning и использует last-known-good descriptor при временной недоступности Core; rotating refresh больше не мутирует замыкание аккаунта до атомарного сохранения токена.
+
 ## [Unreleased] — 2026-07-16
 
 - Core discovery-контракт и generated-схемы публикуют content revision и TTL descriptor-а; новые mobile accounts сохраняют school UUID и routing metadata, а фоновая rediscovery после expiry обновляет endpoint без повторного login с сохранением последнего рабочего адреса при недоступности Core.

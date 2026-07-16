@@ -17,6 +17,7 @@ export type TenantAccount = {
   apiBaseUrl: string;
   descriptorRevision?: string;
   descriptorExpiresAt?: string;
+  descriptorCompatibility?: Discovery['compatibility'];
   user: TenantUser;
   refreshToken: string;
 };

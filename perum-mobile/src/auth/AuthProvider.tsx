@@ -6,6 +6,7 @@ import { loadRegistry, saveRegistry } from './storage';
 import type { Registry, TenantAccount, TenantRole, TenantUser } from './types';
 import { removeAccountLocalData } from '../query/persistence';
 import type { ApiClient } from '@perum/api-client';
+import { applyDiscovery, assertDiscoveryCompatibility, resolveAccountDescriptor } from './descriptorCore';
 
 const roles = new Set<TenantRole>(['student', 'parent', 'teacher', 'admin', 'school_admin', 'director']);
 
@@ -60,6 +61,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   async function restore(saved: TenantAccount, source: Registry) {
     let terminalAuthFailure = false;
+    const resolution = await resolveAccountDescriptor(saved, {
+      discoverById: discoverTenantById,
+      discoverByHost: discoverTenant,
+    });
+    saved = resolution.account;
+    if (resolution.source === 'rediscovered') {
+      source = {
+        ...source,
+        accounts: source.accounts.map((item) => item.id === saved.id ? saved : item),
+      };
+      await persist(source);
+    }
     const client = createAccountClient(
       saved,
       async (refreshToken) => {
@@ -108,6 +121,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const discovery = await discoverTenant(host);
+      assertDiscoveryCompatibility(discovery.compatibility);
       const response = await tenantLogin(discovery, {
         login: login.trim(),
         password,
@@ -130,6 +144,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         apiBaseUrl: discovery.api_base_url,
         descriptorRevision: discovery.descriptor_revision,
         descriptorExpiresAt: new Date(Date.now() + discovery.cache_ttl_seconds * 1000).toISOString(),
+        descriptorCompatibility: discovery.compatibility,
         user,
         refreshToken: response.refresh_token,
       };
@@ -169,15 +184,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const discovery = current.schoolId
       ? await discoverTenantById(current.schoolId)
       : await discoverTenant(current.tenantHost);
-    if (discovery.tenant_id !== current.tenantId) throw new Error('Tenant identity changed during discovery');
-    const updated = {
-      ...current,
-      schoolId: discovery.school_id,
-      tenantHost: discovery.canonical_host,
-      apiBaseUrl: discovery.api_base_url,
-      descriptorRevision: discovery.descriptor_revision,
-      descriptorExpiresAt: new Date(Date.now() + discovery.cache_ttl_seconds * 1000).toISOString(),
-    };
+    const updated = applyDiscovery(current, discovery);
     const next = { ...registry, accounts: registry.accounts.map((item) => item.id === accountId ? updated : item) };
     await persist(next);
     if (account?.id === accountId) setAccount(updated);
