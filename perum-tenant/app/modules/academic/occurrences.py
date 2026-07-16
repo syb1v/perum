@@ -23,7 +23,7 @@ async def get_or_create_occurrence(
         return occurrence
     cls = await db.get(Class, class_id)
     subject = await db.get(Subject, subject_id)
-    if cls is None or cls.school_id != school_id or subject is None or subject.school_id != school_id:
+    if cls is None or cls.school_id != school_id or subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс или предмет не найден")
     schedule = await db.scalar(select(Schedule).where(
         Schedule.school_id == school_id, Schedule.class_id == class_id,

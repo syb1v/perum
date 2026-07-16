@@ -123,7 +123,7 @@ async def restore_subject(db: AsyncSession, school_id: int, subject_id: int) -> 
 
 async def enable_all_subjects_exchange(db: AsyncSession, school_id: int) -> dict:
     result = await db.execute(
-        select(Subject).where(Subject.school_id == school_id)
+        select(Subject).where(Subject.school_id == school_id, Subject.is_archived.is_(False))
     )
     count = 0
     for s in result.scalars().all():

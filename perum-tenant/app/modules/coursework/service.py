@@ -244,7 +244,7 @@ async def create_homework(db: AsyncSession, school_id: int, payload: HomeworkCre
     ).scalar_one_or_none()
     if cls is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
-    subject = await db.scalar(select(Subject).where(Subject.id == payload.subject_id, Subject.school_id == school_id))
+    subject = await db.scalar(select(Subject).where(Subject.id == payload.subject_id, Subject.school_id == school_id, Subject.is_archived.is_(False)))
     if subject is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _assigned(db, user, payload.class_id, payload.subject_id):
@@ -538,6 +538,8 @@ async def create_control_work(db: AsyncSession, school_id: int, payload: Control
     ).scalar_one_or_none()
     if cls is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
+    if not await db.scalar(select(Subject.id).where(Subject.id == payload.subject_id, Subject.school_id == school_id, Subject.is_archived.is_(False))):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _assigned(db, user, payload.class_id, payload.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа")
 

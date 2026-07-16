@@ -226,7 +226,7 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
             raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Два урока на одно время: День {d}, Урок {ln}")
         slots.add((d, ln))
         subject_id = int(it["subject_id"])
-        if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
+        if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id, Subject.is_archived.is_(False))):
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Предмет {subject_id} не найден")
         tid = it.get("teacher_id")
         if tid:

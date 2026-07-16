@@ -241,7 +241,7 @@ async def _validate_template_values(
 ) -> None:
     if payload.topic_id is not None:
         topic = await db.get(Topic, payload.topic_id)
-        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id:
+        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id or topic.is_archived:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
     if payload.work_type_id is not None:
         work_type = await db.get(WorkType, payload.work_type_id)
@@ -260,7 +260,7 @@ async def set_lesson_template(
 ) -> dict:
     await _get_class(db, school_id, class_id)
     subject = await db.get(Subject, subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _assigned(db, user, class_id, subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
@@ -393,7 +393,7 @@ async def update_lesson_occurrence(
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимый статус урока")
     if "topic_id" in payload.model_fields_set and payload.topic_id is not None:
         topic = await db.get(Topic, payload.topic_id)
-        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id:
+        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id or topic.is_archived:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
     occupied = await db.scalar(select(LessonOccurrence.id).where(
         LessonOccurrence.school_id == school_id,
@@ -527,7 +527,7 @@ async def get_journal(
 ) -> dict:
     cls = await _get_class(db, school_id, class_id)
     subject = await db.get(Subject, subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
 
     assigned = await _assigned(db, user, class_id, subject_id)
@@ -696,7 +696,7 @@ async def set_final_grade(
 ) -> dict:
     await _get_class(db, school_id, class_id)
     subject = await db.get(Subject, subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await _assigned(db, user, class_id, subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому журналу")
@@ -803,7 +803,7 @@ async def add_grade(db: AsyncSession, school_id: int, payload: AddGradeRequest, 
 
     cls = await _get_class(db, school_id, payload.class_id)
     subject = await db.get(Subject, payload.subject_id)
-    if subject is None or subject.school_id != school_id:
+    if subject is None or subject.school_id != school_id or subject.is_archived:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     await _validate_student(db, school_id, payload.class_id, payload.student_id)
 
@@ -839,7 +839,7 @@ async def add_grade(db: AsyncSession, school_id: int, payload: AddGradeRequest, 
         work_type_id = template.work_type_id
     if topic_id is not None:
         topic = await db.get(Topic, topic_id)
-        if topic is None or topic.school_id != school_id or topic.subject_id != payload.subject_id:
+        if topic is None or topic.school_id != school_id or topic.subject_id != payload.subject_id or topic.is_archived:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
 
     weight = await _work_type_weight(db, school_id, work_type_id)
@@ -951,7 +951,7 @@ async def update_grade(db: AsyncSession, school_id: int, grade_id: int, payload:
     await _validate_student(db, school_id, g.class_id, g.student_id)
     if payload.topic_id is not None:
         topic = await db.get(Topic, payload.topic_id)
-        if topic is None or topic.school_id != school_id or topic.subject_id != g.subject_id:
+        if topic is None or topic.school_id != school_id or topic.subject_id != g.subject_id or topic.is_archived:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
     subject = await db.get(Subject, g.subject_id)
     cls = await db.get(Class, g.class_id)

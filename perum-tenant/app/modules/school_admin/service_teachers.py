@@ -87,7 +87,7 @@ async def _validate_assignment_refs(db, school_id, teacher_id, subject_id, class
     teacher = await db.get(User, teacher_id)
     if not teacher or teacher.school_id != school_id or teacher.role != TEACHER or not teacher.is_active:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Активный учитель школы не найден")
-    if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id)):
+    if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id, Subject.is_archived.is_(False))):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет не найден")
     if not await db.scalar(select(Class.id).where(Class.id == class_id, Class.school_id == school_id)):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Класс не найден")
