@@ -1,12 +1,13 @@
 import ipaddress
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
-from app.models import Organization, School, SchoolDomain
+from app.core.ratelimit import check_discovery_rate
+from app.models import Organization, OrganizationDomain, School, SchoolDomain
 from app.schemas.public import (
     TenantCapabilities,
     TenantCompatibility,
@@ -138,7 +139,12 @@ async def _discover(payload: TenantDiscoveryRequest, db: AsyncSession) -> Tenant
             await db.execute(
                 select(School, Organization)
                 .join(Organization, School.org_id == Organization.id)
-                .where(Organization.domain == organization_domain, School.subdomain == school_code)
+                .join(OrganizationDomain, OrganizationDomain.org_id == Organization.id)
+                .where(
+                    OrganizationDomain.domain == organization_domain,
+                    OrganizationDomain.status == "active",
+                    School.subdomain == school_code,
+                )
             )
         ).first()
         if result is None:
@@ -155,15 +161,19 @@ async def _discover(payload: TenantDiscoveryRequest, db: AsyncSession) -> Tenant
 
 @router.get("/tenant-discovery", response_model=TenantDiscoveryResponse)
 async def discover_tenant(
+    request: Request,
     host: str = Query(min_length=1, max_length=2048),
     db: AsyncSession = Depends(get_db),
 ) -> TenantDiscoveryResponse:
+    check_discovery_rate(request)
     return await _discover(TenantDiscoveryRequest(host=host), db)
 
 
 @router.post("/tenant-discovery", response_model=TenantDiscoveryResponse)
 async def discover_tenant_post(
+    request: Request,
     payload: TenantDiscoveryRequest,
     db: AsyncSession = Depends(get_db),
 ) -> TenantDiscoveryResponse:
+    check_discovery_rate(request)
     return await _discover(payload, db)

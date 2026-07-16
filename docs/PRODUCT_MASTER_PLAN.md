@@ -548,7 +548,7 @@ Flow:
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
-| P0 | Tenant discovery | Частично | public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code готовы; остаются alias org-domain lookup, discovery revision/TTL/rediscovery при смене домена, dynamic compatibility/capabilities и rate limiting |
+| P0 | Tenant discovery | Частично | public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, включая активные aliases организации, готовы; остаются discovery revision/TTL/rediscovery при смене домена, dynamic compatibility/capabilities и rate limiting |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
@@ -564,7 +564,7 @@ Flow:
 
 Ближайшая последовательность реализации:
 
-1. Довести discovery до Definition of Done: org-domain aliases, rediscovery/revision/TTL, dynamic capabilities, rate limiting.
+1. Довести discovery до Definition of Done: rediscovery/revision/TTL, dynamic capabilities, rate limiting.
 2. Подключить готовые discovery contract и tenant-scoped single-flight refresh
    adapter в фоновый mobile compatibility check.
 3. Расширить offline mutation coverage: перенести read states в SQLite outbox,

@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.db import get_db
+from app.core import ratelimit
 from app.main import app
 from app.routers.public import normalize_tenant_host
 
@@ -42,6 +43,7 @@ def _tenant():
 
 def teardown_function():
     app.dependency_overrides.clear()
+    ratelimit._discovery_hits.clear()
 
 
 @pytest.mark.parametrize(
@@ -109,6 +111,28 @@ def test_post_discovers_by_organization_domain_and_school_code():
     assert response.json()["matched_host"] == "school.example.com"
 
 
+def test_post_discovers_by_active_organization_domain_alias():
+    school, organization = _tenant()
+    primary = SimpleNamespace(domain="school.example.com")
+    response = _client(_DB([(school, organization)], [(primary,)])).post(
+        "/api/public/tenant-discovery",
+        json={"organization_domain": "alias.example.com", "school_code": "school"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["organization_id"] == str(organization.public_id)
+
+
+def test_inactive_organization_domain_alias_is_not_resolved():
+    response = _client(_DB([])).post(
+        "/api/public/tenant-discovery",
+        json={"organization_domain": "removed.example.com", "school_code": "school"},
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Tenant not found"}
+
+
 def test_post_discovers_by_stable_school_id():
     school, organization = _tenant()
     primary = SimpleNamespace(domain="school.example.com")
@@ -142,3 +166,16 @@ def test_unknown_and_malformed_hosts_have_same_generic_response():
     )
     assert unknown.status_code == malformed.status_code == 404
     assert unknown.json() == malformed.json() == {"detail": "Tenant not found"}
+
+
+def test_discovery_is_rate_limited_by_client_ip(monkeypatch):
+    settings = ratelimit.get_settings()
+    monkeypatch.setattr(settings, "DISCOVERY_RATE_LIMIT", 1)
+    monkeypatch.setattr(settings, "DISCOVERY_RATE_WINDOW_S", 60)
+    client = _client(_DB([]))
+
+    assert client.get("/api/public/tenant-discovery", params={"host": "unknown.example.com"}).status_code == 404
+    blocked = client.post("/api/public/tenant-discovery", json={"host": "unknown.example.com"})
+
+    assert blocked.status_code == 429
+    assert blocked.headers["retry-after"] == "60"
