@@ -9059,6 +9059,15 @@
             "type": "string",
             "title": "Web Base Url"
           },
+          "descriptor_revision": {
+            "type": "string",
+            "title": "Descriptor Revision"
+          },
+          "cache_ttl_seconds": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Cache Ttl Seconds"
+          },
           "compatibility": {
             "$ref": "#/components/schemas/TenantCompatibility"
           },
@@ -9078,6 +9087,8 @@
           "matched_host",
           "api_base_url",
           "web_base_url",
+          "descriptor_revision",
+          "cache_ttl_seconds",
           "compatibility",
           "capabilities"
         ],

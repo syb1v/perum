@@ -335,6 +335,8 @@ Discovery response должен содержать:
   "primary_host": "school.organization.ru",
   "api_base_url": "https://school.organization.ru/api",
   "web_base_url": "https://school.organization.ru",
+  "descriptor_revision": "sha256-content-revision",
+  "cache_ttl_seconds": 3600,
   "compatibility": {},
   "capabilities": {}
 }
@@ -548,7 +550,7 @@ Flow:
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
-| P0 | Tenant discovery | Частично | public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, включая активные aliases организации, и независимый IP rate limit для GET/POST готовы; остаются discovery revision/TTL/rediscovery при смене домена и dynamic compatibility/capabilities |
+| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, content revision и TTL descriptor-а; новые mobile accounts сохраняют school UUID и обновляют endpoint через Core с offline fallback. Остаются dynamic compatibility/capabilities, rediscovery до первого tenant-запроса после expiry, migration legacy accounts без school UUID и mobile lifecycle tests |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
@@ -564,9 +566,11 @@ Flow:
 
 Ближайшая последовательность реализации:
 
-1. Довести discovery до Definition of Done: rediscovery/revision/TTL и dynamic capabilities.
-2. Подключить готовые discovery contract и tenant-scoped single-flight refresh
-   adapter в фоновый mobile compatibility check.
+1. Довести discovery до Definition of Done: dynamic compatibility/capabilities,
+   проверка compatibility в mobile и rediscovery до первого tenant-запроса после
+   expiry descriptor-а.
+2. Добавить migration legacy accounts без school UUID и mobile lifecycle tests;
+   фоновая TTL rediscovery новых accounts уже подключена.
 3. Расширить offline mutation coverage: перенести read states в SQLite outbox,
    поддержать конфликт двух устройств во всех контурах, добавить support ticket
    creation outbox.
@@ -580,43 +584,36 @@ Flow:
 8. Закрыть push/deep links, store compliance, security/accessibility и staged
    production rollout.
 
-### Точка передачи учебного hardening на 2026-07-16
+### Точка передачи на 2026-07-16
 
-Последний завершённый рабочий цикл: version-safe mutation и безопасный перенос
-`LessonOccurrence` реализованы поверх optimistic locking `Grade`. Изменения ещё
-не считаются находящимися в `main`, пока не создан отдельный проверенный коммит.
+Учебный vertical slice находится в `main`: Homework разделён на урок выдачи и
+целевой урок, публикацию и timezone-aware deadline; персональный статус ученика
+поддерживает version CAS, durable receipt и web/mobile conflict resolution.
+`LessonOccurrence` переносится version-safe, Subject/Topic архивируются без
+потери истории, а occurrence backfill выполняется через preview/token-gated
+apply без угадывания legacy Homework по `due_date`.
 
-Следующий изолированный шаг: подключение Homework semantics/state к web и
-mobile outbox без смешивания с occurrence backfill.
+Последний дополнительный hardening завершил единый `VERSION_CONFLICT` contract:
+tenant всегда возвращает server snapshot, web восстанавливает актуальное
+состояние с явным сообщением, mobile сохраняет конфликт для решения пользователя.
 
-Текущее состояние кода:
+В текущем discovery-цикле выполнены отдельные пункты WS7 и этапа 1:
 
-- модель `LessonOccurrence` имеет `version`, уникальный class slot и сохраняет
-  identity/source `schedule_id` при переносе;
-- `PATCH /journal/lesson-occurrences/{occurrence_id}` требует version, выполняет
-  conditional update и различает stale version и занятый слот;
-- `Grade`, `LessonTemplate`, `Homework` и `ControlWork` уже ссылаются на
-  occurrence по `occurrence_id`, поэтому перенос должен сохранять identity
-  существующей записи, а не создавать замену и перепривязывать данные;
-- web передаёт и обновляет occurrence version при смене статуса в
-  `perum-web/src/components/journal/TeacherLessonModal.tsx`;
-- unit-тесты occurrence находятся в
-  `perum-tenant/tests/unit/test_lesson_occurrences.py`.
+- Core публикует детерминированную content revision и конфигурируемый TTL
+  descriptor-а;
+- обязательные поля синхронизированы в Core OpenAPI и generated TypeScript;
+- backend-тест фиксирует одинаковую revision для alias/UUID lookup и её смену
+  вместе с primary host;
+- новые mobile accounts сохраняют school UUID, revision и expiry в registry;
+- после expiry фоновая rediscovery по stable school UUID обновляет endpoint без
+  повторного login, а при недоступности Core сохраняет последний рабочий endpoint.
 
-Минимальный безопасный scope следующего изменения:
-
-1. Добавить `assigned_occurrence_id` и `target_occurrence_id`; не выводить target
-   occurrence из legacy `due_date`.
-2. Разделить `published_at` и timezone-aware `deadline_at`; `overdue` вычислять,
-   а не хранить как постоянное состояние.
-3. Добавить versioned `homework_student_states` со статусами `not_started`,
-   `in_progress`, `completed`.
-4. Подготовить compatibility migration и отчёт неоднозначных legacy Homework;
-   не выполнять недостоверную автоматическую привязку.
-5. Добавить service-level school/class/subject authorization, idempotency и
-   stable conflict contract до подключения mobile outbox.
-6. После Homework semantics отдельно выполнить occurrence backfill для legacy
-   Grade/Homework/ControlWork и только затем расширять teacher offline journal.
+Discovery остаётся частичным: cold start пока восстанавливает tenant session до
+rediscovery просроченного descriptor-а, legacy accounts без school UUID используют
+hostname fallback, compatibility не проверяется клиентом, dynamic capabilities и
+mobile lifecycle tests не реализованы. Следующий изолированный шаг — закрыть эти
+ограничения, затем продолжить offline teacher journal и расширенный conflict QA
+учебного контура.
 
 ## 5. CI и release gates
 

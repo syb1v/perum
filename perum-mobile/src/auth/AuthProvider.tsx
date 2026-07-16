@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
-import { clearAccessToken, createAccountClient, discoverTenant, fetchMe, setAccessToken, tenantLogin } from './api';
+import { clearAccessToken, createAccountClient, discoverTenant, discoverTenantById, fetchMe, setAccessToken, tenantLogin } from './api';
 import { loadRegistry, saveRegistry } from './storage';
 import type { Registry, TenantAccount, TenantRole, TenantUser } from './types';
 import { removeAccountLocalData } from '../query/persistence';
@@ -18,6 +18,7 @@ type AuthContextValue = {
   error: string | null;
   signIn: (host: string, login: string, password: string) => Promise<void>;
   switchAccount: (accountId: string) => Promise<void>;
+  refreshAccountDescriptor: (accountId: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
 };
@@ -123,9 +124,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const nextAccount: TenantAccount = {
         id,
         tenantId: discovery.tenant_id,
+        schoolId: discovery.school_id,
         tenantName: discovery.school_name,
         tenantHost: discovery.canonical_host,
         apiBaseUrl: discovery.api_base_url,
+        descriptorRevision: discovery.descriptor_revision,
+        descriptorExpiresAt: new Date(Date.now() + discovery.cache_ttl_seconds * 1000).toISOString(),
         user,
         refreshToken: response.refresh_token,
       };
@@ -159,6 +163,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function refreshAccountDescriptor(accountId: string) {
+    const current = registry.accounts.find((item) => item.id === accountId);
+    if (!current) return;
+    const discovery = current.schoolId
+      ? await discoverTenantById(current.schoolId)
+      : await discoverTenant(current.tenantHost);
+    if (discovery.tenant_id !== current.tenantId) throw new Error('Tenant identity changed during discovery');
+    const updated = {
+      ...current,
+      schoolId: discovery.school_id,
+      tenantHost: discovery.canonical_host,
+      apiBaseUrl: discovery.api_base_url,
+      descriptorRevision: discovery.descriptor_revision,
+      descriptorExpiresAt: new Date(Date.now() + discovery.cache_ttl_seconds * 1000).toISOString(),
+    };
+    const next = { ...registry, accounts: registry.accounts.map((item) => item.id === accountId ? updated : item) };
+    await persist(next);
+    if (account?.id === accountId) setAccount(updated);
+  }
+
   async function signOut() {
     if (!account) return;
     setBusy(true);
@@ -189,7 +213,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     async () => { await removeAccount(account.id); },
   ) : null;
 
-  return <AuthContext.Provider value={{ ready, busy, account, apiClient, accounts: registry.accounts, error, signIn, switchAccount, signOut, clearError: () => setError(null) }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ready, busy, account, apiClient, accounts: registry.accounts, error, signIn, switchAccount, refreshAccountDescriptor, signOut, clearError: () => setError(null) }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

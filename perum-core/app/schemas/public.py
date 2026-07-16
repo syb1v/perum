@@ -48,5 +48,7 @@ class TenantDiscoveryResponse(BaseModel):
     matched_host: str
     api_base_url: str
     web_base_url: str
+    descriptor_revision: str
+    cache_ttl_seconds: int = Field(gt=0)
     compatibility: TenantCompatibility
     capabilities: TenantCapabilities

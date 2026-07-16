@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-16
 
+- Core discovery-контракт и generated-схемы публикуют content revision и TTL descriptor-а; новые mobile accounts сохраняют school UUID и routing metadata, а фоновая rediscovery после expiry обновляет endpoint без повторного login с сохранением последнего рабочего адреса при недоступности Core.
 - Публичный tenant discovery ограничен независимым sliding-window лимитом по клиентскому IP для GET и POST, с `429` и `Retry-After` при исчерпании лимита.
 - Tenant discovery разрешает пару organization-domain/school-code через активные aliases `OrganizationDomain`, без обращения к устаревшему каноническому полю организации.
 - Homework version conflict унифицирован между tenant, web и mobile: `409 VERSION_CONFLICT` всегда содержит актуальный server snapshot, первый конкурентный переход не теряется, web восстанавливает состояние с явным сообщением, mobile сохраняет конфликт для выбора пользователя.

@@ -84,6 +84,8 @@ def test_authoritative_alias_returns_stable_public_contract():
         "matched_host": "alias.example.com",
         "api_base_url": "https://primary.example.com/api",
         "web_base_url": "https://primary.example.com",
+        "descriptor_revision": response.json()["descriptor_revision"],
+        "cache_ttl_seconds": 3600,
         "compatibility": {"mobile_api_version": 1, "minimum_mobile_api_version": 1},
         "capabilities": {"native_mobile": True},
     }
@@ -141,6 +143,27 @@ def test_post_discovers_by_stable_school_id():
     )
     assert response.status_code == 200
     assert UUID(response.json()["tenant_id"]) == school.public_id
+
+
+def test_revision_is_stable_across_aliases_and_changes_with_primary_host():
+    school, organization = _tenant()
+    domain = SimpleNamespace(status="active")
+    first_primary = SimpleNamespace(domain="first.example.com")
+    second_primary = SimpleNamespace(domain="second.example.com")
+
+    alias_response = _client(_DB([(domain, school, organization)], [(first_primary,)])).get(
+        "/api/public/tenant-discovery", params={"host": "alias.example.com"}
+    )
+    id_response = _client(_DB([(school, organization)], [(first_primary,)])).post(
+        "/api/public/tenant-discovery", json={"school_public_id": str(school.public_id)}
+    )
+    moved_response = _client(_DB([(school, organization)], [(second_primary,)])).post(
+        "/api/public/tenant-discovery", json={"school_public_id": str(school.public_id)}
+    )
+
+    assert alias_response.json()["descriptor_revision"] == id_response.json()["descriptor_revision"]
+    assert moved_response.json()["descriptor_revision"] != id_response.json()["descriptor_revision"]
+    assert moved_response.json()["api_base_url"] == "https://second.example.com/api"
 
 
 @pytest.mark.parametrize(

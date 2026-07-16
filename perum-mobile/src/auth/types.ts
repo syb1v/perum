@@ -11,9 +11,12 @@ export type TenantRole = 'student' | 'parent' | 'teacher' | 'admin' | 'school_ad
 export type TenantAccount = {
   id: string;
   tenantId: string;
+  schoolId?: string;
   tenantName: string;
   tenantHost: string;
   apiBaseUrl: string;
+  descriptorRevision?: string;
+  descriptorExpiresAt?: string;
   user: TenantUser;
   refreshToken: string;
 };

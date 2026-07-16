@@ -1,10 +1,13 @@
+import hashlib
 import ipaddress
+import json
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ratelimit import check_discovery_rate
 from app.models import Organization, OrganizationDomain, School, SchoolDomain
@@ -69,6 +72,23 @@ def _response(
     matched_host: str,
 ) -> TenantDiscoveryResponse:
     web_base_url = f"https://{primary_host}"
+    compatibility = TenantCompatibility(mobile_api_version=1, minimum_mobile_api_version=1)
+    capabilities = TenantCapabilities(native_mobile=True)
+    revision_payload = {
+        "tenant_id": str(school.public_id),
+        "organization_id": str(organization.public_id),
+        "school_id": str(school.public_id),
+        "organization_name": organization.name,
+        "school_name": school.name,
+        "primary_host": primary_host,
+        "api_base_url": f"{web_base_url}/api",
+        "web_base_url": web_base_url,
+        "compatibility": compatibility.model_dump(),
+        "capabilities": capabilities.model_dump(),
+    }
+    descriptor_revision = hashlib.sha256(
+        json.dumps(revision_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
     return TenantDiscoveryResponse(
         tenant_id=school.public_id,
         organization_id=organization.public_id,
@@ -80,8 +100,10 @@ def _response(
         matched_host=matched_host,
         api_base_url=f"{web_base_url}/api",
         web_base_url=web_base_url,
-        compatibility=TenantCompatibility(mobile_api_version=1, minimum_mobile_api_version=1),
-        capabilities=TenantCapabilities(native_mobile=True),
+        descriptor_revision=descriptor_revision,
+        cache_ttl_seconds=get_settings().DISCOVERY_CACHE_TTL_S,
+        compatibility=compatibility,
+        capabilities=capabilities,
     )
 
 

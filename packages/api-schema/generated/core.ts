@@ -2862,6 +2862,10 @@ export interface components {
             api_base_url: string;
             /** Web Base Url */
             web_base_url: string;
+            /** Descriptor Revision */
+            descriptor_revision: string;
+            /** Cache Ttl Seconds */
+            cache_ttl_seconds: number;
             compatibility: components["schemas"]["TenantCompatibility"];
             capabilities: components["schemas"]["TenantCapabilities"];
         };

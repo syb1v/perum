@@ -29,6 +29,7 @@ class Settings(BaseSettings):
 
     DISCOVERY_RATE_LIMIT: int = Field(default=60)
     DISCOVERY_RATE_WINDOW_S: int = Field(default=60)
+    DISCOVERY_CACHE_TTL_S: int = Field(default=3600, gt=0)
 
     # Защита /metrics: если задан — требуется Bearer/X-Metrics-Token. Пусто → открыт (dev).
     METRICS_TOKEN: str = Field(default="")

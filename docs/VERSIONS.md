@@ -311,6 +311,8 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 166 | 2026-07-16 | abf2861 | fix(tenant): усилена безопасность occurrence backfill |
 | 167 | 2026-07-16 | 0077090 | fix(tenant): запрещено повторное использование архива |
 | 168 | 2026-07-16 | dd455ff | ci: расширены обязательные release gates |
-| 169 | 2026-07-16 | _______ | fix(homework): унифицирован контракт первого version conflict |
-| 170 | 2026-07-16 | _______ | fix(core): discovery поддерживает активные aliases домена организации |
-| 171 | 2026-07-16 | _______ | fix(core): discovery ограничен rate limit по IP |
+| 169 | 2026-07-16 | bd5bd8e | docs(versions): закрыты placeholder-хеши и синхронизированы статусы |
+| 170 | 2026-07-16 | 3f3cfe2 | fix(homework): унифицирован контракт version conflict |
+| 171 | 2026-07-16 | edb1a56 | fix(core): discovery поддерживает активные aliases домена организации |
+| 172 | 2026-07-16 | 8a89273 | fix(core): discovery ограничен rate limit по IP |
+| 173 | 2026-07-16 | _______ | feat(discovery): добавлено TTL-обновление tenant descriptor |
