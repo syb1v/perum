@@ -19,10 +19,10 @@ export default function SupportThreadScreen() {
   const queryClient = useQueryClient();
   const [reply, setReply] = useState('');
   const eligible = account?.user.role === 'student' || account?.user.role === 'parent' || account?.user.role === 'teacher';
-  const detail = useQuery({ queryKey: queryKeys.supportTicket(account?.id ?? '', ticketId), enabled: Boolean(account && apiClient && eligible && ticketId), queryFn: () => apiClient!.get<SupportTicket>(`/api/support/tickets/${ticketId}`), refetchInterval: 10_000 });
+  const detail = useQuery({ queryKey: queryKeys.supportTicket(account?.id ?? '', ticketId), enabled: Boolean(account && apiClient && eligible && ticketId), queryFn: () => apiClient!.get<SupportTicket>(`/support/tickets/${ticketId}`), refetchInterval: 10_000 });
   const thread = useInfiniteQuery({
     queryKey: queryKeys.supportThread(account?.id ?? '', ticketId), enabled: Boolean(account && apiClient && eligible && ticketId), initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => apiClient!.get<SupportMessagePage>(`/api/support/tickets/${ticketId}/messages?limit=50${pageParam ? `&before=${encodeURIComponent(pageParam)}` : ''}`),
+    queryFn: ({ pageParam }) => apiClient!.get<SupportMessagePage>(`/support/tickets/${ticketId}/messages?limit=50${pageParam ? `&before=${encodeURIComponent(pageParam)}` : ''}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined, refetchInterval: 10_000,
   });
   const refresh = useCallback(() => { if (!eligible) return; void detail.refetch(); void thread.refetch(); }, [eligible, detail.refetch, thread.refetch]);
@@ -31,7 +31,7 @@ export default function SupportThreadScreen() {
   const latest = serverMessages.at(-1);
   useEffect(() => {
     if (!account || !apiClient || !latest) return;
-    void apiClient.post(`/api/support/tickets/${ticketId}/read`, { message_id: latest.id }).then(() => queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(account.id) })).catch(() => undefined);
+    void apiClient.post(`/support/tickets/${ticketId}/read`, { message_id: latest.id }).then(() => queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(account.id) })).catch(() => undefined);
   }, [account?.id, apiClient, latest?.id, queryClient, ticketId]);
   if (!account || !apiClient || !eligible) return null;
   const optimistic: DisplayMessage[] = sync.pending.filter((item) => item.ticketId === ticketId).map((item) => ({ id: item.clientMessageId, sender_id: account.user.id, side: 'requester', body: item.body, created_at: new Date(item.createdAt).toISOString(), localId: item.id, delivery: item.state === 'failed_permanent' ? 'failed' : 'pending' }));

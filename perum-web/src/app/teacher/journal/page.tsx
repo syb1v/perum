@@ -283,6 +283,7 @@ function TeacherJournalContent() {
                     lessonNumber={selectedLesson.lesson_number}
                     occurrenceId={selectedLesson.occurrence_id}
                     occurrenceStatus={selectedLesson.status}
+                    occurrenceVersion={selectedLesson.version}
                     homework={selectedLesson.homework || []}
                     onClose={() => setLessonModalOpen(false)}
                     onUpdate={() => {

@@ -10,6 +10,7 @@ from datetime import date, datetime, time, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -26,7 +27,7 @@ from app.models.academic import (
     Topic,
     WorkType,
 )
-from app.models.journal import FinalGrade, Grade, LessonTemplate, Transaction
+from app.models.journal import ControlWork, FinalGrade, Grade, LessonTemplate, Transaction
 from app.modules.journal.schemas import AddGradeRequest, FinalGradeRequest, LessonOccurrenceUpdate, LessonTemplateUpdate, UpdateGradeRequest
 from app.modules.academic.occurrences import get_or_create_occurrence
 from app.services.points_calculator import calculate_points, grade_color
@@ -359,17 +360,105 @@ async def update_lesson_occurrence(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Урок не найден")
     if not await _assigned(db, user, occurrence.class_id, occurrence.subject_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому уроку")
+    occurrence_id_value = occurrence.id
+    class_id = occurrence.class_id
+    subject_id = occurrence.subject_id
+    old_date = occurrence.lesson_date
+    old_number = occurrence.lesson_number
+    new_date = payload.lesson_date or occurrence.lesson_date
+    new_number = payload.lesson_number or occurrence.lesson_number
+    if occurrence.version != payload.version:
+        raise HTTPException(status.HTTP_409_CONFLICT, {
+            "code": "LESSON_OCCURRENCE_VERSION_CONFLICT",
+            "message": "Урок уже был изменён",
+            "current_version": occurrence.version,
+        })
     if payload.status is not None:
         if payload.status not in {"scheduled", "cancelled", "completed"}:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Недопустимый статус урока")
-        occurrence.status = payload.status
-    if payload.topic_id is not None:
+    if "topic_id" in payload.model_fields_set and payload.topic_id is not None:
         topic = await db.get(Topic, payload.topic_id)
-        if topic is None or topic.school_id != school_id or topic.subject_id != occurrence.subject_id:
+        if topic is None or topic.school_id != school_id or topic.subject_id != subject_id:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Тема не относится к выбранному предмету")
-        occurrence.topic_id = payload.topic_id
-    await db.commit()
-    return {"success": True, "occurrence_id": occurrence.id, "status": occurrence.status}
+    occupied = await db.scalar(select(LessonOccurrence.id).where(
+        LessonOccurrence.school_id == school_id,
+        LessonOccurrence.class_id == class_id,
+        LessonOccurrence.lesson_date == new_date,
+        LessonOccurrence.lesson_number == new_number,
+        LessonOccurrence.id != occurrence_id_value,
+    ))
+    if occupied is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, {
+            "code": "LESSON_OCCURRENCE_SLOT_CONFLICT",
+            "message": "Этот слот класса уже занят",
+        })
+
+    values = {
+        "lesson_date": new_date,
+        "lesson_number": new_number,
+        "version": LessonOccurrence.version + 1,
+    }
+    if payload.status is not None:
+        values["status"] = payload.status
+    if "topic_id" in payload.model_fields_set:
+        values["topic_id"] = payload.topic_id
+    try:
+        result = await db.execute(update(LessonOccurrence).where(
+            LessonOccurrence.id == occurrence_id_value,
+            LessonOccurrence.school_id == school_id,
+            LessonOccurrence.version == payload.version,
+        ).values(**values))
+    except IntegrityError as error:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, {
+            "code": "LESSON_OCCURRENCE_SLOT_CONFLICT",
+            "message": "Этот слот класса уже занят",
+        }) from error
+    if result.rowcount != 1:
+        await db.rollback()
+        current_version = await db.scalar(select(LessonOccurrence.version).where(
+            LessonOccurrence.id == occurrence_id_value,
+            LessonOccurrence.school_id == school_id,
+        ))
+        raise HTTPException(status.HTTP_409_CONFLICT, {
+            "code": "LESSON_OCCURRENCE_VERSION_CONFLICT",
+            "message": "Урок уже был изменён",
+            "current_version": current_version,
+        })
+
+    moved = new_date != old_date or new_number != old_number
+    if moved:
+        lesson_datetime = datetime.combine(new_date, time.min)
+        await db.execute(update(LessonTemplate).where(
+            LessonTemplate.school_id == school_id,
+            LessonTemplate.occurrence_id == occurrence_id_value,
+        ).values(lesson_date=new_date))
+        await db.execute(update(Grade).where(
+            Grade.school_id == school_id,
+            Grade.occurrence_id == occurrence_id_value,
+        ).values(lesson_date=lesson_datetime))
+        await db.execute(update(ControlWork).where(
+            ControlWork.school_id == school_id,
+            ControlWork.occurrence_id == occurrence_id_value,
+        ).values(work_date=lesson_datetime))
+    try:
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, {
+            "code": "LESSON_OCCURRENCE_SLOT_CONFLICT",
+            "message": "Этот слот класса уже занят",
+        }) from error
+    updated = await db.get(LessonOccurrence, occurrence_id_value)
+    return {
+        "success": True,
+        "occurrence_id": updated.id,
+        "status": updated.status,
+        "lesson_date": updated.lesson_date.isoformat(),
+        "lesson_number": updated.lesson_number,
+        "topic_id": updated.topic_id,
+        "version": updated.version,
+    }
 
 
 # ---- periods ----

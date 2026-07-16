@@ -625,6 +625,7 @@ export type LessonOccurrenceStatus = 'scheduled' | 'cancelled' | 'completed';
 export interface LessonOccurrenceInfo {
     occurrence_id: number | null;
     status: LessonOccurrenceStatus;
+    version: number | null;
 }
 
 /* Analytics types */

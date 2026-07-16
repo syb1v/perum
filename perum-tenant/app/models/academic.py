@@ -191,6 +191,7 @@ class LessonOccurrence(Base):
             "status IN ('scheduled', 'cancelled', 'completed')",
             name="ck_lesson_occurrence_status",
         ),
+        CheckConstraint("version > 0", name="ck_lesson_occurrence_version"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
@@ -204,6 +205,7 @@ class LessonOccurrence(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="scheduled", server_default="scheduled")
     topic_id: Mapped[int | None] = mapped_column(ForeignKey("topics.id", ondelete="SET NULL"), nullable=True)
     work_type_id: Mapped[int | None] = mapped_column(ForeignKey("work_types.id", ondelete="SET NULL"), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 

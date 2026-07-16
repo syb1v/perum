@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.deps import require_org_admin, require_platform_admin
-from app.models import Node, NodeAssignment, Organization, School, SchoolDomain
+from app.models import Node, NodeAssignment, OrgAdmin, Organization, School, SchoolDomain
 from app.schemas.node import (
     BootstrapScriptResponse,
     CapacityRecommendationRequest,
@@ -443,10 +443,10 @@ async def get_capacity_recommendation(
 @org_nodes_router.get("", response_model=NodeListResponse)
 async def list_org_nodes(
     db: AsyncSession = Depends(get_db),
-    org: Organization = Depends(require_org_admin),
+    admin: OrgAdmin = Depends(require_org_admin),
 ) -> NodeListResponse:
     result = await db.execute(
-        select(Node).where(Node.org_id == org.id).order_by(Node.created_at.desc())
+        select(Node).where(Node.org_id == admin.org_id).order_by(Node.created_at.desc())
     )
     nodes = result.scalars().all()
 
@@ -460,10 +460,10 @@ async def list_org_nodes(
 async def get_org_node(
     node_id: int,
     db: AsyncSession = Depends(get_db),
-    org: Organization = Depends(require_org_admin),
+    admin: OrgAdmin = Depends(require_org_admin),
 ) -> NodeResponse:
     node = await db.get(Node, node_id)
-    if not node or node.org_id != org.id:
+    if not node or node.org_id != admin.org_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
     return NodeResponse.model_validate(node)
 
@@ -472,10 +472,10 @@ async def get_org_node(
 async def get_org_node_utilization(
     node_id: int,
     db: AsyncSession = Depends(get_db),
-    org: Organization = Depends(require_org_admin),
+    admin: OrgAdmin = Depends(require_org_admin),
 ) -> NodeUtilizationResponse:
     node = await db.get(Node, node_id)
-    if not node or node.org_id != org.id:
+    if not node or node.org_id != admin.org_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Node not found")
 
     from app.services.node_monitor import refresh_node_metrics

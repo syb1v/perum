@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token, verify_password
 from app.core.time import utc_now
 from app.core.config import get_settings
-from app.models import RefreshSession, User
+from app.models import RefreshSession, School, User
 
 settings = get_settings()
 
@@ -29,7 +29,11 @@ def _access_token(user: User, session: RefreshSession) -> str:
 
 
 async def authenticate(db: AsyncSession, login: str, password: str, metadata: dict | None = None) -> tuple[str, str]:
-    result = await db.execute(select(User).where(User.login == login))
+    result = await db.execute(
+        select(User)
+        .outerjoin(School, School.id == User.school_id)
+        .where(User.login == login, (User.school_id.is_(None)) | (School.is_active.is_(True)))
+    )
     user = result.scalar_one_or_none()
     if user is None or not user.is_active or not verify_password(password, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Неверный логин или пароль")
@@ -62,7 +66,14 @@ async def rotate_refresh(db: AsyncSession, refresh_token: str) -> tuple[str, str
         session.revoked_at = now
         await db.commit()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh token reuse detected")
-    user = await db.get(User, session.user_id)
+    user = await db.scalar(
+        select(User)
+        .outerjoin(School, School.id == User.school_id)
+        .where(
+            User.id == session.user_id,
+            (User.school_id.is_(None)) | (School.is_active.is_(True)),
+        )
+    )
     if session.revoked_at or session.expires_at <= now or user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "refresh session expired or revoked")
     new_token = secrets.token_urlsafe(48)

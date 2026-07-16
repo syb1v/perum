@@ -21,10 +21,10 @@ export default function ThreadScreen() {
   const [body, setBody] = useState('');
   const [report, setReport] = useState<{ message: Message; category: ReportCreate['category']; comment: string; clientId: string } | null>(null);
   const [reportState, setReportState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-  const conversation = useQuery({ queryKey: queryKeys.conversation(account?.id ?? '', conversationId), enabled: Boolean(account && apiClient && Number.isFinite(conversationId)), queryFn: () => apiClient!.get<Conversation>(`/api/social/conversations/${conversationId}`), refetchInterval: 15_000 });
+  const conversation = useQuery({ queryKey: queryKeys.conversation(account?.id ?? '', conversationId), enabled: Boolean(account && apiClient && Number.isFinite(conversationId)), queryFn: () => apiClient!.get<Conversation>(`/social/conversations/${conversationId}`), refetchInterval: 15_000 });
   const history = useInfiniteQuery({
     queryKey: queryKeys.messages(account?.id ?? '', conversationId), enabled: Boolean(account && apiClient && Number.isFinite(conversationId)), initialPageParam: null as number | null,
-    queryFn: ({ pageParam }) => apiClient!.get<MessagePage>(`/api/social/conversations/${conversationId}/messages?limit=50${pageParam === null ? '' : `&cursor=${pageParam}`}`),
+    queryFn: ({ pageParam }) => apiClient!.get<MessagePage>(`/social/conversations/${conversationId}/messages?limit=50${pageParam === null ? '' : `&cursor=${pageParam}`}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined, refetchInterval: 10_000,
   });
   useFocusEffect(useCallback(() => { void history.refetch(); void conversation.refetch(); }, [history.refetch, conversation.refetch]));
@@ -35,7 +35,7 @@ export default function ThreadScreen() {
   const latestId = serverMessages.reduce((max, item) => Math.max(max, item.id), 0);
   useEffect(() => {
     if (!apiClient || !account || !latestId || !conversation.data?.unread_count) return;
-    void apiClient.post(`/api/social/conversations/${conversationId}/read`, { message_id: latestId }).then(() => {
+    void apiClient.post(`/social/conversations/${conversationId}/read`, { message_id: latestId }).then(() => {
       queryClient.setQueryData(queryKeys.conversation(account.id, conversationId), { ...conversation.data, unread_count: 0 });
       void queryClient.invalidateQueries({ queryKey: queryKeys.conversations(account.id) });
     }).catch(() => undefined);
@@ -52,7 +52,7 @@ export default function ThreadScreen() {
     if (!report || !apiClient || report.message.sender_id === account?.user.id || report.message.body === null || offline) return;
     setReportState('sending');
     const payload: ReportCreate = { message_id: report.message.id, category: report.category, comment: report.comment.trim() || null, client_report_id: report.clientId };
-    try { await apiClient.post<ReportOut>('/api/social/reports', payload); setReportState('success'); }
+    try { await apiClient.post<ReportOut>('/social/reports', payload); setReportState('success'); }
     catch { setReportState('error'); }
   };
   const categories: { value: ReportCreate['category']; label: string }[] = [{ value: 'harassment', label: 'Оскорбления' }, { value: 'bullying', label: 'Травля' }, { value: 'threats', label: 'Угрозы' }, { value: 'hate', label: 'Язык ненависти' }, { value: 'sexual', label: 'Неприемлемый контент' }, { value: 'spam', label: 'Спам' }, { value: 'other', label: 'Другое' }];

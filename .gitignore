@@ -69,3 +69,4 @@ deploy/stacks/
 .claude/local/
 CF_API_пэрум.txt
 git token opencode
+opencode.json

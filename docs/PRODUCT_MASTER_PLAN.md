@@ -211,8 +211,11 @@ support.attachments.enabled
 ```
 
 Tenant получает versioned entitlement snapshot и продолжает работу при
-временной недоступности core. При просрочке сначала блокируется рост и premium
-customization, а учебные данные переходят в read-only только после grace.
+временной недоступности core. Существующую остановку school app за просрочку не
+развивать и не считать целевой моделью enforcement. До отдельного продуктового,
+юридического и операционного решения просрочка не должна автоматически
+останавливать учебный контур. Порядок ограничений, grace period, read-only и
+восстановления сервиса проектируется отдельно перед реализацией enforcement.
 
 #### UI
 
@@ -515,7 +518,7 @@ Flow:
 - checkout/webhooks/refunds/reconciliation;
 - entitlements/snapshots;
 - org/platform UI;
-- staged enforcement.
+- отдельное решение по последствиям просрочки и только затем staged enforcement.
 
 ### Этап 8. React Native foundation, 4–6 недель
 
@@ -548,13 +551,13 @@ Flow:
 | P0 | Tenant discovery | Частично | public UUID, org-domain + school-code flow, primary/matched host, indexed lookup, rediscovery при смене домена |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
-| P1 | Учебный hardening | Частично | optimistic locking Grade update/delete завершён и отправлен в `main` (`0e9ccc7`); остаются version-safe LessonOccurrence, safe lesson transfer, offline mutation contracts и conflict QA |
+| P1 | Учебный hardening | Частично | optimistic locking Grade update/delete находится в `main` (`0e9ccc7`); version-safe LessonOccurrence и safe lesson transfer реализованы и проверены в рабочем цикле 2026-07-16, остаются Homework semantics/state, occurrence backfill, offline mutation contracts и расширенный conflict QA |
 | P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI и native requester offline outbox готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate, reply pull/ack inbox, correlation/audit и web workflows готовы; остаются production delivery observability/SLA и native admin/org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, read state, offline outbox, reports, evidence-scoped moderation/audit, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
-| P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements, org/platform UI, enforcement |
+| P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, encrypted installation/account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
 | P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
@@ -568,8 +571,9 @@ Flow:
    tenant/account switcher и logout как первый end-to-end vertical slice.
 4. Параллельно закрыть Friends до Definition of Done и реализовать media
    pipeline, поскольку он блокирует support и chats.
-5. Добавить version-safe перенос LessonOccurrence, затем завершить учебные
-   offline mutation contracts и conflict QA до teacher mobile journal.
+5. Разделить Homework semantics и персональный status, выполнить occurrence
+   backfill, затем завершить offline mutation contracts и conflict QA до teacher
+   mobile journal; version-safe перенос LessonOccurrence уже реализован.
 6. Реализовать school support, затем organization-gated core escalation.
 7. Реализовать chats/moderation, billing и mobile parity по ролям.
 8. Закрыть push/deep links, store compliance, security/accessibility и staged
@@ -577,46 +581,41 @@ Flow:
 
 ### Точка передачи учебного hardening на 2026-07-16
 
-Последний завершённый шаг: optimistic locking для изменения и удаления `Grade`
-находится в `main`, коммит `0e9ccc7`. После него реализация следующего шага не
-начиналась; было выполнено только первичное исследование текущего контура.
+Последний завершённый рабочий цикл: version-safe mutation и безопасный перенос
+`LessonOccurrence` реализованы поверх optimistic locking `Grade`. Изменения ещё
+не считаются находящимися в `main`, пока не создан отдельный проверенный коммит.
 
-Следующий изолированный шаг: version-safe перенос `LessonOccurrence`.
+Следующий изолированный шаг: разделение Homework semantics и персонального
+статуса выполнения без смешивания с occurrence backfill.
 
 Текущее состояние кода:
 
-- модель `LessonOccurrence` находится в
-  `perum-tenant/app/models/academic.py`, имеет уникальный слот
-  `(school_id, class_id, lesson_date, lesson_number)`, но не имеет `version`;
-- `PATCH /journal/lesson-occurrences/{occurrence_id}` принимает только `status`
-  и `topic_id`, не проверяет версию и не переносит урок;
+- модель `LessonOccurrence` имеет `version`, уникальный class slot и сохраняет
+  identity/source `schedule_id` при переносе;
+- `PATCH /journal/lesson-occurrences/{occurrence_id}` требует version, выполняет
+  conditional update и различает stale version и занятый слот;
 - `Grade`, `LessonTemplate`, `Homework` и `ControlWork` уже ссылаются на
   occurrence по `occurrence_id`, поэтому перенос должен сохранять identity
   существующей записи, а не создавать замену и перепривязывать данные;
-- web сейчас использует endpoint occurrence только для смены статуса в
+- web передаёт и обновляет occurrence version при смене статуса в
   `perum-web/src/components/journal/TeacherLessonModal.tsx`;
-- базовые unit-тесты occurrence находятся в
+- unit-тесты occurrence находятся в
   `perum-tenant/tests/unit/test_lesson_occurrences.py`.
 
 Минимальный безопасный scope следующего изменения:
 
-1. Добавить `LessonOccurrence.version` с миграцией, `NOT NULL`, default `1`.
-2. Сделать version обязательной для mutation-контракта occurrence и выполнять
-   атомарный conditional update по `id + school_id + version`.
-3. Добавить явный контракт переноса с новой датой и номером урока; сохранить
-   `occurrence_id` и обновить денормализованные даты связанных записей там, где
-   они являются частью пользовательского представления урока.
-4. До записи проверить teacher assignment, диапазон номера урока и отсутствие
-   занятого class slot; конфликт версии и конфликт слота возвращать как `409` с
-   различимыми стабильными кодами для offline-клиента.
-5. Не требовать наличия исходного recurring `Schedule` в новой дате: перенос
-   является исключением расписания. `schedule_id` должен описывать источник, а
-   не блокировать новую позицию occurrence.
-6. Покрыть тестами успешный перенос с сохранением identity/связей, stale
-   version, занятый слот, cross-school/unauthorized доступ и смену статуса по
-   новому version-safe контракту.
-7. После backend-контракта обновить web types/call site и только затем расширять
-   offline teacher journal/outbox; не смешивать это с текущим backend-шагом.
+1. Добавить `assigned_occurrence_id` и `target_occurrence_id`; не выводить target
+   occurrence из legacy `due_date`.
+2. Разделить `published_at` и timezone-aware `deadline_at`; `overdue` вычислять,
+   а не хранить как постоянное состояние.
+3. Добавить versioned `homework_student_states` со статусами `not_started`,
+   `in_progress`, `completed`.
+4. Подготовить compatibility migration и отчёт неоднозначных legacy Homework;
+   не выполнять недостоверную автоматическую привязку.
+5. Добавить service-level school/class/subject authorization, idempotency и
+   stable conflict contract до подключения mobile outbox.
+6. После Homework semantics отдельно выполнить occurrence backfill для legacy
+   Grade/Homework/ControlWork и только затем расширять teacher offline journal.
 
 ## 5. CI и release gates
 

@@ -86,6 +86,11 @@ def test_links_scope_isolation_and_retention_snapshot():
                 assert links.value.status_code == 422
             message = await service.send_message(db, users[0], conversation.id, "safe", "Version 1.2 is fine, hello.worldwide too")
             assert message.expires_at >= message.created_at + timedelta(days=29)
+            message.is_visible = False
+            await db.commit()
+            preview = await service.conversation_out(db, users[1], conversation)
+            assert preview["last_message"] is None
+            assert preview["unread_count"] == 0
             with pytest.raises(HTTPException) as foreign:
                 await service.conversation_for_member(db, users[3], conversation.id)
             assert foreign.value.status_code == 404

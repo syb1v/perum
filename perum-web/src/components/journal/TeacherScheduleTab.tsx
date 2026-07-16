@@ -33,6 +33,7 @@ interface TeacherLesson {
     control_work: ControlWorkInfo | null;
     occurrence_id: number | null;
     status: LessonOccurrenceStatus;
+    version: number | null;
 }
 
 interface TeacherDiaryDay {

@@ -20,7 +20,7 @@ export default function SupportTicketsScreen() {
     queryKey: queryKeys.supportTickets(account?.id ?? ''),
     enabled: Boolean(account && apiClient && eligible),
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => apiClient!.get<SupportTicketPage>(`/api/support/tickets?limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    queryFn: ({ pageParam }) => apiClient!.get<SupportTicketPage>(`/support/tickets?limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
     refetchInterval: 15_000,
   });

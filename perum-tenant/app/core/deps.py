@@ -20,7 +20,7 @@ from app.core.db import get_db
 from app.core.roles import DIRECTOR, ORG_ADMIN, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.security import decode_access_token
 from app.core.time import utc_now
-from app.models import RefreshSession, User
+from app.models import RefreshSession, School, User
 
 settings = get_settings()
 
@@ -46,7 +46,14 @@ async def get_current_user(
         )
 
     sub = payload.get("sub")
-    user = await db.get(User, int(sub)) if sub is not None else None
+    user = await db.scalar(
+        select(User)
+        .outerjoin(School, School.id == User.school_id)
+        .where(
+            User.id == int(sub),
+            (User.school_id.is_(None)) | (School.is_active.is_(True)),
+        )
+    ) if sub is not None else None
     if user is None or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "user not found or inactive", _UNAUTH)
     if payload.get("typ") == "access":

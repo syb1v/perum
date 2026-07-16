@@ -79,7 +79,14 @@ async def send_notifications(db: AsyncSession, school_id: int, message: str, tar
     elif target == "user":
         if not user_id:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Укажите пользователя")
-        ids = [user_id]
+        target_user_id = await db.scalar(select(User.id).where(
+            User.id == user_id,
+            User.school_id == school_id,
+            User.is_active.is_(True),
+        ))
+        if target_user_id is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
+        ids = [target_user_id]
     else:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Неизвестная цель рассылки")
 

@@ -16,7 +16,7 @@ export default function MessagesScreen() {
     queryKey: queryKeys.conversations(account?.id ?? ''),
     enabled: Boolean(account && apiClient),
     initialPageParam: null as number | null,
-    queryFn: ({ pageParam }) => apiClient!.get<ConversationPage>(`/api/social/conversations?limit=30${pageParam === null ? '' : `&cursor=${pageParam}`}`),
+    queryFn: ({ pageParam }) => apiClient!.get<ConversationPage>(`/social/conversations?limit=30${pageParam === null ? '' : `&cursor=${pageParam}`}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
     refetchInterval: 15_000,
   });

@@ -60,7 +60,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
       const ownGeneration = generation;
       setStatus('reconnecting');
       try {
-        const response = await apiClient.post<RealtimeTicket>('/api/social/realtime-ticket');
+        const response = await apiClient.post<RealtimeTicket>('/social/realtime-ticket');
         if (!alive || ownGeneration !== generation || !lifecycle()) return;
         const next = new WebSocket(realtimeUrl(account.apiBaseUrl, response.websocket_path, response.ticket));
         socket = next;

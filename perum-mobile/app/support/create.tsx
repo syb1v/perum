@@ -27,7 +27,7 @@ export default function CreateSupportTicketScreen() {
     if (network.isConnected !== true || submitting || !subject.trim() || !body.trim()) return;
     setSubmitting(true); setError('');
     try {
-      const result = await apiClient.post<SupportTicketCreateOut>('/api/support/tickets', { client_ticket_id: makeId(), client_message_id: makeId(), category, subject: subject.trim(), body: body.trim() });
+      const result = await apiClient.post<SupportTicketCreateOut>('/support/tickets', { client_ticket_id: makeId(), client_message_id: makeId(), category, subject: subject.trim(), body: body.trim() });
       await queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(account.id) });
       router.replace({ pathname: '/support/[ticketId]', params: { ticketId: result.ticket.id } });
     } catch {

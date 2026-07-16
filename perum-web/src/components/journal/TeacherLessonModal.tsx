@@ -30,6 +30,7 @@ interface TeacherLessonModalProps {
     lessonNumber: number;
     occurrenceId: number | null;
     occurrenceStatus: LessonOccurrenceStatus;
+    occurrenceVersion: number | null;
     homework: HomeworkInfo[];
     onClose: () => void;
     onUpdate: () => void;
@@ -46,6 +47,7 @@ export default function TeacherLessonModal({
     lessonNumber,
     occurrenceId,
     occurrenceStatus,
+    occurrenceVersion,
     homework,
     onClose,
     onUpdate,
@@ -65,17 +67,19 @@ export default function TeacherLessonModal({
     const [homeworkModalOpen, setHomeworkModalOpen] = useState(false);
     const [selectedHomework, setSelectedHomework] = useState<HomeworkInfo | null>(null);
     const [status, setStatus] = useState(occurrenceStatus);
+    const [version, setVersion] = useState(occurrenceVersion);
     const [statusLoading, setStatusLoading] = useState(false);
 
     const updateStatus = async (nextStatus: LessonOccurrenceStatus) => {
-        if (!occurrenceId) {
+        if (!occurrenceId || version === null) {
             showError('Урок ещё не создан на сервере');
             return;
         }
         if (nextStatus === 'cancelled' && !confirm('Отменить этот урок?')) return;
         setStatusLoading(true);
         try {
-            await api.patch(`/journal/lesson-occurrences/${occurrenceId}`, { status: nextStatus });
+            const result = await api.patch<{ version: number }>(`/journal/lesson-occurrences/${occurrenceId}`, { version, status: nextStatus });
+            setVersion(result.version);
             setStatus(nextStatus);
             showSuccess(nextStatus === 'cancelled' ? 'Урок отменён' : nextStatus === 'completed' ? 'Урок отмечен проведённым' : 'Урок восстановлен');
             onUpdate();

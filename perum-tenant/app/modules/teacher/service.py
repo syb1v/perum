@@ -299,6 +299,7 @@ async def teacher_diary(db: AsyncSession, school_id: int, user: User, week_offse
                 "control_work": cw_map.get(cw_key),
                 "occurrence_id": occurrence.id if occurrence else None,
                 "status": occurrence.status if occurrence else "scheduled",
+                "version": occurrence.version if occurrence else None,
             })
 
         diary[str(day)] = {

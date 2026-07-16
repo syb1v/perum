@@ -26,7 +26,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
     const refresh = async () => { const rows = await sqliteSupportOutbox.getByAccount(accountId); if (alive) setPending(rows); };
     const send = async (item: SupportMutation): Promise<SupportSendResult> => {
       try {
-        return { type: 'success', message: await apiClient.post<SupportMessage>(`/api/support/tickets/${item.ticketId}/messages`, { client_message_id: item.clientMessageId, body: item.body }) };
+        return { type: 'success', message: await apiClient.post<SupportMessage>(`/support/tickets/${item.ticketId}/messages`, { client_message_id: item.clientMessageId, body: item.body }) };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
         return { type: 'http', status: error.status, message: error.message };

@@ -3839,10 +3839,16 @@ export interface components {
         };
         /** LessonOccurrenceUpdate */
         LessonOccurrenceUpdate: {
+            /** Version */
+            version: number;
             /** Status */
             status?: string | null;
             /** Topic Id */
             topic_id?: number | null;
+            /** Lesson Date */
+            lesson_date?: string | null;
+            /** Lesson Number */
+            lesson_number?: number | null;
         };
         /** LessonTemplateUpdate */
         LessonTemplateUpdate: {
@@ -4654,6 +4660,8 @@ export interface components {
         };
         /** UpdateGradeRequest */
         UpdateGradeRequest: {
+            /** Version */
+            version: number;
             /** Grade Value */
             grade_value?: number | null;
             /** Work Type Id */
@@ -9094,7 +9102,9 @@ export interface operations {
     };
     delete_grade_api_journal_grades__grade_id__delete: {
         parameters: {
-            query?: never;
+            query: {
+                version: number;
+            };
             header?: never;
             path: {
                 grade_id: number;

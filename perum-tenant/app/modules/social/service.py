@@ -183,8 +183,8 @@ async def conversation_out(db: AsyncSession, user: User, conversation: Conversat
     peer, class_ = peer_row
     member = await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation.id, ConversationMember.user_id == user.id, ConversationMember.school_id == user.school_id))
     now = utc_now()
-    unread = await db.scalar(select(func.count(Message.id)).where(Message.conversation_id == conversation.id, Message.school_id == user.school_id, Message.sender_id != user.id, Message.expires_at > now, Message.id > (member.last_read_message_id or 0)))
-    last = await db.scalar(select(Message).where(Message.id == conversation.last_message_id, Message.school_id == user.school_id, Message.expires_at > now)) if conversation.last_message_id else None
+    unread = await db.scalar(select(func.count(Message.id)).where(Message.conversation_id == conversation.id, Message.school_id == user.school_id, Message.sender_id != user.id, Message.is_visible.is_(True), Message.expires_at > now, Message.id > (member.last_read_message_id or 0)))
+    last = await db.scalar(select(Message).where(Message.id == conversation.last_message_id, Message.school_id == user.school_id, Message.is_visible.is_(True), Message.expires_at > now)) if conversation.last_message_id else None
     can_send = conversation.is_active and not conversation.is_locked and await _can_message(db, user, peer_id)
     return {"id": conversation.id, "peer": _profile(peer, class_), "last_message": last, "unread_count": unread or 0, "can_send": can_send, "disabled_reason": None if can_send else "unavailable", "created_at": conversation.created_at}
 

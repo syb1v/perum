@@ -26,7 +26,7 @@ export function MessagesProvider({ children }: PropsWithChildren) {
     const refresh = async () => { const rows = await sqliteMessageOutbox.getByAccount(accountId); if (alive) setPending(rows); };
     const send = async (item: MessageMutation): Promise<SendResult> => {
       try {
-        const message = await apiClient.post<Message>(`/api/social/conversations/${item.conversationId}/messages`, { client_message_id: item.clientMessageId, body: item.body });
+        const message = await apiClient.post<Message>(`/social/conversations/${item.conversationId}/messages`, { client_message_id: item.clientMessageId, body: item.body });
         return { type: 'success', message };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };

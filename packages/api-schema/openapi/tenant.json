@@ -6644,6 +6644,15 @@
               "type": "integer",
               "title": "Grade Id"
             }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Version"
+            }
           }
         ],
         "responses": {
@@ -13417,6 +13426,11 @@
       },
       "LessonOccurrenceUpdate": {
         "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
           "status": {
             "anyOf": [
               {
@@ -13438,9 +13452,37 @@
               }
             ],
             "title": "Topic Id"
+          },
+          "lesson_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Date"
+          },
+          "lesson_number": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 8.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Number"
           }
         },
         "type": "object",
+        "required": [
+          "version"
+        ],
         "title": "LessonOccurrenceUpdate"
       },
       "LessonTemplateUpdate": {
@@ -15827,6 +15869,10 @@
       },
       "UpdateGradeRequest": {
         "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
           "grade_value": {
             "anyOf": [
               {
@@ -15895,6 +15941,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "version"
+        ],
         "title": "UpdateGradeRequest"
       },
       "UpdateScheduleRequest": {

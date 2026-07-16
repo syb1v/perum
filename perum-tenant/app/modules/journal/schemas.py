@@ -1,4 +1,6 @@
-from pydantic import BaseModel
+from datetime import date
+
+from pydantic import BaseModel, Field
 
 
 class AddGradeRequest(BaseModel):
@@ -48,5 +50,8 @@ class LessonTemplateUpdate(BaseModel):
 
 
 class LessonOccurrenceUpdate(BaseModel):
+    version: int = Field(ge=1)
     status: str | None = None
     topic_id: int | None = None
+    lesson_date: date | None = None
+    lesson_number: int | None = Field(default=None, ge=1, le=8)
