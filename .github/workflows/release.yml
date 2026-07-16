@@ -12,15 +12,23 @@ name: Release (detect changes, build & push, register tenant release)
 # секрет RELEASE_PUBLISH_TOKEN. См. docs/RELEASING.md.
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch: {}
 
+concurrency:
+  group: release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
 env:
   REGISTRY: ghcr.io
+  RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
   changes:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.filter.outputs.core }}
@@ -28,6 +36,9 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 2
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -66,11 +77,13 @@ jobs:
     steps:
       - if: matrix.changed == 'true'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
 
       - name: Derive image tag from commit
         if: matrix.changed == 'true'
         id: meta
-        run: echo "tag=git-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+        run: echo "tag=git-${RELEASE_SHA::12}" >> "$GITHUB_OUTPUT"
 
       - if: matrix.changed == 'true'
         uses: docker/setup-buildx-action@v3
@@ -136,6 +149,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.RELEASE_SHA }}
           fetch-depth: 0  # нужен git-лог для changelog
 
       - name: Build changelog + read semver from VERSION
@@ -144,11 +158,11 @@ jobs:
           # Образ остаётся на git-<sha> (immutable, реально пушится выше). Человеческая
           # версия (version_tag) — из perum-tenant/VERSION (семвер x.y.z). Чтобы выкатить
           # релиз, надо бампнуть VERSION: иначе ядро отклонит дубликат version_tag.
-          IMAGE_TAG="git-${GITHUB_SHA::12}"
+          IMAGE_TAG="git-${RELEASE_SHA::12}"
           VERSION="$(tr -d ' \t\n\r' < perum-tenant/VERSION 2>/dev/null || true)"
           [ -z "$VERSION" ] && VERSION="$IMAGE_TAG"
-          RANGE="${{ github.event.before }}..${{ github.sha }}"
-          if ! git rev-parse "${{ github.event.before }}" >/dev/null 2>&1; then RANGE="HEAD~20..HEAD"; fi
+          RANGE="${RELEASE_SHA}^..${RELEASE_SHA}"
+          if ! git rev-parse "${RELEASE_SHA}^" >/dev/null 2>&1; then RANGE="HEAD~20..HEAD"; fi
           CHANGELOG=$(git log --no-merges --pretty=format:'- %s' $RANGE -- perum-tenant | head -40)
           [ -z "$CHANGELOG" ] && CHANGELOG="- обновление тенанта ($VERSION)"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
@@ -167,7 +181,7 @@ jobs:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/perum-tenant:${{ steps.cl.outputs.image_tag }}
           TAG: ${{ steps.cl.outputs.version }}
           CHANGELOG: ${{ steps.cl.outputs.changelog }}
-          SHA: ${{ github.sha }}
+          SHA: ${{ env.RELEASE_SHA }}
         run: |
           jq -n --arg v "$TAG" --arg img "$IMAGE" --arg cl "$CHANGELOG" --arg sha "$SHA" \
             '{version_tag:$v, image:$img, changelog:$cl, source_commit:$sha, make_current:true}' \
