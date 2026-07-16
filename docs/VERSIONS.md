@@ -300,3 +300,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 155 | 2026-07-16 | _______ | feat(web): подключена новая Homework-семантика учителя |
 | 156 | 2026-07-16 | _______ | feat(web): добавлен статус выполнения Homework ученика |
 | 157 | 2026-07-16 | _______ | feat(mobile): добавлен offline outbox статусов Homework |
+| 158 | 2026-07-16 | _______ | feat(tenant): добавлен безопасный occurrence backfill |

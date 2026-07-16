@@ -32,6 +32,7 @@ from app.modules.school_admin.schemas import (
     WorkTypeUpdate,
 )
 from app.modules.school_admin.service import resolve_school_id
+from app.modules.academic.backfill import apply_plan, build_plan
 
 router = APIRouter()
 
@@ -78,8 +79,22 @@ class SyncAssignmentsRequest(BaseModel):
     class_ids: list[int] = []
 
 
+class OccurrenceBackfillApply(BaseModel):
+    plan_token: str
+
+
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
+
+
+@router.get("/maintenance/occurrence-backfill")
+async def occurrence_backfill_preview(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    return await build_plan(db, await _school(user, db))
+
+
+@router.post("/maintenance/occurrence-backfill")
+async def occurrence_backfill_apply(payload: OccurrenceBackfillApply, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+    return await apply_plan(db, await _school(user, db), payload.plan_token)
 
 
 # Школами и их администраторами управляет org_admin в ЯДРЕ (perum-core,
