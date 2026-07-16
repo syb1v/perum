@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-16
 
+- Push installation защищена proof-of-possession: mobile хранит отдельный 256-битный секрет в SecureStore, tenant хранит только SHA-256 digest и не позволяет пользователю той же школы перехватить endpoint по известному installation UUID; proof отзыва передаётся в заголовке, а не URL.
 - Добавлен version-safe перенос `LessonOccurrence`: identity и источник расписания сохраняются, связанные даты журнала обновляются атомарно, stale version и занятый слот возвращают различимые `409`, а web передаёт и обновляет актуальную версию урока.
 - Закрыты OpSec-дефекты изоляции: org admin видит ноды только своей организации, адресная рассылка не пересекает школы, деактивированная школа не может создавать или продолжать сессии, скрытые moderation-сообщения не попадают в preview и unread count.
 - Mobile social, support и realtime приведены к canonical discovery contract: `api_base_url` уже содержит `/api`, поэтому клиент больше не формирует ошибочные URL с повторным `/api`.

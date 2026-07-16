@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class RegistrationPut(BaseModel):
+    installation_secret: str = Field(min_length=43, max_length=128, pattern=r"^[A-Za-z0-9_-]+$")
     provider: Literal["expo", "fcm", "apns", "rustore", "huawei"]
     platform: Literal["ios", "android"]
     environment: Literal["development", "production"]

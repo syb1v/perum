@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -23,7 +23,7 @@ async def put_registration(installation_id: UUID, data: RegistrationPut, user: U
 
 
 @router.delete("/push/installations/{installation_id}/registration")
-async def delete_registration(installation_id: UUID, user: User = Depends(get_current_user), session: RefreshSession = Depends(get_current_refresh_session), db: AsyncSession = Depends(get_db)) -> dict:
-    if not await service.revoke(db, user, session, str(installation_id)):
+async def delete_registration(installation_id: UUID, installation_secret: str = Header(alias="X-Installation-Proof", min_length=43, max_length=128), user: User = Depends(get_current_user), session: RefreshSession = Depends(get_current_refresh_session), db: AsyncSession = Depends(get_db)) -> dict:
+    if not await service.revoke(db, user, session, str(installation_id), installation_secret):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "registration not found")
     return {"success": True}

@@ -48,8 +48,8 @@ def _configure(monkeypatch):
     monkeypatch.setattr(settings, "PUSH_TOKEN_HASH_KEY", "hash-secret")
 
 
-def _payload(token="provider-token-value"):
-    return RegistrationPut(provider="expo", platform="android", environment="production", token=token, app_id="school.perum", app_version="1.0")
+def _payload(token="provider-token-value", secret="a" * 43):
+    return RegistrationPut(installation_secret=secret, provider="expo", platform="android", environment="production", token=token, app_id="school.perum", app_version="1.0")
 
 
 def test_push_crypto_fail_closed_round_trip_and_tamper():
@@ -97,8 +97,11 @@ def test_registration_fail_closed_idempotent_isolated_and_revoked(monkeypatch):
         endpoint = await db.scalar(select(PushEndpoint))
         assert b"provider-token-value" not in endpoint.token_ciphertext
         assert endpoint.token_hash != "provider-token-value"
-        assert not await revoke(db, users[1], sessions[1], installation_id)
-        assert await revoke(db, users[0], sessions[0], installation_id)
+        with pytest.raises(HTTPException) as hijack:
+            await register(db, users[1], sessions[1], installation_id, _payload("attacker-token-value", "b" * 43))
+        assert hijack.value.status_code == 404
+        assert not await revoke(db, users[1], sessions[1], installation_id, "b" * 43)
+        assert await revoke(db, users[0], sessions[0], installation_id, "a" * 43)
         await db.close()
         await engine.dispose()
     asyncio.run(scenario())

@@ -36,6 +36,7 @@ def test_alembic_upgrade_head_on_sqlite(tmp_path, monkeypatch) -> None:
     assert {column["name"] for column in inspector.get_columns("support_tickets")} >= {"escalation_status", "escalation_requested_at", "escalation_requested_by", "core_ticket_id", "last_core_message_cursor"}
     assert "sender_snapshot" in {column["name"] for column in inspector.get_columns("support_messages")}
     assert {"push_installations", "push_endpoints", "push_registrations", "push_outbox"} <= set(inspector.get_table_names())
+    assert "secret_hash" in {column["name"] for column in inspector.get_columns("push_installations")}
     assert {index["name"] for index in inspector.get_indexes("push_endpoints")} >= {"ix_push_endpoints_token_hash"}
     assert {constraint["name"] for constraint in inspector.get_unique_constraints("push_outbox")} >= {"uq_push_outbox_installation_user_event"}
     with inspector.bind.connect() as connection:

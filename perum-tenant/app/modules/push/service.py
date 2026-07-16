@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from uuid import uuid4
 
 from fastapi import HTTPException, status
@@ -48,14 +50,28 @@ async def register(db: AsyncSession, user: User, session: RefreshSession, instal
         raise HTTPException(status.HTTP_403_FORBIDDEN, "school membership required")
     key, hash_key = _keys()
     now = utc_now()
-    installation = await db.get(PushInstallation, installation_id)
+    installation = await db.scalar(select(PushInstallation).where(
+        PushInstallation.id == installation_id,
+    ).with_for_update())
     if installation is not None and installation.school_id != user.school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "installation not found")
+    secret_digest = hashlib.sha256(data.installation_secret.encode()).hexdigest()
     if installation is None:
-        installation = PushInstallation(id=installation_id, school_id=user.school_id, platform=data.platform, device_name=data.device_name)
+        installation = PushInstallation(id=installation_id, school_id=user.school_id, platform=data.platform, device_name=data.device_name, secret_hash=secret_digest)
         db.add(installation)
         await db.flush()
     else:
+        if installation.secret_hash is None:
+            legacy_owner = await db.scalar(select(PushRegistration.id).where(
+                PushRegistration.installation_id == installation_id,
+                PushRegistration.user_id == user.id,
+                PushRegistration.state == "active",
+            ))
+            if legacy_owner is None:
+                raise HTTPException(status.HTTP_404_NOT_FOUND, "installation not found")
+            installation.secret_hash = secret_digest
+        elif not secrets.compare_digest(installation.secret_hash, secret_digest):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "installation not found")
         installation.platform = data.platform
         installation.device_name = data.device_name
         installation.state = "active"
@@ -96,7 +112,11 @@ async def register(db: AsyncSession, user: User, session: RefreshSession, instal
     return {"installation_id": installation_id, "state": "active"}
 
 
-async def revoke(db: AsyncSession, user: User, session: RefreshSession, installation_id: str) -> bool:
+async def revoke(db: AsyncSession, user: User, session: RefreshSession, installation_id: str, installation_secret: str) -> bool:
+    installation = await db.get(PushInstallation, installation_id)
+    secret_digest = hashlib.sha256(installation_secret.encode()).hexdigest()
+    if installation is None or installation.secret_hash is None or not secrets.compare_digest(installation.secret_hash, secret_digest):
+        return False
     row = await db.scalar(select(PushRegistration).where(PushRegistration.installation_id == installation_id, PushRegistration.user_id == user.id, PushRegistration.refresh_session_id == session.id, PushRegistration.state == "active"))
     if row is None:
         return False

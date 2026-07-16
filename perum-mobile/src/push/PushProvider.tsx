@@ -4,7 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { Linking, Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
-import { getInstallationId } from './installation';
+import { getInstallation } from './installation';
 
 type PushState = { available: boolean; registered: boolean; busy: boolean; error: string | null; enable: () => Promise<void>; revoke: () => Promise<void> };
 const PushContext = createContext<PushState | null>(null);
@@ -20,8 +20,8 @@ export function PushProvider({ children }: PropsWithChildren) {
 
   async function register(token: string) {
     if (!apiClient || !account) return;
-    const installationId = await getInstallationId();
-    await apiClient.put(`/push/installations/${installationId}/registration`, { provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS, app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null });
+    const installation = await getInstallation();
+    await apiClient.put(`/push/installations/${installation.id}/registration`, { installation_secret: installation.secret, provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS, app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null });
     setState((current) => ({ ...current, registered: true, error: null }));
   }
 
@@ -42,7 +42,8 @@ export function PushProvider({ children }: PropsWithChildren) {
 
   async function revoke() {
     if (!apiClient) return;
-    try { await apiClient.del(`/push/installations/${await getInstallationId()}/registration`); } finally { setState((current) => ({ ...current, registered: false })); }
+    const installation = await getInstallation();
+    try { await apiClient.del(`/push/installations/${installation.id}/registration`, { headers: { 'X-Installation-Proof': installation.secret } }); } finally { setState((current) => ({ ...current, registered: false })); }
   }
 
   useEffect(() => {
