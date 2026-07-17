@@ -15,13 +15,14 @@
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** durable offline support; requester read cursor реализован,
-следующий slice — offline support ticket creation. One-school pilot Stage F
+**Текущий этап:** multi-device Homework conflict QA. Durable requester support
+read cursor и offline ticket creation реализованы. One-school pilot Stage F
 отложен до получения временного operator access и остаётся на 11/12.
 
-**Следующий roadmap:** реализовать offline support ticket creation, затем провести
-multi-device conflict QA. One-school pilot выполняется по готовому checklist после
-получения operator access; до этого Stage F и descriptor percentages не меняются.
+**Следующий roadmap:** провести multi-device conflict QA для Homework и по его
+результатам переоценить следующий небольшой цикл. One-school pilot выполняется по
+готовому checklist после получения operator access; до этого Stage F и descriptor
+percentages не меняются.
 После этого приоритеты продолжаются по workstream table ниже: Friends/media,
 учебный hardening, support escalation, chats/moderation, billing, role parity и
 production rollout.
@@ -587,12 +588,12 @@ Flow:
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate и безопасный operator checklist зелёные. Остаётся выполнить one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
-| P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages и requester support read cursor SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
+| P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, requester support read cursor и offline ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
 | P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
-| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message outbox и durable account-scoped read cursor готовы; остаются offline ticket creation, attachments, push, native admin inbox и SLA/observability |
+| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, read state, offline outbox, reports, evidence-scoped moderation/audit, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |

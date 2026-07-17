@@ -35,3 +35,21 @@ export type SupportReadMutation = {
   error: string | null;
   createdAt: number;
 };
+
+export type SupportTicketCreateMutationState = SupportMutationState | 'reconciled';
+
+export type SupportTicketCreateMutation = {
+  id: string;
+  accountId: string;
+  clientTicketId: string;
+  clientMessageId: string;
+  category: SupportCategory;
+  subject: string;
+  body: string;
+  state: SupportTicketCreateMutationState;
+  attempts: number;
+  nextAttemptAt: number;
+  error: string | null;
+  createdAt: number;
+  serverTicketId: string | null;
+};

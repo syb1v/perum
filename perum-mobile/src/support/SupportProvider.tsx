@@ -7,14 +7,17 @@ import { useAuth } from '../auth/AuthProvider';
 import { queryKeys } from '../query/queryKeys';
 import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
 import { sqliteSupportOutbox } from './sqliteOutbox';
-import type { SupportMessage, SupportMutation } from './types';
+import type { SupportCategory, SupportMessage, SupportMutation, SupportTicketCreateMutation, SupportTicketCreateOut } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
 import { createSupportReadCursorOutboxCore, type SupportReadResult } from './readCursorOutboxCore';
 import { sqliteSupportReadCursorOutbox } from './sqliteReadCursorOutbox';
+import { createSupportTicketCreationOutboxCore, type SupportTicketCreateResult } from './ticketCreationOutboxCore';
+import { sqliteSupportTicketCreationOutbox } from './sqliteTicketCreationOutbox';
 
 type Core = ReturnType<typeof createSupportOutboxCore>;
 type ReadCore = ReturnType<typeof createSupportReadCursorOutboxCore>;
-type Value = { pending: SupportMutation[]; enqueue: (ticketId: string, body: string) => Promise<void>; markRead: (ticketId: string, messageId: string) => Promise<void>; retry: (id: string) => Promise<void> };
+type CreationCore = ReturnType<typeof createSupportTicketCreationOutboxCore>;
+type Value = { pending: SupportMutation[]; pendingTickets: SupportTicketCreateMutation[]; createTicket: (category: SupportCategory, subject: string, body: string) => Promise<SupportTicketCreateMutation | null>; retryTicket: (id: string) => Promise<void>; dismissTicket: (id: string) => Promise<void>; enqueue: (ticketId: string, body: string) => Promise<void>; markRead: (ticketId: string, messageId: string) => Promise<void>; retry: (id: string) => Promise<void> };
 const Context = createContext<Value | null>(null);
 
 export function SupportProvider({ children }: PropsWithChildren) {
@@ -22,14 +25,19 @@ export function SupportProvider({ children }: PropsWithChildren) {
   const { hasAll } = useCapabilities();
   const enabled = hasAll(['support_requester', 'offline_support_messages']);
   const readEnabled = hasAll(['support_requester', 'offline_read_cursors']);
+  const creationEnabled = hasAll(['support_requester', 'offline_support_ticket_creation']);
   const queryClient = useQueryClient();
   const coreRef = useRef<Core | null>(null);
   const readCoreRef = useRef<ReadCore | null>(null);
+  const creationCoreRef = useRef<CreationCore | null>(null);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const readEnabledRef = useRef(readEnabled);
   readEnabledRef.current = readEnabled;
+  const creationEnabledRef = useRef(creationEnabled);
+  creationEnabledRef.current = creationEnabled;
   const [pending, setPending] = useState<SupportMutation[]>([]);
+  const [pendingTickets, setPendingTickets] = useState<SupportTicketCreateMutation[]>([]);
 
   useEffect(() => {
     if (!account || !apiClient) { coreRef.current = null; setPending([]); return; }
@@ -95,8 +103,39 @@ export function SupportProvider({ children }: PropsWithChildren) {
     return () => { readCoreRef.current = null; network(); appState.remove(); clearInterval(timer); };
   }, [account?.id, apiClient, queryClient, readEnabled]);
 
+  useEffect(() => {
+    if (!account || !apiClient) { creationCoreRef.current = null; setPendingTickets([]); return; }
+    const accountId = account.id;
+    let alive = true;
+    const refresh = async () => { const rows = await sqliteSupportTicketCreationOutbox.getByAccount(accountId); if (alive) setPendingTickets(rows); };
+    if (!creationEnabled) { creationCoreRef.current = null; void refresh(); return () => { alive = false; }; }
+    const send = async (item: SupportTicketCreateMutation): Promise<SupportTicketCreateResult> => {
+      try {
+        return { type: 'success', result: await apiClient.post<SupportTicketCreateOut>('/support/tickets', { client_ticket_id: item.clientTicketId, client_message_id: item.clientMessageId, category: item.category, subject: item.subject, body: item.body }) };
+      } catch (error) {
+        if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
+        return { type: 'http', status: error.status, message: error.message };
+      }
+    };
+    const core = createSupportTicketCreationOutboxCore({
+      store: sqliteSupportTicketCreationOutbox,
+      send,
+      canSend: () => creationEnabledRef.current,
+      onChange: refresh,
+      onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) }),
+    });
+    creationCoreRef.current = core;
+    const run = async () => { await core.run(accountId); await refresh(); };
+    void core.recover().then(run);
+    void refresh();
+    const network = NetInfo.addEventListener((state) => { if (state.isConnected !== false) void run(); });
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void run(); });
+    const timer = setInterval(() => void run(), 5_000);
+    return () => { alive = false; creationCoreRef.current = null; network(); appState.remove(); clearInterval(timer); };
+  }, [account?.id, apiClient, creationEnabled, queryClient]);
+
   if (!account) return children;
-  return <Context.Provider value={{ pending, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, markRead: async (ticketId, messageId) => { const core = readCoreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, messageId); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ pending, pendingTickets, createTicket: async (category, subject, body) => { const core = creationCoreRef.current; if (!core) return null; const row = await core.enqueue(account.id, category, subject, body); void core.run(account.id); return row; }, retryTicket: async (id) => { await creationCoreRef.current?.retry(account.id, id); }, dismissTicket: async (id) => { await sqliteSupportTicketCreationOutbox.remove(account.id, id); setPendingTickets(await sqliteSupportTicketCreationOutbox.getByAccount(account.id)); }, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, markRead: async (ticketId, messageId) => { const core = readCoreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, messageId); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;
 }
 
 export function useSupportSync() {

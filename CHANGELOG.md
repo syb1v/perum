@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Mobile requester может создать school support ticket офлайн: immutable client IDs и payload сохраняются в account-scoped SQLite до отправки, retries и crash recovery не создают дублей, persisted local-to-server reconciliation переводит optimistic карточку на реальный thread, а permanent failure остаётся доступен для безопасного повтора.
 - Mobile requester support получил durable account-scoped SQLite read cursor: стабильный `client_action_id`, crash recovery, bounded retry, capability downgrade guard и logout isolation; tenant дедуплицирует потерянные ответы, сохраняет монотонность cursor и совместимость online web-клиентов.
 - Для последней строки Stage F подготовлен безопасный one-school pilot checklist: prerequisites, unknown-release/grace/incompatible-client сценарии, stop/recovery criteria и privacy-safe шаблон operator evidence; шкала сохранена на 11/12 до фактического пилота.
 - Stage F dynamic descriptor получил request-time traffic lease и lifecycle scheduler: cold start, resume после TTL, account switch и release upgrade/downgrade синхронно закрывают старые clients до atomic descriptor acceptance; refresh rotation стал persistence-first, добавлены automated lifecycle/Core transition tests и обязательный Tenant release descriptor contract gate перед image publication.
