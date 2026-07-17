@@ -1,5 +1,6 @@
 import { createApiClient, createTenantApiClient, type ApiClient, type TenantSessionProvider } from '@perum/api-client';
 import type { Discovery, LoginRequest, LoginResponse, TenantAccount, TenantUser } from './types';
+import { leaseApiClient } from './trafficCore';
 
 const coreApiUrl = (process.env.EXPO_PUBLIC_CORE_API_URL || 'https://admin.perum.app/api').replace(/\/$/, '');
 const accessTokens = new Map<string, string>();
@@ -43,24 +44,30 @@ export function createAccountClient(
   account: TenantAccount,
   updateRefreshToken: (refreshToken: string) => Promise<void>,
   clear: () => Promise<void>,
+  assertLease: () => void = () => undefined,
 ): ApiClient {
+  let refreshToken = account.refreshToken;
   const provider: TenantSessionProvider = {
     getAccessToken: () => accessTokens.get(account.id) ?? null,
-    getRefreshToken: () => account.refreshToken,
-    setTokens: async ({ accessToken, refreshToken }) => {
-      accessTokens.set(account.id, accessToken);
-      await updateRefreshToken(refreshToken);
-      account.refreshToken = refreshToken;
+    getRefreshToken: () => refreshToken,
+    setTokens: async (tokens) => {
+      await updateRefreshToken(tokens.refreshToken);
+      refreshToken = tokens.refreshToken;
+      accessTokens.set(account.id, tokens.accessToken);
     },
     clear: async () => {
       accessTokens.delete(account.id);
       await clear();
     },
   };
-  return createTenantApiClient({
+  return leaseApiClient(createTenantApiClient({
     baseUrl: normalizeApiUrl(account.apiBaseUrl),
     sessionNamespace: `${account.tenantId}:${account.user.id}`,
     sessionProvider: provider,
     refreshEndpoint: '/auth/refresh',
-  });
+    getAdditionalHeaders: async () => {
+      assertLease();
+      return {};
+    },
+  }), assertLease);
 }

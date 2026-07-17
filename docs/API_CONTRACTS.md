@@ -26,3 +26,8 @@ npm run contracts:check
 request/response types. Anonymous mobile discovery и tenant descriptor имеют
 дополнительный structural parity gate, описанный в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md).
+
+Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
+schema, а nested Core/Tenant OpenAPI shapes сравниваются в
+`perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и
+release gate до публикации Tenant image.

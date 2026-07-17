@@ -36,6 +36,11 @@ academic suites. Точные команды всегда сверяются с 
 build, mobile exports и OpenAPI generation/drift. `release.yml` запускается для
 успешного CI commit и не заменяет тестовый workflow.
 
+Stage F lifecycle evidence находится в `perum-mobile/src/auth/trafficCore.test.ts`
+и `api.test.ts`; release contract воспроизводится через
+`perum-core/tests/test_release_manifest.py`. Named CI gate обязателен до Tenant
+image/release publication.
+
 Инфраструктурные скрипты `deploy/tests/isolation_e2e.sh` и
 `deploy/tests/load_test.js` требуют подготовленный стенд и не входят в обычный
 локальный unit cycle.

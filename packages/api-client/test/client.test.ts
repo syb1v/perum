@@ -139,6 +139,24 @@ test('isolates refresh flights and failures by tenant account namespace', async 
   assert.equal(validSession.clearCount, 0);
 });
 
+test('does not clear an account when rotated token persistence fails', async () => {
+  const session = createSessionProvider({ accessToken: 'expired', refreshToken: 'refresh' });
+  session.setTokens = async () => { throw new Error('secure storage failed'); };
+  const client = createTenantApiClient({
+    baseUrl: 'https://tenant.example/api',
+    sessionNamespace: 'tenant:persistence-failure',
+    sessionProvider: session,
+    fetch: async (input) => String(input).endsWith('/auth/refresh')
+      ? new Response(JSON.stringify({ access_token: 'rotated', refresh_token: 'rotated-refresh' }), { status: 200 })
+      : new Response(JSON.stringify({ detail: 'expired' }), { status: 401 }),
+  });
+
+  await assert.rejects(client.get('/user/me'), ApiClientError);
+  assert.equal(session.clearCount, 0);
+  assert.equal(await session.getAccessToken(), 'expired');
+  assert.equal(await session.getRefreshToken(), 'refresh');
+});
+
 test('does not retry forever after a refreshed request returns 401', async () => {
   const session = createSessionProvider({ accessToken: 'expired', refreshToken: 'refresh' });
   let refreshCount = 0;

@@ -40,6 +40,17 @@ changelog из git log, включает `perum-tenant/mobile-descriptor.json` �
 настроенных `CORE_URL`/`RELEASE_PUBLISH_TOKEN` вызывает
 `POST /api/ci/release`. Core отклоняет duplicate version/image/source commit.
 
+До Tenant image publication automatic и manual release paths выполняют named job
+`Tenant release descriptor contract gate`: checked-in manifest валидируется Core
+Pydantic schema и сравнивается с Core/Tenant OpenAPI descriptor shapes. Локально:
+
+```bash
+(cd perum-core && python -m pytest tests/test_release_manifest.py -q)
+```
+
+Release publication считается подтверждённой только после successful named CI
+run для конкретного commit SHA.
+
 Publication release record не обновляет школы автоматически. `org_admin` ставит
 текущий release opt-in для каждой школы; provisioner сохраняет volumes и имеет
 application-image rollback. Перед rollout проверьте migration compatibility,

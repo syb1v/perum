@@ -236,6 +236,51 @@ def test_release_manifest_controls_mobile_contract_and_revision():
     assert manifest_response.json()["descriptor_revision"] != fallback_response.json()["descriptor_revision"]
 
 
+def test_sequential_release_upgrade_and_downgrade_change_revision_and_effective_capabilities():
+    school, organization = _tenant()
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    base = dict.fromkeys(
+        [
+            "refresh_sessions", "session_management", "push_registration", "push_delivery",
+            "social_friends", "social_messages", "social_realtime", "social_attachments",
+            "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+            "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+            "offline_support_ticket_creation",
+        ],
+        False,
+    )
+    snapshot_time = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    def resolve(tag, release_id, homework_enabled):
+        school.release_tag = tag
+        release = SimpleNamespace(
+            id=release_id,
+            mobile_descriptor_schema_version=1,
+            mobile_compatibility={"mobile_api_version": 1, "minimum_mobile_api_version": 1, "minimum_app_version": "1.0.0"},
+            mobile_build_capabilities={**base, "refresh_sessions": True, "offline_homework_state": homework_enabled},
+        )
+        snapshot = SimpleNamespace(
+            release_image=tag, observed_at=snapshot_time, scanner_ready=False,
+            realtime_ready=False, push_registration_ready=False, push_delivery_ready=False,
+        )
+        response = _client(_DB([(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot)).get(
+            "/api/public/tenant-discovery", params={"host": "school.example.com"}
+        )
+        assert response.status_code == 200
+        return response.json()
+
+    initial = resolve("tenant:release-a", 1, False)
+    upgraded = resolve("tenant:release-b", 2, True)
+    downgraded = resolve("tenant:release-c", 3, False)
+
+    assert initial["capabilities"]["offline_homework_state"] is False
+    assert upgraded["capabilities"]["offline_homework_state"] is True
+    assert downgraded["capabilities"]["offline_homework_state"] is False
+    assert initial["descriptor_revision"] != upgraded["descriptor_revision"]
+    assert downgraded["descriptor_revision"] == initial["descriptor_revision"]
+
+
 def test_deployment_snapshot_only_gates_runtime_dependent_capabilities():
     school, organization = _tenant()
     school.release_tag = "tenant:release-a"

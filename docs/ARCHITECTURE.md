@@ -49,6 +49,9 @@ Generated remote-node stack пока не включает `perum_web`, а defau
 - Tenant telemetry использует отдельный token.
 - Mobile получает canonical tenant descriptor через Core discovery и затем
   аутентифицируется непосредственно в tenant.
+- Mobile request-time traffic lease привязан к account, descriptor revision,
+  canonical route и validity window; resume, account switch и rediscovery
+  синхронно инвалидируют ранее выданные clients до принятия нового descriptor.
 - Core-to-node commands используют Agent API; публичная сеть требует защищённого
   transport boundary, описанного в [HARDENING.md](HARDENING.md).
 

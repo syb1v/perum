@@ -311,17 +311,17 @@ Stage F не дублирует эту реализацию: он проверя
 
 | Сценарий | Начальное состояние | Ожидаемый результат | Evidence | Статус |
 |---|---|---|---|---|
-| Cold start online | fresh complete v1 descriptor | cached validation до первого tenant request, без Core call | mobile lifecycle test | pending |
-| Cold start rediscovery | expired descriptor, Core available | atomic route/revision/capabilities update до tenant request | mobile lifecycle test | pending |
-| Cold start grace | expired descriptor, network/429/5xx, grace active | compatible LKG разрешён, `core_unavailable`, account/outbox сохранены | mobile lifecycle test | pending |
-| Cold start blocked | grace expired или malformed/incompatible/identity mismatch | `apiClient` закрыт, tenant requests отсутствуют, account/outbox сохранены | mobile lifecycle test | pending |
-| Resume before/after TTL | foreground transition | до TTL без discovery; после TTL providers закрыты до resolver result | provider lifecycle test | pending |
-| Account switch | accounts на разных releases | нет route/capability/cache/outbox leakage | auth/provider lifecycle test | pending |
-| School upgrade | новый manifest/revision | capabilities запускаются только после atomic acceptance | Core + mobile integration | pending |
-| School downgrade | capability удалена | provider/outbox send остановлен, mutation identity сохранена | Core + mobile integration | pending |
-| Stale deployment snapshot | snapshot старше freshness | только deployment-dependent capabilities false | Core integration | pending |
-| Refresh rotation failure | descriptor accepted, refresh fails | account не мутируется частично, другой account не затронут | auth integration test | pending |
-| Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | CI workflow evidence | pending |
+| Cold start online | fresh complete v1 descriptor | cached validation до первого tenant request, без Core call | `trafficCore.test.ts` | automated local pass |
+| Cold start rediscovery | expired descriptor, Core available | atomic route/revision/capabilities update до tenant request | `trafficCore.test.ts` | automated local pass |
+| Cold start grace | expired descriptor, network/429/5xx, grace active | compatible LKG разрешён, `core_unavailable`, account/outbox сохранены | `trafficCore.test.ts` | automated local pass |
+| Cold start blocked | grace expired или malformed/incompatible/identity mismatch | `apiClient` закрыт, tenant requests отсутствуют, account/outbox сохранены | `descriptorCore.test.ts`, `trafficCore.test.ts` | automated local pass |
+| Resume before/after TTL | foreground transition | до TTL без discovery; после TTL providers закрыты до resolver result | `trafficCore.test.ts` | automated local pass |
+| Account switch | accounts на разных releases | нет route/capability/cache/outbox leakage | `trafficCore.test.ts` | automated local pass |
+| School upgrade | новый manifest/revision | capabilities запускаются только после atomic acceptance | `trafficCore.test.ts`, Core discovery pytest | automated local pass |
+| School downgrade | capability удалена | provider/outbox send остановлен, mutation identity сохранена | `trafficCore.test.ts`, Core discovery pytest | automated local pass |
+| Stale deployment snapshot | snapshot старше freshness | только deployment-dependent capabilities false | `test_stale_snapshot_disables_only_runtime_dependent_capabilities` | automated local pass |
+| Refresh rotation failure | descriptor accepted, refresh fails | account не мутируется частично, другой account не затронут | `auth/api.test.ts`, shared client test | automated local pass |
+| Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | `Tenant release descriptor contract gate` | pending successful CI run |
 | Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | operator record | pending |
 
 Строка закрывается только ссылкой на automated test/CI run или recorded manual

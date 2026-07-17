@@ -119,6 +119,20 @@ jobs:
           git diff --exit-code -- packages/api-schema/openapi packages/api-schema/generated
           npm run contracts:check
 
+  tenant-release-contract:
+    name: Tenant release descriptor contract gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Core contract dependencies
+        run: pip install -r perum-core/requirements.txt pytest
+      - name: Validate release manifest and Core/Tenant OpenAPI parity
+        working-directory: perum-core
+        run: python -m pytest tests/test_release_manifest.py -q
+
   workflow-config:
     name: Workflow config smoke
     runs-on: ubuntu-latest

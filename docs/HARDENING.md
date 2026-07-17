@@ -23,6 +23,8 @@
   внешней настройки и дальнейшей реализации.
 - Store, device, accessibility и end-to-end rollout gates ещё не завершены;
   текущий status находится в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+- Stage F lifecycle gates прошли локальную automation, но successful named CI run
+  и production pilot evidence обязательны до расширения rollout.
 
 ## Engineering requirements
 

@@ -1,27 +1,27 @@
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { useAuth } from './AuthProvider';
+import { createDescriptorLifecycleScheduler } from './trafficCore';
 
 export function TenantDescriptorProvider() {
-  const { ready, account, refreshAccountDescriptor } = useAuth();
+  const { ready, account, refreshAccountDescriptor, closeTenantTraffic } = useAuth();
 
   useEffect(() => {
     if (!ready || !account) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const refresh = async () => {
-      try {
-        await refreshAccountDescriptor(account.id);
-        if (!cancelled && expiresAt <= Date.now()) timer = setTimeout(refresh, 60_000);
-      } catch {
-        if (!cancelled) timer = setTimeout(refresh, 60_000);
-      }
-    };
-    const expiresAt = account.descriptorExpiresAt ? Date.parse(account.descriptorExpiresAt) : 0;
-    const delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now()) : 0;
-    timer = setTimeout(refresh, delay);
+    const scheduler = createDescriptorLifecycleScheduler({
+      expiresAt: () => {
+        const value = Date.parse(account.descriptorExpiresAt ?? '');
+        return Number.isFinite(value) ? value : 0;
+      },
+      refresh: () => refreshAccountDescriptor(account.id),
+      closeTraffic: closeTenantTraffic,
+    });
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') scheduler.resume();
+    });
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      subscription.remove();
+      scheduler.dispose();
     };
   }, [ready, account?.id, account?.descriptorExpiresAt]);
 

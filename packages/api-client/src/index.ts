@@ -157,6 +157,12 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
 
 const refreshFlights = new Map<string, Promise<void>>();
 
+class SessionCommitError extends Error {
+  constructor(public readonly cause: unknown) {
+    super('Failed to persist rotated session');
+  }
+}
+
 export function createTenantApiClient(options: TenantApiClientOptions): ApiClient {
   const fetchImpl = options.fetch || globalThis.fetch;
   const refreshEndpoint = options.refreshEndpoint || '/auth/refresh';
@@ -179,17 +185,21 @@ export function createTenantApiClient(options: TenantApiClientOptions): ApiClien
       if (!data.access_token || !data.refresh_token) {
         throw new ApiClientError('Сессия истекла', 401, data);
       }
-      await options.sessionProvider.setTokens({
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-      });
+      try {
+        await options.sessionProvider.setTokens({
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token,
+        });
+      } catch (error) {
+        throw new SessionCommitError(error);
+      }
     })();
 
     refreshFlights.set(options.sessionNamespace, flight);
     try {
       await flight;
     } catch (error) {
-      await options.sessionProvider.clear();
+      if (!(error instanceof SessionCommitError)) await options.sessionProvider.clear();
       throw error;
     } finally {
       if (refreshFlights.get(options.sessionNamespace) === flight) {

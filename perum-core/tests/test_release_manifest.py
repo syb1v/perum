@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -61,3 +64,34 @@ def test_release_manifest_rejects_invalid_or_incomplete_contract(mutate):
 
     with pytest.raises(ValidationError):
         MobileReleaseManifestV1.model_validate(manifest)
+
+
+def _shape(schema: dict, components: dict) -> dict:
+    if "$ref" in schema:
+        schema = components[schema["$ref"].rsplit("/", 1)[-1]]
+    return {
+        "type": schema.get("type"),
+        "required": sorted(schema.get("required", [])),
+        "properties": {
+            name: _shape(value, components)
+            for name, value in sorted(schema.get("properties", {}).items())
+        },
+    }
+
+
+def test_checked_in_tenant_manifest_and_openapi_match_authoritative_contract():
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "perum-tenant/mobile-descriptor.json").read_text())
+    validated = MobileReleaseManifestV1.model_validate(manifest)
+    assert validated.model_dump(mode="json") == manifest
+
+    core = json.loads((root / "packages/api-schema/openapi/core.json").read_text())
+    tenant = json.loads((root / "packages/api-schema/openapi/tenant.json").read_text())
+    core_components = core["components"]["schemas"]
+    tenant_components = tenant["components"]["schemas"]
+    core_descriptor = core_components["TenantDiscoveryResponse"]
+    tenant_descriptor = tenant_components["MobileDescriptor"]
+    for property_name in ("schema_version", "compatibility", "capabilities"):
+        assert _shape(core_descriptor["properties"][property_name], core_components) == _shape(
+            tenant_descriptor["properties"][property_name], tenant_components
+        )

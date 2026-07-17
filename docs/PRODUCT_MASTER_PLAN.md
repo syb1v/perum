@@ -11,10 +11,12 @@
 |---|---:|---|
 | Dynamic mobile descriptor | **10/11 = 90.9%** | 11 проверяемых пунктов Definition of Done; закрыты 10, lifecycle matrix Stage F не закрыта |
 | Descriptor stages | **5/6 = 83.3%** | Stages A-E завершены; Stage F pending |
+| Stage F lifecycle matrix | **10/12 = 83.3%** | 10 automated rows прошли локально; named CI run и pilot operator evidence pending |
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** Stage F, lifecycle и release gates dynamic mobile descriptor.
+**Текущий этап:** Stage F, lifecycle и release gates dynamic mobile descriptor;
+локальная automated matrix закрыта, ожидаются CI и pilot evidence.
 
 **Следующий roadmap:** закрыть lifecycle matrix для cold start, resume, account
 switch, upgrade/downgrade, stale snapshot и refresh failure; затем перейти к
@@ -23,10 +25,11 @@ durable read cursors, offline support ticket creation и multi-device conflict Q
 учебный hardening, support escalation, chats/moderation, billing, role parity и
 production rollout.
 
-**Handoff readiness:** код Stages A-E и их unit/contract gates находится в
-`main`; Stage F ещё не подтверждён end-to-end. Следующий исполнитель начинает с
-acceptance matrix в [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md),
-не меняя проценты до получения проверяемого результата.
+**Handoff readiness:** код Stages A-E находится в `main`; automated Stage F
+lifecycle/traffic/release gates подготовлены локально и перечислены в acceptance
+matrix [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md).
+Следующий исполнитель проверяет named GitHub Actions gate после push и выполняет
+one-school pilot, не закрывая Stage F без обеих ссылок на evidence.
 
 **Протокол обновления:** после каждого завершённого цикла исполнитель обязан
 обновить дату, числители/знаменатели, текущий этап, следующий roadmap и handoff;
@@ -581,7 +584,7 @@ Flow:
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
-| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, TTL и content revision descriptor-а. Core разрешает schema v1, compatibility и curated capabilities по immutable manifest фактического `School.release_tag`, принимает school-authenticated deployment snapshot и пересекает build/runtime readiness; отсутствующий/unknown/invalid manifest и missing/stale snapshot обрабатываются fail-closed. Tenant публикует тот же strict descriptor contract из release-owned manifest, legacy endpoints используют общий resolver, а OpenAPI structural test блокирует drift. Mobile атомарно сохраняет полный descriptor, выполняет schema/API/SemVer preflight, account-scoped capability gating и ограниченный 24-часовой grace fallback; legacy cache не используется для fallback, direct routes/providers/outboxes fail-closed. Остаются provider/store lifecycle и release upgrade/downgrade tests этапа F; исполнимый план зафиксирован в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
+| P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated cold start/resume/switch/upgrade/downgrade/stale snapshot/refresh failure tests зелёные локально. Остаются successful named CI evidence и one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |

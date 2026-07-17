@@ -55,8 +55,29 @@ jobs:
               # OTA защищает бэкенд (`publish_release_record` отклоняет тот же образ/коммит).
               - 'perum-tenant/**'
 
-  build:
+  tenant-release-contract:
+    name: Tenant release descriptor contract gate
     needs: changes
+    if: needs.changes.outputs.tenant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Core contract dependencies
+        run: pip install -r perum-core/requirements.txt pytest
+      - name: Validate release manifest and Core/Tenant OpenAPI parity
+        working-directory: perum-core
+        run: python -m pytest tests/test_release_manifest.py -q
+
+  build:
+    needs: [changes, tenant-release-contract]
+    if: >-
+      always() && needs.changes.result == 'success' &&
+      (needs.changes.outputs.tenant != 'true' || needs.tenant-release-contract.result == 'success')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -143,8 +164,8 @@ jobs:
 
   tenant-release:
     # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.
-    needs: [changes, build]
-    if: needs.changes.outputs.tenant == 'true'
+    needs: [changes, tenant-release-contract, build]
+    if: needs.changes.outputs.tenant == 'true' && needs.tenant-release-contract.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
