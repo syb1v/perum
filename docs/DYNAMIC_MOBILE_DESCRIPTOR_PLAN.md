@@ -321,7 +321,7 @@ Stage F не дублирует эту реализацию: он проверя
 | School downgrade | capability удалена | provider/outbox send остановлен, mutation identity сохранена | `trafficCore.test.ts`, Core discovery pytest | automated local pass |
 | Stale deployment snapshot | snapshot старше freshness | только deployment-dependent capabilities false | `test_stale_snapshot_disables_only_runtime_dependent_capabilities` | automated local pass |
 | Refresh rotation failure | descriptor accepted, refresh fails | account не мутируется частично, другой account не затронут | `auth/api.test.ts`, shared client test | automated local pass |
-| Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | `Tenant release descriptor contract gate`; first named job passed in CI run `29597933464`, full rerun pending generator fix | pending successful full CI run |
+| Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | `Tenant release descriptor contract gate`, [CI run 29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) | passed |
 | Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | operator record | pending |
 
 Строка закрывается только ссылкой на automated test/CI run или recorded manual

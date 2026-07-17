@@ -183,4 +183,5 @@
 | 180 | 2026-07-17 | 9084155 | feat(mobile): добавлены capability gating и descriptor grace period |
 | 181 | 2026-07-17 | 7652b94 | docs: актуализирована и очищена документация проекта |
 | 182 | 2026-07-17 | b29b8f2 | feat(mobile): автоматизированы lifecycle и release gates descriptor-а |
-| 183 | 2026-07-17 | _______ | fix(ci): исправлен Python resolver OpenAPI generator-а |
+| 183 | 2026-07-17 | 4dba925 | fix(ci): исправлен Python resolver OpenAPI generator-а |
+| 184 | 2026-07-17 | _______ | docs: зафиксирован зелёный Stage F CI evidence |

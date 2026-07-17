@@ -49,7 +49,8 @@ Pydantic schema и сравнивается с Core/Tenant OpenAPI descriptor sh
 ```
 
 Release publication считается подтверждённой только после successful named CI
-run для конкретного commit SHA.
+run для конкретного commit SHA. Первое полное зелёное evidence после введения
+gate: [CI run 29598407038](https://github.com/syb1v/perum/actions/runs/29598407038).
 
 Publication release record не обновляет школы автоматически. `org_admin` ставит
 текущий release opt-in для каждой школы; provisioner сохраняет volumes и имеет
