@@ -1,3 +1,8 @@
+# Исторический документ
+
+> Архивный снимок. Проценты и следующие шаги ниже устарели. Текущий статус:
+> [PRODUCT_MASTER_PLAN.md](../../PRODUCT_MASTER_PLAN.md).
+
 # PROGRESS — где мы сейчас и что делать дальше
 
 > Этот файл — точка возобновления для новой сессии. Полный план — [PLAN.md](PLAN.md). Обновлять при каждом значимом продвижении.
@@ -74,7 +79,7 @@
 
 **Принципы (не пересматривать без запроса)** — см. «Зафиксированные решения»: дизайн+функционал из легаси (`R1dnis/PERUM`); бренд «ПЭРУМ» (кириллица); обновления только «по кнопке»; silo-per-org.
 
-**Демо-доступ (стенд `acme`):** платформа `admin.perum.local` (`admin`/`admin`). `acme.perum.local` — **org_admin** `ivan@acme.ru`/`admin123` (консоль школ: 2 школы + управление их админами, внутрь школы не заходит); **school_admin** `zavuch1`/`test1234` (полная админка школы 1, изолированно); демо-учителя (`petrov`/`ivanova`/…), ученики (`student1..24`), родитель (`parent1`, два ученика 5А) — пароль `test1234`.
+**Демо-доступ (исторический стенд):** учётные данные удалены из архива. Используйте актуальный seed/local setup и не переиспользуйте прежние credentials.
 
 ---
 
@@ -173,13 +178,13 @@
 - Модуль `app/modules/school_admin` (router→service→schemas): `/api/admin/subjects` (CRUD), `/api/admin/work-types` (CRUD), `/api/admin/dashboard/overview` (пустой, корректной формы). Контракт легаси, RBAC `require_admin`, изоляция по школе. Разделы «Обзор/Предметы/Виды работ» в кабинете работают.
 - Резолвер `school_id`: org_admin (school_id NULL) → первая школа орг.
 
-**Сделано ещё (Фаза 5):** эндпоинты Классы (+ состав `/{id}/students`, расписание `/{id}/schedule`), Учителя `/teachers` (+ назначения `/teacher-subjects`), Учебные годы, Периоды, Расписание звонков — по контракту легаси (`service_classes/_academic/_teachers`). Школа `acme` **заполнена демо-данными** (`app/scripts/seed_test_data.py`): 5 учителей, 4 класса × 6 учеников, год 2025-2026 + 4 четверти, звонки, недельное расписание 10А. Демо-логины (учителя `petrov/ivanova/...`, ученики `student1..24`) — пароль `test1234`. org_admin `ivan@acme.ru` / `_qOI5q3nSHqC`.
+**Сделано ещё (Фаза 5):** эндпоинты Классы (+ состав `/{id}/students`, расписание `/{id}/schedule`), Учителя `/teachers` (+ назначения `/teacher-subjects`), Учебные годы, Периоды, Расписание звонков — по контракту легаси (`service_classes/_academic/_teachers`). Исторические demo credentials удалены; актуальные локальные данные создаются через текущий seed/setup.
 
 **Фаза 6 (журнал и оценки) — начато:**
 - Модели Grade / FinalGrade / Transaction / Homework / HomeworkAttachment / ControlWork (миграция `tenant_0004`). Порт `app/services/points_calculator.py` (5→+25, 4→+10, 3→−5, 2→−20, 1→−30 × коэф. профильности × вес).
 - **Журнал учителя** `app/modules/journal` + `app/modules/teacher` (контракт легаси): `GET /api/journal/teacher/subjects`, `GET /api/journal/{class}/{subject}` (сетка ученики×даты + средние + период + итоговые), `POST/GET/PUT/DELETE /api/journal/grades`, `/work-types`, `/subjects`, `/subjects/{id}/topics`; `GET /api/teacher/{classes,subjects,classes/{id}/students,homework,control-works}`. Выставление оценки начисляет ливки (атомарно, balance≥0) + пишет Transaction. `require_teacher` + проверка назначения (teacher_subjects) / readonly для классрука.
 - **Обзор школы** считает реальные KPI из оценок (средний балл, распределение, по классам).
-- Демо: ~216 оценок в `acme` (3 предмета, май 2026 = текущая четверть). Проверено E2E: учитель `petrov`/`test1234` → журнал 10А → +5 даёт +25 ливок; обзор 217 оценок, ср.балл 4.05.
+- Демо: ~216 оценок в `acme` (3 предмета, май 2026 = текущая четверть). Проверено E2E исторической тестовой учётной записью: журнал 10А → +5 даёт +25 ливок; обзор 217 оценок, ср.балл 4.05. Credentials удалены.
 
 **Осталось:**
 1. **Фазы 5, 7 и 8 закрыты.** Фаза 8: **новости** + **аналитика** (учитель `GET /api/teacher/analytics/{dashboard,topics,works,students/problem}`; админ `GET /api/admin/dashboard/{overview,performance,deep-economy}` + `POST /api/admin/analytics/track`) + **апелляции** (`/api/appeals/*`). Хвосты Фазы 5: управление пользователями (`/api/admin/users*`, `/register-users`), редактор расписания с подгруппами и `teacher-subjects/sync`. **Дальше — Фаза 4** (домены+TLS, 3%) и эксплуатационные **Фазы 9–11** (обновления-по-кнопке, observability, hardening, деплой).

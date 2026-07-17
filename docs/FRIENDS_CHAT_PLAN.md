@@ -1,8 +1,18 @@
 # Утверждённый план друзей и личных чатов
 
-> Статус: продуктовые решения утверждены 2026-07-11. Этот документ является
-> источником требований для реализации social-модуля в `perum-tenant`, web и
-> React Native.
+> Это целевая спецификация требований, а не утверждение, что каждый пункт уже
+> реализован. Live status и roadmap ведутся только в
+> [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+
+## Текущее состояние и requirement gap
+
+Реализован базовый student vertical slice: school settings, поиск, заявки,
+дружба/блокировки, direct text conversations, read state, web/mobile UI,
+mobile offline send, reports, evidence-scoped moderation, retention и realtime с
+polling fallback. Целевыми, но не завершёнными остаются parent observer policy,
+attachments с production scanner, расширенный anti-abuse, push lifecycle,
+durable offline read cursors, groups (если будут утверждены отдельно) и полный
+rollout/observability. Нижеследующие разделы описывают требования целевой версии.
 
 ## 1. Настройки школы
 

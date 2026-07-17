@@ -1,3 +1,8 @@
+# Исторический документ
+
+> Архив инфраструктурного плана. Текущая модель: [INFRASTRUCTURE.md](../../INFRASTRUCTURE.md),
+> live roadmap: [PRODUCT_MASTER_PLAN.md](../../PRODUCT_MASTER_PLAN.md).
+
 # План: Инфраструктурное управление, прозрачность и масштабирование PERUM
 
 > Создано: 2026-06-18

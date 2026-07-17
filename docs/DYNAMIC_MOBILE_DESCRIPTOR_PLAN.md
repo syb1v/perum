@@ -1,6 +1,7 @@
 # План динамического mobile descriptor
 
-**Статус:** approved for implementation
+**Статус:** Stages A-E выполнены; Stage F pending. Live проценты и текущий
+roadmap ведутся только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
 
 **Дата:** 2026-07-17
 
@@ -299,6 +300,33 @@ Acceptance tests:
 - pending mutation сохраняется при временном capability downgrade.
 
 ### Этап F. Lifecycle и release gates
+
+Stage E реализует runtime-механику клиента: persistence descriptor-а, capability
+gating, grace period и fail-closed поведение отдельных providers/routes/outboxes.
+Stage F не дублирует эту реализацию: он проверяет полный lifecycle приложения и
+релиза на границах cold start/resume/account switch/upgrade/downgrade и делает
+эти сценарии release gate. Поэтому выполненный Stage E не закрывает Stage F.
+
+Исполнимая acceptance matrix:
+
+| Сценарий | Начальное состояние | Ожидаемый результат | Evidence | Статус |
+|---|---|---|---|---|
+| Cold start online | fresh complete v1 descriptor | cached validation до первого tenant request, без Core call | mobile lifecycle test | pending |
+| Cold start rediscovery | expired descriptor, Core available | atomic route/revision/capabilities update до tenant request | mobile lifecycle test | pending |
+| Cold start grace | expired descriptor, network/429/5xx, grace active | compatible LKG разрешён, `core_unavailable`, account/outbox сохранены | mobile lifecycle test | pending |
+| Cold start blocked | grace expired или malformed/incompatible/identity mismatch | `apiClient` закрыт, tenant requests отсутствуют, account/outbox сохранены | mobile lifecycle test | pending |
+| Resume before/after TTL | foreground transition | до TTL без discovery; после TTL providers закрыты до resolver result | provider lifecycle test | pending |
+| Account switch | accounts на разных releases | нет route/capability/cache/outbox leakage | auth/provider lifecycle test | pending |
+| School upgrade | новый manifest/revision | capabilities запускаются только после atomic acceptance | Core + mobile integration | pending |
+| School downgrade | capability удалена | provider/outbox send остановлен, mutation identity сохранена | Core + mobile integration | pending |
+| Stale deployment snapshot | snapshot старше freshness | только deployment-dependent capabilities false | Core integration | pending |
+| Refresh rotation failure | descriptor accepted, refresh fails | account не мутируется частично, другой account не затронут | auth integration test | pending |
+| Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | CI workflow evidence | pending |
+| Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | operator record | pending |
+
+Строка закрывается только ссылкой на automated test/CI run или recorded manual
+evidence. После закрытия всех строк обновляются DoD ниже и live percentages в
+`PRODUCT_MASTER_PLAN.md`.
 
 Проверки:
 

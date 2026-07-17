@@ -1,6 +1,6 @@
 # Инструкция для AI-агентов (PERUM v2)
 
-> Последнее обновление: 2026-06-16. Этот файл — единый источник правил работы с кодовой базой PERUM для любых AI-агентов. Соблюдать обязательно.
+> Последнее обновление: 2026-07-17. Этот файл — правила работы с кодовой базой PERUM.
 
 ---
 
@@ -8,16 +8,19 @@
 
 **PERUM** — многоарендная (multi-tenant) школьная SaaS-платформа: геймифицированный электронный журнал с рейтингами, биржей, маркетом, квестами и аналитикой.
 
-**Архитектура (v2, silo-per-SCHOOL):** монорепо из 3 микросервисов + инфраструктура:
+**Архитектура (v2, silo-per-SCHOOL):**
 
 | Компонент | Роль | Язык | Путь |
 |-----------|------|------|------|
 | `perum-core/` | Control Plane — управляет организациями, школами, биллингом, провижинингом, релизами | **Python 3.12** (FastAPI) | `perum-core/` |
 | `perum-tenant/` | Tenant App — одна инстанция на школу: журнал, оценки, геймификация | **Python 3.12** (FastAPI) | `perum-tenant/` |
 | `perum-web/` | Frontend — единая сборка Next.js для всех tenant'ов | **TypeScript 5** (React 19 / Next.js 16) | `perum-web/` |
+| `perum-mobile/` | Native client — Expo Router, secure auth и offline data | **TypeScript** (Expo SDK 57 / React Native) | `perum-mobile/` |
+| `packages/` | Общие API-контракты, client, domain и design tokens | **TypeScript** | `packages/` |
 
 Ключевые доки:
-- [docs/PLAN.md](docs/PLAN.md) — роадмап по фазам
+- [docs/README.md](docs/README.md) — индекс документации
+- [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md) — единственный live status/roadmap
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — архитектура v2
 - [docs/RELEASING.md](docs/RELEASING.md) — процесс релизов
 - [docs/VERSIONS.md](docs/VERSIONS.md) — журнал коммитов
@@ -46,7 +49,7 @@
 ### 2.3. Backend (perum-core / perum-tenant)
 - **Фреймворк:** FastAPI, SQLAlchemy 2.0 (async), asyncpg, Alembic.
 - **Структура модуля:** `app/modules/<name>/` — `router.py` (роуты), `service.py` (бизнес-логика), `models.py` (SQLAlchemy), `schemas.py` (Pydantic).
-- **Миграции:** Alembic в `app/migrations/versions/`.
+- **Миграции:** Alembic в `perum-core/migrations/versions/` и `perum-tenant/migrations/versions/`.
 - **Тесты:** `tests/` (pytest + aiosqlite для tenant-юнитов).
 
 ---
@@ -55,30 +58,27 @@
 
 ### 3.1. Frontend (`perum-web/`)
 ```bash
-# TypeScript typecheck (обязательно перед коммитом)
-cd perum-web && npx tsc --noEmit
-
-# Сборка (полная проверка включая типы)
-cd perum-web && npx next build
-
-# ESLint (Next.js 16: встроенный линтер через next lint)
-# Примечание: eslint v9 + .eslintrc.json могут конфликтовать.
-# Основная проверка — tsc --noEmit.
-cd perum-web && npm run lint   # = next lint
+npm run typecheck
+npm run test:shared
+npm run contracts:check
+npm run typecheck:web
+npm run build:web
+npm run typecheck --workspace perum-mobile
+npm test --workspace perum-mobile
 ```
 
 ### 3.2. Backend
 ```bash
 # perum-core — все тесты
-cd perum-core && python -m pytest -q
+(cd perum-core && python -m pytest -q)
 
 # perum-tenant — unit-тесты
-cd perum-tenant && python -m pytest tests/unit -q
+(cd perum-tenant && python -m pytest tests/unit -q)
 ```
 
 ### 3.3. CI (GitHub Actions)
-- **`.github/workflows/ci.yml`** — на push/PR в `main`: core pytest, tenant pytest (unit), web `tsc --noEmit`.
-- **`.github/workflows/release.yml`** — на push в `main`: paths-filter, сборка Docker-образов, push в GHCR, авто-регистрация релиза.
+- **`.github/workflows/ci.yml`** — core/tenant pytest, migrations, shared/web/mobile checks, builds и OpenAPI drift.
+- **`.github/workflows/release.yml`** — после успешного CI: changed images, optional control-plane deploy и tenant release registration.
 
 ---
 
@@ -88,7 +88,7 @@ cd perum-tenant && python -m pytest tests/unit -q
 - Формат версий: `0.0.x` (ранняя стадия).
 - **CHANGELOG.md** — Keep a Changelog, свежие версии сверху. Секция `## [Unreleased] — ГГГГ-ММ-ДД` для ещё не выпущенного.
 - **docs/VERSIONS.md** — счётчик коммитов `№(N)`. Каждый новый коммит → новая строка: `| N | дата время | хеш | описание |`.
-- **perum-web/package.json** — поле `version` для frontend-пакета (сейчас `2.0.0`).
+- Версии компонентов берутся из фактических package/VERSION-файлов, не дублируются здесь.
 
 ### 4.2. Правила обновления ченджлога
 После каждого цикла изменений:
@@ -155,15 +155,10 @@ git push                      # только по явной команде
 
 ---
 
-## 7. Прод-сервер
+## 7. Production access
 
-| Параметр | Значение |
-|----------|----------|
-| **IP** | `87.232.119.17` |
-| **Пользователь** | `root` |
-| **Пароль / ключ** | `cGC72q9UZg2lC83` |
-| **Подключение** | `ssh root@87.232.119.17` |
-| **Путь на сервере** | `/opt/perum` (проверить при деплое) |
-
-Для деплоя использовать скрипты из `deploy/` (Caddyfile, docker-compose, .env.prod).
-**Никогда не коммитить секреты и пароли в репозиторий.**
+Production hosts, users, private keys, passwords and tokens are stored only in
+the approved secret manager and operator runbook outside the repository. Obtain
+temporary least-privilege access from the service owner. Never paste or commit
+credentials; follow [docs/RUNBOOK.md](docs/RUNBOOK.md) and rotate any credential
+that has appeared in source control or conversation history.

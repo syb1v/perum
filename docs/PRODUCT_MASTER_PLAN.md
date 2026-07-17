@@ -1,8 +1,39 @@
-# PERUM: утверждённый master-plan функций, биллинга и приложений
+# PERUM: live product status и master plan
 
-> Статус: продуктовые решения утверждены 2026-07-11; фактический прогресс и
-> учебный optimistic locking обновлены 2026-07-16. План задаёт порядок реализации
-> backend, API, web и React Native от миграций до production rollout.
+> Этот файл — единственный источник текущего продуктового статуса, процентов,
+> handoff и roadmap. Архитектурные и операционные документы не должны дублировать
+> эти оценки. Последнее обновление live-блока: **2026-07-17**.
+
+<!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
+## Live progress
+
+| Срез | Значение | Методика |
+|---|---:|---|
+| Dynamic mobile descriptor | **10/11 = 90.9%** | 11 проверяемых пунктов Definition of Done; закрыты 10, lifecycle matrix Stage F не закрыта |
+| Descriptor stages | **5/6 = 83.3%** | Stages A-E завершены; Stage F pending |
+| Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
+| Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
+
+**Текущий этап:** Stage F, lifecycle и release gates dynamic mobile descriptor.
+
+**Следующий roadmap:** закрыть lifecycle matrix для cold start, resume, account
+switch, upgrade/downgrade, stale snapshot и refresh failure; затем перейти к
+durable read cursors, offline support ticket creation и multi-device conflict QA.
+После этого приоритеты продолжаются по workstream table ниже: Friends/media,
+учебный hardening, support escalation, chats/moderation, billing, role parity и
+production rollout.
+
+**Handoff readiness:** код Stages A-E и их unit/contract gates находится в
+`main`; Stage F ещё не подтверждён end-to-end. Следующий исполнитель начинает с
+acceptance matrix в [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md),
+не меняя проценты до получения проверяемого результата.
+
+**Протокол обновления:** после каждого завершённого цикла исполнитель обязан
+обновить дату, числители/знаменатели, текущий этап, следующий roadmap и handoff;
+сверить workstream table; добавить записи в `CHANGELOG.md` и `VERSIONS.md`.
+Проценты меняются только при изменении указанной методики или закрытии её пункта.
+Новая методика описывается рядом со значением, чтобы ряд оставался проверяемым.
+<!-- /LIVE_PROGRESS -->
 
 ## 1. Зафиксированные решения
 
@@ -541,7 +572,7 @@ Flow:
 Работы выполняются параллельно несколькими командами; оценки указаны в
 календарных неделях для одного основного потока и требуют уточнения после ADR.
 
-### Фактический статус и оставшиеся работы на 2026-07-17
+### Evidence по workstreams на 2026-07-17
 
 Обозначения: `готово` означает реализованный и проверенный базовый контур;
 `частично` означает, что foundation или vertical slice есть, но workstream ещё
@@ -564,79 +595,10 @@ Flow:
 | P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
 
-Ближайшая последовательность реализации:
-
-1. Завершить `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`: lifecycle/release gates для cold
-   start, resume, account switch и upgrade/downgrade; deployment snapshot, Tenant
-   contract parity, mobile capability gating и 24-часовой grace уже готовы.
-2. Добавить provider/store lifecycle tests для cold start, resume, account switch,
-   release upgrade/downgrade и expiry grace; unit preflight и lazy migration
-   legacy accounts уже готовы.
-3. Расширить offline mutation coverage: перенести read states в SQLite outbox,
-   поддержать конфликт двух устройств во всех контурах, добавить support ticket
-   creation outbox.
-4. Параллельно закрыть Friends до Definition of Done и реализовать media
-   pipeline, поскольку он блокирует support и chats.
-5. Разделить Homework semantics и персональный status, выполнить occurrence
-   backfill, затем завершить offline mutation contracts и conflict QA до teacher
-   mobile journal; version-safe перенос LessonOccurrence уже реализован.
-6. Реализовать school support, затем organization-gated core escalation.
-7. Реализовать chats/moderation, billing и mobile parity по ролям.
-8. Закрыть push/deep links, store compliance, security/accessibility и staged
-   production rollout.
-
-### Точка передачи на 2026-07-17
-
-Учебный vertical slice находится в `main`: Homework разделён на урок выдачи и
-целевой урок, публикацию и timezone-aware deadline; персональный статус ученика
-поддерживает version CAS, durable receipt и web/mobile conflict resolution.
-`LessonOccurrence` переносится version-safe, Subject/Topic архивируются без
-потери истории, а occurrence backfill выполняется через preview/token-gated
-apply без угадывания legacy Homework по `due_date`.
-
-Последний дополнительный hardening завершил единый `VERSION_CONFLICT` contract:
-tenant всегда возвращает server snapshot, web восстанавливает актуальное
-состояние с явным сообщением, mobile сохраняет конфликт для решения пользователя.
-
-В текущем discovery-цикле выполнены отдельные пункты WS7 и этапа 1:
-
-- Core публикует детерминированную content revision и конфигурируемый TTL
-  descriptor-а;
-- обязательные поля синхронизированы в Core OpenAPI и generated TypeScript;
-- backend-тест фиксирует одинаковую revision для alias/UUID lookup и её смену
-  вместе с primary host;
-- новые mobile accounts сохраняют school UUID, revision и expiry в registry;
-- после expiry фоновая rediscovery по stable school UUID обновляет endpoint без
-  повторного login, а при недоступности Core сохраняет последний рабочий endpoint.
-
-Mobile descriptor preflight теперь выполняется до первого authenticated tenant
-request при cold start и переключении account: свежий descriptor проверяется
-локально, просроченный обновляется через Core по stable school UUID, legacy account
-проходит lazy migration через hostname, а identity и API compatibility проверяются
-до создания рабочего API client. Временная недоступность Core использует только
-ранее сохранённый endpoint; refresh token мутирует account closure лишь после
-атомарного сохранения.
-
-Core discovery теперь разрешает schema v1, compatibility и curated capabilities
-из immutable manifest конкретного `Release`, сопоставленного с
-`School.release_tag`; effective contract входит в revision. Tenant telemetry
-передаёт аутентифицированный deployment snapshot с release identity и runtime
-readiness, а Core проверяет его монотонность и freshness и не включает
-deployment-dependent capability без свежего подтверждения. Отсутствующий,
-unknown или невалидный manifest и missing/stale snapshot обрабатываются
-fail-closed с безопасной structured telemetry. Tenant теперь публикует canonical
-mobile descriptor из того же release-owned manifest, вычисляет effective
-capabilities через общую с telemetry runtime readiness и сохраняет старые mobile
-endpoints как typed projections; structural OpenAPI check фиксирует точное
-совпадение Core/Tenant compatibility и capability names. Discovery остаётся
-частичным только по lifecycle/release gates: Mobile атомарно сохраняет полный
-descriptor v1, проверяет schema/API/SemVer до authenticated request, изолирует
-capabilities между accounts и ограничивает fallback 24 часами после expiry только
-для network/429/5xx. Direct routes, providers и durable outboxes fail-closed
-учитывают capability downgrade, сохраняя pending mutation и idempotency identity.
-Следующий изолированный шаг — этап F из `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`; после
-descriptor-плана выполняются durable read cursors, offline support ticket creation
-и расширенный multi-device conflict QA.
+Live sequence и handoff не дублируются здесь: они редактируются только в блоке
+`Live progress` в начале файла. Таблица выше хранит evidence и remaining scope по
+workstreams; исполнимая матрица текущего Stage F находится в
+[DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md).
 
 ## 5. CI и release gates
 

@@ -1,3 +1,7 @@
+# Исторический документ
+
+> Архивный снимок. Текущий статус: [PRODUCT_MASTER_PLAN.md](../../PRODUCT_MASTER_PLAN.md).
+
 # Прогресс реализации: Инфраструктурное управление PERUM
 
 > План: [INFRASTRUCTURE_PLAN.md](INFRASTRUCTURE_PLAN.md)
