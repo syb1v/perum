@@ -6,6 +6,9 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Core tenant discovery теперь получает versioned mobile compatibility и capabilities из release manifest, включает их в content revision и при отсутствии, неизвестном или невалидном manifest безопасно отключает все mobile capabilities.
+- Синхронизирован `PRODUCT_MASTER_PLAN.md` и детальный план dynamic mobile descriptor: release manifest и Core resolver отмечены выполненными, а deployment snapshot, tenant parity, mobile grace period и lifecycle tests сохранены как следующие незакрытые этапы.
+- Core release records now persist a strict, versioned mobile manifest; the CI release endpoint requires it and the tenant workflow publishes the repository-owned descriptor with every release.
 - Подготовлена техническая передача по последнему инженерному циклу: Homework и offline conflicts, occurrence backfill, архивирование учебных сущностей, discovery/mobile auth, security, CI, миграции и порядок продолжения.
 - Подготовлен краткий отчёт для команды о текущей готовности PERUM, состоянии кабинетов ученика, учителя и родителя, архитектуре и реалистичности достижения feature complete ко второй неделе августа.
 - Mobile проверяет TTL и API-совместимость tenant descriptor до любого authenticated запроса при cold start и переключении аккаунта, обновляет routing через Core с tenant identity pinning и использует last-known-good descriptor при временной недоступности Core; rotating refresh больше не мутирует замыкание аккаунта до атомарного сохранения токена.

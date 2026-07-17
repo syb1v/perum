@@ -1,6 +1,7 @@
 import hashlib
 import ipaddress
 import json
+import logging
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -10,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ratelimit import check_discovery_rate
-from app.models import Organization, OrganizationDomain, School, SchoolDomain
+from app.models import Organization, OrganizationDomain, Release, School, SchoolDomain
+from app.schemas.mobile_descriptor import MobileReleaseManifestV1
 from app.schemas.public import (
     TenantCapabilities,
     TenantCompatibility,
@@ -21,6 +23,16 @@ from app.schemas.public import (
 router = APIRouter()
 
 _NOT_FOUND = "Tenant not found"
+logger = logging.getLogger(__name__)
+
+_CONSERVATIVE_COMPATIBILITY = TenantCompatibility(
+    mobile_api_version=1,
+    minimum_mobile_api_version=1,
+    minimum_app_version="0.0.0",
+)
+_CONSERVATIVE_CAPABILITIES = TenantCapabilities(
+    **dict.fromkeys(TenantCapabilities.model_fields, False)
+)
 
 
 def normalize_tenant_host(value: str) -> str:
@@ -65,15 +77,46 @@ def normalize_tenant_host(value: str) -> str:
     return host
 
 
-def _response(
+async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, TenantCompatibility, TenantCapabilities]:
+    if not school.release_tag:
+        logger.warning("mobile_descriptor_missing_release", extra={"school_id": school.id})
+        return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
+
+    release = (
+        await db.execute(select(Release).where(Release.image == school.release_tag).limit(1))
+    ).scalar_one_or_none()
+    if release is None:
+        logger.warning("mobile_descriptor_unknown_release", extra={"school_id": school.id})
+        return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
+
+    try:
+        manifest = MobileReleaseManifestV1.model_validate(
+            {
+                "schema_version": release.mobile_descriptor_schema_version,
+                "compatibility": release.mobile_compatibility,
+                "capabilities": release.mobile_build_capabilities,
+            }
+        )
+    except ValueError:
+        logger.warning("mobile_descriptor_invalid_manifest", extra={"release_id": release.id})
+        return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
+
+    return (
+        manifest.schema_version,
+        TenantCompatibility.model_validate(manifest.compatibility.model_dump()),
+        TenantCapabilities.model_validate(manifest.capabilities.model_dump()),
+    )
+
+
+async def _response(
     school: School,
     organization: Organization,
     primary_host: str,
     matched_host: str,
+    db: AsyncSession,
 ) -> TenantDiscoveryResponse:
     web_base_url = f"https://{primary_host}"
-    compatibility = TenantCompatibility(mobile_api_version=1, minimum_mobile_api_version=1)
-    capabilities = TenantCapabilities(native_mobile=True)
+    schema_version, compatibility, capabilities = await _mobile_contract(school, db)
     revision_payload = {
         "tenant_id": str(school.public_id),
         "organization_id": str(organization.public_id),
@@ -83,6 +126,7 @@ def _response(
         "primary_host": primary_host,
         "api_base_url": f"{web_base_url}/api",
         "web_base_url": web_base_url,
+        "schema_version": schema_version,
         "compatibility": compatibility.model_dump(),
         "capabilities": capabilities.model_dump(),
     }
@@ -102,6 +146,7 @@ def _response(
         web_base_url=web_base_url,
         descriptor_revision=descriptor_revision,
         cache_ttl_seconds=get_settings().DISCOVERY_CACHE_TTL_S,
+        schema_version=schema_version,
         compatibility=compatibility,
         capabilities=capabilities,
     )
@@ -178,7 +223,7 @@ async def _discover(payload: TenantDiscoveryRequest, db: AsyncSession) -> Tenant
     primary_host = await _primary_host(db, school.id)
     if primary_host is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND)
-    return _response(school, organization, primary_host, matched_host or primary_host)
+    return await _response(school, organization, primary_host, matched_host or primary_host, db)
 
 
 @router.get("/tenant-discovery", response_model=TenantDiscoveryResponse)

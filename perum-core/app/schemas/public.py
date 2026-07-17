@@ -1,20 +1,36 @@
-from typing import Self
+from typing import Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class TenantCompatibility(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     mobile_api_version: int
     minimum_mobile_api_version: int
+    minimum_app_version: str
 
 
 class TenantCapabilities(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
-    native_mobile: bool
+    refresh_sessions: bool
+    session_management: bool
+    push_registration: bool
+    push_delivery: bool
+    social_friends: bool
+    social_messages: bool
+    social_realtime: bool
+    social_attachments: bool
+    support_requester: bool
+    support_attachments: bool
+    offline_preferences: bool
+    offline_homework_state: bool
+    offline_social_messages: bool
+    offline_support_messages: bool
+    offline_read_cursors: bool
+    offline_support_ticket_creation: bool
 
 
 class TenantDiscoveryRequest(BaseModel):
@@ -50,5 +66,6 @@ class TenantDiscoveryResponse(BaseModel):
     web_base_url: str
     descriptor_revision: str
     cache_ttl_seconds: int = Field(gt=0)
+    schema_version: Literal[1]
     compatibility: TenantCompatibility
     capabilities: TenantCapabilities

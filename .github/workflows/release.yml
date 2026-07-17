@@ -183,10 +183,12 @@ jobs:
           CHANGELOG: ${{ steps.cl.outputs.changelog }}
           SHA: ${{ env.RELEASE_SHA }}
         run: |
-          jq -n --arg v "$TAG" --arg img "$IMAGE" --arg cl "$CHANGELOG" --arg sha "$SHA" \
-            '{version_tag:$v, image:$img, changelog:$cl, source_commit:$sha, make_current:true}' \
+          MANIFEST=perum-tenant/mobile-descriptor.json
+          jq -e type "$MANIFEST" >/dev/null
+          jq -n --arg v "$TAG" --arg img "$IMAGE" --arg cl "$CHANGELOG" --arg sha "$SHA" --slurpfile manifest "$MANIFEST" \
+            '{version_tag:$v, image:$img, changelog:$cl, source_commit:$sha, make_current:true, mobile_manifest:$manifest[0]}' \
           | curl -fsS -X POST "${CORE_URL%/}/api/ci/release" \
               -H "Authorization: Bearer ${TOKEN}" \
               -H "Content-Type: application/json" \
-              --data @- && echo "tenant release registered: $TAG (image $IMAGE)" \
-          || echo "release registration skipped/failed (core unreachable, dup version_tag, or no real change)"
+              --data @-
+          echo "tenant release registered: $TAG (image $IMAGE)"

@@ -2944,7 +2944,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReleaseCreate"
+                "$ref": "#/components/schemas/CIReleaseCreate"
               }
             }
           }
@@ -7144,6 +7144,66 @@
         ],
         "title": "BootstrapScriptResponse"
       },
+      "CIReleaseCreate": {
+        "properties": {
+          "version_tag": {
+            "type": "string",
+            "title": "Version Tag"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "changelog": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changelog"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel",
+            "default": "stable"
+          },
+          "make_current": {
+            "type": "boolean",
+            "title": "Make Current",
+            "default": true
+          },
+          "source_commit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Commit"
+          },
+          "mobile_manifest": {
+            "$ref": "#/components/schemas/MobileReleaseManifestV1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version_tag",
+          "mobile_manifest"
+        ],
+        "title": "CIReleaseCreate"
+      },
       "CapacityRecommendationResponse": {
         "properties": {
           "recommendations": {
@@ -7483,6 +7543,144 @@
           "body"
         ],
         "title": "MessageCreate"
+      },
+      "MobileBuildCapabilitiesV1": {
+        "properties": {
+          "refresh_sessions": {
+            "type": "boolean",
+            "title": "Refresh Sessions"
+          },
+          "session_management": {
+            "type": "boolean",
+            "title": "Session Management"
+          },
+          "push_registration": {
+            "type": "boolean",
+            "title": "Push Registration"
+          },
+          "push_delivery": {
+            "type": "boolean",
+            "title": "Push Delivery"
+          },
+          "social_friends": {
+            "type": "boolean",
+            "title": "Social Friends"
+          },
+          "social_messages": {
+            "type": "boolean",
+            "title": "Social Messages"
+          },
+          "social_realtime": {
+            "type": "boolean",
+            "title": "Social Realtime"
+          },
+          "social_attachments": {
+            "type": "boolean",
+            "title": "Social Attachments"
+          },
+          "support_requester": {
+            "type": "boolean",
+            "title": "Support Requester"
+          },
+          "support_attachments": {
+            "type": "boolean",
+            "title": "Support Attachments"
+          },
+          "offline_preferences": {
+            "type": "boolean",
+            "title": "Offline Preferences"
+          },
+          "offline_homework_state": {
+            "type": "boolean",
+            "title": "Offline Homework State"
+          },
+          "offline_social_messages": {
+            "type": "boolean",
+            "title": "Offline Social Messages"
+          },
+          "offline_support_messages": {
+            "type": "boolean",
+            "title": "Offline Support Messages"
+          },
+          "offline_read_cursors": {
+            "type": "boolean",
+            "title": "Offline Read Cursors"
+          },
+          "offline_support_ticket_creation": {
+            "type": "boolean",
+            "title": "Offline Support Ticket Creation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "refresh_sessions",
+          "session_management",
+          "push_registration",
+          "push_delivery",
+          "social_friends",
+          "social_messages",
+          "social_realtime",
+          "social_attachments",
+          "support_requester",
+          "support_attachments",
+          "offline_preferences",
+          "offline_homework_state",
+          "offline_social_messages",
+          "offline_support_messages",
+          "offline_read_cursors",
+          "offline_support_ticket_creation"
+        ],
+        "title": "MobileBuildCapabilitiesV1"
+      },
+      "MobileCompatibilityV1": {
+        "properties": {
+          "mobile_api_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Mobile Api Version"
+          },
+          "minimum_mobile_api_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Minimum Mobile Api Version"
+          },
+          "minimum_app_version": {
+            "type": "string",
+            "title": "Minimum App Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mobile_api_version",
+          "minimum_mobile_api_version",
+          "minimum_app_version"
+        ],
+        "title": "MobileCompatibilityV1"
+      },
+      "MobileReleaseManifestV1": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version"
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/MobileCompatibilityV1"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/MobileBuildCapabilitiesV1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "compatibility",
+          "capabilities"
+        ],
+        "title": "MobileReleaseManifestV1"
       },
       "NewsCreate": {
         "properties": {
@@ -8759,6 +8957,16 @@
               }
             ],
             "title": "Source Commit"
+          },
+          "mobile_manifest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MobileReleaseManifestV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -8927,14 +9135,90 @@
       },
       "TenantCapabilities": {
         "properties": {
-          "native_mobile": {
+          "refresh_sessions": {
             "type": "boolean",
-            "title": "Native Mobile"
+            "title": "Refresh Sessions"
+          },
+          "session_management": {
+            "type": "boolean",
+            "title": "Session Management"
+          },
+          "push_registration": {
+            "type": "boolean",
+            "title": "Push Registration"
+          },
+          "push_delivery": {
+            "type": "boolean",
+            "title": "Push Delivery"
+          },
+          "social_friends": {
+            "type": "boolean",
+            "title": "Social Friends"
+          },
+          "social_messages": {
+            "type": "boolean",
+            "title": "Social Messages"
+          },
+          "social_realtime": {
+            "type": "boolean",
+            "title": "Social Realtime"
+          },
+          "social_attachments": {
+            "type": "boolean",
+            "title": "Social Attachments"
+          },
+          "support_requester": {
+            "type": "boolean",
+            "title": "Support Requester"
+          },
+          "support_attachments": {
+            "type": "boolean",
+            "title": "Support Attachments"
+          },
+          "offline_preferences": {
+            "type": "boolean",
+            "title": "Offline Preferences"
+          },
+          "offline_homework_state": {
+            "type": "boolean",
+            "title": "Offline Homework State"
+          },
+          "offline_social_messages": {
+            "type": "boolean",
+            "title": "Offline Social Messages"
+          },
+          "offline_support_messages": {
+            "type": "boolean",
+            "title": "Offline Support Messages"
+          },
+          "offline_read_cursors": {
+            "type": "boolean",
+            "title": "Offline Read Cursors"
+          },
+          "offline_support_ticket_creation": {
+            "type": "boolean",
+            "title": "Offline Support Ticket Creation"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "native_mobile"
+          "refresh_sessions",
+          "session_management",
+          "push_registration",
+          "push_delivery",
+          "social_friends",
+          "social_messages",
+          "social_realtime",
+          "social_attachments",
+          "support_requester",
+          "support_attachments",
+          "offline_preferences",
+          "offline_homework_state",
+          "offline_social_messages",
+          "offline_support_messages",
+          "offline_read_cursors",
+          "offline_support_ticket_creation"
         ],
         "title": "TenantCapabilities"
       },
@@ -8947,12 +9231,18 @@
           "minimum_mobile_api_version": {
             "type": "integer",
             "title": "Minimum Mobile Api Version"
+          },
+          "minimum_app_version": {
+            "type": "string",
+            "title": "Minimum App Version"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "mobile_api_version",
-          "minimum_mobile_api_version"
+          "minimum_mobile_api_version",
+          "minimum_app_version"
         ],
         "title": "TenantCompatibility"
       },
@@ -9068,6 +9358,11 @@
             "exclusiveMinimum": 0.0,
             "title": "Cache Ttl Seconds"
           },
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version"
+          },
           "compatibility": {
             "$ref": "#/components/schemas/TenantCompatibility"
           },
@@ -9089,6 +9384,7 @@
           "web_base_url",
           "descriptor_revision",
           "cache_ttl_seconds",
+          "schema_version",
           "compatibility",
           "capabilities"
         ],

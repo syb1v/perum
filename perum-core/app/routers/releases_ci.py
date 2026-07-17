@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.routers.releases import ReleaseCreate, _release_dict, publish_release_record
+from app.routers.releases import CIReleaseCreate, _release_dict, publish_release_record
 
 router = APIRouter()
 
@@ -29,6 +29,6 @@ async def _require_release_token(authorization: str | None = Header(default=None
 
 
 @router.post("/release", status_code=status.HTTP_201_CREATED, dependencies=[Depends(_require_release_token)])
-async def ci_publish_release(payload: ReleaseCreate, db: AsyncSession = Depends(get_db)) -> dict:
+async def ci_publish_release(payload: CIReleaseCreate, db: AsyncSession = Depends(get_db)) -> dict:
     rel = await publish_release_record(payload, db)
     return _release_dict(rel)

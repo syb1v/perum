@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "compatibility": {
+    "mobile_api_version": 1,
+    "minimum_mobile_api_version": 1,
+    "minimum_app_version": "0.0.0"
+  },
+  "capabilities": {
+    "refresh_sessions": true,
+    "session_management": true,
+    "push_registration": true,
+    "push_delivery": false,
+    "social_friends": true,
+    "social_messages": true,
+    "social_realtime": true,
+    "social_attachments": false,
+    "support_requester": true,
+    "support_attachments": false,
+    "offline_preferences": true,
+    "offline_homework_state": true,
+    "offline_social_messages": true,
+    "offline_support_messages": true,
+    "offline_read_cursors": false,
+    "offline_support_ticket_creation": false
+  }
+}

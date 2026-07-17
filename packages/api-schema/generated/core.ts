@@ -2234,6 +2234,28 @@ export interface components {
             /** Enrollment Token */
             enrollment_token: string;
         };
+        /** CIReleaseCreate */
+        CIReleaseCreate: {
+            /** Version Tag */
+            version_tag: string;
+            /** Image */
+            image?: string | null;
+            /** Changelog */
+            changelog?: string | null;
+            /**
+             * Channel
+             * @default stable
+             */
+            channel: string;
+            /**
+             * Make Current
+             * @default true
+             */
+            make_current: boolean;
+            /** Source Commit */
+            source_commit?: string | null;
+            mobile_manifest: components["schemas"]["MobileReleaseManifestV1"];
+        };
         /** CapacityRecommendationResponse */
         CapacityRecommendationResponse: {
             /** Recommendations */
@@ -2346,6 +2368,60 @@ export interface components {
         MessageCreate: {
             /** Body */
             body: string;
+        };
+        /** MobileBuildCapabilitiesV1 */
+        MobileBuildCapabilitiesV1: {
+            /** Refresh Sessions */
+            refresh_sessions: boolean;
+            /** Session Management */
+            session_management: boolean;
+            /** Push Registration */
+            push_registration: boolean;
+            /** Push Delivery */
+            push_delivery: boolean;
+            /** Social Friends */
+            social_friends: boolean;
+            /** Social Messages */
+            social_messages: boolean;
+            /** Social Realtime */
+            social_realtime: boolean;
+            /** Social Attachments */
+            social_attachments: boolean;
+            /** Support Requester */
+            support_requester: boolean;
+            /** Support Attachments */
+            support_attachments: boolean;
+            /** Offline Preferences */
+            offline_preferences: boolean;
+            /** Offline Homework State */
+            offline_homework_state: boolean;
+            /** Offline Social Messages */
+            offline_social_messages: boolean;
+            /** Offline Support Messages */
+            offline_support_messages: boolean;
+            /** Offline Read Cursors */
+            offline_read_cursors: boolean;
+            /** Offline Support Ticket Creation */
+            offline_support_ticket_creation: boolean;
+        };
+        /** MobileCompatibilityV1 */
+        MobileCompatibilityV1: {
+            /** Mobile Api Version */
+            mobile_api_version: number;
+            /** Minimum Mobile Api Version */
+            minimum_mobile_api_version: number;
+            /** Minimum App Version */
+            minimum_app_version: string;
+        };
+        /** MobileReleaseManifestV1 */
+        MobileReleaseManifestV1: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            compatibility: components["schemas"]["MobileCompatibilityV1"];
+            capabilities: components["schemas"]["MobileBuildCapabilitiesV1"];
         };
         /** NewsCreate */
         NewsCreate: {
@@ -2758,6 +2834,7 @@ export interface components {
             make_current: boolean;
             /** Source Commit */
             source_commit?: string | null;
+            mobile_manifest?: components["schemas"]["MobileReleaseManifestV1"] | null;
         };
         /** SchoolAdminCreate */
         SchoolAdminCreate: {
@@ -2810,8 +2887,38 @@ export interface components {
         };
         /** TenantCapabilities */
         TenantCapabilities: {
-            /** Native Mobile */
-            native_mobile: boolean;
+            /** Refresh Sessions */
+            refresh_sessions: boolean;
+            /** Session Management */
+            session_management: boolean;
+            /** Push Registration */
+            push_registration: boolean;
+            /** Push Delivery */
+            push_delivery: boolean;
+            /** Social Friends */
+            social_friends: boolean;
+            /** Social Messages */
+            social_messages: boolean;
+            /** Social Realtime */
+            social_realtime: boolean;
+            /** Social Attachments */
+            social_attachments: boolean;
+            /** Support Requester */
+            support_requester: boolean;
+            /** Support Attachments */
+            support_attachments: boolean;
+            /** Offline Preferences */
+            offline_preferences: boolean;
+            /** Offline Homework State */
+            offline_homework_state: boolean;
+            /** Offline Social Messages */
+            offline_social_messages: boolean;
+            /** Offline Support Messages */
+            offline_support_messages: boolean;
+            /** Offline Read Cursors */
+            offline_read_cursors: boolean;
+            /** Offline Support Ticket Creation */
+            offline_support_ticket_creation: boolean;
         };
         /** TenantCompatibility */
         TenantCompatibility: {
@@ -2819,6 +2926,8 @@ export interface components {
             mobile_api_version: number;
             /** Minimum Mobile Api Version */
             minimum_mobile_api_version: number;
+            /** Minimum App Version */
+            minimum_app_version: string;
         };
         /** TenantDiscoveryRequest */
         TenantDiscoveryRequest: {
@@ -2866,6 +2975,11 @@ export interface components {
             descriptor_revision: string;
             /** Cache Ttl Seconds */
             cache_ttl_seconds: number;
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
             compatibility: components["schemas"]["TenantCompatibility"];
             capabilities: components["schemas"]["TenantCapabilities"];
         };
@@ -4779,7 +4893,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReleaseCreate"];
+                "application/json": components["schemas"]["CIReleaseCreate"];
             };
         };
         responses: {

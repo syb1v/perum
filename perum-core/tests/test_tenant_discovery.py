@@ -17,13 +17,17 @@ class _Result:
     def first(self):
         return self.rows[0] if self.rows else None
 
+    def scalar_one_or_none(self):
+        row = self.first()
+        return row[0] if row is not None else None
+
 
 class _DB:
     def __init__(self, *results):
         self.results = iter(results)
 
     async def execute(self, statement):
-        return _Result(next(self.results))
+        return _Result(next(self.results, []))
 
 
 def _client(db):
@@ -36,7 +40,7 @@ def _client(db):
 
 def _tenant():
     school_id = uuid4()
-    school = SimpleNamespace(id=7, public_id=school_id, name="Central School", status="active")
+    school = SimpleNamespace(id=7, public_id=school_id, name="Central School", status="active", release_tag=None)
     organization = SimpleNamespace(public_id=uuid4(), name="Central Org", status="active")
     return school, organization
 
@@ -86,8 +90,22 @@ def test_authoritative_alias_returns_stable_public_contract():
         "web_base_url": "https://primary.example.com",
         "descriptor_revision": response.json()["descriptor_revision"],
         "cache_ttl_seconds": 3600,
-        "compatibility": {"mobile_api_version": 1, "minimum_mobile_api_version": 1},
-        "capabilities": {"native_mobile": True},
+        "schema_version": 1,
+        "compatibility": {
+            "mobile_api_version": 1,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "0.0.0",
+        },
+        "capabilities": dict.fromkeys(
+            [
+                "refresh_sessions", "session_management", "push_registration", "push_delivery",
+                "social_friends", "social_messages", "social_realtime", "social_attachments",
+                "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+                "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+                "offline_support_ticket_creation",
+            ],
+            False,
+        ),
     }
 
 
@@ -164,6 +182,43 @@ def test_revision_is_stable_across_aliases_and_changes_with_primary_host():
     assert alias_response.json()["descriptor_revision"] == id_response.json()["descriptor_revision"]
     assert moved_response.json()["descriptor_revision"] != id_response.json()["descriptor_revision"]
     assert moved_response.json()["api_base_url"] == "https://second.example.com/api"
+
+
+def test_release_manifest_controls_mobile_contract_and_revision():
+    school, organization = _tenant()
+    school.release_tag = "tenant:release-a"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    release = SimpleNamespace(
+        id=4,
+        mobile_descriptor_schema_version=1,
+        mobile_compatibility={
+            "mobile_api_version": 2,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "2.3.0",
+        },
+        mobile_build_capabilities=dict.fromkeys(
+            [
+                "refresh_sessions", "session_management", "push_registration", "push_delivery",
+                "social_friends", "social_messages", "social_realtime", "social_attachments",
+                "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+                "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+                "offline_support_ticket_creation",
+            ],
+            True,
+        ),
+    )
+    manifest_response = _client(_DB([(domain, school, organization)], [(primary,)], [(release,)])).get(
+        "/api/public/tenant-discovery", params={"host": "school.example.com"}
+    )
+    fallback_response = _client(_DB([(domain, school, organization)], [(primary,)], [])).get(
+        "/api/public/tenant-discovery", params={"host": "school.example.com"}
+    )
+
+    assert manifest_response.json()["compatibility"]["mobile_api_version"] == 2
+    assert manifest_response.json()["capabilities"]["push_delivery"] is True
+    assert fallback_response.json()["capabilities"]["push_delivery"] is False
+    assert manifest_response.json()["descriptor_revision"] != fallback_response.json()["descriptor_revision"]
 
 
 @pytest.mark.parametrize(

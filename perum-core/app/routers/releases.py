@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
 from app.models import Release
+from app.schemas.mobile_descriptor import MobileReleaseManifestV1
 
 router = APIRouter()
 
@@ -30,6 +31,11 @@ class ReleaseCreate(BaseModel):
     channel: str = "stable"
     make_current: bool = True
     source_commit: str | None = None
+    mobile_manifest: MobileReleaseManifestV1 | None = None
+
+
+class CIReleaseCreate(ReleaseCreate):
+    mobile_manifest: MobileReleaseManifestV1
 
 
 def _release_dict(r: Release) -> dict:
@@ -40,6 +46,9 @@ def _release_dict(r: Release) -> dict:
         "image": r.image,
         "changelog": r.changelog,
         "source_commit": r.source_commit,
+        "mobile_descriptor_schema_version": r.mobile_descriptor_schema_version,
+        "mobile_compatibility": r.mobile_compatibility,
+        "mobile_build_capabilities": r.mobile_build_capabilities,
         "is_current": r.is_current,
         "published_at": r.published_at.isoformat() if r.published_at else None,
     }
@@ -87,6 +96,9 @@ async def publish_release_record(payload: ReleaseCreate, db: AsyncSession) -> Re
         image=image,
         changelog=payload.changelog,
         source_commit=payload.source_commit,
+        mobile_descriptor_schema_version=(payload.mobile_manifest.schema_version if payload.mobile_manifest else None),
+        mobile_compatibility=(payload.mobile_manifest.compatibility.model_dump(mode="json") if payload.mobile_manifest else None),
+        mobile_build_capabilities=(payload.mobile_manifest.capabilities.model_dump(mode="json") if payload.mobile_manifest else None),
         is_current=payload.make_current,
     )
     db.add(rel)

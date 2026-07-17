@@ -449,6 +449,9 @@ class Release(Base):
     # привязанным к РЕАЛЬНОМУ изменению кода (нельзя выпустить OTA без нового
     # коммита/образа — см. publish-гард). Пусто у ручных/легаси-релизов.
     source_commit: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    mobile_descriptor_schema_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mobile_compatibility: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    mobile_build_capabilities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_current: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     published_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     published_by: Mapped[int | None] = mapped_column(
