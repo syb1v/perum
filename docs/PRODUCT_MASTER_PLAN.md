@@ -50,9 +50,10 @@ restart/conflict evidence.
    останавливается, attachments остаются fail-closed.
 5. School support native admin inbox и delivery observability без attachments.
    Push подключается только после готовности реального delivery adapter.
-6. Юридические ADR: minors/social/parent, retention, offline conflicts,
-   ЮKassa/fiscalization и OS/store matrix. Billing, parent observer policy и
-   store rollout не начинаются до утверждения соответствующих ADR.
+6. Отложено до назначения профильного владельца: юридические ADR по
+   minors/social/parent, retention, offline conflicts, ЮKassa/fiscalization и
+   OS/store matrix. Billing, parent observer policy и store rollout не начинаются
+   до утверждения соответствующих ADR.
 
 **Протокол обновления:** после каждого завершённого цикла исполнитель обязан
 обновить дату, числители/знаменатели, текущий этап, следующий roadmap и handoff;
@@ -609,7 +610,7 @@ Flow:
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate и безопасный operator checklist зелёные. Остаётся выполнить one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, requester support read cursor и offline ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
-| P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
+| P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | следующий slice — durable social read cursor; далее audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |

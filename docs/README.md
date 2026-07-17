@@ -34,7 +34,6 @@
 
 - [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md) — descriptor requirements и Stage F acceptance.
 - [FRIENDS_CHAT_PLAN.md](FRIENDS_CHAT_PLAN.md) — целевые social/chat requirements и текущий implementation gap.
-- [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md) — prerequisites и evidence для отложенных Stage F pilot и Homework conflict QA.
 
 ## История
 
