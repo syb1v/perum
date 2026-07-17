@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Требования для возобновления Stage F pilot и Homework multi-device conflict QA вынесены в отдельный active document с prerequisites, stop conditions и exit criteria; master plan получил следующий dependency-aware roadmap из шести малых циклов.
 - Master plan переоценён после двух durable support slices: Stage F pilot и Homework multi-device QA оставлены незакрытыми и явно отложены до внешнего evidence, а следующим изолированным циклом выбран durable social/chat read cursor без изменения продуктовых процентов.
 - Mobile requester может создать school support ticket офлайн: immutable client IDs и payload сохраняются в account-scoped SQLite до отправки, retries и crash recovery не создают дублей, persisted local-to-server reconciliation переводит optimistic карточку на реальный thread, а permanent failure остаётся доступен для безопасного повтора.
 - Mobile requester support получил durable account-scoped SQLite read cursor: стабильный `client_action_id`, crash recovery, bounded retry, capability downgrade guard и logout isolation; tenant дедуплицирует потерянные ответы, сохраняет монотонность cursor и совместимость online web-клиентов.

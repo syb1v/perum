@@ -17,7 +17,9 @@
 
 **Текущий этап:** Friends/direct chats hardening, следующий изолированный slice —
 durable social read cursor. One-school pilot Stage F и multi-device Homework
-conflict QA явно отложены; их незакрытые шкалы и remaining scope не изменены.
+conflict QA явно отложены; их prerequisites вынесены в
+[DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
+и remaining scope не изменены.
 
 **Следующий roadmap:** реализовать только durable account-scoped read cursor для
 direct chats с server idempotency, retry/recovery и capability gating; затем
@@ -35,6 +37,22 @@ Pilot checklist и обязательные поля operator record описа�
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
 restart/conflict evidence.
+
+**Следующие независимые циклы:**
+
+1. Durable social/chat read cursor: server idempotency, account-scoped SQLite,
+   retry/recovery, capability gating и contract tests.
+2. Friends hardening: audit/observability, feature flag и pagination/isolation
+   tests. Выполняется только после завершения read cursor.
+3. Native Friends UI и controlled rollout без attachments. Выполняется только
+   после зелёного hardening и утверждённого rollout flag.
+4. Media scanner selection и production integration. До выбора scanner работа
+   останавливается, attachments остаются fail-closed.
+5. School support native admin inbox и delivery observability без attachments.
+   Push подключается только после готовности реального delivery adapter.
+6. Юридические ADR: minors/social/parent, retention, offline conflicts,
+   ЮKassa/fiscalization и OS/store matrix. Billing, parent observer policy и
+   store rollout не начинаются до утверждения соответствующих ADR.
 
 **Протокол обновления:** после каждого завершённого цикла исполнитель обязан
 обновить дату, числители/знаменатели, текущий этап, следующий roadmap и handoff;
