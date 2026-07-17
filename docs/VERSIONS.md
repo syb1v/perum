@@ -191,4 +191,4 @@
 | 188 | 2026-07-17 | 91374e9 | docs(plan): переоценён roadmap после support slices |
 | 189 | 2026-07-17 | 368b407 | docs(plan): зафиксированы deferred requirements и следующий roadmap |
 | 190 | 2026-07-17 | 7b5f40c | docs(plan): отложены юридические ADR и очищен индекс |
-| 191 | 2026-07-18 | _______ | feat(social): добавлен durable mobile read cursor |
+| 191 | 2026-07-18 | 8160822 | feat(social): добавлен durable mobile read cursor |
