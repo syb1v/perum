@@ -185,4 +185,4 @@
 | 182 | 2026-07-17 | b29b8f2 | feat(mobile): автоматизированы lifecycle и release gates descriptor-а |
 | 183 | 2026-07-17 | 4dba925 | fix(ci): исправлен Python resolver OpenAPI generator-а |
 | 184 | 2026-07-17 | 68ac827 | docs: зафиксирован зелёный Stage F CI evidence |
-| 185 | 2026-07-17 | _______ | docs(plan): подготовлен безопасный Stage F one-school pilot checklist |
+| 185 | 2026-07-17 | 9449b1e | docs(plan): подготовлен безопасный Stage F one-school pilot checklist |
