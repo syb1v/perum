@@ -41,6 +41,10 @@ Stage F lifecycle evidence находится в `perum-mobile/src/auth/trafficC
 `perum-core/tests/test_release_manifest.py`. Named CI gate обязателен до Tenant
 image/release publication.
 
+`npm run contracts:generate` автоматически использует service `.venv` локально,
+если он существует; в clean CI использует `python` из `PATH`. Явные
+`TENANT_PYTHON`/`CORE_PYTHON` поддерживают absolute или repository-relative paths.
+
 Инфраструктурные скрипты `deploy/tests/isolation_e2e.sh` и
 `deploy/tests/load_test.js` требуют подготовленный стенд и не входят в обычный
 локальный unit cycle.

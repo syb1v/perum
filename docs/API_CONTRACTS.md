@@ -18,6 +18,11 @@ npm run contracts:generate
 npm run contracts:check
 ```
 
+Generator выбирает `perum-tenant/.venv/bin/python` и
+`perum-core/.venv/bin/python` локально при их наличии; clean CI использует
+установленный `python` из `PATH`. Overrides `TENANT_PYTHON` и `CORE_PYTHON`
+разрешаются как absolute или repository-relative executable paths.
+
 Просмотрите generated diff вместе с backend изменением. CI повторно генерирует
 контракты, требует clean diff и запускает curated contract check.
 

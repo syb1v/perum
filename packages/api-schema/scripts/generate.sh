@@ -2,10 +2,30 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-TENANT_PYTHON="${TENANT_PYTHON:-python}"
-CORE_PYTHON="${CORE_PYTHON:-python}"
-[[ "$TENANT_PYTHON" = /* ]] || TENANT_PYTHON="$ROOT/$TENANT_PYTHON"
-[[ "$CORE_PYTHON" = /* ]] || CORE_PYTHON="$ROOT/$CORE_PYTHON"
+if [[ -z "${TENANT_PYTHON:-}" && -x "$ROOT/perum-tenant/.venv/bin/python" ]]; then
+  TENANT_PYTHON="perum-tenant/.venv/bin/python"
+else
+  TENANT_PYTHON="${TENANT_PYTHON:-python}"
+fi
+if [[ -z "${CORE_PYTHON:-}" && -x "$ROOT/perum-core/.venv/bin/python" ]]; then
+  CORE_PYTHON="perum-core/.venv/bin/python"
+else
+  CORE_PYTHON="${CORE_PYTHON:-python}"
+fi
+
+resolve_python() {
+  local value="$1"
+  if [[ "$value" = /* ]]; then
+    printf '%s\n' "$value"
+  elif [[ "$value" == */* ]]; then
+    printf '%s\n' "$ROOT/$value"
+  else
+    command -v "$value"
+  fi
+}
+
+TENANT_PYTHON="$(resolve_python "$TENANT_PYTHON")"
+CORE_PYTHON="$(resolve_python "$CORE_PYTHON")"
 
 "$TENANT_PYTHON" "$ROOT/packages/api-schema/scripts/export_openapi.py" "$ROOT/perum-tenant" "$ROOT/packages/api-schema/openapi/tenant.json"
 "$CORE_PYTHON" "$ROOT/packages/api-schema/scripts/export_openapi.py" "$ROOT/perum-core" "$ROOT/packages/api-schema/openapi/core.json"
