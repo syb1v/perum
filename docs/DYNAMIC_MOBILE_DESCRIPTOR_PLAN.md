@@ -264,7 +264,7 @@ Acceptance tests:
 - отсутствующий push provider означает push delivery `false`;
 - неизвестная runtime integration не включается по умолчанию.
 
-### Этап E. Mobile persistence, gating и grace period
+### Этап E. Mobile persistence, gating и grace period (выполнен)
 
 Файлы:
 
@@ -333,10 +333,10 @@ unknown release, grace fallback и incompatible client проверяются д
 - [x] Descriptor revision учитывает effective contract.
 - [x] Attachments и push delivery не включаются без runtime readiness.
 - [x] Core и Tenant проходят schema parity tests.
-- [ ] Mobile сохраняет и применяет capabilities до authenticated request.
+- [x] Mobile сохраняет и применяет capabilities до authenticated request.
 - [x] Неизвестные schema/capabilities обрабатываются fail-closed.
-- [ ] Last-known-good fallback ограничен 24 часами и наблюдаем.
-- [ ] Identity mismatch и compatibility failure не допускают fallback.
+- [x] Last-known-good fallback ограничен 24 часами и наблюдаем в UX gate state.
+- [x] Identity mismatch и compatibility failure не допускают fallback.
 - [ ] Проверены cold start, resume, account switch, upgrade и downgrade.
 - [x] Обновлены OpenAPI, generated clients, CHANGELOG и VERSIONS.
 

@@ -8,6 +8,7 @@ import { queryKeys } from '../query/queryKeys';
 import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
 import { sqliteSupportOutbox } from './sqliteOutbox';
 import type { SupportMessage, SupportMutation } from './types';
+import { useCapabilities } from '../auth/CapabilityProvider';
 
 type Core = ReturnType<typeof createSupportOutboxCore>;
 type Value = { pending: SupportMutation[]; enqueue: (ticketId: string, body: string) => Promise<void>; retry: (id: string) => Promise<void> };
@@ -15,12 +16,17 @@ const Context = createContext<Value | null>(null);
 
 export function SupportProvider({ children }: PropsWithChildren) {
   const { account, apiClient } = useAuth();
+  const { hasAll } = useCapabilities();
+  const enabled = hasAll(['support_requester', 'offline_support_messages']);
   const queryClient = useQueryClient();
   const coreRef = useRef<Core | null>(null);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const [pending, setPending] = useState<SupportMutation[]>([]);
 
   useEffect(() => {
     if (!account || !apiClient) { coreRef.current = null; setPending([]); return; }
+    if (!enabled) { coreRef.current = null; void sqliteSupportOutbox.getByAccount(account.id).then(setPending); return; }
     let alive = true;
     const accountId = account.id;
     const refresh = async () => { const rows = await sqliteSupportOutbox.getByAccount(accountId); if (alive) setPending(rows); };
@@ -35,6 +41,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
     const core = createSupportOutboxCore({
       store: sqliteSupportOutbox,
       send,
+      canSend: () => enabledRef.current,
       onChange: refresh,
       onSuccess: (_, ticketId) => {
         void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) });
@@ -49,7 +56,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
     const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void run(); });
     const timer = setInterval(() => void run(), 5_000);
     return () => { alive = false; coreRef.current = null; network(); appState.remove(); clearInterval(timer); };
-  }, [account?.id, apiClient, queryClient]);
+  }, [account?.id, apiClient, enabled, queryClient]);
 
   if (!account) return children;
   return <Context.Provider value={{ pending, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;

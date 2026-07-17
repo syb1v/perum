@@ -8,19 +8,24 @@ import { queryKeys } from '../../../src/query/queryKeys';
 import { colors } from '../../../src/theme';
 import type { ConversationPage } from '../../../src/messages/types';
 import { useRealtimeStatus } from '../../../src/realtime/RealtimeProvider';
+import { useCapabilities } from '../../../src/auth/CapabilityProvider';
+import { FeatureUnavailable } from '../../../src/components/FeatureUnavailable';
 
 export default function MessagesScreen() {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('social_messages');
   const realtime = useRealtimeStatus();
   const conversations = useInfiniteQuery({
     queryKey: queryKeys.conversations(account?.id ?? ''),
-    enabled: Boolean(account && apiClient),
+    enabled: Boolean(enabled && account && apiClient),
     initialPageParam: null as number | null,
     queryFn: ({ pageParam }) => apiClient!.get<ConversationPage>(`/social/conversations?limit=30${pageParam === null ? '' : `&cursor=${pageParam}`}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
     refetchInterval: 15_000,
   });
-  useFocusEffect(useCallback(() => { void conversations.refetch(); }, [conversations.refetch]));
+  useFocusEffect(useCallback(() => { if (enabled) void conversations.refetch(); }, [enabled, conversations.refetch]));
+  if (!enabled) return <FeatureUnavailable />;
   const items = conversations.data?.pages.flatMap((page) => page.items) ?? [];
   return <Screen>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>Назад</Text></Pressable><Text style={styles.title}>Сообщения</Text>{realtime !== 'connected' ? <Text style={styles.status}>{realtime === 'reconnecting' ? 'Переподключение…' : 'Обновление по опросу'}</Text> : null}</View>

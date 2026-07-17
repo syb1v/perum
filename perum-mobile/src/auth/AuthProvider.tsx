@@ -1,12 +1,12 @@
 import Constants from 'expo-constants';
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { Platform } from 'react-native';
 import { clearAccessToken, createAccountClient, discoverTenant, discoverTenantById, fetchMe, setAccessToken, tenantLogin } from './api';
 import { loadRegistry, saveRegistry } from './storage';
 import type { Registry, TenantAccount, TenantRole, TenantUser } from './types';
 import { removeAccountLocalData } from '../query/persistence';
 import type { ApiClient } from '@perum/api-client';
-import { applyDiscovery, assertDiscoveryCompatibility, resolveAccountDescriptor } from './descriptorCore';
+import { assertDiscoveryDescriptor, DescriptorGateError, resolveAccountDescriptor, type DescriptorReason, type InternalDescriptorReason } from './descriptorCore';
 
 const roles = new Set<TenantRole>(['student', 'parent', 'teacher', 'admin', 'school_admin', 'director']);
 
@@ -17,6 +17,7 @@ type AuthContextValue = {
   apiClient: ApiClient | null;
   accounts: TenantAccount[];
   error: string | null;
+  descriptorReason: DescriptorReason | null;
   signIn: (host: string, login: string, password: string) => Promise<void>;
   switchAccount: (accountId: string) => Promise<void>;
   refreshAccountDescriptor: (accountId: string) => Promise<void>;
@@ -42,19 +43,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [descriptorGateReason, setDescriptorGateReason] = useState<InternalDescriptorReason | null>(null);
+  const registryRef = useRef(registry);
+  const writeQueue = useRef(Promise.resolve());
+  const appVersion = Constants.expoConfig?.version ?? '0.0.0';
 
   async function persist(next: Registry) {
+    registryRef.current = next;
     setRegistry(next);
-    await saveRegistry(next);
+    const write = writeQueue.current.then(() => saveRegistry(next));
+    writeQueue.current = write.catch(() => undefined);
+    await write;
   }
 
-  async function removeAccount(accountId: string, source = registry) {
+  async function updateRegistry(update: (current: Registry) => Registry) {
+    const next = update(registryRef.current);
+    await persist(next);
+    return next;
+  }
+
+  async function removeAccount(accountId: string) {
     clearAccessToken(accountId);
     await removeAccountLocalData(accountId);
-    const accounts = source.accounts.filter((item) => item.id !== accountId);
-    const selectedAccountId = source.selectedAccountId === accountId ? accounts[0]?.id ?? null : source.selectedAccountId;
-    const next = { accounts, selectedAccountId };
-    await persist(next);
+    const next = await updateRegistry((current) => {
+      const accounts = current.accounts.filter((item) => item.id !== accountId);
+      return { accounts, selectedAccountId: current.selectedAccountId === accountId ? accounts[0]?.id ?? null : current.selectedAccountId };
+    });
     if (account?.id === accountId) setAccount(null);
     return next;
   }
@@ -64,38 +78,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const resolution = await resolveAccountDescriptor(saved, {
       discoverById: discoverTenantById,
       discoverByHost: discoverTenant,
+      appVersion,
     });
+    setDescriptorGateReason(resolution.degradedReason ?? null);
     saved = resolution.account;
     if (resolution.source === 'rediscovered') {
-      source = {
-        ...source,
-        accounts: source.accounts.map((item) => item.id === saved.id ? saved : item),
-      };
-      await persist(source);
+      source = await updateRegistry((current) => ({ ...current, accounts: current.accounts.map((item) => item.id === saved.id ? { ...item, ...saved } : item) }));
     }
     const client = createAccountClient(
       saved,
       async (refreshToken) => {
-        const next = { ...source, accounts: source.accounts.map((item) => item.id === saved.id ? { ...item, refreshToken } : item) };
-        source = next;
-        await persist(next);
+        source = await updateRegistry((current) => ({ ...current, accounts: current.accounts.map((item) => item.id === saved.id ? { ...item, refreshToken } : item) }));
       },
       async () => {
         terminalAuthFailure = true;
-        await removeAccount(saved.id, source);
+        await removeAccount(saved.id);
       },
     );
     try {
       const user = await client.get<TenantUser>('/user/me');
       assertTenantUser(user);
       const updated = { ...saved, user };
-      const next = { ...source, selectedAccountId: saved.id, accounts: source.accounts.map((item) => item.id === saved.id ? updated : item) };
-      await persist(next);
+      const next = await updateRegistry((current) => ({ ...current, selectedAccountId: saved.id, accounts: current.accounts.map((item) => item.id === saved.id ? { ...item, ...updated } : item) }));
       setAccount(updated);
     } catch (restoreError) {
       if (terminalAuthFailure) throw restoreError;
-      const next = { ...source, selectedAccountId: saved.id };
-      await persist(next);
+      await updateRegistry((current) => ({ ...current, selectedAccountId: saved.id }));
       setAccount(saved);
     }
   }
@@ -103,12 +111,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     void (async () => {
       const saved = await loadRegistry();
+      registryRef.current = saved;
       setRegistry(saved);
       const selected = saved.accounts.find((item) => item.id === saved.selectedAccountId);
       if (selected) {
         try {
           await restore(selected, saved);
         } catch (restoreError) {
+          if (restoreError instanceof DescriptorGateError) setDescriptorGateReason(restoreError.reason);
+          setAccount(selected);
           setError(messageOf(restoreError));
         }
       }
@@ -121,7 +132,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setError(null);
     try {
       const discovery = await discoverTenant(host);
-      assertDiscoveryCompatibility(discovery.compatibility);
+      assertDiscoveryDescriptor(discovery, appVersion);
       const response = await tenantLogin(discovery, {
         login: login.trim(),
         password,
@@ -144,14 +155,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
         apiBaseUrl: discovery.api_base_url,
         descriptorRevision: discovery.descriptor_revision,
         descriptorExpiresAt: new Date(Date.now() + discovery.cache_ttl_seconds * 1000).toISOString(),
+        descriptorLastVerifiedAt: new Date().toISOString(),
+        descriptorSchemaVersion: discovery.schema_version,
         descriptorCompatibility: discovery.compatibility,
+        descriptorCapabilities: discovery.capabilities,
         user,
         refreshToken: response.refresh_token,
       };
       setAccessToken(id, accessToken);
+      setDescriptorGateReason(null);
       const next = {
         selectedAccountId: id,
-        accounts: [...registry.accounts.filter((item) => item.id !== id), nextAccount],
+        accounts: [...registryRef.current.accounts.filter((item) => item.id !== id), nextAccount],
       };
       await persist(next);
       setAccount(nextAccount);
@@ -164,13 +179,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   async function switchAccount(accountId: string) {
-    const selected = registry.accounts.find((item) => item.id === accountId);
+    const selected = registryRef.current.accounts.find((item) => item.id === accountId);
     if (!selected || selected.id === account?.id) return;
     setBusy(true);
     setError(null);
+    setAccount(null);
     try {
-      await restore(selected, registry);
+      await restore(selected, registryRef.current);
     } catch (switchError) {
+      if (switchError instanceof DescriptorGateError) setDescriptorGateReason(switchError.reason);
+      setAccount(selected);
       setError(messageOf(switchError));
       throw switchError;
     } finally {
@@ -179,15 +197,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   async function refreshAccountDescriptor(accountId: string) {
-    const current = registry.accounts.find((item) => item.id === accountId);
+    const current = registryRef.current.accounts.find((item) => item.id === accountId);
     if (!current) return;
-    const discovery = current.schoolId
-      ? await discoverTenantById(current.schoolId)
-      : await discoverTenant(current.tenantHost);
-    const updated = applyDiscovery(current, discovery);
-    const next = { ...registry, accounts: registry.accounts.map((item) => item.id === accountId ? updated : item) };
-    await persist(next);
-    if (account?.id === accountId) setAccount(updated);
+    try {
+      const resolution = await resolveAccountDescriptor(current, { discoverById: discoverTenantById, discoverByHost: discoverTenant, appVersion, force: true });
+      const updated = resolution.account;
+      setDescriptorGateReason(resolution.degradedReason ?? null);
+      const next = await updateRegistry((latest) => ({ ...latest, accounts: latest.accounts.map((item) => item.id === accountId ? { ...item, ...updated, refreshToken: item.refreshToken, user: item.user } : item) }));
+      if (account?.id === accountId) setAccount(next.accounts.find((item) => item.id === accountId) ?? updated);
+    } catch (refreshError) {
+      if (refreshError instanceof DescriptorGateError) setDescriptorGateReason(refreshError.reason);
+      throw refreshError;
+    }
   }
 
   async function signOut() {
@@ -211,16 +232,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }
 
-  const apiClient = account ? createAccountClient(
+  const descriptorReason: DescriptorReason | null = descriptorGateReason === 'malformed' || descriptorGateReason === 'identity_mismatch' ? 'feature_unavailable' : descriptorGateReason;
+  const descriptorAllowsTraffic = descriptorGateReason === null || descriptorGateReason === 'core_unavailable';
+  const apiClient = account && descriptorAllowsTraffic ? createAccountClient(
     account,
     async (refreshToken) => {
-      const next = { ...registry, accounts: registry.accounts.map((item) => item.id === account.id ? { ...item, refreshToken } : item) };
-      await persist(next);
+      await updateRegistry((current) => ({ ...current, accounts: current.accounts.map((item) => item.id === account.id ? { ...item, refreshToken } : item) }));
     },
     async () => { await removeAccount(account.id); },
   ) : null;
 
-  return <AuthContext.Provider value={{ ready, busy, account, apiClient, accounts: registry.accounts, error, signIn, switchAccount, refreshAccountDescriptor, signOut, clearError: () => setError(null) }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ ready, busy, account, apiClient, accounts: registry.accounts, error, descriptorReason, signIn, switchAccount, refreshAccountDescriptor, signOut, clearError: () => setError(null) }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

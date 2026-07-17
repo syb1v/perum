@@ -3,7 +3,7 @@ import type { HomeworkMutation, HomeworkState, HomeworkStatus } from './types';
 export type HomeworkStore = { recover(): Promise<void>; getRunnable(accountId: string, now: number): Promise<HomeworkMutation | null>; getByAccount(accountId: string): Promise<HomeworkMutation[]>; put(item: HomeworkMutation): Promise<void>; remove(id: string): Promise<void>; removeAccount(accountId: string): Promise<void> };
 export type HomeworkResult = { type: 'success'; state: HomeworkState } | { type: 'http'; status: number; message?: string; serverState?: HomeworkState } | { type: 'transport'; message?: string };
 
-export function createHomeworkOutbox(options: { store: HomeworkStore; send(item: HomeworkMutation): Promise<HomeworkResult>; onChange?(accountId: string): void | Promise<void>; onSuccess?(accountId: string, homeworkId: number, state: HomeworkState): void | Promise<void>; now?: () => number; key?: () => string }) {
+export function createHomeworkOutbox(options: { store: HomeworkStore; send(item: HomeworkMutation): Promise<HomeworkResult>; onChange?(accountId: string): void | Promise<void>; onSuccess?(accountId: string, homeworkId: number, state: HomeworkState): void | Promise<void>; now?: () => number; key?: () => string; canSend?: () => boolean }) {
   const now = options.now ?? Date.now;
   const key = options.key ?? (() => crypto.randomUUID());
   const running = new Set<string>();
@@ -13,18 +13,21 @@ export function createHomeworkOutbox(options: { store: HomeworkStore; send(item:
     await options.store.put(item); await options.onChange?.(accountId); return item;
   }
   async function run(accountId: string) {
-    if (running.has(accountId)) return; running.add(accountId);
+    if (running.has(accountId) || options.canSend?.() === false) return; running.add(accountId);
     try {
-      let item = await options.store.getRunnable(accountId, now());
+      let item = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       while (item) {
+        if (options.canSend?.() === false) break;
+        const original = item;
         await options.store.put({ ...item, state: 'sending' });
+        if (options.canSend?.() === false) { await options.store.put(original); break; }
         let result: HomeworkResult;
         try { result = await options.send(item); } catch (error) { result = { type: 'transport', message: error instanceof Error ? error.message : undefined }; }
         if (result.type === 'success') { await options.store.remove(item.id); await options.onSuccess?.(accountId, item.homeworkId, result.state); }
         else if (result.type === 'transport' || result.status >= 500 || [408, 425, 429].includes(result.status)) { const attempts = item.attempts + 1; await options.store.put({ ...item, state: 'retry_wait', attempts, nextAttemptAt: now() + Math.min(300_000, 1000 * 2 ** Math.min(attempts, 8)), error: result.message ?? null }); }
         else if (result.status === 409 && result.serverState) await options.store.put({ ...item, state: 'conflict', error: result.message ?? null, serverState: result.serverState });
         else await options.store.put({ ...item, state: 'failed_permanent', error: result.message ?? null });
-        await options.onChange?.(accountId); item = await options.store.getRunnable(accountId, now());
+        await options.onChange?.(accountId); item = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       }
     } finally { running.delete(accountId); }
   }

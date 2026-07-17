@@ -39,3 +39,17 @@ test('keeps first-write conflict with server state for explicit resolution', asy
   assert.equal(data.rows.get('first-write')?.state, 'conflict');
   assert.deepEqual(data.rows.get('first-write')?.serverState, { status: 'completed', version: 1, completed_at: '2026-07-16T10:00:00' });
 });
+
+test('disabled homework send preserves row and resumes the same action identity', async () => {
+  const data = store(); let enabled = false; const sent: string[] = [];
+  const core = createHomeworkOutbox({ store: data, canSend: () => enabled, key: () => 'homework-stable', send: async (item) => { sent.push(item.clientActionId); return { type: 'success', state: { status: item.status, version: 2, completed_at: null } }; } });
+  await core.enqueue('a', 4, 1, 'completed'); const before = structuredClone(data.rows.get('homework-stable')!); await core.run('a');
+  assert.deepEqual(data.rows.get('homework-stable'), before); assert.deepEqual(sent, []); enabled = true; await core.run('a'); assert.deepEqual(sent, ['homework-stable']);
+});
+
+test('homework downgrade during transition restores unchanged row', async () => {
+  const data = store(); let enabled = true; let sends = 0; const put = data.put;
+  data.put = async (row) => { await put(row); if (row.state === 'sending') enabled = false; };
+  const core = createHomeworkOutbox({ store: data, canSend: () => enabled, key: () => 'homework-race', send: async (item) => { sends += 1; return { type: 'success', state: { status: item.status, version: 2, completed_at: null } }; } });
+  await core.enqueue('a', 4, 1, 'completed'); const before = structuredClone(data.rows.get('homework-race')!); await core.run('a'); assert.equal(sends, 0); assert.deepEqual(data.rows.get('homework-race'), before);
+});

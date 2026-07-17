@@ -322,3 +322,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 177 | 2026-07-17 | fc3cecc | feat(discovery): release manifest определяет mobile contract tenant descriptor |
 | 178 | 2026-07-17 | 6bcde86 | feat(discovery): добавлен deployment snapshot runtime readiness |
 | 179 | 2026-07-17 | be395b9 | feat(tenant): синхронизирован mobile descriptor contract |
+| 180 | 2026-07-17 | _______ | feat(mobile): добавлены capability gating и descriptor grace period |

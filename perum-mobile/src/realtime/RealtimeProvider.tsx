@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { queryKeys } from '../query/queryKeys';
 import { parseRealtimeEvent, realtimeInvalidationKeys, realtimeUrl, reconnectDelay, shouldConnectRealtime } from './core';
+import { useCapabilities } from '../auth/CapabilityProvider';
 
 type RealtimeTicket = TenantComponents['schemas']['RealtimeTicketOut'];
 type RealtimeStatus = 'connected' | 'reconnecting' | 'polling';
@@ -14,6 +15,8 @@ const Context = createContext<RealtimeStatus>('polling');
 
 export function RealtimeProvider({ children }: PropsWithChildren) {
   const { account, apiClient } = useAuth();
+  const { hasAll } = useCapabilities();
+  const enabled = hasAll(['social_messages', 'social_realtime']);
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<RealtimeStatus>('polling');
 
@@ -27,7 +30,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     let attempt = 0;
     let generation = 0;
     const accountId = account?.id ?? null;
-    const lifecycle = () => shouldConnectRealtime({ accountId, role: account?.user.role ?? null, foreground, online });
+    const lifecycle = () => enabled && shouldConnectRealtime({ accountId, role: account?.user.role ?? null, foreground, online });
     const invalidate = (event: NonNullable<ReturnType<typeof parseRealtimeEvent>>) => {
       if (!accountId) return;
       for (const key of realtimeInvalidationKeys(accountId, event)) void queryClient.invalidateQueries({ queryKey: key });
@@ -104,7 +107,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
     });
     if (lifecycle()) void connect();
     return () => { alive = false; clearConnection(); appState.remove(); network(); };
-  }, [account?.id, apiClient, queryClient]);
+  }, [account?.id, apiClient, enabled, queryClient]);
 
   return <Context.Provider value={status}>{children}</Context.Provider>;
 }

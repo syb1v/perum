@@ -2,6 +2,8 @@ import type { components as CoreComponents } from '@perum/api-schema/core';
 import type { components as TenantComponents } from '@perum/api-schema/tenant';
 
 export type Discovery = CoreComponents['schemas']['TenantDiscoveryResponse'];
+export type TenantCapabilities = Discovery['capabilities'];
+export type TenantCompatibility = Discovery['compatibility'];
 export type LoginRequest = TenantComponents['schemas']['LoginRequest'];
 export type LoginResponse = TenantComponents['schemas']['LoginResponse'];
 export type TenantUser = TenantComponents['schemas']['UserRead'];
@@ -17,7 +19,10 @@ export type TenantAccount = {
   apiBaseUrl: string;
   descriptorRevision?: string;
   descriptorExpiresAt?: string;
-  descriptorCompatibility?: Discovery['compatibility'];
+  descriptorLastVerifiedAt?: string;
+  descriptorSchemaVersion?: number;
+  descriptorCompatibility?: TenantCompatibility;
+  descriptorCapabilities?: TenantCapabilities;
   user: TenantUser;
   refreshToken: string;
 };

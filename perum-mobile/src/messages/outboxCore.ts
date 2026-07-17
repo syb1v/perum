@@ -22,6 +22,7 @@ export function createMessageOutboxCore(options: {
   now?: () => number;
   key?: () => string;
   backoff?: (attempt: number) => number;
+  canSend?: () => boolean;
 }) {
   const now = options.now ?? Date.now;
   const key = options.key ?? (() => `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
@@ -38,12 +39,15 @@ export function createMessageOutboxCore(options: {
   }
 
   async function run(accountId: string) {
-    if (running.has(accountId)) return;
+    if (running.has(accountId) || options.canSend?.() === false) return;
     running.add(accountId);
     try {
-      let mutation = await options.store.getRunnable(accountId, now());
+      let mutation = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       while (mutation) {
+        if (options.canSend?.() === false) break;
+        const original = mutation;
         await options.store.put({ ...mutation, state: 'sending' });
+        if (options.canSend?.() === false) { await options.store.put(original); break; }
         await options.onChange?.(accountId);
         let result: SendResult;
         try {
@@ -65,7 +69,7 @@ export function createMessageOutboxCore(options: {
           await options.onChange?.(accountId);
           break;
         }
-        mutation = await options.store.getRunnable(accountId, now());
+        mutation = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       }
     } finally {
       running.delete(accountId);

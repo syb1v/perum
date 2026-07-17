@@ -8,12 +8,16 @@ import { Screen } from '../../src/components/Screen';
 import { queryKeys } from '../../src/query/queryKeys';
 import { colors } from '../../src/theme';
 import type { SupportCategory, SupportTicketCreateOut } from '../../src/support/types';
+import { useCapabilities } from '../../src/auth/CapabilityProvider';
+import { FeatureUnavailable } from '../../src/components/FeatureUnavailable';
 
 const categories: { value: SupportCategory; label: string }[] = [{ value: 'general', label: 'Общий вопрос' }, { value: 'technical', label: 'Техническая проблема' }, { value: 'account', label: 'Учётная запись' }, { value: 'academic', label: 'Учебный процесс' }, { value: 'safety', label: 'Безопасность' }, { value: 'other', label: 'Другое' }];
 const makeId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
 export default function CreateSupportTicketScreen() {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('support_requester');
   const network = useNetInfo();
   const queryClient = useQueryClient();
   const [category, setCategory] = useState<SupportCategory>('general');
@@ -22,9 +26,10 @@ export default function CreateSupportTicketScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const eligible = account?.user.role === 'student' || account?.user.role === 'parent' || account?.user.role === 'teacher';
+  if (!enabled) return <FeatureUnavailable />;
   if (!account || !apiClient || !eligible) return null;
   const submit = async () => {
-    if (network.isConnected !== true || submitting || !subject.trim() || !body.trim()) return;
+    if (!enabled || network.isConnected !== true || submitting || !subject.trim() || !body.trim()) return;
     setSubmitting(true); setError('');
     try {
       const result = await apiClient.post<SupportTicketCreateOut>('/support/tickets', { client_ticket_id: makeId(), client_message_id: makeId(), category, subject: subject.trim(), body: body.trim() });

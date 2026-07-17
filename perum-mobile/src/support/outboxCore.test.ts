@@ -47,3 +47,17 @@ test('marks required permanent statuses and recovers interrupted sends after cra
     await core.recover(); assert.equal(store.rows[0]?.state, 'pending'); await core.run('a'); assert.equal(store.rows[0]?.state, 'failed_permanent');
   }
 });
+
+test('disabled support send preserves row and resumes with the same identity', async () => {
+  const store = memoryStore(); let enabled = false; const sent: string[] = [];
+  const core = createSupportOutboxCore({ store, canSend: () => enabled, key: () => 'support-stable', send: async (item) => { sent.push(item.clientMessageId); return { type: 'success', message: response(item) }; } });
+  await core.enqueue('a', 'ticket', 'body'); const before = structuredClone(store.rows[0]); await core.run('a');
+  assert.deepEqual(store.rows[0], before); assert.deepEqual(sent, []); enabled = true; await core.run('a'); assert.deepEqual(sent, ['support-stable']);
+});
+
+test('support downgrade during transition restores unchanged row', async () => {
+  const store = memoryStore(); let enabled = true; let sends = 0; const put = store.put;
+  store.put = async (row) => { await put(row); if (row.state === 'sending') enabled = false; };
+  const core = createSupportOutboxCore({ store, canSend: () => enabled, key: () => 'support-race', send: async (item) => { sends += 1; return { type: 'success', message: response(item) }; } });
+  await core.enqueue('a', 'ticket', 'body'); const before = structuredClone(store.rows[0]); await core.run('a'); assert.equal(sends, 0); assert.deepEqual(store.rows[0], before);
+});

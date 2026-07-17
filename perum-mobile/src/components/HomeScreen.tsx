@@ -10,18 +10,20 @@ import { Screen } from './Screen';
 import { preferencesSnapshot, usePreferencesSync } from '../preferences/PreferencesProvider';
 import type { Preferences, PreferencesSnapshot } from '../preferences/types';
 import { usePush } from '../push/PushProvider';
+import { useCapabilities } from '../auth/CapabilityProvider';
 
 const roleNames: Record<string, string> = { student: 'Ученик', parent: 'Родитель', teacher: 'Учитель', admin: 'Администратор', school_admin: 'Администратор школы', director: 'Директор' };
 
 export function HomeScreen() {
-  const { account, apiClient, signOut, busy } = useAuth();
+  const { account, apiClient, signOut, busy, descriptorReason } = useAuth();
   if (!account) return null;
-  if (!apiClient) return null;
+  if (!apiClient) return <Screen><Text style={styles.title}>{descriptorReason === 'app_outdated' ? 'Обновите приложение' : descriptorReason === 'tenant_release_outdated' ? 'Школе требуется обновление' : descriptorReason === 'grace_expired' ? 'Подключитесь к сети' : 'Функции школы недоступны'}</Text><Text style={styles.cardBody}>{descriptorReason === 'grace_expired' ? 'Срок автономной работы истёк. Данные аккаунта и ожидающие отправки сохранены.' : 'Мы заблокировали запросы к школе до безопасной проверки совместимости.'}</Text></Screen>;
   return <AccountHome account={account} apiClient={apiClient} signOut={signOut} busy={busy} />;
 }
 
 function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullable<ReturnType<typeof useAuth>['account']>; apiClient: NonNullable<ReturnType<typeof useAuth>['apiClient']>; signOut: () => Promise<void>; busy: boolean }) {
   const network = useNetInfo();
+  const { has } = useCapabilities();
   const sync = usePreferencesSync();
   const push = usePush();
   const me = useQuery({
@@ -32,6 +34,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
   const preferences = useQuery({
     queryKey: queryKeys.preferences(account.id),
     queryFn: async () => preferencesSnapshot(await apiClient.get<Preferences>('/user/preferences')),
+    enabled: has('offline_preferences'),
   });
   const server = preferences.data as PreferencesSnapshot | undefined;
   const desired = sync.mutation?.desired ?? server?.data.push_preview_enabled ?? false;
@@ -50,11 +53,11 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
       <Text style={styles.cacheStatus}>{status}</Text>
       <Pressable disabled={me.isFetching} onPress={() => void me.refetch()}><Text style={styles.refresh}>{me.isFetching ? 'Обновление…' : 'Обновить вручную'}</Text></Pressable>
     </View>
-    <View style={styles.card}><Text style={styles.cardTitle}>Push-уведомления</Text><Text style={styles.cardBody}>{push.registered ? 'Устройство зарегистрировано. Доставка включится после настройки провайдера школой.' : 'Уведомления включаются только по вашему запросу.'}</Text>{push.error ? <Text style={styles.error}>{push.error}</Text> : null}<Pressable disabled={push.busy} onPress={() => void (push.registered ? push.revoke() : push.enable())}><Text style={styles.refresh}>{push.busy ? 'Проверяем…' : push.registered ? 'Отключить на этом устройстве' : 'Включить уведомления'}</Text></Pressable></View>
+    <View style={styles.card}><Text style={styles.cardTitle}>Push-уведомления</Text><Text style={styles.cardBody}>{has('push_registration') ? push.registered ? 'Устройство зарегистрировано. Доставка включится после настройки провайдера школой.' : 'Уведомления включаются только по вашему запросу.' : 'Функция недоступна для этой школы.'}</Text>{push.error ? <Text style={styles.error}>{push.error}</Text> : null}{has('push_registration') ? <Pressable disabled={push.busy} onPress={() => void (push.registered ? push.revoke() : push.enable())}><Text style={styles.refresh}>{push.busy ? 'Проверяем…' : push.registered ? 'Отключить на этом устройстве' : 'Включить уведомления'}</Text></Pressable> : null}</View>
     <View style={styles.card}>
       <View style={styles.settingRow}>
         <View style={styles.settingText}><Text style={styles.cardTitle}>Превью push-уведомлений</Text><Text style={styles.cardBody}>Показывать содержание уведомления на экране устройства.</Text></View>
-        <Switch disabled={!server && !sync.mutation} value={desired} onValueChange={(value) => void sync.enqueue(value, sync.mutation?.baseEtag ?? server?.etag ?? '')} />
+        <Switch disabled={!has('offline_preferences') || (!server && !sync.mutation)} value={desired} onValueChange={(value) => void sync.enqueue(value, sync.mutation?.baseEtag ?? server?.etag ?? '')} />
       </View>
       <Text style={styles.cacheStatus}>{sync.mutation ? syncLabels[sync.mutation.state] : preferences.isFetching ? 'Загрузка настроек…' : 'Синхронизировано'}</Text>
       {sync.mutation?.state === 'conflict' ? <View style={styles.conflict}>
@@ -64,9 +67,9 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
       </View> : null}
     </View>
     <View style={styles.spacer} />
-    {user.role === 'student' ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/homework')}><Text style={styles.primaryText}>Домашние задания</Text></Pressable> : null}
-    {user.role === 'student' ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/messages')}><Text style={styles.primaryText}>Сообщения</Text></Pressable> : null}
-    {user.role === 'student' || user.role === 'parent' || user.role === 'teacher' ? <Pressable style={styles.primary} onPress={() => router.push('/support')}><Text style={styles.primaryText}>Поддержка школы</Text></Pressable> : null}
+    {user.role === 'student' && has('offline_homework_state') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/homework')}><Text style={styles.primaryText}>Домашние задания</Text></Pressable> : null}
+    {user.role === 'student' && has('social_messages') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/messages')}><Text style={styles.primaryText}>Сообщения</Text></Pressable> : null}
+    {(user.role === 'student' || user.role === 'parent' || user.role === 'teacher') && has('support_requester') ? <Pressable style={styles.primary} onPress={() => router.push('/support')}><Text style={styles.primaryText}>Поддержка школы</Text></Pressable> : null}
     <Pressable style={styles.primary} onPress={() => router.push('/accounts')}><Text style={styles.primaryText}>Сменить аккаунт</Text></Pressable>
     <Pressable disabled={busy} style={styles.secondary} onPress={() => void signOut()}><Text style={styles.secondaryText}>{busy ? 'Выходим…' : 'Выйти из аккаунта'}</Text></Pressable>
   </Screen>;

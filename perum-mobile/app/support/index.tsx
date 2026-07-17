@@ -8,29 +8,34 @@ import { Screen } from '../../src/components/Screen';
 import { queryKeys } from '../../src/query/queryKeys';
 import { colors } from '../../src/theme';
 import type { SupportTicketPage } from '../../src/support/types';
+import { useCapabilities } from '../../src/auth/CapabilityProvider';
+import { FeatureUnavailable } from '../../src/components/FeatureUnavailable';
 
 const statuses: Record<string, string> = { open: 'Открыто', in_progress: 'В работе', waiting_requester: 'Ждёт вашего ответа', resolved: 'Решено', closed: 'Закрыто' };
 const categories: Record<string, string> = { general: 'Общий вопрос', technical: 'Техническая проблема', account: 'Учётная запись', academic: 'Учебный процесс', safety: 'Безопасность', other: 'Другое' };
 
 export default function SupportTicketsScreen() {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('support_requester');
   const network = useNetInfo();
   const eligible = account?.user.role === 'student' || account?.user.role === 'parent' || account?.user.role === 'teacher';
   const tickets = useInfiniteQuery({
     queryKey: queryKeys.supportTickets(account?.id ?? ''),
-    enabled: Boolean(account && apiClient && eligible),
+    enabled: Boolean(enabled && account && apiClient && eligible),
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) => apiClient!.get<SupportTicketPage>(`/support/tickets?limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
     getNextPageParam: (page) => page.next_cursor ?? undefined,
     refetchInterval: 15_000,
   });
-  useFocusEffect(useCallback(() => { if (eligible) void tickets.refetch(); }, [eligible, tickets.refetch]));
+  useFocusEffect(useCallback(() => { if (enabled && eligible) void tickets.refetch(); }, [enabled, eligible, tickets.refetch]));
+  if (!enabled) return <FeatureUnavailable />;
   if (!account || !eligible) return null;
   const items = tickets.data?.pages.flatMap((page) => page.items) ?? [];
   return <Screen>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>Назад</Text></Pressable><Text style={styles.title}>Поддержка школы</Text><Text style={styles.subtitle}>Обращения обрабатывает ваша школа</Text></View>
     {network.isConnected === false ? <Text style={styles.offline}>Нет подключения. Сохранённые обращения доступны, создание временно недоступно.</Text> : null}
-    <Pressable disabled={network.isConnected !== true} style={[styles.create, network.isConnected !== true && styles.disabled]} onPress={() => router.push('/support/create')}><Text style={styles.createText}>Новое обращение</Text></Pressable>
+    {has('offline_support_ticket_creation') ? <Pressable style={styles.create} onPress={() => router.push('/support/create')}><Text style={styles.createText}>Новое обращение</Text></Pressable> : network.isConnected === true ? <Pressable style={styles.create} onPress={() => router.push('/support/create')}><Text style={styles.createText}>Новое обращение</Text></Pressable> : <Text style={styles.offline}>Создание обращения офлайн недоступно.</Text>}
     {tickets.isLoading && !items.length ? <ActivityIndicator color={colors.primary} /> : null}
     <FlatList
       data={items}

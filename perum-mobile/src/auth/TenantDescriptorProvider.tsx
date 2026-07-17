@@ -11,6 +11,7 @@ export function TenantDescriptorProvider() {
     const refresh = async () => {
       try {
         await refreshAccountDescriptor(account.id);
+        if (!cancelled && expiresAt <= Date.now()) timer = setTimeout(refresh, 60_000);
       } catch {
         if (!cancelled) timer = setTimeout(refresh, 60_000);
       }

@@ -8,6 +8,7 @@ import { queryKeys } from '../query/queryKeys';
 import { createOutboxCore, type PatchResult } from './outboxCore';
 import { sqliteOutbox } from './sqliteOutbox';
 import type { Preferences, PreferencesMutation, PreferencesSnapshot } from './types';
+import { useCapabilities } from '../auth/CapabilityProvider';
 
 type Core = ReturnType<typeof createOutboxCore>;
 type Value = { mutation: PreferencesMutation | null; enqueue: (desired: boolean, etag: string) => Promise<void>; resolve: (choice: 'server' | 'local') => Promise<void> };
@@ -19,12 +20,17 @@ export function preferencesSnapshot(data: Preferences): PreferencesSnapshot {
 
 export function PreferencesProvider({ children }: PropsWithChildren) {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('offline_preferences');
   const queryClient = useQueryClient();
   const coreRef = useRef<Core | null>(null);
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
   const [mutation, setMutation] = useState<PreferencesMutation | null>(null);
 
   useEffect(() => {
     if (!account || !apiClient) { coreRef.current = null; setMutation(null); return; }
+    if (!enabled) { coreRef.current = null; void sqliteOutbox.getLatest(account.id).then(setMutation); return; }
     let alive = true;
     const accountId = account.id;
     const refresh = async () => { const next = await sqliteOutbox.getLatest(accountId); if (alive) setMutation(next); };
@@ -39,7 +45,7 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
         return { type: 'http', status: error.status, code: body?.error?.code, message: body?.error?.message ?? error.message, current: current ? { data: current, etag: body?.error?.details?.etag ?? `"${current.version}"` } : undefined };
       }
     };
-    const core = createOutboxCore({ store: sqliteOutbox, patch, onSuccess: async (_, snapshot) => { queryClient.setQueryData(queryKeys.preferences(accountId), snapshot); await refresh(); } });
+    const core = createOutboxCore({ store: sqliteOutbox, patch, canSend: () => enabledRef.current, onSuccess: async (_, snapshot) => { queryClient.setQueryData(queryKeys.preferences(accountId), snapshot); await refresh(); } });
     coreRef.current = core;
     const run = async () => { await core.run(accountId); await refresh(); };
     void core.recover().then(run);
@@ -47,7 +53,7 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
     const network = NetInfo.addEventListener((state) => { if (state.isConnected !== false) void run(); });
     const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void run(); });
     return () => { alive = false; coreRef.current = null; network(); appState.remove(); };
-  }, [account?.id, apiClient, queryClient]);
+  }, [account?.id, apiClient, enabled, queryClient]);
 
   if (!account) return children;
   const refresh = async () => setMutation(await sqliteOutbox.getLatest(account.id));

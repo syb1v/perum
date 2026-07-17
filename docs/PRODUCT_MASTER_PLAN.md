@@ -550,7 +550,7 @@ Flow:
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
-| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, TTL и content revision descriptor-а. Core разрешает schema v1, compatibility и curated capabilities по immutable manifest фактического `School.release_tag`, принимает school-authenticated deployment snapshot и пересекает build/runtime readiness; отсутствующий/unknown/invalid manifest и missing/stale snapshot обрабатываются fail-closed. Tenant публикует тот же strict descriptor contract из release-owned manifest, legacy endpoints используют общий resolver, а OpenAPI structural test блокирует drift. Mobile выполняет compatibility/TTL preflight до authenticated запроса, pinning tenant identity и lazy migration legacy accounts. Остаются mobile capability persistence/gating, 24-часовой grace period и provider/store lifecycle tests; исполнимый план зафиксирован в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
+| P0 | Tenant discovery | Частично | готовы public UUID, primary/matched host, indexed lookup по host/UUID и паре org-domain/school-code, active aliases организации, IP rate limit, TTL и content revision descriptor-а. Core разрешает schema v1, compatibility и curated capabilities по immutable manifest фактического `School.release_tag`, принимает school-authenticated deployment snapshot и пересекает build/runtime readiness; отсутствующий/unknown/invalid manifest и missing/stale snapshot обрабатываются fail-closed. Tenant публикует тот же strict descriptor contract из release-owned manifest, legacy endpoints используют общий resolver, а OpenAPI structural test блокирует drift. Mobile атомарно сохраняет полный descriptor, выполняет schema/API/SemVer preflight, account-scoped capability gating и ограниченный 24-часовой grace fallback; legacy cache не используется для fallback, direct routes/providers/outboxes fail-closed. Остаются provider/store lifecycle и release upgrade/downgrade tests этапа F; исполнимый план зафиксирован в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, первый SQLite outbox/preferences conflict slice, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
@@ -566,9 +566,9 @@ Flow:
 
 Ближайшая последовательность реализации:
 
-1. Завершить `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`: mobile persistence capabilities,
-   feature gating и ограниченный 24-часовой grace period; deployment snapshot и
-   Tenant contract parity уже готовы.
+1. Завершить `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`: lifecycle/release gates для cold
+   start, resume, account switch и upgrade/downgrade; deployment snapshot, Tenant
+   contract parity, mobile capability gating и 24-часовой grace уже готовы.
 2. Добавить provider/store lifecycle tests для cold start, resume, account switch,
    release upgrade/downgrade и expiry grace; unit preflight и lazy migration
    legacy accounts уже готовы.
@@ -629,11 +629,14 @@ mobile descriptor из того же release-owned manifest, вычисляет 
 capabilities через общую с telemetry runtime readiness и сохраняет старые mobile
 endpoints как typed projections; structural OpenAPI check фиксирует точное
 совпадение Core/Tenant compatibility и capability names. Discovery остаётся
-частичным: Mobile пока не сохраняет capabilities и не gate-ит providers, а
-fallback ещё не ограничен grace period. Следующий изолированный шаг — этап E из
-`DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`; после descriptor-плана выполняются durable
-read cursors, offline support ticket creation и расширенный multi-device conflict
-QA.
+частичным только по lifecycle/release gates: Mobile атомарно сохраняет полный
+descriptor v1, проверяет schema/API/SemVer до authenticated request, изолирует
+capabilities между accounts и ограничивает fallback 24 часами после expiry только
+для network/429/5xx. Direct routes, providers и durable outboxes fail-closed
+учитывают capability downgrade, сохраняя pending mutation и idempotency identity.
+Следующий изолированный шаг — этап F из `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md`; после
+descriptor-плана выполняются durable read cursors, offline support ticket creation
+и расширенный multi-device conflict QA.
 
 ## 5. CI и release gates
 

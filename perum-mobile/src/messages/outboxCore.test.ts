@@ -53,3 +53,25 @@ test('recovery restores interrupted sends and permanent mismatch can be retried 
   await core.recover(); assert.equal(store.rows[0]?.state, 'pending'); await core.run('a'); assert.equal(store.rows[0]?.state, 'failed_permanent');
   result = { type: 'success', message: message(row) }; await core.retry('a', 'x'); assert.equal(store.rows.length, 0);
 });
+
+test('capability downgrade retains the unchanged row and identity until resume', async () => {
+  const store = memoryStore(); const sent: string[] = []; let enabled = false;
+  const core = createMessageOutboxCore({ store, canSend: () => enabled, key: () => 'stable-capability-id', send: async (item) => { sent.push(item.clientMessageId); return { type: 'success', message: message(item) }; } });
+  await core.enqueue('a', 1, 'held');
+  const before = { ...store.rows[0] };
+  await core.run('a');
+  assert.deepEqual(sent, []);
+  assert.deepEqual(store.rows[0], before);
+  enabled = true;
+  await core.run('a');
+  assert.deepEqual(sent, ['stable-capability-id']);
+  assert.equal(store.rows.length, 0);
+});
+
+test('message downgrade during transition restores row without touching another account', async () => {
+  const store = memoryStore(); let enabled = true; let sends = 0; const put = store.put;
+  store.put = async (row) => { await put(row); if (row.state === 'sending') enabled = false; };
+  const core = createMessageOutboxCore({ store, canSend: () => enabled, key: (() => { let id = 0; return () => `race-${++id}`; })(), send: async (item) => { sends += 1; return { type: 'success', message: message(item) }; } });
+  await core.enqueue('a', 1, 'a'); await core.enqueue('b', 1, 'b'); const before = structuredClone(store.rows);
+  await core.run('a'); assert.equal(sends, 0); assert.deepEqual(store.rows.sort((a, b) => a.id.localeCompare(b.id)), before.sort((a, b) => a.id.localeCompare(b.id)));
+});

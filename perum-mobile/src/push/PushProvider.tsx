@@ -5,21 +5,24 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { Linking, Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { getInstallation } from './installation';
+import { useCapabilities } from '../auth/CapabilityProvider';
 
 type PushState = { available: boolean; registered: boolean; busy: boolean; error: string | null; enable: () => Promise<void>; revoke: () => Promise<void> };
 const PushContext = createContext<PushState | null>(null);
 
 export function PushProvider({ children }: PropsWithChildren) {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('push_registration');
   const [state, setState] = useState({ available: false, registered: false, busy: false, error: null as string | null });
 
   useEffect(() => {
-    if (!apiClient) return setState({ available: false, registered: false, busy: false, error: null });
+    if (!apiClient || !enabled) return setState({ available: false, registered: false, busy: false, error: enabled ? null : 'Функция недоступна для этой школы' });
     void apiClient.get<{ registration_available: boolean; registered: boolean }>('/push/registration').then((value) => setState((current) => ({ ...current, available: value.registration_available, registered: value.registered }))).catch(() => undefined);
-  }, [account?.id]);
+  }, [account?.id, enabled]);
 
   async function register(token: string) {
-    if (!apiClient || !account) return;
+    if (!apiClient || !account || !enabled) return;
     const installation = await getInstallation();
     await apiClient.put(`/push/installations/${installation.id}/registration`, { installation_secret: installation.secret, provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS, app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null });
     setState((current) => ({ ...current, registered: true, error: null }));
@@ -41,7 +44,7 @@ export function PushProvider({ children }: PropsWithChildren) {
   }
 
   async function revoke() {
-    if (!apiClient) return;
+    if (!apiClient || !enabled) return;
     const installation = await getInstallation();
     try { await apiClient.del(`/push/installations/${installation.id}/registration`, { headers: { 'X-Installation-Proof': installation.secret } }); } finally { setState((current) => ({ ...current, registered: false })); }
   }
@@ -56,7 +59,7 @@ export function PushProvider({ children }: PropsWithChildren) {
       if (typeof url === 'string') void Linking.openURL(url).catch(() => undefined);
     });
     return () => { tokenSubscription.remove(); responseSubscription.remove(); };
-  }, [account?.id]);
+  }, [account?.id, enabled]);
 
   return <PushContext.Provider value={{ ...state, enable, revoke }}>{children}</PushContext.Provider>;
 }

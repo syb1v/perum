@@ -6,11 +6,16 @@ import type { Homework, HomeworkStatus } from '../../src/homework/types';
 import { queryKeys } from '../../src/query/queryKeys';
 import { colors } from '../../src/theme';
 import { Screen } from '../../src/components/Screen';
+import { useCapabilities } from '../../src/auth/CapabilityProvider';
+import { FeatureUnavailable } from '../../src/components/FeatureUnavailable';
 
 export default function HomeworkScreen() {
   const { account, apiClient } = useAuth();
+  const { has } = useCapabilities();
+  const enabled = has('offline_homework_state');
   const sync = useHomeworkSync();
-  const query = useQuery({ queryKey: queryKeys.homework(account?.id ?? ''), enabled: Boolean(account && apiClient), queryFn: () => apiClient!.get<{ homework: Homework[] }>('/homework') });
+  const query = useQuery({ queryKey: queryKeys.homework(account?.id ?? ''), enabled: Boolean(enabled && account && apiClient), queryFn: () => apiClient!.get<{ homework: Homework[] }>('/homework') });
+  if (!enabled) return <FeatureUnavailable />;
   return <Screen>
     <Text style={styles.title}>Домашние задания</Text>
     {query.data?.homework.map(item => {

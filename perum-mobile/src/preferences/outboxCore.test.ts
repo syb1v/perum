@@ -76,3 +76,19 @@ test('retries in-progress but permanently fails reused keys', async () => {
   await permanent.run('a');
   assert.equal(store.rows[0].state, 'failed_permanent');
 });
+
+test('disabled send preserves the exact row and resumes the same identity', async () => {
+  const store = memoryStore(); let enabled = false; const sent: string[] = [];
+  const core = createOutboxCore({ store, canSend: () => enabled, key: (() => { let id = 0; return () => `guard-${++id}`; })(), patch: async (row) => { sent.push(row.idempotencyKey); return { type: 'success', snapshot: snapshot(row.desired) }; } });
+  await core.enqueue('a', true, '"1"'); const before = structuredClone(store.rows[0]);
+  await core.run('a'); assert.deepEqual(store.rows[0], before); assert.deepEqual(sent, []);
+  enabled = true; await core.run('a'); assert.deepEqual(sent, [before.idempotencyKey]); assert.equal(store.rows.length, 0);
+});
+
+test('downgrade during sending transition restores the unchanged row', async () => {
+  const store = memoryStore(); let enabled = true; let sends = 0; const put = store.put;
+  store.put = async (row) => { await put(row); if (row.state === 'sending') enabled = false; };
+  const core = createOutboxCore({ store, canSend: () => enabled, key: (() => { let id = 0; return () => `race-${++id}`; })(), patch: async () => { sends += 1; return { type: 'success', snapshot: snapshot(true) }; } });
+  await core.enqueue('a', true, '"1"'); const before = structuredClone(store.rows[0]); await core.run('a');
+  assert.equal(sends, 0); assert.deepEqual(store.rows[0], before);
+});

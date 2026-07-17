@@ -22,6 +22,7 @@ export type OutboxCoreOptions = {
   now?: () => number;
   key?: () => string;
   backoff?: (attempt: number) => number;
+  canSend?: () => boolean;
 };
 
 const retryStatuses = new Set([408, 425, 429]);
@@ -49,13 +50,16 @@ export function createOutboxCore(options: OutboxCoreOptions) {
   }
 
   async function run(accountId: string) {
-    if (running.has(accountId)) return;
+    if (running.has(accountId) || options.canSend?.() === false) return;
     running.add(accountId);
     try {
-      let mutation = await options.store.getRunnable(accountId, now());
+      let mutation = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       while (mutation) {
-        mutation = { ...mutation, state: 'sending' };
+        if (options.canSend?.() === false) break;
+        const original = mutation;
+        mutation = { ...original, state: 'sending' };
         await options.store.put(mutation);
+        if (options.canSend?.() === false) { await options.store.put(original); break; }
         let result: PatchResult;
         try {
           result = await options.patch(mutation);
@@ -79,7 +83,7 @@ export function createOutboxCore(options: OutboxCoreOptions) {
           await options.store.put({ ...mutation, state: 'failed_permanent', error: result.message ?? null });
           break;
         }
-        mutation = await options.store.getRunnable(accountId, now());
+        mutation = options.canSend?.() === false ? null : await options.store.getRunnable(accountId, now());
       }
     } finally {
       running.delete(accountId);
