@@ -181,4 +181,4 @@
 | 178 | 2026-07-17 | 6bcde86 | feat(discovery): добавлен deployment snapshot runtime readiness |
 | 179 | 2026-07-17 | be395b9 | feat(tenant): синхронизирован mobile descriptor contract |
 | 180 | 2026-07-17 | 9084155 | feat(mobile): добавлены capability gating и descriptor grace period |
-| 181 | 2026-07-17 | _______ | docs: актуализирована и очищена документация проекта |
+| 181 | 2026-07-17 | 7652b94 | docs: актуализирована и очищена документация проекта |
