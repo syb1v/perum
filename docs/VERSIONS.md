@@ -189,4 +189,4 @@
 | 186 | 2026-07-17 | e377f4b | feat(support): добавлен durable mobile read cursor |
 | 187 | 2026-07-17 | f6801cc | feat(support): добавлено offline-создание mobile ticket |
 | 188 | 2026-07-17 | 91374e9 | docs(plan): переоценён roadmap после support slices |
-| 189 | 2026-07-17 | _______ | docs(plan): зафиксированы deferred requirements и следующий roadmap |
+| 189 | 2026-07-17 | 368b407 | docs(plan): зафиксированы deferred requirements и следующий roadmap |
