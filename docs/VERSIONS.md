@@ -188,4 +188,4 @@
 | 185 | 2026-07-17 | 9449b1e | docs(plan): подготовлен безопасный Stage F one-school pilot checklist |
 | 186 | 2026-07-17 | e377f4b | feat(support): добавлен durable mobile read cursor |
 | 187 | 2026-07-17 | f6801cc | feat(support): добавлено offline-создание mobile ticket |
-| 188 | 2026-07-17 | _______ | docs(plan): переоценён roadmap после support slices |
+| 188 | 2026-07-17 | 91374e9 | docs(plan): переоценён roadmap после support slices |
