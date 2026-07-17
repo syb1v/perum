@@ -239,7 +239,7 @@ Acceptance tests:
 - snapshot не повышает отсутствующую build capability;
 - scanner unavailable гарантированно оставляет attachments выключенными.
 
-### Этап D. Tenant contract parity
+### Этап D. Tenant contract parity (выполнен)
 
 Файлы:
 
@@ -332,13 +332,13 @@ unknown release, grace fallback и incompatible client проверяются д
 - [x] Core разрешает contract по фактическому `School.release_tag` без live query.
 - [x] Descriptor revision учитывает effective contract.
 - [x] Attachments и push delivery не включаются без runtime readiness.
-- [ ] Core и Tenant проходят schema parity tests.
+- [x] Core и Tenant проходят schema parity tests.
 - [ ] Mobile сохраняет и применяет capabilities до authenticated request.
 - [x] Неизвестные schema/capabilities обрабатываются fail-closed.
 - [ ] Last-known-good fallback ограничен 24 часами и наблюдаем.
 - [ ] Identity mismatch и compatibility failure не допускают fallback.
 - [ ] Проверены cold start, resume, account switch, upgrade и downgrade.
-- [ ] Обновлены OpenAPI, generated clients, CHANGELOG и VERSIONS.
+- [x] Обновлены OpenAPI, generated clients, CHANGELOG и VERSIONS.
 
 ## 8. Следующий slice
 

@@ -2861,6 +2861,34 @@ export interface components {
             /** Admin Email */
             admin_email?: string | null;
         };
+        /** SchoolDeploymentSnapshotV1 */
+        SchoolDeploymentSnapshotV1: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            /**
+             * School Id
+             * Format: uuid
+             */
+            school_id: string;
+            /** Release Image */
+            release_image: string;
+            /** Scanner Ready */
+            scanner_ready: boolean;
+            /** Realtime Ready */
+            realtime_ready: boolean;
+            /** Push Registration Ready */
+            push_registration_ready: boolean;
+            /** Push Delivery Ready */
+            push_delivery_ready: boolean;
+            /**
+             * Observed At
+             * Format: date-time
+             */
+            observed_at: string;
+        };
         /** SchoolPatch */
         SchoolPatch: {
             /** Name */
@@ -2884,6 +2912,7 @@ export interface components {
             metrics: {
                 [key: string]: unknown;
             };
+            deployment_snapshot?: components["schemas"]["SchoolDeploymentSnapshotV1"] | null;
         };
         /** TenantCapabilities */
         TenantCapabilities: {

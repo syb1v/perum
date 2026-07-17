@@ -18,6 +18,14 @@ from app.core.security import decode_access_token
 from app.models import RefreshSession, User
 from app.modules.auth import service
 from app.modules.auth.schemas import LoginRequest, LoginResponse, RefreshRequest, SessionRead, UserRead
+from app.modules.mobile_descriptor import (
+    LegacyCapabilities,
+    LegacyCompatibility,
+    MobileDescriptor,
+    legacy_capabilities,
+    legacy_compatibility,
+    resolve_descriptor,
+)
 
 router = APIRouter()
 bearer = HTTPBearer(auto_error=False)
@@ -102,12 +110,18 @@ async def logout(credentials: HTTPAuthorizationCredentials | None = Depends(bear
     return {"success": True}
 
 
-@router.get("/mobile/compatibility")
-async def mobile_compatibility() -> dict:
-    return {"compatible": True, "minimum_app_version": "0.0.0", "api_version": 1}
+@router.get("/mobile/descriptor", response_model=MobileDescriptor)
+async def mobile_descriptor() -> MobileDescriptor:
+    return resolve_descriptor()[0]
 
 
-@router.get("/mobile/capabilities")
-async def mobile_capabilities() -> dict:
-    from app.modules.push.service import capability
-    return {"refresh_sessions": True, "session_management": True, "push_tokens": capability()}
+@router.get("/mobile/compatibility", response_model=LegacyCompatibility)
+async def mobile_compatibility() -> LegacyCompatibility:
+    descriptor, _ = resolve_descriptor()
+    return legacy_compatibility(descriptor)
+
+
+@router.get("/mobile/capabilities", response_model=LegacyCapabilities)
+async def mobile_capabilities() -> LegacyCapabilities:
+    descriptor, push = resolve_descriptor()
+    return legacy_capabilities(descriptor, push)

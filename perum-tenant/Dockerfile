@@ -21,6 +21,7 @@ COPY app ./app
 COPY migrations ./migrations
 COPY alembic.ini ./alembic.ini
 COPY VERSION ./VERSION
+COPY mobile-descriptor.json ./mobile-descriptor.json
 
 EXPOSE 3000
 

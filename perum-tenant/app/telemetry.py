@@ -78,19 +78,19 @@ async def send_once() -> None:
         if school_id is None:
             return
         metrics = await collect_metrics(db, school_id)
-    from app.modules.push.service import capability as push_capability
+    from app.modules.mobile_descriptor import runtime_readiness
 
-    push = push_capability()
+    readiness = runtime_readiness()
     body = {"slug": s.ORG_SLUG, "metrics": metrics}
     if s.SCHOOL_PUBLIC_ID and s.RELEASE_IMAGE:
         body["deployment_snapshot"] = {
             "schema_version": 1,
             "school_id": s.SCHOOL_PUBLIC_ID,
             "release_image": s.RELEASE_IMAGE,
-            "scanner_ready": False,
-            "realtime_ready": True,
-            "push_registration_ready": push["registration_available"],
-            "push_delivery_ready": push["delivery_enabled"],
+            "scanner_ready": readiness.scanner_ready,
+            "realtime_ready": readiness.realtime_ready,
+            "push_registration_ready": readiness.push_registration_ready,
+            "push_delivery_ready": readiness.push_delivery_ready,
             "observed_at": utc_now().isoformat(),
         }
     async with httpx.AsyncClient(timeout=10.0) as client:

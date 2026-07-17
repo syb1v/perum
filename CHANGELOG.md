@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Tenant получил strict canonical `GET /api/mobile/descriptor` с теми же schema version, compatibility и curated capabilities, что Core discovery; build contract загружается из release-owned manifest, runtime readiness разделяется с telemetry, legacy mobile endpoints сохранены как typed projections, а structural OpenAPI check блокирует schema drift.
 - Core принимает аутентифицированный versioned deployment snapshot школы, проверяет UUID, release identity и монотонность наблюдения, а tenant discovery публикует deployment-dependent capabilities только как пересечение release manifest со свежей runtime readiness; missing/stale snapshot и недоступный scanner обрабатываются fail-closed и фиксируются безопасной structured telemetry.
 - Core tenant discovery теперь получает versioned mobile compatibility и capabilities из release manifest, включает их в content revision и при отсутствии, неизвестном или невалидном manifest безопасно отключает все mobile capabilities.
 - Синхронизирован `PRODUCT_MASTER_PLAN.md` и детальный план dynamic mobile descriptor: release manifest и Core resolver отмечены выполненными, а deployment snapshot, tenant parity, mobile grace period и lifecycle tests сохранены как следующие незакрытые этапы.

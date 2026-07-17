@@ -34,6 +34,14 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
     monkeypatch.setattr(settings, "SCHOOL_PUBLIC_ID", "f89929a3-1aca-4be4-adb2-f706dcb78b1b")
     monkeypatch.setattr(settings, "RELEASE_IMAGE", "tenant:release-a")
     monkeypatch.setattr(t, "collect_metrics", AsyncMock(return_value={"users_total": 1}))
+    from app.modules import mobile_descriptor
+
+    monkeypatch.setattr(mobile_descriptor, "runtime_readiness", lambda: SimpleNamespace(
+        scanner_ready=True,
+        realtime_ready=False,
+        push_registration_ready=True,
+        push_delivery_ready=False,
+    ))
 
     db = AsyncMock()
     db.scalar.return_value = 7
@@ -64,9 +72,9 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
         "schema_version": 1,
         "school_id": settings.SCHOOL_PUBLIC_ID,
         "release_image": "tenant:release-a",
-        "scanner_ready": False,
-        "realtime_ready": True,
-        "push_registration_ready": False,
+        "scanner_ready": True,
+        "realtime_ready": False,
+        "push_registration_ready": True,
         "push_delivery_ready": False,
         "observed_at": body["deployment_snapshot"]["observed_at"],
     }

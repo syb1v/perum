@@ -9071,6 +9071,60 @@
         ],
         "title": "SchoolCreate"
       },
+      "SchoolDeploymentSnapshotV1": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version"
+          },
+          "school_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "School Id"
+          },
+          "release_image": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Release Image"
+          },
+          "scanner_ready": {
+            "type": "boolean",
+            "title": "Scanner Ready"
+          },
+          "realtime_ready": {
+            "type": "boolean",
+            "title": "Realtime Ready"
+          },
+          "push_registration_ready": {
+            "type": "boolean",
+            "title": "Push Registration Ready"
+          },
+          "push_delivery_ready": {
+            "type": "boolean",
+            "title": "Push Delivery Ready"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Observed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "school_id",
+          "release_image",
+          "scanner_ready",
+          "realtime_ready",
+          "push_registration_ready",
+          "push_delivery_ready",
+          "observed_at"
+        ],
+        "title": "SchoolDeploymentSnapshotV1"
+      },
       "SchoolPatch": {
         "properties": {
           "name": {
@@ -9125,6 +9179,16 @@
             "type": "object",
             "title": "Metrics",
             "default": {}
+          },
+          "deployment_snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchoolDeploymentSnapshotV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

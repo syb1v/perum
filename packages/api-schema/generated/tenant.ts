@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/mobile/descriptor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mobile Descriptor */
+        get: operations["mobile_descriptor_api_mobile_descriptor_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/mobile/compatibility": {
         parameters: {
             query?: never;
@@ -3931,6 +3948,34 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** LegacyCapabilities */
+        LegacyCapabilities: {
+            /** Refresh Sessions */
+            refresh_sessions: boolean;
+            /** Session Management */
+            session_management: boolean;
+            push_tokens: components["schemas"]["LegacyPushCapabilities"];
+        };
+        /** LegacyCompatibility */
+        LegacyCompatibility: {
+            /** Compatible */
+            compatible: boolean;
+            /** Minimum App Version */
+            minimum_app_version: string;
+            /** Api Version */
+            api_version: number;
+        };
+        /** LegacyPushCapabilities */
+        LegacyPushCapabilities: {
+            /** Registration Supported */
+            registration_supported: boolean;
+            /** Registration Available */
+            registration_available: boolean;
+            /** Delivery Enabled */
+            delivery_enabled: boolean;
+            /** Configured Providers */
+            configured_providers: string[];
+        };
         /** LessonOccurrenceUpdate */
         LessonOccurrenceUpdate: {
             /** Version */
@@ -4007,6 +4052,60 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** MobileCapabilities */
+        MobileCapabilities: {
+            /** Refresh Sessions */
+            refresh_sessions: boolean;
+            /** Session Management */
+            session_management: boolean;
+            /** Push Registration */
+            push_registration: boolean;
+            /** Push Delivery */
+            push_delivery: boolean;
+            /** Social Friends */
+            social_friends: boolean;
+            /** Social Messages */
+            social_messages: boolean;
+            /** Social Realtime */
+            social_realtime: boolean;
+            /** Social Attachments */
+            social_attachments: boolean;
+            /** Support Requester */
+            support_requester: boolean;
+            /** Support Attachments */
+            support_attachments: boolean;
+            /** Offline Preferences */
+            offline_preferences: boolean;
+            /** Offline Homework State */
+            offline_homework_state: boolean;
+            /** Offline Social Messages */
+            offline_social_messages: boolean;
+            /** Offline Support Messages */
+            offline_support_messages: boolean;
+            /** Offline Read Cursors */
+            offline_read_cursors: boolean;
+            /** Offline Support Ticket Creation */
+            offline_support_ticket_creation: boolean;
+        };
+        /** MobileCompatibility */
+        MobileCompatibility: {
+            /** Mobile Api Version */
+            mobile_api_version: number;
+            /** Minimum Mobile Api Version */
+            minimum_mobile_api_version: number;
+            /** Minimum App Version */
+            minimum_app_version: string;
+        };
+        /** MobileDescriptor */
+        MobileDescriptor: {
+            /**
+             * Schema Version
+             * @constant
+             */
+            schema_version: 1;
+            compatibility: components["schemas"]["MobileCompatibility"];
+            capabilities: components["schemas"]["MobileCapabilities"];
         };
         /** ModerationActionCreate */
         ModerationActionCreate: {
@@ -5202,6 +5301,26 @@ export interface operations {
             };
         };
     };
+    mobile_descriptor_api_mobile_descriptor_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MobileDescriptor"];
+                };
+            };
+        };
+    };
     mobile_compatibility_api_mobile_compatibility_get: {
         parameters: {
             query?: never;
@@ -5217,9 +5336,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["LegacyCompatibility"];
                 };
             };
         };
@@ -5239,9 +5356,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["LegacyCapabilities"];
                 };
             };
         };

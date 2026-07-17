@@ -285,6 +285,27 @@
         ]
       }
     },
+    "/api/mobile/descriptor": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Mobile Descriptor",
+        "operationId": "mobile_descriptor_api_mobile_descriptor_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MobileDescriptor"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/mobile/compatibility": {
       "get": {
         "tags": [
@@ -298,9 +319,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Mobile Compatibility Api Mobile Compatibility Get"
+                  "$ref": "#/components/schemas/LegacyCompatibility"
                 }
               }
             }
@@ -321,9 +340,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Mobile Capabilities Api Mobile Capabilities Get"
+                  "$ref": "#/components/schemas/LegacyCapabilities"
                 }
               }
             }
@@ -13811,6 +13828,85 @@
         ],
         "title": "InvestRequest"
       },
+      "LegacyCapabilities": {
+        "properties": {
+          "refresh_sessions": {
+            "type": "boolean",
+            "title": "Refresh Sessions"
+          },
+          "session_management": {
+            "type": "boolean",
+            "title": "Session Management"
+          },
+          "push_tokens": {
+            "$ref": "#/components/schemas/LegacyPushCapabilities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "refresh_sessions",
+          "session_management",
+          "push_tokens"
+        ],
+        "title": "LegacyCapabilities"
+      },
+      "LegacyCompatibility": {
+        "properties": {
+          "compatible": {
+            "type": "boolean",
+            "title": "Compatible"
+          },
+          "minimum_app_version": {
+            "type": "string",
+            "title": "Minimum App Version"
+          },
+          "api_version": {
+            "type": "integer",
+            "title": "Api Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "compatible",
+          "minimum_app_version",
+          "api_version"
+        ],
+        "title": "LegacyCompatibility"
+      },
+      "LegacyPushCapabilities": {
+        "properties": {
+          "registration_supported": {
+            "type": "boolean",
+            "title": "Registration Supported"
+          },
+          "registration_available": {
+            "type": "boolean",
+            "title": "Registration Available"
+          },
+          "delivery_enabled": {
+            "type": "boolean",
+            "title": "Delivery Enabled"
+          },
+          "configured_providers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Configured Providers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "registration_supported",
+          "registration_available",
+          "delivery_enabled",
+          "configured_providers"
+        ],
+        "title": "LegacyPushCapabilities"
+      },
       "LessonOccurrenceUpdate": {
         "properties": {
           "version": {
@@ -14083,6 +14179,144 @@
           "created_at"
         ],
         "title": "MediaObjectOut"
+      },
+      "MobileCapabilities": {
+        "properties": {
+          "refresh_sessions": {
+            "type": "boolean",
+            "title": "Refresh Sessions"
+          },
+          "session_management": {
+            "type": "boolean",
+            "title": "Session Management"
+          },
+          "push_registration": {
+            "type": "boolean",
+            "title": "Push Registration"
+          },
+          "push_delivery": {
+            "type": "boolean",
+            "title": "Push Delivery"
+          },
+          "social_friends": {
+            "type": "boolean",
+            "title": "Social Friends"
+          },
+          "social_messages": {
+            "type": "boolean",
+            "title": "Social Messages"
+          },
+          "social_realtime": {
+            "type": "boolean",
+            "title": "Social Realtime"
+          },
+          "social_attachments": {
+            "type": "boolean",
+            "title": "Social Attachments"
+          },
+          "support_requester": {
+            "type": "boolean",
+            "title": "Support Requester"
+          },
+          "support_attachments": {
+            "type": "boolean",
+            "title": "Support Attachments"
+          },
+          "offline_preferences": {
+            "type": "boolean",
+            "title": "Offline Preferences"
+          },
+          "offline_homework_state": {
+            "type": "boolean",
+            "title": "Offline Homework State"
+          },
+          "offline_social_messages": {
+            "type": "boolean",
+            "title": "Offline Social Messages"
+          },
+          "offline_support_messages": {
+            "type": "boolean",
+            "title": "Offline Support Messages"
+          },
+          "offline_read_cursors": {
+            "type": "boolean",
+            "title": "Offline Read Cursors"
+          },
+          "offline_support_ticket_creation": {
+            "type": "boolean",
+            "title": "Offline Support Ticket Creation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "refresh_sessions",
+          "session_management",
+          "push_registration",
+          "push_delivery",
+          "social_friends",
+          "social_messages",
+          "social_realtime",
+          "social_attachments",
+          "support_requester",
+          "support_attachments",
+          "offline_preferences",
+          "offline_homework_state",
+          "offline_social_messages",
+          "offline_support_messages",
+          "offline_read_cursors",
+          "offline_support_ticket_creation"
+        ],
+        "title": "MobileCapabilities"
+      },
+      "MobileCompatibility": {
+        "properties": {
+          "mobile_api_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Mobile Api Version"
+          },
+          "minimum_mobile_api_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Minimum Mobile Api Version"
+          },
+          "minimum_app_version": {
+            "type": "string",
+            "title": "Minimum App Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mobile_api_version",
+          "minimum_mobile_api_version",
+          "minimum_app_version"
+        ],
+        "title": "MobileCompatibility"
+      },
+      "MobileDescriptor": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version"
+          },
+          "compatibility": {
+            "$ref": "#/components/schemas/MobileCompatibility"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/MobileCapabilities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "schema_version",
+          "compatibility",
+          "capabilities"
+        ],
+        "title": "MobileDescriptor"
       },
       "ModerationActionCreate": {
         "properties": {
