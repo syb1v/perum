@@ -6,6 +6,8 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Подготовлена техническая передача по последнему инженерному циклу: Homework и offline conflicts, occurrence backfill, архивирование учебных сущностей, discovery/mobile auth, security, CI, миграции и порядок продолжения.
+- Подготовлен краткий отчёт для команды о текущей готовности PERUM, состоянии кабинетов ученика, учителя и родителя, архитектуре и реалистичности достижения feature complete ко второй неделе августа.
 - Mobile проверяет TTL и API-совместимость tenant descriptor до любого authenticated запроса при cold start и переключении аккаунта, обновляет routing через Core с tenant identity pinning и использует last-known-good descriptor при временной недоступности Core; rotating refresh больше не мутирует замыкание аккаунта до атомарного сохранения токена.
 - Сформирован исполнимый план динамического versioned mobile descriptor: release manifest в Core вместо live tenant query, безопасное пересечение deployment capabilities, tenant contract parity, mobile feature gating и 24-часовой grace period для last-known-good routing.
 
