@@ -318,4 +318,4 @@ RBAC-матрица + тесты ядра (56 passed), isolation E2E (cross-scho
 | 173 | 2026-07-16 | e59d937 | feat(discovery): добавлено TTL-обновление tenant descriptor |
 | 174 | 2026-07-17 | e315144 | fix(mobile): descriptor preflight и атомарная ротация refresh token |
 | 175 | 2026-07-17 | ace40db | docs(plan): спроектирован динамический mobile descriptor |
-| 176 | 2026-07-17 | _______ | docs: подготовлены отчёт о готовности и техническая передача |
+| 176 | 2026-07-17 | 83db72f | docs: подготовлены отчёт о готовности и техническая передача |
