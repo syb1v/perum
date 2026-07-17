@@ -15,24 +15,26 @@
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** multi-device Homework conflict QA. Durable requester support
-read cursor и offline ticket creation реализованы. One-school pilot Stage F
-отложен до получения временного operator access и остаётся на 11/12.
+**Текущий этап:** Friends/direct chats hardening, следующий изолированный slice —
+durable social read cursor. One-school pilot Stage F и multi-device Homework
+conflict QA явно отложены; их незакрытые шкалы и remaining scope не изменены.
 
-**Следующий roadmap:** провести multi-device conflict QA для Homework и по его
-результатам переоценить следующий небольшой цикл. One-school pilot выполняется по
-готовому checklist после получения operator access; до этого Stage F и descriptor
-percentages не меняются.
-После этого приоритеты продолжаются по workstream table ниже: Friends/media,
-учебный hardening, support escalation, chats/moderation, billing, role parity и
-production rollout.
+**Следующий roadmap:** реализовать только durable account-scoped read cursor для
+direct chats с server idempotency, retry/recovery и capability gating; затем
+отдельно переоценить Friends rollout. Stage F возобновляется после предоставления
+opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
+concurrency environment и mobile preview QA window. После этого приоритеты
+продолжаются по workstream table ниже: Friends/media, учебный hardening, support
+escalation, chats/moderation, billing, role parity и production rollout.
 
-**Handoff readiness:** код Stages A-E и automated Stage F gates находится в
-`main`; CI run [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038)
-зелёный. Безопасный checklist, stop conditions, recovery и обязательные поля
-operator record описаны в
-[DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Следующий
-исполнитель выбирает opt-in школу и не закрывает Stage F без operator evidence.
+**Handoff readiness:** код Stages A-E, automated Stage F gates, durable requester
+support read cursor и offline ticket creation находится в `main`; CI run
+[29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
+Stage F automation, а support slices прошли tenant/mobile/shared contract gates.
+Pilot checklist и обязательные поля operator record описаны в
+[DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
+закрывать Stage F без operator evidence или Homework hardening без concurrency и
+restart/conflict evidence.
 
 **Протокол обновления:** после каждого завершённого цикла исполнитель обязан
 обновить дату, числители/знаменатели, текущий этап, следующий roadmap и handoff;
@@ -590,8 +592,8 @@ Flow:
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate и безопасный operator checklist зелёные. Остаётся выполнить one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, requester support read cursor и offline ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Не начато | minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix |
-| P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA |
-| P1 | Friends | Частично | audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
+| P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
+| P1 | Friends | Частично | следующий slice — durable social read cursor; далее audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |
