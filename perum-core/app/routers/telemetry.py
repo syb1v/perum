@@ -83,6 +83,7 @@ async def ingest(
         deployment.realtime_ready = snapshot.realtime_ready
         deployment.push_registration_ready = snapshot.push_registration_ready
         deployment.push_delivery_ready = snapshot.push_delivery_ready
+        deployment.social_ready = snapshot.social_ready
         deployment.observed_at = observed_at
         deployment.received_at = datetime.now(timezone.utc).replace(tzinfo=None)
 

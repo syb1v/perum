@@ -19,7 +19,7 @@ from app.telemetry import collect_metrics
 
 EXPECTED_KEYS = {
     "users_total", "students", "teachers", "parents", "admins",
-    "grades_total", "avg_grade", "active_24h", "balance_total",
+    "grades_total", "avg_grade", "active_24h", "balance_total", "social",
 }
 
 
@@ -82,6 +82,11 @@ def test_collect_metrics_exact_values():
     assert m["balance_total"] == 300  # 3 ученика * 100
     # Никаких PII — только агрегаты.
     assert set(m.keys()) == EXPECTED_KEYS
+    assert m["social"] == {
+        "operator_enabled": True, "school_enabled": False, "history_deletion_pending": False,
+        "friendships_active": 0, "friend_requests_pending": 0, "blocks_active": 0,
+        "conversations": 0, "messages": 0, "reports": 0,
+    }
 
 
 async def _empty_school():
@@ -100,3 +105,4 @@ def test_collect_metrics_empty_school():
     assert m["avg_grade"] is None
     assert m["active_24h"] == 0 and m["balance_total"] == 0
     assert set(m.keys()) == EXPECTED_KEYS
+    assert all(isinstance(value, (bool, int)) for value in m["social"].values())

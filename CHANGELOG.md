@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Friends/social hardening разделил fail-closed operator rollout и школьную policy: school shutdown оставляет историю read-only на 30 дней с пользовательским countdown и отменой удаления при повторном включении, operator shutdown не запускает deletion; добавлены audit/telemetry, capability gating, pagination/isolation hardening и исправление пропуска search cursor.
 - Direct chats получили durable account-scoped read cursor: tenant атомарно хранит монотонный cursor и actor-wide idempotency receipt, mobile восстанавливает SQLite outbox после crash/network failure и использует отдельную release capability `offline_social_read_cursors`, не смешивая rollout с support cursor.
 - Юридические ADR вынесены из активной очереди до назначения профильного владельца; зависимые billing, parent observer policy и store rollout остаются заблокированными, а отдельная ссылка на deferred requirements убрана из индекса документации.
 - Требования для возобновления Stage F pilot и Homework multi-device conflict QA вынесены в отдельный active document с prerequisites, stop conditions и exit criteria; master plan получил следующий dependency-aware roadmap из шести малых циклов.

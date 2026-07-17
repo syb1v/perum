@@ -15,6 +15,7 @@ from app.core.time import utc_now
 from app.models import School, User
 from app.models.social import SocialRealtimeTicket
 from app.modules.social.service import _social_context
+from app.modules.social.service import require_rollout
 
 
 def token_digest(token: str) -> str:
@@ -38,6 +39,10 @@ async def issue_ticket(db: AsyncSession, user: User) -> tuple[str, datetime]:
 
 
 async def consume_ticket(db: AsyncSession, token: str) -> tuple[User, int] | None:
+    try:
+        require_rollout()
+    except HTTPException:
+        return None
     if not token or len(token) > 128:
         return None
     try:
@@ -101,6 +106,10 @@ class SocialRealtimeManager:
                 self._connections.pop(key, None)
 
     async def publish(self, school_id: int, user_ids: set[int], payload: dict[str, Any]) -> None:
+        try:
+            require_rollout()
+        except HTTPException:
+            return
         async with self._lock:
             targets = [connection for user_id in user_ids for connection in self._connections.get((school_id, user_id), ())]
             for connection in targets:
@@ -139,6 +148,10 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     sender = asyncio.create_task(send_events())
     try:
         while True:
+            try:
+                require_rollout()
+            except HTTPException:
+                break
             raw = await asyncio.wait_for(websocket.receive_text(), timeout=45)
             if len(raw) > 1024:
                 break

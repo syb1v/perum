@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.core.db import Base
 from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent
-from app.models.social import FriendRequest, Friendship
+from app.models.social import FriendRequest, Friendship, SocialSettings
 from app.modules.social import service
 from app.modules.social.schemas import SettingsPatch
 
@@ -54,6 +54,31 @@ def test_scope_idempotency_accept_and_block_cleanup():
         finally:
             await db.close()
             await engine.dispose()
+    asyncio.run(run())
+
+
+def test_student_search_cursor_has_no_skips_duplicates_or_cross_school_rows():
+    async def run():
+        engine, db, users, school = await seed()
+        try:
+            own_class = await db.scalar(select(Class).where(Class.school_id == school.id, Class.grade_level == 5))
+            extra = [User(school_id=school.id, role="student", login=f"page{i}", first_name=f"Page{i}", password_hash="x") for i in range(5)]
+            db.add_all(extra); await db.flush()
+            db.add_all([ClassStudent(class_id=own_class.id, student_id=row.id) for row in extra]); await db.commit()
+            await service.patch_settings(db, school.id, SettingsPatch(social_enabled=True))
+            seen = []
+            cursor = None
+            while True:
+                items, cursor = await service.students(db, users[0], "", cursor, 2)
+                seen.extend(item.id for item in items)
+                if cursor is None:
+                    break
+            expected = sorted([users[1].id, *[row.id for row in extra]])
+            assert seen == expected
+            assert len(seen) == len(set(seen))
+            assert users[3].id not in seen
+        finally:
+            await db.close(); await engine.dispose()
     asyncio.run(run())
 
 

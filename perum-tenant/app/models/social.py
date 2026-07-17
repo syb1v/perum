@@ -1,6 +1,6 @@
 from datetime import datetime, time
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, Time, UniqueConstraint, text, func
+from sqlalchemy import JSON, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, Time, UniqueConstraint, text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -29,6 +29,21 @@ class SocialSettings(Base):
     social_quiet_hours_start: Mapped[time | None] = mapped_column(Time)
     social_quiet_hours_end: Mapped[time | None] = mapped_column(Time)
     social_moderation_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime)
+    history_deletes_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+
+
+class SocialAuditEvent(Base):
+    __tablename__ = "social_audit_events"
+    __table_args__ = (Index("ix_social_audit_school_created", "school_id", "created_at"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(20), nullable=False, default="accepted", server_default="accepted")
+    details: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
 class SocialRealtimeTicket(Base):

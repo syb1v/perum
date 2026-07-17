@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 import re
 import unicodedata
 
@@ -10,8 +11,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.models import User
 from app.models.academic import Class, ClassStudent
-from app.models.social import Conversation, ConversationMember, EvidenceHold, FriendRequest, Friendship, Message, ModerationCase, ModerationReport, SocialReadReceipt, SocialSettings, UserBlock
+from app.core.config import get_settings as get_runtime_settings
+from app.models.social import Conversation, ConversationMember, EvidenceHold, FriendRequest, Friendship, Message, ModerationCase, ModerationReport, SocialAuditEvent, SocialReadReceipt, SocialSettings, UserBlock
 from app.modules.social.schemas import ReportCreate, SettingsPatch, StudentProfile
+
+
+logger = logging.getLogger("perum.tenant.social")
+
+
+def require_rollout() -> None:
+    if not get_runtime_settings().SOCIAL_ROLLOUT_ENABLED:
+        logger.info("social_access_denied", extra={"social_reason": "operator_disabled"})
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "social rollout is unavailable")
+
+
+def settings_out(settings: SocialSettings) -> dict:
+    return {
+        **{field: getattr(settings, field) for field in ("social_enabled", "friend_scope", "social_min_grade", "social_max_grade", "parent_chat_visibility", "message_retention_days", "message_links_allowed", "message_attachments_enabled", "social_quiet_hours_start", "social_quiet_hours_end", "social_moderation_enabled", "disabled_at", "history_deletes_at")},
+        "operator_available": get_runtime_settings().SOCIAL_ROLLOUT_ENABLED,
+        "history_mode": "active" if settings.social_enabled else "read_only",
+    }
+
+
+def audit_event(school_id: int, event_type: str, actor_role: str, details: dict | None = None) -> SocialAuditEvent:
+    return SocialAuditEvent(school_id=school_id, event_type=event_type, actor_role=actor_role, details=details)
 
 
 async def get_settings(db: AsyncSession, school_id: int) -> SocialSettings:
@@ -23,16 +46,25 @@ async def get_settings(db: AsyncSession, school_id: int) -> SocialSettings:
     return settings
 
 
-async def patch_settings(db: AsyncSession, school_id: int, payload: SettingsPatch) -> SocialSettings:
+async def patch_settings(db: AsyncSession, school_id: int, payload: SettingsPatch, actor_role: str = "school_admin") -> SocialSettings:
     settings = await get_settings(db, school_id)
     values = payload.model_dump(exclude_unset=True)
     minimum = values.get("social_min_grade", settings.social_min_grade)
     maximum = values.get("social_max_grade", settings.social_max_grade)
     if minimum is not None and maximum is not None and minimum > maximum:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid grade range")
+    was_enabled = settings.social_enabled
     for key, value in values.items():
         setattr(settings, key, value)
     settings.social_moderation_enabled = settings.social_enabled
+    now = utc_now()
+    if was_enabled and not settings.social_enabled:
+        settings.disabled_at = now
+        settings.history_deletes_at = now + timedelta(days=30)
+    elif not was_enabled and settings.social_enabled:
+        settings.disabled_at = None
+        settings.history_deletes_at = None
+    db.add(audit_event(school_id, "settings_updated", actor_role, {"fields": sorted(values), "social_enabled": settings.social_enabled}))
     await db.commit()
     await db.refresh(settings)
     return settings
@@ -62,6 +94,7 @@ def _profile(user: User, class_: Class) -> StudentProfile:
 
 
 async def _social_context(db: AsyncSession, user: User):
+    require_rollout()
     if user.school_id is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "school not found")
     settings = await get_settings(db, user.school_id)
@@ -69,6 +102,16 @@ async def _social_context(db: AsyncSession, user: User):
     if not settings.social_enabled or own_class.grade_level is None or (settings.social_min_grade is not None and own_class.grade_level < settings.social_min_grade) or (settings.social_max_grade is not None and own_class.grade_level > settings.social_max_grade):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "social features are unavailable")
     return settings, own_user, own_class
+
+
+async def history_context(db: AsyncSession, user: User) -> SocialSettings:
+    require_rollout()
+    if user.school_id is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "school not found")
+    settings = await get_settings(db, user.school_id)
+    if not settings.social_enabled and settings.history_deletes_at is not None and settings.history_deletes_at <= utc_now():
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "social history is unavailable")
+    return settings
 
 
 async def _eligible_target(db: AsyncSession, user: User, student_id: int):
@@ -90,7 +133,7 @@ async def students(db: AsyncSession, user: User, query: str, cursor: int | None,
     if query: stmt = stmt.where(or_(User.first_name.ilike(f"%{query}%"), User.last_name.ilike(f"%{query}%")))
     if cursor is not None: stmt = stmt.where(User.id > cursor)
     rows = (await db.execute(stmt.order_by(User.id).limit(limit + 1))).all()
-    return [_profile(*row) for row in rows[:limit]], rows[limit][0].id if len(rows) > limit else None
+    return [_profile(*row) for row in rows[:limit]], rows[limit - 1][0].id if len(rows) > limit else None
 
 
 async def create_request(db: AsyncSession, user: User, student_id: int, client_request_id: str):
@@ -105,7 +148,7 @@ async def create_request(db: AsyncSession, user: User, student_id: int, client_r
     pending = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.user_low_id == low, FriendRequest.user_high_id == high, FriendRequest.status == "pending"))
     if pending is not None: return pending
     request = FriendRequest(school_id=user.school_id, requester_id=user.id, addressee_id=student_id, user_low_id=low, user_high_id=high, client_request_id=client_request_id, expires_at=utc_now() + timedelta(days=30))
-    db.add(request); await db.commit(); await db.refresh(request); return request
+    db.add(request); db.add(audit_event(user.school_id, "friend_request_created", user.role)); await db.commit(); await db.refresh(request); return request
 
 
 async def request_action(db: AsyncSession, user: User, request_id: int, action: str):
@@ -115,6 +158,7 @@ async def request_action(db: AsyncSession, user: User, request_id: int, action: 
     if not allowed: raise HTTPException(status.HTTP_404_NOT_FOUND, "request not found")
     request.status = {"accept": "accepted", "reject": "rejected", "cancel": "cancelled"}[action]; request.responded_at = utc_now()
     if action == "accept": db.add(Friendship(school_id=user.school_id, user_low_id=request.user_low_id, user_high_id=request.user_high_id, created_from_request_id=request.id))
+    db.add(audit_event(user.school_id, f"friend_request_{action}", user.role))
     await db.commit(); return request
 
 
@@ -126,6 +170,7 @@ async def block(db: AsyncSession, user: User, student_id: int, reason_code: str 
     for request in (await db.scalars(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.user_low_id == low, FriendRequest.user_high_id == high, FriendRequest.status == "pending"))).all(): request.status = "cancelled"; request.responded_at = now
     friendship = await db.scalar(select(Friendship).where(Friendship.school_id == user.school_id, Friendship.user_low_id == low, Friendship.user_high_id == high, Friendship.ended_at.is_(None)))
     if friendship: friendship.ended_at = now; friendship.ended_by_id = user.id; friendship.end_reason = "blocked"
+    db.add(audit_event(user.school_id, "user_blocked", user.role, {"reason_present": reason_code is not None}))
     await db.commit(); await publish_conversation_changed(db, user.school_id, user.id, student_id, "blocked"); await db.refresh(block_); return block_
 
 
@@ -133,7 +178,7 @@ async def end_friendship(db: AsyncSession, user: User, student_id: int):
     await _eligible_target(db, user, student_id); low, high = _pair(user.id, student_id)
     friendship = await db.scalar(select(Friendship).where(Friendship.school_id == user.school_id, Friendship.user_low_id == low, Friendship.user_high_id == high, Friendship.ended_at.is_(None)))
     if friendship is None: raise HTTPException(status.HTTP_404_NOT_FOUND, "friend not found")
-    friendship.ended_at = utc_now(); friendship.ended_by_id = user.id; friendship.end_reason = "removed"; await db.commit(); await publish_conversation_changed(db, user.school_id, user.id, student_id, "unfriended")
+    friendship.ended_at = utc_now(); friendship.ended_by_id = user.id; friendship.end_reason = "removed"; db.add(audit_event(user.school_id, "friendship_ended", user.role)); await db.commit(); await publish_conversation_changed(db, user.school_id, user.id, student_id, "unfriended")
 
 
 async def publish_conversation_changed(db: AsyncSession, school_id: int, user_id: int, peer_id: int, reason: str) -> None:
@@ -169,6 +214,7 @@ async def create_conversation(db: AsyncSession, user: User, peer_id: int) -> Con
 
 
 async def conversation_for_member(db: AsyncSession, user: User, conversation_id: int) -> tuple[Conversation, ConversationMember]:
+    await history_context(db, user)
     row = (await db.execute(select(Conversation, ConversationMember).join(ConversationMember, ConversationMember.conversation_id == Conversation.id).where(Conversation.id == conversation_id, Conversation.school_id == user.school_id, ConversationMember.school_id == user.school_id, ConversationMember.user_id == user.id))).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
@@ -176,6 +222,7 @@ async def conversation_for_member(db: AsyncSession, user: User, conversation_id:
 
 
 async def conversation_out(db: AsyncSession, user: User, conversation: Conversation) -> dict:
+    settings = await history_context(db, user)
     peer_id = conversation.user_high_id if conversation.user_low_id == user.id else conversation.user_low_id
     peer_row = (await db.execute(select(User, Class).join(ClassStudent, ClassStudent.student_id == User.id).join(Class, Class.id == ClassStudent.class_id).where(User.id == peer_id, User.school_id == user.school_id, Class.school_id == user.school_id))).first()
     if peer_row is None:
@@ -183,14 +230,17 @@ async def conversation_out(db: AsyncSession, user: User, conversation: Conversat
     peer, class_ = peer_row
     member = await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation.id, ConversationMember.user_id == user.id, ConversationMember.school_id == user.school_id))
     now = utc_now()
-    unread = await db.scalar(select(func.count(Message.id)).where(Message.conversation_id == conversation.id, Message.school_id == user.school_id, Message.sender_id != user.id, Message.is_visible.is_(True), Message.expires_at > now, Message.id > (member.last_read_message_id or 0)))
-    last = await db.scalar(select(Message).where(Message.id == conversation.last_message_id, Message.school_id == user.school_id, Message.is_visible.is_(True), Message.expires_at > now)) if conversation.last_message_id else None
-    can_send = conversation.is_active and not conversation.is_locked and await _can_message(db, user, peer_id)
-    return {"id": conversation.id, "peer": _profile(peer, class_), "last_message": last, "unread_count": unread or 0, "can_send": can_send, "disabled_reason": None if can_send else "unavailable", "created_at": conversation.created_at}
+    readable = Message.expires_at > now if settings.social_enabled else True
+    unread = await db.scalar(select(func.count(Message.id)).where(Message.conversation_id == conversation.id, Message.school_id == user.school_id, Message.sender_id != user.id, Message.is_visible.is_(True), readable, Message.id > (member.last_read_message_id or 0)))
+    last = await db.scalar(select(Message).where(Message.id == conversation.last_message_id, Message.school_id == user.school_id, Message.is_visible.is_(True), readable)) if conversation.last_message_id else None
+    can_send = settings.social_enabled and conversation.is_active and not conversation.is_locked and await _can_message(db, user, peer_id)
+    reason = None if can_send else ("school_disabled" if not settings.social_enabled else "unavailable")
+    return {"id": conversation.id, "peer": _profile(peer, class_), "last_message": last, "unread_count": unread or 0, "can_send": can_send, "disabled_reason": reason, "history_deletes_at": settings.history_deletes_at, "created_at": conversation.created_at}
 
 
 async def send_message(db: AsyncSession, user: User, conversation_id: int, client_message_id: str, body: str) -> Message:
     conversation, _ = await conversation_for_member(db, user, conversation_id)
+    await _social_context(db, user)
     canonical = canonical_message(body)
     if not canonical or len(canonical) > 4000:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid message")
@@ -220,6 +270,7 @@ async def send_message(db: AsyncSession, user: User, conversation_id: int, clien
 
 async def mark_read(db: AsyncSession, user: User, conversation_id: int, message_id: int, client_action_id: str | None = None) -> ConversationMember:
     conversation, _ = await conversation_for_member(db, user, conversation_id)
+    await _social_context(db, user)
     if client_action_id is not None:
         existing = await db.scalar(select(SocialReadReceipt).where(SocialReadReceipt.actor_id == user.id, SocialReadReceipt.client_action_id == client_action_id))
         if existing is not None:
@@ -269,6 +320,7 @@ async def create_report(db: AsyncSession, user: User, payload: ReportCreate) -> 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "message not found")
     report = ModerationReport(school_id=user.school_id, reporter_id=user.id, reported_user_id=message.sender_id, message_id=message.id, category=payload.category, comment=payload.comment, client_report_id=payload.client_report_id)
     db.add(report)
+    db.add(audit_event(user.school_id, "message_reported", user.role, {"category": payload.category, "comment_present": payload.comment is not None}))
     await db.flush()
     case = ModerationCase(school_id=user.school_id, report_id=report.id, conversation_id=message.conversation_id, reported_message_id=message.id)
     db.add(case)

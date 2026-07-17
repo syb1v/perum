@@ -41,6 +41,7 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
         realtime_ready=False,
         push_registration_ready=True,
         push_delivery_ready=False,
+        social_ready=True,
     ))
 
     db = AsyncMock()
@@ -76,5 +77,6 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
         "realtime_ready": False,
         "push_registration_ready": True,
         "push_delivery_ready": False,
+        "social_ready": True,
         "observed_at": body["deployment_snapshot"]["observed_at"],
     }

@@ -9110,6 +9110,11 @@
             "type": "boolean",
             "title": "Push Delivery Ready"
           },
+          "social_ready": {
+            "type": "boolean",
+            "title": "Social Ready",
+            "default": false
+          },
           "observed_at": {
             "type": "string",
             "format": "date-time",

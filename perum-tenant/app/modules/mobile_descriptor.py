@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_
 
 from app.modules.media.scanner import UnavailableScanner
 from app.modules.push.service import capability as push_capability
+from app.core.config import get_settings
 
 
 _SEMVER_PATTERN = (
@@ -80,6 +81,7 @@ class RuntimeReadiness(BaseModel):
     push_delivery_ready: StrictBool
     push_registration_supported: StrictBool
     configured_push_providers: tuple[str, ...]
+    social_ready: StrictBool
 
 
 class LegacyCompatibility(BaseModel):
@@ -131,6 +133,7 @@ def runtime_readiness() -> RuntimeReadiness:
         push_delivery_ready=push.delivery_enabled and bool(push.configured_providers),
         push_registration_supported=push.registration_supported,
         configured_push_providers=tuple(push.configured_providers),
+        social_ready=get_settings().SOCIAL_ROLLOUT_ENABLED,
     )
 
 
@@ -143,6 +146,12 @@ def resolve_descriptor() -> tuple[MobileDescriptor, LegacyPushCapabilities]:
         "social_realtime": build.capabilities.social_realtime and readiness.realtime_ready,
         "social_attachments": build.capabilities.social_attachments and readiness.scanner_ready,
         "support_attachments": build.capabilities.support_attachments and readiness.scanner_ready,
+        "social_friends": build.capabilities.social_friends and readiness.social_ready,
+        "social_messages": build.capabilities.social_messages and readiness.social_ready,
+        "offline_social_messages": build.capabilities.offline_social_messages and readiness.social_ready,
+        "offline_social_read_cursors": build.capabilities.offline_social_read_cursors and readiness.social_ready,
+        "social_realtime": build.capabilities.social_realtime and readiness.realtime_ready and readiness.social_ready,
+        "social_attachments": build.capabilities.social_attachments and readiness.scanner_ready and readiness.social_ready,
     })
     push = LegacyPushCapabilities(
         registration_supported=build.capabilities.push_registration and readiness.push_registration_supported,

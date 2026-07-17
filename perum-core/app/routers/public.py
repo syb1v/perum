@@ -40,7 +40,12 @@ _DEPLOYMENT_CAPABILITIES = {
     "social_realtime": "realtime_ready",
     "social_attachments": "scanner_ready",
     "support_attachments": "scanner_ready",
+    "social_friends": "social_ready",
+    "social_messages": "social_ready",
+    "offline_social_messages": "social_ready",
+    "offline_social_read_cursors": "social_ready",
 }
+_SOCIAL_CAPABILITIES = {name for name in TenantCapabilities.model_fields if "social" in name}
 
 
 def normalize_tenant_host(value: str) -> str:
@@ -137,8 +142,11 @@ async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, Tenan
     effective = capabilities.model_dump()
     for capability, readiness in _DEPLOYMENT_CAPABILITIES.items():
         effective[capability] = effective[capability] and bool(
-            snapshot is not None and snapshot_reason is None and getattr(snapshot, readiness)
+            snapshot is not None and snapshot_reason is None and getattr(snapshot, readiness, False)
         )
+    social_ready = bool(snapshot is not None and snapshot_reason is None and getattr(snapshot, "social_ready", False))
+    for capability in _SOCIAL_CAPABILITIES:
+        effective[capability] = effective[capability] and social_ready
     return (
         manifest.schema_version,
         TenantCompatibility.model_validate(manifest.compatibility.model_dump()),

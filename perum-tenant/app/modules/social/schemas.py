@@ -17,6 +17,10 @@ class SettingsOut(BaseModel):
     social_quiet_hours_start: time | None
     social_quiet_hours_end: time | None
     social_moderation_enabled: bool
+    operator_available: bool
+    history_mode: Literal["active", "read_only"]
+    disabled_at: datetime | None
+    history_deletes_at: datetime | None
 
 
 class RealtimeTicketOut(BaseModel):
@@ -110,7 +114,8 @@ class ConversationOut(BaseModel):
     last_message: MessageOut | None
     unread_count: int
     can_send: bool
-    disabled_reason: Literal["unavailable"] | None
+    disabled_reason: Literal["unavailable", "school_disabled"] | None
+    history_deletes_at: datetime | None
     created_at: datetime
 
 

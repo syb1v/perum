@@ -348,6 +348,7 @@ class SchoolDeploymentSnapshot(Base):
     realtime_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
     push_registration_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
     push_delivery_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    social_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     observed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 

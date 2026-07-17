@@ -17,13 +17,14 @@ admin_router = APIRouter(prefix="/social")
 
 
 async def _profiles(db: AsyncSession, ids: list[int]):
-    rows = (await db.execute(select(User, Class).join(ClassStudent, ClassStudent.student_id == User.id).join(Class, Class.id == ClassStudent.class_id).where(User.id.in_(ids)))).all()
+    rows = (await db.execute(select(User, Class).join(ClassStudent, ClassStudent.student_id == User.id).join(Class, Class.id == ClassStudent.class_id).where(User.id.in_(ids), User.school_id == Class.school_id))).all()
     return {user.id: service._profile(user, class_) for user, class_ in rows}
 
 
 @router.get("/settings", response_model=SettingsOut)
 async def settings(user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
-    return await service.get_settings(db, user.school_id)
+    service.require_rollout()
+    return service.settings_out(await service.get_settings(db, user.school_id))
 
 
 @router.post("/realtime-ticket", response_model=RealtimeTicketOut)
@@ -36,7 +37,7 @@ async def realtime_ticket(response: Response, user: User = Depends(require_stude
 
 @admin_router.patch("/settings", response_model=SettingsOut)
 async def update_settings(payload: SettingsPatch, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    return await service.patch_settings(db, user.school_id, payload)
+    return service.settings_out(await service.patch_settings(db, user.school_id, payload, user.role))
 
 
 @admin_router.get("/moderation/cases")
@@ -133,11 +134,12 @@ async def release_block(student_id: int, user: User = Depends(require_student), 
     await service._social_context(db, user); await service._student_row(db, user.school_id, student_id)
     row = await db.scalar(select(UserBlock).where(UserBlock.school_id == user.school_id, UserBlock.blocker_id == user.id, UserBlock.blocked_id == student_id, UserBlock.released_at.is_(None)))
     if row is not None:
-        row.released_at = service.utc_now(); await db.commit(); await service.publish_conversation_changed(db, user.school_id, user.id, student_id, "unblocked")
+        row.released_at = service.utc_now(); db.add(service.audit_event(user.school_id, "user_unblocked", user.role)); await db.commit(); await service.publish_conversation_changed(db, user.school_id, user.id, student_id, "unblocked")
 
 
 @router.get("/conversations", response_model=ConversationPage)
 async def conversations(cursor: int | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
+    await service.history_context(db, user)
     stmt = select(Conversation).where(Conversation.school_id == user.school_id, or_(Conversation.user_low_id == user.id, Conversation.user_high_id == user.id))
     if cursor is not None: stmt = stmt.where(Conversation.id < cursor)
     rows = (await db.scalars(stmt.order_by(Conversation.id.desc()).limit(limit + 1))).all()
@@ -158,7 +160,10 @@ async def conversation(conversation_id: int, user: User = Depends(require_studen
 @router.get("/conversations/{conversation_id}/messages", response_model=MessagePage)
 async def messages(conversation_id: int, cursor: int | None = None, limit: int = Query(50, ge=1, le=100), user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
     await service.conversation_for_member(db, user, conversation_id)
-    stmt = select(Message).where(Message.conversation_id == conversation_id, Message.school_id == user.school_id, Message.expires_at > service.utc_now())
+    settings = await service.history_context(db, user)
+    stmt = select(Message).where(Message.conversation_id == conversation_id, Message.school_id == user.school_id)
+    if settings.social_enabled:
+        stmt = stmt.where(Message.expires_at > service.utc_now())
     if cursor is not None: stmt = stmt.where(Message.id < cursor)
     rows = (await db.scalars(stmt.order_by(Message.id.desc()).limit(limit + 1))).all()
     items = [{"id": row.id, "sender_id": row.sender_id, "client_message_id": row.client_message_id, "body": row.body if row.is_visible else None, "created_at": row.created_at, "expires_at": row.expires_at} for row in rows[:limit]]
@@ -177,6 +182,7 @@ async def read_conversation(conversation_id: int, payload: ReadCreate, user: Use
 
 @router.get("/unread-count", response_model=UnreadCountOut)
 async def unread_count(user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
+    await service.history_context(db, user)
     rows = (await db.scalars(select(Conversation).where(Conversation.school_id == user.school_id, or_(Conversation.user_low_id == user.id, Conversation.user_high_id == user.id)))).all()
     total = 0
     for row in rows:

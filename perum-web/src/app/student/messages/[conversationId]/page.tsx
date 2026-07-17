@@ -25,6 +25,11 @@ function errorText(error: unknown) {
     return 'Не удалось отправить сообщение';
 }
 
+function deletionWarning(value: string) {
+    const days = Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000));
+    return `Школа отключила общение. История доступна только для чтения и удалится через ${days} ${days === 1 ? 'день' : days >= 2 && days <= 4 ? 'дня' : 'дней'}.`;
+}
+
 export default function ConversationPage() {
     const { conversationId } = useParams<{ conversationId: string }>();
     const { user } = useAuth();
@@ -112,6 +117,7 @@ export default function ConversationPage() {
     return <main className={styles.page}>
         <header className={styles.header}><Link href="/messages" aria-label="Назад к сообщениям">‹</Link>{conversation ? <><div className={styles.avatar}>{conversation.peer.avatar ? <img src={conversation.peer.avatar} alt="" /> : conversation.peer.name.slice(0, 1)}</div><div><h1>{conversation.peer.name}</h1><span>{conversation.peer.class_name}</span></div></> : <div><h1>Диалог</h1></div>}<small className={styles.realtime} data-state={realtime}>{realtime === 'connected' ? 'Онлайн' : realtime === 'reconnecting' ? 'Подключение...' : 'Опрос'}</small></header>
         {error && <div className={styles.error}>{error}</div>}
+        {conversation?.disabled_reason === 'school_disabled' && conversation.history_deletes_at && <div className={styles.readOnly}>{deletionWarning(conversation.history_deletes_at)}</div>}
         <section className={styles.chat} aria-live="polite">
             {cursor !== null && <button className={styles.more} disabled={moreLoading} onClick={() => void loadMessages(cursor)}>{moreLoading ? 'Загрузка...' : 'Загрузить ранние сообщения'}</button>}
             {loading ? <div className={styles.state}>Загрузка истории...</div> : messages.length === 0 ? <div className={styles.state}>Сообщений пока нет. Начните разговор.</div> : messages.map(message => {
@@ -120,7 +126,7 @@ export default function ConversationPage() {
             })}
             <div ref={bottomRef} />
         </section>
-        {conversation && !conversation.can_send ? <div className={styles.readOnly}>Переписка заблокирована модератором и доступна только для чтения</div> : <form className={styles.composer} onSubmit={submit}><textarea value={body} onChange={event => setBody(event.target.value)} maxLength={4000} rows={1} placeholder="Сообщение" aria-label="Текст сообщения" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><span>{body.length}/4000</span><button disabled={!body.trim() || !conversation?.can_send} type="submit">Отправить</button></form>}
+        {conversation && !conversation.can_send ? conversation.disabled_reason !== 'school_disabled' && <div className={styles.readOnly}>Переписка заблокирована модератором и доступна только для чтения</div> : <form className={styles.composer} onSubmit={submit}><textarea value={body} onChange={event => setBody(event.target.value)} maxLength={4000} rows={1} placeholder="Сообщение" aria-label="Текст сообщения" onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit(); } }} /><span>{body.length}/4000</span><button disabled={!body.trim() || !conversation?.can_send} type="submit">Отправить</button></form>}
         {report && <div className={styles.modalBackdrop} role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setReport(null); }}><form className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="report-title" onSubmit={submitReport}><h2 id="report-title">Пожаловаться на сообщение</h2>{reportState === 'success' ? <><p className={styles.success}>Жалоба отправлена модераторам школы.</p><button type="button" onClick={() => setReport(null)}>Закрыть</button></> : <><label>Причина<select value={report.category} onChange={event => setReport(current => current ? { ...current, category: event.target.value as ReportCreate['category'] } : current)}><option value="harassment">Оскорбления</option><option value="bullying">Травля</option><option value="threats">Угрозы</option><option value="hate">Язык ненависти</option><option value="sexual">Неприемлемый контент</option><option value="spam">Спам</option><option value="other">Другое</option></select></label><label>Комментарий (необязательно)<textarea maxLength={1000} rows={4} value={report.comment} onChange={event => setReport(current => current ? { ...current, comment: event.target.value } : current)} /></label><p className={styles.notice}>Жалобу и содержание сообщения увидят уполномоченные модераторы школы. Отправитель сообщения не увидит, кто подал жалобу, но абсолютная анонимность не гарантируется.</p>{reportState === 'error' && <p className={styles.reportError}>Не удалось отправить жалобу. Повторная попытка не создаст дубликат.</p>}<div className={styles.modalActions}><button type="button" onClick={() => setReport(null)}>Отмена</button><button disabled={reportState === 'sending'} type="submit">{reportState === 'sending' ? 'Отправка...' : reportState === 'error' ? 'Повторить' : 'Отправить'}</button></div></>}</form></div>}
     </main>;
 }

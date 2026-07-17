@@ -20,6 +20,7 @@ from app.core.db import SessionLocal
 from app.core.roles import DIRECTOR, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.time import utc_now
 from app.models import Grade, PageVisit, School, User
+from app.models.social import Conversation, FriendRequest, Friendship, Message, ModerationReport, SocialSettings, UserBlock
 
 logger = logging.getLogger("perum.telemetry")
 
@@ -53,6 +54,17 @@ async def collect_metrics(db, school_id: int) -> dict:
     balance_total = int(await db.scalar(
         select(func.coalesce(func.sum(User.balance), 0)).where(User.school_id == school_id)
     ) or 0)
+    social = await db.get(SocialSettings, school_id)
+    social_counts = {}
+    for key, model in (("friendships_active", Friendship), ("friend_requests_pending", FriendRequest), ("blocks_active", UserBlock), ("conversations", Conversation), ("messages", Message), ("reports", ModerationReport)):
+        filters = [model.school_id == school_id]
+        if model is Friendship:
+            filters.append(Friendship.ended_at.is_(None))
+        elif model is FriendRequest:
+            filters.append(FriendRequest.status == "pending")
+        elif model is UserBlock:
+            filters.append(UserBlock.released_at.is_(None))
+        social_counts[key] = int(await db.scalar(select(func.count(model.id)).where(*filters)) or 0)
 
     return {
         "users_total": users_total,
@@ -64,6 +76,12 @@ async def collect_metrics(db, school_id: int) -> dict:
         "avg_grade": avg_grade,
         "active_24h": active_24h,
         "balance_total": balance_total,
+        "social": {
+            "operator_enabled": get_settings().SOCIAL_ROLLOUT_ENABLED,
+            "school_enabled": bool(social and social.social_enabled),
+            "history_deletion_pending": bool(social and social.history_deletes_at),
+            **social_counts,
+        },
     }
 
 
@@ -91,6 +109,7 @@ async def send_once() -> None:
             "realtime_ready": readiness.realtime_ready,
             "push_registration_ready": readiness.push_registration_ready,
             "push_delivery_ready": readiness.push_delivery_ready,
+            "social_ready": readiness.social_ready,
             "observed_at": utc_now().isoformat(),
         }
     async with httpx.AsyncClient(timeout=10.0) as client:

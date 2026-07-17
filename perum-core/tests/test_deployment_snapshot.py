@@ -64,6 +64,7 @@ def _request(db, school_id, release_image, observed_at=None):
             "realtime_ready": True,
             "push_registration_ready": True,
             "push_delivery_ready": False,
+            "social_ready": True,
             "observed_at": (observed_at or datetime.now(timezone.utc)).isoformat(),
         },
     }
@@ -86,6 +87,7 @@ def test_authenticated_snapshot_is_stored():
     assert db.committed is True
     assert db.snapshot.school_id == 7
     assert db.snapshot.scanner_ready is False
+    assert db.snapshot.social_ready is True
 
 
 def test_snapshot_observation_is_normalized_to_utc():
@@ -147,6 +149,7 @@ def test_snapshot_schema_is_strict_and_versioned():
                     "realtime_ready": True,
                     "push_registration_ready": True,
                     "push_delivery_ready": True,
+                    "social_ready": True,
                     "observed_at": datetime.now(timezone.utc).isoformat(),
                 },
             },

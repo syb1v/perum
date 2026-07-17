@@ -2886,6 +2886,11 @@ export interface components {
             /** Push Delivery Ready */
             push_delivery_ready: boolean;
             /**
+             * Social Ready
+             * @default false
+             */
+            social_ready: boolean;
+            /**
              * Observed At
              * Format: date-time
              */

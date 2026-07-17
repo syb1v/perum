@@ -15,14 +15,16 @@
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** Friends hardening: audit/observability, feature flag и
-pagination/isolation tests. Durable social read cursor завершён. One-school pilot Stage F и multi-device Homework
+**Текущий этап:** подготовка Native Friends UI и controlled rollout. Friends
+hardening, audit/observability, fail-closed feature flag, pagination/isolation и
+30-дневный school shutdown retention завершены. One-school pilot Stage F и multi-device Homework
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** закрыть Friends hardening и отдельно переоценить readiness
-native UI/controlled rollout. Stage F возобновляется после предоставления
+**Следующий roadmap:** назначить владельца и способ включения
+`SOCIAL_ROLLOUT_ENABLED` для конкретной школы; только затем начать Native Friends
+UI и controlled rollout. Stage F возобновляется после предоставления
 opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
 concurrency environment и mobile preview QA window. После этого приоритеты
 продолжаются по workstream table ниже: Friends/media, учебный hardening, support
@@ -41,8 +43,9 @@ restart/conflict evidence.
 
 1. Durable social/chat read cursor: завершён, включая server idempotency,
    account-scoped SQLite, retry/recovery, capability gating и contract tests.
-2. Friends hardening: audit/observability, feature flag и pagination/isolation
-   tests. Выполняется только после завершения read cursor.
+2. Friends hardening: завершён, включая privacy-safe audit/telemetry,
+   fail-closed feature flag, pagination/isolation tests и 30-дневное read-only
+   окно после school shutdown.
 3. Native Friends UI и controlled rollout без attachments. Выполняется только
    после зелёного hardening и утверждённого rollout flag.
 4. Media scanner selection и production integration. До выбора scanner работа
@@ -611,11 +614,11 @@ Flow:
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
-| P1 | Friends | Частично | durable social read cursor готов; следующий slice — audit/observability, feature flag и расширенные pagination/isolation tests, затем native UI и rollout |
+| P1 | Friends | Частично | durable social cursor и hardening готовы: audit/telemetry, fail-closed operational flag, pagination/isolation, web pagination и 30-дневное read-only окно; остаются назначение rollout owner, Native Friends UI и controlled rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |
-| P2 | Chats/moderation | Частично | 1:1 student text chats, read state, offline outbox, reports, evidence-scoped moderation/audit, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
+| P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
 | P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |

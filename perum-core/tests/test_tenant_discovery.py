@@ -220,6 +220,7 @@ def test_release_manifest_controls_mobile_contract_and_revision():
         realtime_ready=True,
         push_registration_ready=True,
         push_delivery_ready=True,
+        social_ready=True,
     )
     manifest_response = _client(_DB(
         [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
@@ -263,6 +264,7 @@ def test_sequential_release_upgrade_and_downgrade_change_revision_and_effective_
         snapshot = SimpleNamespace(
             release_image=tag, observed_at=snapshot_time, scanner_ready=False,
             realtime_ready=False, push_registration_ready=False, push_delivery_ready=False,
+            social_ready=False,
         )
         response = _client(_DB([(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot)).get(
             "/api/public/tenant-discovery", params={"host": "school.example.com"}
@@ -313,6 +315,7 @@ def test_deployment_snapshot_only_gates_runtime_dependent_capabilities():
         realtime_ready=True,
         push_registration_ready=True,
         push_delivery_ready=False,
+        social_ready=True,
     )
     response = _client(_DB(
         [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
@@ -359,6 +362,7 @@ def test_stale_snapshot_disables_only_runtime_dependent_capabilities():
         realtime_ready=True,
         push_registration_ready=True,
         push_delivery_ready=True,
+        social_ready=True,
     )
     response = _client(_DB(
         [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
@@ -404,6 +408,7 @@ def test_snapshot_cannot_raise_build_false_capability():
         realtime_ready=True,
         push_registration_ready=True,
         push_delivery_ready=True,
+        social_ready=True,
     )
     response = _client(_DB(
         [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot

@@ -24,3 +24,7 @@
 .empty { padding: 54px 20px; border: 1px dashed var(--border-color, #d9dde5); border-radius: 15px; color: var(--text-secondary, #667085); text-align: center; }
 .error { margin-top: 14px; padding: 12px 15px; border-radius: 10px; background: #ef444418; color: #c93838; }
 @media (max-width: 650px) { .page { width: min(100% - 20px, 920px); padding-top: 24px; } .title { align-items: flex-start; flex-direction: column; gap: 10px; } .person { align-items: flex-start; flex-wrap: wrap; } .identity { padding-top: 5px; } .actions { width: 100%; padding-left: 0; flex-wrap: wrap; } .actions button { flex: 1; min-width: 90px; padding-inline: 8px; } }
+.more {
+    margin: 20px auto 0;
+    display: block;
+}

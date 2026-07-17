@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     TELEMETRY_INTERVAL_S: int = 60
     SOCIAL_RETENTION_INTERVAL_S: int = 3600
     SOCIAL_RETENTION_BATCH_SIZE: int = 500
+    SOCIAL_ROLLOUT_ENABLED: bool = False
     MEDIA_ENABLED: bool = False
     MEDIA_ROOT: str = "/app/data/media"
     MEDIA_MAX_BYTES: int = 10 * 1024 * 1024

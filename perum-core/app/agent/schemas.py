@@ -127,6 +127,7 @@ class SchoolDeploymentSnapshotV1(BaseModel):
     realtime_ready: StrictBool
     push_registration_ready: StrictBool
     push_delivery_ready: StrictBool
+    social_ready: StrictBool = False
     observed_at: datetime
 
     @field_validator("observed_at")

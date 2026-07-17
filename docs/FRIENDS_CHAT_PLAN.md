@@ -7,12 +7,12 @@
 ## Текущее состояние и requirement gap
 
 Реализован базовый student vertical slice: school settings, поиск, заявки,
-дружба/блокировки, direct text conversations, read state, web/mobile UI,
-mobile offline send, reports, evidence-scoped moderation, retention и realtime с
-polling fallback. Целевыми, но не завершёнными остаются parent observer policy,
-attachments с production scanner, расширенный anti-abuse, push lifecycle,
-durable offline read cursors, groups (если будут утверждены отдельно) и полный
-rollout/observability. Нижеследующие разделы описывают требования целевой версии.
+дружба/блокировки, direct text conversations, durable read state, web UI,
+mobile Messages UI/offline outbox, privacy-safe audit/telemetry, operational
+feature flag, reports, evidence-scoped moderation, retention и realtime с polling
+fallback. Целевыми, но не завершёнными остаются Native Friends UI, parent observer
+policy, attachments с production scanner, расширенный anti-abuse, push lifecycle,
+groups (если будут утверждены отдельно) и controlled rollout.
 
 ## 1. Настройки школы
 
@@ -74,6 +74,11 @@ social_moderation_enabled            bool, всегда true при social_enabl
 - `state`: `active`, `locked`, `archived`.
 - Участник хранит `last_read_message_id`, mute/archive и notification settings.
 - После удаления из друзей история доступна только для чтения.
+- При отключении social школой история доступна только для чтения 30 дней, после
+  чего retention удаляет сообщения без active moderation hold; повторное
+  включение до срока отменяет удаление.
+- Operator shutdown немедленно блокирует student social, но не запускает удаление
+  и не изменяет школьный 30-дневный срок.
 
 ### `messages`
 

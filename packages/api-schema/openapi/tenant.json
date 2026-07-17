@@ -13256,13 +13256,28 @@
             "anyOf": [
               {
                 "type": "string",
-                "const": "unavailable"
+                "enum": [
+                  "unavailable",
+                  "school_disabled"
+                ]
               },
               {
                 "type": "null"
               }
             ],
             "title": "Disabled Reason"
+          },
+          "history_deletes_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Deletes At"
           },
           "created_at": {
             "type": "string",
@@ -13278,6 +13293,7 @@
           "unread_count",
           "can_send",
           "disabled_reason",
+          "history_deletes_at",
           "created_at"
         ],
         "title": "ConversationOut"
@@ -15519,6 +15535,42 @@
           "social_moderation_enabled": {
             "type": "boolean",
             "title": "Social Moderation Enabled"
+          },
+          "operator_available": {
+            "type": "boolean",
+            "title": "Operator Available"
+          },
+          "history_mode": {
+            "type": "string",
+            "enum": [
+              "active",
+              "read_only"
+            ],
+            "title": "History Mode"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "history_deletes_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Deletes At"
           }
         },
         "type": "object",
@@ -15533,7 +15585,11 @@
           "message_attachments_enabled",
           "social_quiet_hours_start",
           "social_quiet_hours_end",
-          "social_moderation_enabled"
+          "social_moderation_enabled",
+          "operator_available",
+          "history_mode",
+          "disabled_at",
+          "history_deletes_at"
         ],
         "title": "SettingsOut"
       },

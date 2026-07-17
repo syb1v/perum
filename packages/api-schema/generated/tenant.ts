@@ -3773,7 +3773,9 @@ export interface components {
             /** Can Send */
             can_send: boolean;
             /** Disabled Reason */
-            disabled_reason: "unavailable" | null;
+            disabled_reason: ("unavailable" | "school_disabled") | null;
+            /** History Deletes At */
+            history_deletes_at: string | null;
             /**
              * Created At
              * Format: date-time
@@ -4521,6 +4523,17 @@ export interface components {
             social_quiet_hours_end: string | null;
             /** Social Moderation Enabled */
             social_moderation_enabled: boolean;
+            /** Operator Available */
+            operator_available: boolean;
+            /**
+             * History Mode
+             * @enum {string}
+             */
+            history_mode: "active" | "read_only";
+            /** Disabled At */
+            disabled_at: string | null;
+            /** History Deletes At */
+            history_deletes_at: string | null;
         };
         /** SettingsPatch */
         SettingsPatch: {

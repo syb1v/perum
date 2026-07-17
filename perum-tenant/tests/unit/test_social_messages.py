@@ -10,8 +10,8 @@ from app.core.db import Base
 from app.core.time import utc_now
 from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent
-from app.models.social import ConversationMember, FriendRequest, Friendship, Message, SocialReadReceipt
-from app.modules.social import service
+from app.models.social import ConversationMember, FriendRequest, Friendship, Message, SocialAuditEvent, SocialReadReceipt
+from app.modules.social import retention, service
 from app.modules.social.realtime import manager
 from app.modules.social.schemas import SettingsPatch
 
@@ -131,5 +131,80 @@ def test_durable_read_receipts_replay_reuse_stale_and_actor_scope():
             assert foreign.value.status_code == 404
             await manager.unregister(connection)
         finally:
+            await db.close(); await engine.dispose()
+    asyncio.run(run())
+
+
+def test_school_shutdown_is_read_only_for_30_days_and_reenable_cancels_cleanup():
+    async def run():
+        engine, db, users, school = await seed()
+        try:
+            conversation = await service.create_conversation(db, users[0], users[1].id)
+            message = await service.send_message(db, users[0], conversation.id, "before-off", "history")
+            settings = await service.patch_settings(db, school.id, SettingsPatch(social_enabled=False))
+            assert settings.disabled_at is not None
+            assert settings.history_deletes_at == settings.disabled_at + timedelta(days=30)
+            output = await service.conversation_out(db, users[1], conversation)
+            assert output["last_message"].id == message.id
+            assert output["can_send"] is False
+            assert output["disabled_reason"] == "school_disabled"
+            assert output["history_deletes_at"] == settings.history_deletes_at
+            message.expires_at = utc_now() - timedelta(seconds=1)
+            await db.commit()
+            assert await retention.delete_expired_batch(db, 20) == 0
+            assert (await service.conversation_out(db, users[1], conversation))["last_message"].id == message.id
+            with pytest.raises(HTTPException) as send_denied:
+                await service.send_message(db, users[1], conversation.id, "after-off", "denied")
+            assert send_denied.value.status_code == 403
+            with pytest.raises(HTTPException):
+                await service.mark_read(db, users[1], conversation.id, message.id)
+            enabled = await service.patch_settings(db, school.id, SettingsPatch(social_enabled=True))
+            assert enabled.disabled_at is None and enabled.history_deletes_at is None
+            assert (await service.send_message(db, users[1], conversation.id, "enabled", "allowed")).id > message.id
+        finally:
+            await db.close(); await engine.dispose()
+    asyncio.run(run())
+
+
+def test_shutdown_deadline_cleanup_preserves_active_evidence_and_audit_has_no_user_pii():
+    async def run():
+        engine, db, users, school = await seed()
+        try:
+            conversation = await service.create_conversation(db, users[0], users[1].id)
+            held = await service.send_message(db, users[1], conversation.id, "held", "required evidence")
+            ordinary = await service.send_message(db, users[0], conversation.id, "ordinary", "delete me")
+            report = await service.create_report(db, users[0], ReportCreate(message_id=held.id, category="bullying", comment="private context", client_report_id="private-id"))
+            settings = await service.patch_settings(db, school.id, SettingsPatch(social_enabled=False))
+            settings.history_deletes_at = utc_now() - timedelta(seconds=1)
+            await db.commit()
+            assert await retention.delete_expired_batch(db, 20) == 1
+            assert await db.get(Message, ordinary.id) is None
+            assert await db.get(Message, held.id) is not None
+            events = (await db.scalars(select(SocialAuditEvent))).all()
+            serialized = str([{"event_type": row.event_type, "actor_role": row.actor_role, "details": row.details} for row in events])
+            assert str(users[0].id) not in serialized
+            assert "private context" not in serialized and "private-id" not in serialized and "required evidence" not in serialized
+            assert report.id is not None
+        finally:
+            await db.close(); await engine.dispose()
+    from app.modules.social.schemas import ReportCreate
+    asyncio.run(run())
+
+
+def test_operator_rollout_off_fails_closed_without_advancing_school_deadline(monkeypatch):
+    async def run():
+        engine, db, users, school = await seed()
+        try:
+            settings = await service.get_settings(db, school.id)
+            assert settings.history_deletes_at is None
+            monkeypatch.setenv("SOCIAL_ROLLOUT_ENABLED", "false")
+            service.get_runtime_settings.cache_clear()
+            with pytest.raises(HTTPException) as denied:
+                await service.students(db, users[0], "", None, 20)
+            assert denied.value.status_code == 503
+            await db.refresh(settings)
+            assert settings.social_enabled is True and settings.disabled_at is None and settings.history_deletes_at is None
+        finally:
+            service.get_runtime_settings.cache_clear()
             await db.close(); await engine.dispose()
     asyncio.run(run())

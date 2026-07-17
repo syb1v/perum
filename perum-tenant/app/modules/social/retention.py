@@ -1,12 +1,12 @@
 import asyncio
 import logging
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import SessionLocal
 from app.core.time import utc_now
-from app.models.social import Conversation, ConversationMember, EvidenceHold, Message
+from app.models.social import Conversation, ConversationMember, EvidenceHold, Message, SocialSettings
 
 logger = logging.getLogger("perum.tenant.social.retention")
 
@@ -14,7 +14,19 @@ logger = logging.getLogger("perum.tenant.social.retention")
 async def delete_expired_batch(db: AsyncSession, batch_size: int = 500) -> int:
     now = utc_now()
     held = select(EvidenceHold.message_id).where(EvidenceHold.released_at.is_(None))
-    stmt = select(Message.id).where(Message.expires_at <= now, Message.id.not_in(held)).order_by(Message.id).limit(batch_size)
+    shutdown_due = select(SocialSettings.school_id).where(
+        SocialSettings.social_enabled.is_(False),
+        SocialSettings.history_deletes_at.is_not(None),
+        SocialSettings.history_deletes_at <= now,
+    )
+    shutdown_grace = select(SocialSettings.school_id).where(
+        SocialSettings.social_enabled.is_(False),
+        SocialSettings.history_deletes_at > now,
+    )
+    stmt = select(Message.id).where(
+        or_(and_(Message.expires_at <= now, Message.school_id.not_in(shutdown_grace)), Message.school_id.in_(shutdown_due)),
+        Message.id.not_in(held),
+    ).order_by(Message.id).limit(batch_size)
     if db.bind is not None and db.bind.dialect.name == "postgresql":
         stmt = stmt.with_for_update(skip_locked=True)
     ids = list((await db.scalars(stmt)).all())
@@ -45,5 +57,5 @@ async def retention_loop(interval_seconds: int, batch_size: int):
                 total += count
                 if count < batch_size:
                     break
-        logger.info("social retention completed deleted=%s", total)
+        logger.info("social_retention_completed", extra={"social_messages_deleted": total})
         await asyncio.sleep(interval_seconds)
