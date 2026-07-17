@@ -9,19 +9,26 @@ import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
 import { sqliteSupportOutbox } from './sqliteOutbox';
 import type { SupportMessage, SupportMutation } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
+import { createSupportReadCursorOutboxCore, type SupportReadResult } from './readCursorOutboxCore';
+import { sqliteSupportReadCursorOutbox } from './sqliteReadCursorOutbox';
 
 type Core = ReturnType<typeof createSupportOutboxCore>;
-type Value = { pending: SupportMutation[]; enqueue: (ticketId: string, body: string) => Promise<void>; retry: (id: string) => Promise<void> };
+type ReadCore = ReturnType<typeof createSupportReadCursorOutboxCore>;
+type Value = { pending: SupportMutation[]; enqueue: (ticketId: string, body: string) => Promise<void>; markRead: (ticketId: string, messageId: string) => Promise<void>; retry: (id: string) => Promise<void> };
 const Context = createContext<Value | null>(null);
 
 export function SupportProvider({ children }: PropsWithChildren) {
   const { account, apiClient } = useAuth();
   const { hasAll } = useCapabilities();
   const enabled = hasAll(['support_requester', 'offline_support_messages']);
+  const readEnabled = hasAll(['support_requester', 'offline_read_cursors']);
   const queryClient = useQueryClient();
   const coreRef = useRef<Core | null>(null);
+  const readCoreRef = useRef<ReadCore | null>(null);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const readEnabledRef = useRef(readEnabled);
+  readEnabledRef.current = readEnabled;
   const [pending, setPending] = useState<SupportMutation[]>([]);
 
   useEffect(() => {
@@ -58,8 +65,38 @@ export function SupportProvider({ children }: PropsWithChildren) {
     return () => { alive = false; coreRef.current = null; network(); appState.remove(); clearInterval(timer); };
   }, [account?.id, apiClient, enabled, queryClient]);
 
+  useEffect(() => {
+    if (!account || !apiClient || !readEnabled) { readCoreRef.current = null; return; }
+    const accountId = account.id;
+    const send = async (item: import('./types').SupportReadMutation): Promise<SupportReadResult> => {
+      try {
+        await apiClient.post(`/support/tickets/${item.ticketId}/read`, { client_action_id: item.clientActionId, message_id: item.messageId });
+        return { type: 'success' };
+      } catch (error) {
+        if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
+        return { type: 'http', status: error.status, message: error.message };
+      }
+    };
+    const core = createSupportReadCursorOutboxCore({
+      store: sqliteSupportReadCursorOutbox,
+      send,
+      canSend: () => readEnabledRef.current,
+      onSuccess: (_, ticketId) => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTicket(accountId, ticketId) });
+      },
+    });
+    readCoreRef.current = core;
+    const run = async () => core.run(accountId);
+    void core.recover().then(run);
+    const network = NetInfo.addEventListener((state) => { if (state.isConnected !== false) void run(); });
+    const appState = AppState.addEventListener('change', (state) => { if (state === 'active') void run(); });
+    const timer = setInterval(() => void run(), 5_000);
+    return () => { readCoreRef.current = null; network(); appState.remove(); clearInterval(timer); };
+  }, [account?.id, apiClient, queryClient, readEnabled]);
+
   if (!account) return children;
-  return <Context.Provider value={{ pending, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ pending, enqueue: async (ticketId, body) => { const core = coreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, body); void core.run(account.id); }, markRead: async (ticketId, messageId) => { const core = readCoreRef.current; if (!core) return; await core.enqueue(account.id, ticketId, messageId); void core.run(account.id); }, retry: async (id) => { await coreRef.current?.retry(account.id, id); } }}>{children}</Context.Provider>;
 }
 
 export function useSupportSync() {

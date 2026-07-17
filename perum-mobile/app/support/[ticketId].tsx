@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -21,7 +21,6 @@ export default function SupportThreadScreen() {
   const enabled = has('support_requester');
   const sendEnabled = enabled && has('offline_support_messages');
   const sync = useSupportSync();
-  const queryClient = useQueryClient();
   const [reply, setReply] = useState('');
   const eligible = account?.user.role === 'student' || account?.user.role === 'parent' || account?.user.role === 'teacher';
   const detail = useQuery({ queryKey: queryKeys.supportTicket(account?.id ?? '', ticketId), enabled: Boolean(enabled && account && apiClient && eligible && ticketId), queryFn: () => apiClient!.get<SupportTicket>(`/support/tickets/${ticketId}`), refetchInterval: 10_000 });
@@ -36,8 +35,8 @@ export default function SupportThreadScreen() {
   const latest = serverMessages.at(-1);
   useEffect(() => {
     if (!enabled || !account || !apiClient || !latest) return;
-    void apiClient.post(`/support/tickets/${ticketId}/read`, { message_id: latest.id }).then(() => queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(account.id) })).catch(() => undefined);
-  }, [enabled, account?.id, apiClient, latest?.id, queryClient, ticketId]);
+    void sync.markRead(ticketId, latest.id);
+  }, [enabled, account?.id, apiClient, latest?.id, ticketId]);
   if (!enabled) return <FeatureUnavailable />;
   if (!account || !apiClient || !eligible) return null;
   const optimistic: DisplayMessage[] = sync.pending.filter((item) => item.ticketId === ticketId).map((item) => ({ id: item.clientMessageId, sender_id: account.user.id, side: 'requester', body: item.body, created_at: new Date(item.createdAt).toISOString(), localId: item.id, delivery: item.state === 'failed_permanent' ? 'failed' : 'pending' }));

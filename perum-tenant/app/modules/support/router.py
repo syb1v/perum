@@ -40,7 +40,7 @@ async def reply(ticket_id: str, data: MessageCreate, user: User = Depends(reques
 
 @router.post("/tickets/{ticket_id}/read", status_code=status.HTTP_204_NO_CONTENT)
 async def read(ticket_id: str, data: ReadCreate, user: User = Depends(requester), db: AsyncSession = Depends(get_db)):
-    await service.mark_read(db, user, ticket_id, data.message_id, False)
+    await service.mark_read(db, user, ticket_id, data.message_id, data.client_action_id, False)
 
 
 @router.get("/unread-count", response_model=UnreadOut)
@@ -90,7 +90,7 @@ async def admin_reply(ticket_id: str, data: MessageCreate, user: User = Depends(
 
 @admin_router.post("/tickets/{ticket_id}/read", status_code=status.HTTP_204_NO_CONTENT)
 async def admin_read(ticket_id: str, data: ReadCreate, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
-    await service.mark_read(db, user, ticket_id, data.message_id, True)
+    await service.mark_read(db, user, ticket_id, data.message_id, data.client_action_id, True)
 
 
 @admin_router.get("/assignees", response_model=list[AssigneeOut])

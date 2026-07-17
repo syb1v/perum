@@ -20,7 +20,7 @@
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,
-    "offline_read_cursors": false,
+    "offline_read_cursors": true,
     "offline_support_ticket_creation": false
   }
 }

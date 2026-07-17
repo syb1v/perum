@@ -17217,6 +17217,19 @@
       },
       "app__modules__support__schemas__ReadCreate": {
         "properties": {
+          "client_action_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Action Id"
+          },
           "message_id": {
             "type": "string",
             "maxLength": 36,

@@ -27,6 +27,7 @@ class MessageCreate(StrictModel):
 
 
 class ReadCreate(StrictModel):
+    client_action_id: str | None = Field(default=None, min_length=1, max_length=64)
     message_id: str = Field(min_length=36, max_length=36)
 
 

@@ -427,6 +427,7 @@ unknown release, grace fallback и incompatible client проверяются д
 
 ## 8. Следующий slice
 
-После этого плана: durable SQLite outbox для social/support read cursors,
-offline support ticket creation и единая multi-device conflict matrix. Friends
-attachments остаются заблокированы до выбора production scanner.
+Requester support read cursor получил durable account-scoped SQLite outbox и
+idempotent server receipt. Следующие slices: social read cursors, offline support
+ticket creation и единая multi-device conflict matrix. Friends attachments
+остаются заблокированы до выбора production scanner.

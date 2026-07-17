@@ -269,6 +269,43 @@ def test_support_monotonic_reads_unread_totals_and_notification_clear():
     asyncio.run(run())
 
 
+def test_support_read_action_is_idempotent_and_cannot_be_reused():
+    async def run():
+        engine, sessions, app, users, current = await setup_app()
+        try:
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                created = await create_ticket(client)
+                ticket_id = created.json()["ticket"]["id"]
+                initial_id = created.json()["initial_message"]["id"]
+                current["value"] = users["admin"].id
+                first = await client.post(f"/api/admin/support/tickets/{ticket_id}/messages", json={"client_message_id": "read-answer-1", "body": "First"})
+                second = await client.post(f"/api/admin/support/tickets/{ticket_id}/messages", json={"client_message_id": "read-answer-2", "body": "Second"})
+                current["value"] = users["student"].id
+
+                payload = {"client_action_id": "read-action-1", "message_id": second.json()["id"]}
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json=payload)).status_code == 204
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json=payload)).status_code == 204
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json={**payload, "message_id": first.json()["id"]})).status_code == 409
+
+                stale = {"client_action_id": "read-action-stale", "message_id": initial_id}
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json=stale)).status_code == 204
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json=stale)).status_code == 204
+
+                current["value"] = users["other"].id
+                assert (await client.post(f"/api/support/tickets/{ticket_id}/read", json={"client_action_id": "foreign", "message_id": second.json()["id"]})).status_code == 404
+
+            async with sessions() as db:
+                ticket = await db.scalar(select(SupportTicket).where(SupportTicket.public_id == ticket_id))
+                participant = await db.scalar(select(SupportParticipant).where(SupportParticipant.ticket_id == ticket.id, SupportParticipant.kind == "requester"))
+                assert participant.last_read_message_id == second.json()["id"]
+                events = list((await db.scalars(select(SupportEvent).where(SupportEvent.ticket_id == ticket.id, SupportEvent.client_action_id.is_not(None)))).all())
+                assert {event.client_action_id for event in events} == {"read-action-1", "read-action-stale"}
+        finally:
+            await engine.dispose()
+
+    asyncio.run(run())
+
+
 def test_support_ticket_and_message_pagination_and_role_dependencies():
     async def run():
         engine, sessions, app, users, current = await setup_app()

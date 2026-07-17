@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.time import utc_now
@@ -129,21 +130,43 @@ async def send(db: AsyncSession, user: User, public_id: str, data: MessageCreate
     return MessageOut.model_validate(message, from_attributes=True)
 
 
-async def mark_read(db: AsyncSession, user: User, public_id: str, message_id: str, admin: bool) -> None:
+async def mark_read(db: AsyncSession, user: User, public_id: str, message_id: str, client_action_id: str | None, admin: bool) -> None:
     ticket = await (_admin_ticket(db, user, public_id) if admin else _requester_ticket(db, user, public_id))
     message = await db.scalar(select(SupportMessage).where(SupportMessage.id == message_id, SupportMessage.ticket_id == ticket.id, SupportMessage.school_id == user.school_id))
     if message is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Сообщение не найдено")
-    participant = await _participant(db, ticket.id, "shared_inbox" if admin else "requester")
+    kind = "shared_inbox" if admin else "requester"
+    fingerprint = {"action": "ticket_read", "actor_id": user.id, "kind": kind, "message_id": message.id}
+    if client_action_id is not None:
+        existing = await db.scalar(select(SupportEvent).where(SupportEvent.ticket_id == ticket.id, SupportEvent.client_action_id == client_action_id))
+        if existing is not None:
+            if not isinstance(existing.metadata_json, dict) or existing.metadata_json.get("fingerprint") != fingerprint:
+                raise HTTPException(status.HTTP_409_CONFLICT, "client_action_id reused")
+            return
+    participant = await db.scalar(select(SupportParticipant).where(SupportParticipant.ticket_id == ticket.id, SupportParticipant.kind == kind).with_for_update())
+    if participant is None:
+        raise RuntimeError("support participant missing")
+    advanced = False
     if participant.read_at is None or message.created_at > participant.read_at or message.created_at == participant.read_at and (participant.last_read_message_id is None or message.id > participant.last_read_message_id):
         participant.last_read_message_id = message.id
         participant.read_at = message.created_at
-        db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_read", metadata_json={"message_id": message.id}, created_at=utc_now()))
+        advanced = True
+    if advanced or client_action_id is not None:
+        metadata = {"fingerprint": fingerprint} if client_action_id is not None else {"message_id": message.id}
+        db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_read", client_action_id=client_action_id, metadata_json=metadata, created_at=utc_now()))
     if not admin:
         notifications = list((await db.scalars(select(Notification).where(Notification.user_id == user.id, Notification.ref_type == "school_support_ticket", Notification.ref_id == ticket.public_id, Notification.is_read.is_(False)))).all())
         for notification in notifications:
             notification.is_read = True
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        ticket = await (_admin_ticket(db, user, public_id) if admin else _requester_ticket(db, user, public_id))
+        existing = await db.scalar(select(SupportEvent).where(SupportEvent.ticket_id == ticket.id, SupportEvent.client_action_id == client_action_id))
+        if existing is not None and isinstance(existing.metadata_json, dict) and existing.metadata_json.get("fingerprint") == fingerprint:
+            return
+        raise HTTPException(status.HTTP_409_CONFLICT, "client_action_id reused")
 
 
 async def unread(db: AsyncSession, user: User, admin: bool) -> UnreadOut:

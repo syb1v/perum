@@ -22,3 +22,16 @@ export type SupportMutation = {
   error: string | null;
   createdAt: number;
 };
+
+export type SupportReadMutation = {
+  id: string;
+  accountId: string;
+  ticketId: string;
+  messageId: string;
+  clientActionId: string;
+  state: SupportMutationState;
+  attempts: number;
+  nextAttemptAt: number;
+  error: string | null;
+  createdAt: number;
+};
