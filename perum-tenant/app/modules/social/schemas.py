@@ -121,6 +121,7 @@ class ConversationPage(BaseModel):
 
 class ReadCreate(BaseModel):
     message_id: int
+    client_action_id: str | None = Field(None, min_length=1, max_length=64)
 
 
 class UnreadCountOut(BaseModel):

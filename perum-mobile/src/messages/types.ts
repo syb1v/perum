@@ -23,3 +23,16 @@ export type MessageMutation = {
 };
 
 export type DisplayMessage = Message & { delivery?: 'pending' | 'failed' };
+
+export type SocialReadMutation = {
+  id: string;
+  accountId: string;
+  conversationId: number;
+  messageId: number;
+  clientActionId: string;
+  state: MessageMutationState;
+  attempts: number;
+  nextAttemptAt: number;
+  error: string | null;
+  createdAt: number;
+};

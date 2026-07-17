@@ -31,6 +31,7 @@ def _manifest() -> dict:
             "offline_social_messages": True,
             "offline_support_messages": True,
             "offline_read_cursors": False,
+            "offline_social_read_cursors": False,
             "offline_support_ticket_creation": False,
         },
     }
@@ -56,6 +57,7 @@ def test_release_manifest_accepts_complete_v1_contract():
             minimum_mobile_api_version=2, mobile_api_version=1
         ),
         lambda value: value["capabilities"].pop("offline_read_cursors"),
+        lambda value: value["capabilities"].pop("offline_social_read_cursors"),
     ],
 )
 def test_release_manifest_rejects_invalid_or_incomplete_contract(mutate):

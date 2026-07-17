@@ -20,7 +20,7 @@ export const capabilityNames = [
   'social_friends', 'social_messages', 'social_realtime', 'social_attachments',
   'support_requester', 'support_attachments', 'offline_preferences',
   'offline_homework_state', 'offline_social_messages', 'offline_support_messages',
-  'offline_read_cursors', 'offline_support_ticket_creation',
+  'offline_read_cursors', 'offline_social_read_cursors', 'offline_support_ticket_creation',
 ] as const satisfies readonly (keyof TenantCapabilities)[];
 
 type DiscoveryDependencies = {

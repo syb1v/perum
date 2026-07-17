@@ -14242,6 +14242,10 @@
             "type": "boolean",
             "title": "Offline Read Cursors"
           },
+          "offline_social_read_cursors": {
+            "type": "boolean",
+            "title": "Offline Social Read Cursors"
+          },
           "offline_support_ticket_creation": {
             "type": "boolean",
             "title": "Offline Support Ticket Creation"
@@ -14265,6 +14269,7 @@
           "offline_social_messages",
           "offline_support_messages",
           "offline_read_cursors",
+          "offline_social_read_cursors",
           "offline_support_ticket_creation"
         ],
         "title": "MobileCapabilities"
@@ -17105,6 +17110,19 @@
           "message_id": {
             "type": "integer",
             "title": "Message Id"
+          },
+          "client_action_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Action Id"
           }
         },
         "type": "object",

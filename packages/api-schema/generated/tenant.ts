@@ -4085,6 +4085,8 @@ export interface components {
             offline_support_messages: boolean;
             /** Offline Read Cursors */
             offline_read_cursors: boolean;
+            /** Offline Social Read Cursors */
+            offline_social_read_cursors: boolean;
             /** Offline Support Ticket Creation */
             offline_support_ticket_creation: boolean;
         };
@@ -5051,6 +5053,8 @@ export interface components {
         app__modules__social__schemas__ReadCreate: {
             /** Message Id */
             message_id: number;
+            /** Client Action Id */
+            client_action_id?: string | null;
         };
         /** MessageCreate */
         app__modules__support__schemas__MessageCreate: {

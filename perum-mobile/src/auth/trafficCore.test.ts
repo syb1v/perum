@@ -11,7 +11,7 @@ const capabilities = {
   refresh_sessions: true, session_management: true, push_registration: true, push_delivery: false,
   social_friends: true, social_messages: true, social_realtime: true, social_attachments: false,
   support_requester: true, support_attachments: false, offline_preferences: true, offline_homework_state: true,
-  offline_social_messages: true, offline_support_messages: true, offline_read_cursors: false, offline_support_ticket_creation: false,
+  offline_social_messages: true, offline_support_messages: true, offline_read_cursors: false, offline_social_read_cursors: false, offline_support_ticket_creation: false,
 };
 
 function account(id: string, revision: string, route: string, expiresAt = now + 60_000): TenantAccount {

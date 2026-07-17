@@ -2401,6 +2401,8 @@ export interface components {
             offline_support_messages: boolean;
             /** Offline Read Cursors */
             offline_read_cursors: boolean;
+            /** Offline Social Read Cursors */
+            offline_social_read_cursors: boolean;
             /** Offline Support Ticket Creation */
             offline_support_ticket_creation: boolean;
         };
@@ -2946,6 +2948,8 @@ export interface components {
             offline_support_messages: boolean;
             /** Offline Read Cursors */
             offline_read_cursors: boolean;
+            /** Offline Social Read Cursors */
+            offline_social_read_cursors: boolean;
             /** Offline Support Ticket Creation */
             offline_support_ticket_creation: boolean;
         };

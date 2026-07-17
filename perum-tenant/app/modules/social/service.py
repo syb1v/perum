@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.models import User
 from app.models.academic import Class, ClassStudent
-from app.models.social import Conversation, ConversationMember, EvidenceHold, FriendRequest, Friendship, Message, ModerationCase, ModerationReport, SocialSettings, UserBlock
+from app.models.social import Conversation, ConversationMember, EvidenceHold, FriendRequest, Friendship, Message, ModerationCase, ModerationReport, SocialReadReceipt, SocialSettings, UserBlock
 from app.modules.social.schemas import ReportCreate, SettingsPatch, StudentProfile
 
 
@@ -218,14 +218,39 @@ async def send_message(db: AsyncSession, user: User, conversation_id: int, clien
     await db.refresh(message); return message
 
 
-async def mark_read(db: AsyncSession, user: User, conversation_id: int, message_id: int) -> ConversationMember:
-    _, member = await conversation_for_member(db, user, conversation_id)
+async def mark_read(db: AsyncSession, user: User, conversation_id: int, message_id: int, client_action_id: str | None = None) -> ConversationMember:
+    conversation, _ = await conversation_for_member(db, user, conversation_id)
+    if client_action_id is not None:
+        existing = await db.scalar(select(SocialReadReceipt).where(SocialReadReceipt.actor_id == user.id, SocialReadReceipt.client_action_id == client_action_id))
+        if existing is not None:
+            if existing.school_id != user.school_id or existing.conversation_id != conversation_id or existing.message_id != message_id:
+                raise HTTPException(status.HTTP_409_CONFLICT, "client_action_id reused")
+            return await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation_id, ConversationMember.user_id == user.id, ConversationMember.school_id == user.school_id))
     message = await db.scalar(select(Message).where(Message.id == message_id, Message.conversation_id == conversation_id, Message.school_id == user.school_id))
     if message is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "message not found")
-    if member.last_read_message_id is None or message_id > member.last_read_message_id:
-        member.last_read_message_id = message_id; await db.commit()
-        conversation = await db.get(Conversation, conversation_id)
+    member = await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation_id, ConversationMember.user_id == user.id, ConversationMember.school_id == user.school_id).with_for_update())
+    if member is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    advanced = member.last_read_message_id is None or message_id > member.last_read_message_id
+    if advanced:
+        member.last_read_message_id = message_id
+    if client_action_id is not None:
+        db.add(SocialReadReceipt(school_id=user.school_id, actor_id=user.id, conversation_id=conversation_id, message_id=message_id, client_action_id=client_action_id))
+    if advanced or client_action_id is not None:
+        try:
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            if client_action_id is not None:
+                existing = await db.scalar(select(SocialReadReceipt).where(SocialReadReceipt.actor_id == user.id, SocialReadReceipt.client_action_id == client_action_id))
+                if existing is not None and existing.school_id == user.school_id and existing.conversation_id == conversation_id and existing.message_id == message_id:
+                    member = await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation_id, ConversationMember.user_id == user.id, ConversationMember.school_id == user.school_id))
+                    if member is None:
+                        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+                    return member
+            raise HTTPException(status.HTTP_409_CONFLICT, "client_action_id reused")
+    if advanced:
         from app.modules.social.realtime import publish_conversation
         await publish_conversation("conversation.read", user.school_id, conversation_id, {conversation.user_low_id, conversation.user_high_id}, user_id=user.id, message_id=message_id)
     return member

@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../../../src/auth/AuthProvider';
 import { useMessagesSync } from '../../../src/messages/MessagesProvider';
@@ -19,11 +19,13 @@ export default function ThreadScreen() {
   const { has } = useCapabilities();
   const enabled = has('social_messages');
   const sendEnabled = enabled && has('offline_social_messages');
+  const readEnabled = enabled && has('offline_social_read_cursors');
   const sync = useMessagesSync();
   const queryClient = useQueryClient();
   const network = useNetInfo();
   const realtime = useRealtimeStatus();
   const [body, setBody] = useState('');
+  const lastReadEnqueued = useRef('');
   const [report, setReport] = useState<{ message: Message; category: ReportCreate['category']; comment: string; clientId: string } | null>(null);
   const [reportState, setReportState] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const conversation = useQuery({ queryKey: queryKeys.conversation(account?.id ?? '', conversationId), enabled: Boolean(enabled && account && apiClient && Number.isFinite(conversationId)), queryFn: () => apiClient!.get<Conversation>(`/social/conversations/${conversationId}`), refetchInterval: 15_000 });
@@ -37,14 +39,14 @@ export default function ThreadScreen() {
   const serverIds = new Set(serverMessages.map((item) => item.client_message_id));
   const optimistic: DisplayMessage[] = sync.pending.filter((item) => item.conversationId === conversationId && !serverIds.has(item.clientMessageId)).map((item) => ({ id: -item.createdAt, sender_id: account?.user.id ?? 0, client_message_id: item.clientMessageId, body: item.body, created_at: new Date(item.createdAt).toISOString(), expires_at: '', delivery: item.state === 'failed_permanent' ? 'failed' : 'pending' }));
   const messages: DisplayMessage[] = [...serverMessages, ...optimistic].sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || b.id - a.id);
-  const latestId = serverMessages.reduce((max, item) => Math.max(max, item.id), 0);
+  const latestPeerId = serverMessages.reduce((max, item) => item.sender_id !== account?.user.id ? Math.max(max, item.id) : max, 0);
   useEffect(() => {
-    if (!enabled || !apiClient || !account || !latestId || !conversation.data?.unread_count) return;
-    void apiClient.post(`/social/conversations/${conversationId}/read`, { message_id: latestId }).then(() => {
-      queryClient.setQueryData(queryKeys.conversation(account.id, conversationId), { ...conversation.data, unread_count: 0 });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.conversations(account.id) });
-    }).catch(() => undefined);
-  }, [enabled, account?.id, apiClient, conversation.data?.unread_count, conversationId, latestId, queryClient]);
+    if (!readEnabled || !account || !latestPeerId || !conversation.data?.unread_count) return;
+    const key = `${account.id}:${conversationId}:${latestPeerId}`;
+    if (lastReadEnqueued.current === key) return;
+    lastReadEnqueued.current = key;
+    void sync.markRead(conversationId, latestPeerId);
+  }, [readEnabled, account?.id, conversation.data?.unread_count, conversationId, latestPeerId, sync.markRead]);
   const send = async () => { const text = body.trim(); if (!sendEnabled || !text || text.length > 4000 || !conversation.data?.can_send) return; setBody(''); await sync.enqueue(conversationId, text); };
   const offline = network.isConnected === false || network.isInternetReachable === false;
   const openReport = (message: DisplayMessage) => {

@@ -21,6 +21,7 @@
     "offline_social_messages": true,
     "offline_support_messages": true,
     "offline_read_cursors": true,
+    "offline_social_read_cursors": true,
     "offline_support_ticket_creation": true
   }
 }

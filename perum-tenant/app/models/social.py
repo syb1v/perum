@@ -133,6 +133,19 @@ class ConversationMember(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
+class SocialReadReceipt(Base):
+    __tablename__ = "social_read_receipts"
+    __table_args__ = (UniqueConstraint("actor_id", "client_action_id", name="uq_social_read_receipts_actor_action"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
+    message_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    client_action_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+
+
 class Message(Base):
     __tablename__ = "messages"
     __table_args__ = (UniqueConstraint("conversation_id", "sender_id", "client_message_id", name="uq_messages_client_id"),)

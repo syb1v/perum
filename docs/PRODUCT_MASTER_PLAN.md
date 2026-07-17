@@ -15,15 +15,14 @@
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** Friends/direct chats hardening, следующий изолированный slice —
-durable social read cursor. One-school pilot Stage F и multi-device Homework
+**Текущий этап:** Friends hardening: audit/observability, feature flag и
+pagination/isolation tests. Durable social read cursor завершён. One-school pilot Stage F и multi-device Homework
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** реализовать только durable account-scoped read cursor для
-direct chats с server idempotency, retry/recovery и capability gating; затем
-отдельно переоценить Friends rollout. Stage F возобновляется после предоставления
+**Следующий roadmap:** закрыть Friends hardening и отдельно переоценить readiness
+native UI/controlled rollout. Stage F возобновляется после предоставления
 opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
 concurrency environment и mobile preview QA window. После этого приоритеты
 продолжаются по workstream table ниже: Friends/media, учебный hardening, support
@@ -40,8 +39,8 @@ restart/conflict evidence.
 
 **Следующие независимые циклы:**
 
-1. Durable social/chat read cursor: server idempotency, account-scoped SQLite,
-   retry/recovery, capability gating и contract tests.
+1. Durable social/chat read cursor: завершён, включая server idempotency,
+   account-scoped SQLite, retry/recovery, capability gating и contract tests.
 2. Friends hardening: audit/observability, feature flag и pagination/isolation
    tests. Выполняется только после завершения read cursor.
 3. Native Friends UI и controlled rollout без attachments. Выполняется только
@@ -609,10 +608,10 @@ Flow:
 |---:|---|---|---|
 | P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate и безопасный operator checklist зелёные. Остаётся выполнить one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
-| P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, requester support read cursor и offline ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
+| P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
-| P1 | Friends | Частично | следующий slice — durable social read cursor; далее audit/observability, feature flag, расширенные pagination/isolation tests, native UI и rollout |
+| P1 | Friends | Частично | durable social read cursor готов; следующий slice — audit/observability, feature flag и расширенные pagination/isolation tests, затем native UI и rollout |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |

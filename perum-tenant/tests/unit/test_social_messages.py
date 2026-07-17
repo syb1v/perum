@@ -10,7 +10,7 @@ from app.core.db import Base
 from app.core.time import utc_now
 from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent
-from app.models.social import ConversationMember, FriendRequest, Friendship, Message
+from app.models.social import ConversationMember, FriendRequest, Friendship, Message, SocialReadReceipt
 from app.modules.social import service
 from app.modules.social.realtime import manager
 from app.modules.social.schemas import SettingsPatch
@@ -99,6 +99,37 @@ def test_links_scope_isolation_and_retention_snapshot():
             assert out_of_scope.value.status_code == 404
             message.expires_at = utc_now() - timedelta(seconds=1); await db.commit()
             assert await db.scalar(select(Message.id).where(Message.id == message.id, Message.expires_at > utc_now())) is None
+        finally:
+            await db.close(); await engine.dispose()
+    asyncio.run(run())
+
+
+def test_durable_read_receipts_replay_reuse_stale_and_actor_scope():
+    async def run():
+        engine, db, users, _ = await seed()
+        try:
+            conversation = await service.create_conversation(db, users[0], users[1].id)
+            first = await service.send_message(db, users[0], conversation.id, "first", "first")
+            second = await service.send_message(db, users[0], conversation.id, "second", "second")
+            connection = await manager.register(users[1].school_id, users[1].id)
+            await service.mark_read(db, users[1], conversation.id, second.id, "read-1")
+            assert (await connection.queue.get())["data"]["message_id"] == second.id
+            await db.delete(second); await db.commit()
+            await service.mark_read(db, users[1], conversation.id, second.id, "read-1")
+            assert connection.queue.empty()
+            await service.mark_read(db, users[1], conversation.id, first.id, "read-stale")
+            assert connection.queue.empty()
+            member = await db.scalar(select(ConversationMember).where(ConversationMember.conversation_id == conversation.id, ConversationMember.user_id == users[1].id))
+            assert member.last_read_message_id == second.id
+            receipts = list((await db.scalars(select(SocialReadReceipt).where(SocialReadReceipt.actor_id == users[1].id))).all())
+            assert {(row.client_action_id, row.message_id) for row in receipts} == {("read-1", second.id), ("read-stale", first.id)}
+            with pytest.raises(HTTPException) as reused:
+                await service.mark_read(db, users[1], conversation.id, first.id, "read-1")
+            assert reused.value.status_code == 409
+            with pytest.raises(HTTPException) as foreign:
+                await service.mark_read(db, users[3], conversation.id, second.id, "read-1")
+            assert foreign.value.status_code == 404
+            await manager.unregister(connection)
         finally:
             await db.close(); await engine.dispose()
     asyncio.run(run())

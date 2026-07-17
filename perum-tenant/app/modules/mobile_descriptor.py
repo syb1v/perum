@@ -59,6 +59,7 @@ class MobileCapabilities(BaseModel):
     offline_social_messages: StrictBool
     offline_support_messages: StrictBool
     offline_read_cursors: StrictBool
+    offline_social_read_cursors: StrictBool
     offline_support_ticket_creation: StrictBool
 
 

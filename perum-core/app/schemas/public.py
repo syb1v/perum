@@ -30,6 +30,7 @@ class TenantCapabilities(BaseModel):
     offline_social_messages: bool
     offline_support_messages: bool
     offline_read_cursors: bool
+    offline_social_read_cursors: bool
     offline_support_ticket_creation: bool
 
 

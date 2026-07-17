@@ -172,7 +172,7 @@ async def send_message(conversation_id: int, payload: MessageCreate, user: User 
 
 @router.post("/conversations/{conversation_id}/read", status_code=204)
 async def read_conversation(conversation_id: int, payload: ReadCreate, user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
-    await service.mark_read(db, user, conversation_id, payload.message_id)
+    await service.mark_read(db, user, conversation_id, payload.message_id, payload.client_action_id)
 
 
 @router.get("/unread-count", response_model=UnreadCountOut)
