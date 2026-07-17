@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Core принимает аутентифицированный versioned deployment snapshot школы, проверяет UUID, release identity и монотонность наблюдения, а tenant discovery публикует deployment-dependent capabilities только как пересечение release manifest со свежей runtime readiness; missing/stale snapshot и недоступный scanner обрабатываются fail-closed и фиксируются безопасной structured telemetry.
 - Core tenant discovery теперь получает versioned mobile compatibility и capabilities из release manifest, включает их в content revision и при отсутствии, неизвестном или невалидном manifest безопасно отключает все mobile capabilities.
 - Синхронизирован `PRODUCT_MASTER_PLAN.md` и детальный план dynamic mobile descriptor: release manifest и Core resolver отмечены выполненными, а deployment snapshot, tenant parity, mobile grace period и lifecycle tests сохранены как следующие незакрытые этапы.
 - Core release records now persist a strict, versioned mobile manifest; the CI release endpoint requires it and the tenant workflow publishes the repository-owned descriptor with every release.

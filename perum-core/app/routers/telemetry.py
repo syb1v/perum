@@ -7,16 +7,17 @@ from __future__ import annotations
 import secrets as secrets_mod
 import time
 from collections import defaultdict, deque
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agent.schemas import SchoolDeploymentSnapshotV1
 from app.core.db import get_db
 from app.core.ratelimit import _client_ip
-from app.models import School, SchoolMetric, SchoolSecret
+from app.models import School, SchoolDeploymentSnapshot, SchoolMetric, SchoolSecret
 
 router = APIRouter()
 
@@ -42,6 +43,7 @@ def _throttle(request: Request) -> None:
 class TelemetryIn(BaseModel):
     slug: str
     metrics: dict = {}
+    deployment_snapshot: SchoolDeploymentSnapshotV1 | None = None
 
 
 @router.post("")
@@ -61,12 +63,35 @@ async def ingest(
     if secret is None or not secrets_mod.compare_digest(secret.telemetry_token, x_telemetry_token):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid telemetry token")
 
+    snapshot = payload.deployment_snapshot
+    if snapshot is not None:
+        if snapshot.school_id != school.public_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "deployment snapshot school mismatch")
+        if snapshot.release_image != school.release_tag:
+            raise HTTPException(status.HTTP_409_CONFLICT, "deployment snapshot release mismatch")
+        await db.execute(select(School.id).where(School.id == school.id).with_for_update())
+        deployment = await db.get(SchoolDeploymentSnapshot, school.id)
+        observed_at = snapshot.observed_at.astimezone(timezone.utc).replace(tzinfo=None)
+        if deployment is not None and observed_at <= deployment.observed_at:
+            raise HTTPException(status.HTTP_409_CONFLICT, "deployment snapshot is not newer")
+        if deployment is None:
+            deployment = SchoolDeploymentSnapshot(school_id=school.id)
+            db.add(deployment)
+        deployment.schema_version = snapshot.schema_version
+        deployment.release_image = snapshot.release_image
+        deployment.scanner_ready = snapshot.scanner_ready
+        deployment.realtime_ready = snapshot.realtime_ready
+        deployment.push_registration_ready = snapshot.push_registration_ready
+        deployment.push_delivery_ready = snapshot.push_delivery_ready
+        deployment.observed_at = observed_at
+        deployment.received_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
     m = payload.metrics or {}
     metric = await db.get(SchoolMetric, school.id)
     if metric is None:
         metric = SchoolMetric(school_id=school.id)
         db.add(metric)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     metric.last_heartbeat_at = now
     metric.updated_at = now
     metric.users_total = int(m.get("users_total") or 0)

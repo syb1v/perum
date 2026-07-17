@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 
 class AgentProvisionSchoolRequest(BaseModel):
@@ -113,6 +115,26 @@ class AgentHeartbeatRequest(BaseModel):
 class AgentHeartbeatResponse(BaseModel):
     success: bool
     node_id: int | None = None
+
+
+class SchoolDeploymentSnapshotV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1]
+    school_id: UUID
+    release_image: str = Field(min_length=1, max_length=255)
+    scanner_ready: StrictBool
+    realtime_ready: StrictBool
+    push_registration_ready: StrictBool
+    push_delivery_ready: StrictBool
+    observed_at: datetime
+
+    @field_validator("observed_at")
+    @classmethod
+    def validate_observed_at(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("observed_at must include a timezone")
+        return value
 
 
 class AgentInternalRpcRequest(BaseModel):

@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     INTERNAL_RPC_TOKEN: str = ""
     CONTROL_PLANE_URL: str = "http://perum_core:3000"
     SCHOOL_PUBLIC_ID: str = ""
+    RELEASE_IMAGE: str = ""
     SUPPORT_ESCALATION_INTERVAL_S: int = 15
     # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
     TELEMETRY_INTERVAL_S: int = 60

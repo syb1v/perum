@@ -187,7 +187,7 @@ Acceptance tests:
 - повторная публикация не может незаметно изменить manifest существующей версии;
 - legacy release обрабатывается fail-closed.
 
-### Этап B. Dynamic Core discovery (частично выполнен)
+### Этап B. Dynamic Core discovery (выполнен)
 
 Файлы:
 
@@ -203,7 +203,7 @@ Acceptance tests:
 3. Включить effective contract в descriptor revision.
 4. Не раскрывать school policy, entitlement и role data.
 5. Добавить structured telemetry для unknown release, missing manifest и
-   incompatible descriptor; не включать tenant/user secrets. Остаётся выполнить.
+   unavailable deployment descriptor; не включать tenant/user secrets.
 
 Acceptance tests:
 
@@ -213,7 +213,7 @@ Acceptance tests:
 - unknown release не обещает optional capability;
 - inactive/suspended school и rate limit сохраняют прежнюю семантику.
 
-### Этап C. Deployment snapshot
+### Этап C. Deployment snapshot (выполнен)
 
 Файлы:
 
@@ -331,12 +331,12 @@ unknown release, grace fallback и incompatible client проверяются д
 - [x] Новый release невозможно опубликовать через CI без valid manifest v1.
 - [x] Core разрешает contract по фактическому `School.release_tag` без live query.
 - [x] Descriptor revision учитывает effective contract.
+- [x] Attachments и push delivery не включаются без runtime readiness.
 - [ ] Core и Tenant проходят schema parity tests.
 - [ ] Mobile сохраняет и применяет capabilities до authenticated request.
 - [x] Неизвестные schema/capabilities обрабатываются fail-closed.
 - [ ] Last-known-good fallback ограничен 24 часами и наблюдаем.
 - [ ] Identity mismatch и compatibility failure не допускают fallback.
-- [ ] Attachments и push delivery не включаются без runtime readiness.
 - [ ] Проверены cold start, resume, account switch, upgrade и downgrade.
 - [ ] Обновлены OpenAPI, generated clients, CHANGELOG и VERSIONS.
 

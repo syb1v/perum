@@ -2,6 +2,7 @@ import hashlib
 import ipaddress
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -11,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ratelimit import check_discovery_rate
-from app.models import Organization, OrganizationDomain, Release, School, SchoolDomain
+from app.models import Organization, OrganizationDomain, Release, School, SchoolDeploymentSnapshot, SchoolDomain
 from app.schemas.mobile_descriptor import MobileReleaseManifestV1
 from app.schemas.public import (
     TenantCapabilities,
@@ -33,6 +34,13 @@ _CONSERVATIVE_COMPATIBILITY = TenantCompatibility(
 _CONSERVATIVE_CAPABILITIES = TenantCapabilities(
     **dict.fromkeys(TenantCapabilities.model_fields, False)
 )
+_DEPLOYMENT_CAPABILITIES = {
+    "push_registration": "push_registration_ready",
+    "push_delivery": "push_delivery_ready",
+    "social_realtime": "realtime_ready",
+    "social_attachments": "scanner_ready",
+    "support_attachments": "scanner_ready",
+}
 
 
 def normalize_tenant_host(value: str) -> str:
@@ -79,14 +87,20 @@ def normalize_tenant_host(value: str) -> str:
 
 async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, TenantCompatibility, TenantCapabilities]:
     if not school.release_tag:
-        logger.warning("mobile_descriptor_missing_release", extra={"school_id": school.id})
+        logger.warning(
+            "mobile_descriptor_resolution_failed",
+            extra={"descriptor_reason": "missing_release", "school_id": school.id},
+        )
         return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
 
     release = (
         await db.execute(select(Release).where(Release.image == school.release_tag).limit(1))
     ).scalar_one_or_none()
     if release is None:
-        logger.warning("mobile_descriptor_unknown_release", extra={"school_id": school.id})
+        logger.warning(
+            "mobile_descriptor_resolution_failed",
+            extra={"descriptor_reason": "unknown_release", "school_id": school.id},
+        )
         return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
 
     try:
@@ -98,13 +112,37 @@ async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, Tenan
             }
         )
     except ValueError:
-        logger.warning("mobile_descriptor_invalid_manifest", extra={"release_id": release.id})
+        logger.warning(
+            "mobile_descriptor_resolution_failed",
+            extra={"descriptor_reason": "invalid_manifest", "school_id": school.id, "release_id": release.id},
+        )
         return 1, _CONSERVATIVE_COMPATIBILITY, _CONSERVATIVE_CAPABILITIES
 
+    capabilities = TenantCapabilities.model_validate(manifest.capabilities.model_dump())
+    snapshot = await db.get(SchoolDeploymentSnapshot, school.id)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    freshness = timedelta(seconds=get_settings().DEPLOYMENT_SNAPSHOT_FRESHNESS_S)
+    snapshot_reason = None
+    if snapshot is None:
+        snapshot_reason = "missing_snapshot"
+    elif snapshot.release_image != school.release_tag:
+        snapshot_reason = "release_mismatch"
+    elif snapshot.observed_at > now or now - snapshot.observed_at > freshness:
+        snapshot_reason = "stale_snapshot"
+    if snapshot_reason is not None:
+        logger.warning(
+            "mobile_descriptor_deployment_unavailable",
+            extra={"descriptor_reason": snapshot_reason, "school_id": school.id},
+        )
+    effective = capabilities.model_dump()
+    for capability, readiness in _DEPLOYMENT_CAPABILITIES.items():
+        effective[capability] = effective[capability] and bool(
+            snapshot is not None and snapshot_reason is None and getattr(snapshot, readiness)
+        )
     return (
         manifest.schema_version,
         TenantCompatibility.model_validate(manifest.compatibility.model_dump()),
-        TenantCapabilities.model_validate(manifest.capabilities.model_dump()),
+        TenantCapabilities.model_validate(effective),
     )
 
 

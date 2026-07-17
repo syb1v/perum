@@ -78,7 +78,21 @@ async def send_once() -> None:
         if school_id is None:
             return
         metrics = await collect_metrics(db, school_id)
+    from app.modules.push.service import capability as push_capability
+
+    push = push_capability()
     body = {"slug": s.ORG_SLUG, "metrics": metrics}
+    if s.SCHOOL_PUBLIC_ID and s.RELEASE_IMAGE:
+        body["deployment_snapshot"] = {
+            "schema_version": 1,
+            "school_id": s.SCHOOL_PUBLIC_ID,
+            "release_image": s.RELEASE_IMAGE,
+            "scanner_ready": False,
+            "realtime_ready": True,
+            "push_registration_ready": push["registration_available"],
+            "push_delivery_ready": push["delivery_enabled"],
+            "observed_at": utc_now().isoformat(),
+        }
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.post(
             f"{s.CONTROL_PLANE_URL.rstrip('/')}/api/telemetry",

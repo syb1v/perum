@@ -336,6 +336,22 @@ class SchoolMetric(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
+class SchoolDeploymentSnapshot(Base):
+    __tablename__ = "school_deployment_snapshots"
+
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True
+    )
+    schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    release_image: Mapped[str] = mapped_column(String(255), nullable=False)
+    scanner_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    realtime_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    push_registration_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    push_delivery_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    observed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
 class AgentState(Base):
     """Локальная идентичность узла организации (режим ROLE=org_agent). Одна строка:
     после enroll-on-boot хранит, к какой орг подключён узел и текущий релиз.

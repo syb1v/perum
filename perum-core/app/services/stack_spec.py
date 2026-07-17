@@ -174,6 +174,7 @@ def build_school_stack_spec(
         "ORG_SLUG": slug,
         "ORG_NAME": school.name,
         "SCHOOL_PUBLIC_ID": str(school.public_id),
+        "RELEASE_IMAGE": image or settings.TENANT_IMAGE,
         "DATABASE_URL": database_url,
         "REDIS_URL": redis_url,
         "CONTROL_PLANE_URL": settings.CONTROL_PLANE_URL,

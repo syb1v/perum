@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from uuid import UUID, uuid4
 
@@ -23,11 +24,15 @@ class _Result:
 
 
 class _DB:
-    def __init__(self, *results):
+    def __init__(self, *results, deployment_snapshot=None):
         self.results = iter(results)
+        self.deployment_snapshot = deployment_snapshot
 
     async def execute(self, statement):
         return _Result(next(self.results, []))
+
+    async def get(self, model, key):
+        return self.deployment_snapshot
 
 
 def _client(db):
@@ -208,7 +213,17 @@ def test_release_manifest_controls_mobile_contract_and_revision():
             True,
         ),
     )
-    manifest_response = _client(_DB([(domain, school, organization)], [(primary,)], [(release,)])).get(
+    snapshot = SimpleNamespace(
+        release_image=school.release_tag,
+        observed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        scanner_ready=True,
+        realtime_ready=True,
+        push_registration_ready=True,
+        push_delivery_ready=True,
+    )
+    manifest_response = _client(_DB(
+        [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
+    )).get(
         "/api/public/tenant-discovery", params={"host": "school.example.com"}
     )
     fallback_response = _client(_DB([(domain, school, organization)], [(primary,)], [])).get(
@@ -219,6 +234,207 @@ def test_release_manifest_controls_mobile_contract_and_revision():
     assert manifest_response.json()["capabilities"]["push_delivery"] is True
     assert fallback_response.json()["capabilities"]["push_delivery"] is False
     assert manifest_response.json()["descriptor_revision"] != fallback_response.json()["descriptor_revision"]
+
+
+def test_deployment_snapshot_only_gates_runtime_dependent_capabilities():
+    school, organization = _tenant()
+    school.release_tag = "tenant:release-a"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    capabilities = dict.fromkeys(
+        [
+            "refresh_sessions", "session_management", "push_registration", "push_delivery",
+            "social_friends", "social_messages", "social_realtime", "social_attachments",
+            "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+            "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+            "offline_support_ticket_creation",
+        ],
+        True,
+    )
+    release = SimpleNamespace(
+        id=4,
+        mobile_descriptor_schema_version=1,
+        mobile_compatibility={
+            "mobile_api_version": 1,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "1.0.0",
+        },
+        mobile_build_capabilities=capabilities,
+    )
+    snapshot = SimpleNamespace(
+        release_image=school.release_tag,
+        observed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        scanner_ready=False,
+        realtime_ready=True,
+        push_registration_ready=True,
+        push_delivery_ready=False,
+    )
+    response = _client(_DB(
+        [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
+    )).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
+
+    effective = response.json()["capabilities"]
+    assert effective["refresh_sessions"] is True
+    assert effective["social_realtime"] is True
+    assert effective["push_registration"] is True
+    assert effective["push_delivery"] is False
+    assert effective["social_attachments"] is False
+    assert effective["support_attachments"] is False
+
+
+def test_stale_snapshot_disables_only_runtime_dependent_capabilities():
+    school, organization = _tenant()
+    school.release_tag = "tenant:release-a"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    capabilities = dict.fromkeys(
+        [
+            "refresh_sessions", "session_management", "push_registration", "push_delivery",
+            "social_friends", "social_messages", "social_realtime", "social_attachments",
+            "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+            "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+            "offline_support_ticket_creation",
+        ],
+        True,
+    )
+    release = SimpleNamespace(
+        id=4,
+        mobile_descriptor_schema_version=1,
+        mobile_compatibility={
+            "mobile_api_version": 1,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "1.0.0",
+        },
+        mobile_build_capabilities=capabilities,
+    )
+    snapshot = SimpleNamespace(
+        release_image=school.release_tag,
+        observed_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1),
+        scanner_ready=True,
+        realtime_ready=True,
+        push_registration_ready=True,
+        push_delivery_ready=True,
+    )
+    response = _client(_DB(
+        [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
+    )).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
+
+    effective = response.json()["capabilities"]
+    assert effective["refresh_sessions"] is True
+    assert all(effective[name] is False for name in (
+        "push_registration", "push_delivery", "social_realtime",
+        "social_attachments", "support_attachments",
+    ))
+
+
+def test_snapshot_cannot_raise_build_false_capability():
+    school, organization = _tenant()
+    school.release_tag = "tenant:release-a"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    capabilities = dict.fromkeys(
+        [
+            "refresh_sessions", "session_management", "push_registration", "push_delivery",
+            "social_friends", "social_messages", "social_realtime", "social_attachments",
+            "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+            "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+            "offline_support_ticket_creation",
+        ],
+        False,
+    )
+    release = SimpleNamespace(
+        id=4,
+        mobile_descriptor_schema_version=1,
+        mobile_compatibility={
+            "mobile_api_version": 1,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "1.0.0",
+        },
+        mobile_build_capabilities=capabilities,
+    )
+    snapshot = SimpleNamespace(
+        release_image=school.release_tag,
+        observed_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        scanner_ready=True,
+        realtime_ready=True,
+        push_registration_ready=True,
+        push_delivery_ready=True,
+    )
+    response = _client(_DB(
+        [(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot
+    )).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
+
+    assert not any(response.json()["capabilities"].values())
+
+
+def test_missing_snapshot_keeps_build_only_capabilities_and_emits_safe_telemetry(caplog):
+    school, organization = _tenant()
+    school.release_tag = "tenant:secret-release"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    capabilities = dict.fromkeys(
+        [
+            "refresh_sessions", "session_management", "push_registration", "push_delivery",
+            "social_friends", "social_messages", "social_realtime", "social_attachments",
+            "support_requester", "support_attachments", "offline_preferences", "offline_homework_state",
+            "offline_social_messages", "offline_support_messages", "offline_read_cursors",
+            "offline_support_ticket_creation",
+        ],
+        True,
+    )
+    release = SimpleNamespace(
+        id=4,
+        mobile_descriptor_schema_version=1,
+        mobile_compatibility={
+            "mobile_api_version": 1,
+            "minimum_mobile_api_version": 1,
+            "minimum_app_version": "1.0.0",
+        },
+        mobile_build_capabilities=capabilities,
+    )
+
+    with caplog.at_level("WARNING", logger="app.routers.public"):
+        response = _client(_DB(
+            [(domain, school, organization)], [(primary,)], [(release,)]
+        )).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
+
+    effective = response.json()["capabilities"]
+    assert effective["refresh_sessions"] is True
+    assert effective["push_registration"] is False
+    record = next(record for record in caplog.records if record.msg == "mobile_descriptor_deployment_unavailable")
+    assert record.descriptor_reason == "missing_snapshot"
+    assert record.school_id == school.id
+    assert "secret-release" not in caplog.text
+
+
+def test_release_resolution_failures_emit_reason_codes_without_release_identity(caplog):
+    school, organization = _tenant()
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    with caplog.at_level("WARNING", logger="app.routers.public"):
+        _client(_DB([(domain, school, organization)], [(primary,)])).get(
+            "/api/public/tenant-discovery", params={"host": "school.example.com"}
+        )
+        school.release_tag = "tenant:secret-unknown"
+        _client(_DB([(domain, school, organization)], [(primary,)], [])).get(
+            "/api/public/tenant-discovery", params={"host": "school.example.com"}
+        )
+        invalid_release = SimpleNamespace(
+            id=9,
+            mobile_descriptor_schema_version=1,
+            mobile_compatibility={},
+            mobile_build_capabilities={},
+        )
+        _client(_DB([(domain, school, organization)], [(primary,)], [(invalid_release,)])).get(
+            "/api/public/tenant-discovery", params={"host": "school.example.com"}
+        )
+
+    records = [record for record in caplog.records if record.msg == "mobile_descriptor_resolution_failed"]
+    assert [record.descriptor_reason for record in records] == [
+        "missing_release", "unknown_release", "invalid_manifest"
+    ]
+    assert all(record.school_id == school.id for record in records)
+    assert "secret-unknown" not in caplog.text
 
 
 @pytest.mark.parametrize(
