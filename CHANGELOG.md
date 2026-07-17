@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Для последней строки Stage F подготовлен безопасный one-school pilot checklist: prerequisites, unknown-release/grace/incompatible-client сценарии, stop/recovery criteria и privacy-safe шаблон operator evidence; шкала сохранена на 11/12 до фактического пилота.
 - Stage F dynamic descriptor получил request-time traffic lease и lifecycle scheduler: cold start, resume после TTL, account switch и release upgrade/downgrade синхронно закрывают старые clients до atomic descriptor acceptance; refresh rotation стал persistence-first, добавлены automated lifecycle/Core transition tests и обязательный Tenant release descriptor contract gate перед image publication.
 - OpenAPI generator корректно разрешает bare `python` через `PATH` в clean CI и автоматически использует service venv локально, устраняя ложный repository path `<root>/python` и позволяя одной команде воспроизводить contract drift gate.
 - Stage F automated release evidence подтверждено полностью зелёным CI run `29598407038`: descriptor contract gate, Core/Tenant tests, OpenAPI drift, Web build и Mobile Android/iOS exports прошли; до закрытия Stage F остаётся one-school pilot.

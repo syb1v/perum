@@ -328,6 +328,63 @@ Stage F не дублирует эту реализацию: он проверя
 evidence. После закрытия всех строк обновляются DoD ниже и live percentages в
 `PRODUCT_MASTER_PLAN.md`.
 
+#### One-school pilot checklist
+
+Пилот выполняется на одной явно выбранной opt-in школе. Координаты, credentials и
+значения production-конфигурации берутся только из approved secret manager и
+внешнего operator runbook и не переносятся в evidence или репозиторий.
+
+Подготовка:
+
+1. Записать public school UUID, текущие release tag/image digest, descriptor
+   revision и время начала; не записывать пользователей, токены и внутренние URL.
+2. Подтвердить зелёный CI нужного commit, свежий backup/restore point, health
+   школы и наличие совместимого rollback image согласно `RUNBOOK.md`.
+3. Назначить оператора, наблюдателя и окно пилота. На время окна не запускать
+   параллельные deploy/update этой школы.
+4. Подготовить pilot Mobile build с локальной telemetry и тестовый school account
+   без административных или реальных пользовательских данных.
+
+Проверки:
+
+1. **Baseline:** выполнить discovery и login, зафиксировать только schema version,
+   descriptor revision, release identity, effective capability names и health.
+2. **Unknown release:** временно назначить школе заранее подготовленный release
+   без валидного manifest либо эквивалентный безопасный test fixture. Убедиться,
+   что optional capabilities выключены, authenticated traffic не стартует и Core
+   фиксирует redacted `unknown release`/`missing manifest` event.
+3. **Grace:** вернуть валидный release, принять descriptor, дождаться или безопасно
+   воспроизвести expiry, затем сделать Core discovery недоступным только тестовому
+   клиенту. Проверить разрешённый LKG fallback для network/`429`/`5xx`, состояние
+   `core_unavailable`, сохранность account и pending outbox, затем восстановить
+   Core до истечения 24-часовой границы.
+4. **Incompatible client:** назначить test manifest с `minimum_app_version` выше
+   pilot build. Проверить blocked UX, отсутствие tenant requests и redacted
+   incompatible-client telemetry без fallback.
+5. **Recovery:** вернуть исходный release/image, дождаться свежего deployment
+   snapshot, повторить discovery/login и подтвердить исходные health, revision и
+   capability contract.
+
+Немедленно остановить пилот и выполнить recovery при identity mismatch, появлении
+tenant traffic в blocked-сценарии, потере account/outbox, ошибке миграции, health
+failure или telemetry с credentials/PII. Не выполнять schema downgrade; при
+несовместимой миграции оставить исходный application image и следовать incident
+процедуре из `RUNBOOK.md`.
+
+Operator record считается достаточным только при наличии:
+
+- даты/окна, роли оператора и public school UUID;
+- commit SHA, Mobile build version, исходного и тестового release tag/image digest;
+- результатов baseline, unknown-release, grace, incompatible-client и recovery;
+- redacted timestamps/event IDs или ссылок на защищённые логи для трёх telemetry
+  сигналов без их копирования в репозиторий;
+- результата health/data smoke после recovery и ссылки на внешний incident record,
+  если сработал критерий остановки;
+- итогового `pass` или `fail`, подписи оператора и наблюдателя.
+
+До operator record со всеми перечисленными полями строка `Pilot rollout` остаётся
+`pending`, Stage F и связанные проценты не закрываются.
+
 Проверки:
 
 - Core pytest;
