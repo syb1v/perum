@@ -2,7 +2,7 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-17**.
+> эти оценки. Последнее обновление live-блока: **2026-07-18**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
@@ -12,7 +12,7 @@
 | Dynamic mobile descriptor | **10/11 = 90.9%** | 11 проверяемых пунктов Definition of Done; закрыты 10, lifecycle matrix Stage F не закрыта |
 | Descriptor stages | **5/6 = 83.3%** | Stages A-E завершены; Stage F pending |
 | Stage F lifecycle matrix | **11/12 = 91.7%** | Automated rows и named CI run `29598407038` прошли; безопасный operator checklist готов, pilot evidence pending |
-| Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
+| Общая готовность продукта | **28-33%, midpoint 30%** | Консервативная экспертная переоценка полного scope после durable support/social offline slices, Native Friends и controlled rollout foundation; billing, policy, full role parity, scanner/push integrations и production evidence сохраняют большую часть remaining scope |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
 **Текущий этап:** выбор production media scanner перед включением social/support
@@ -31,10 +31,12 @@ concurrency environment и mobile preview QA window. После этого пр�
 продолжаются по workstream table ниже: Friends/media, учебный hardening, support
 escalation, chats/moderation, billing, role parity и production rollout.
 
-**Handoff readiness:** код Stages A-E, automated Stage F gates, durable requester
-support read cursor и offline ticket creation находится в `main`; CI run
+**Handoff readiness:** код Stages A-E, automated Stage F gates, durable
+support/social read cursors, offline support ticket creation, Friends hardening,
+Native Friends UI и двухступенчатый controlled rollout находится в `main`; CI run
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
-Stage F automation, а support slices прошли tenant/mobile/shared contract gates.
+Stage F automation, а последние social/support slices прошли Core/Tenant full
+pytest, mobile/shared tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
@@ -94,6 +96,10 @@ restart/conflict evidence.
 | Mobile routing | Один global Core discovery URL; клиент не строит tenant URL самостоятельно |
 | Выбор школы | Полный school host, QR/invite link или пара organization domain + school code |
 | Публичность школ | Полный список школ организации анонимно не публикуется |
+| Social operational rollout | `platform_admin` выдаёт grant, `org_admin` отдельно включает rollout своей школы, `school_admin` управляет tenant policy |
+| Social revoke | Platform revoke атомарно сбрасывает org intent; новый grant требует повторного org enable |
+| Social convergence | Core discovery закрывается сразу; available node подтверждает env generation свежим heartbeat, unavailable node остаётся `enforcement_pending` |
+| Social shutdown retention | Operator shutdown не запускает удаление; school shutdown оставляет read-only историю на 30 дней, re-enable отменяет удаление, moderation hold сохраняет evidence |
 
 ## 2. Workstreams
 
@@ -609,7 +615,7 @@ Flow:
 Работы выполняются параллельно несколькими командами; оценки указаны в
 календарных неделях для одного основного потока и требуют уточнения после ADR.
 
-### Evidence по workstreams на 2026-07-17
+### Evidence по workstreams на 2026-07-18
 
 Обозначения: `готово` означает реализованный и проверенный базовый контур;
 `частично` означает, что foundation или vertical slice есть, но workstream ещё
@@ -629,7 +635,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Не начато | student, parent, teacher offline journal, school/org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages и Support requester готовы; остаются полный student parity, parent, teacher offline journal, school admin/director, org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке

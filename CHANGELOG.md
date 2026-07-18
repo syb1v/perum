@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-17
 
+- Product master plan полностью синхронизирован с состоянием на 2026-07-18: обновлены live/evidence даты, social rollout/retention решения, handoff evidence, Mobile role parity и консервативная общая готовность `28–33%` без изменения незакрытых Stage F descriptor-шкал.
 - Подготовлена передача оставшихся циклов: отдельный план фиксирует выбор production scanner, attachment stop gate и независимый native support admin inbox, а session report суммирует реализованные support/social/rollout изменения и зелёные проверки.
 - Реализованы Native Friends UI и двухступенчатый controlled social rollout: `platform_admin` выдаёт grant, `org_admin` отдельно включает свою школу, revoke атомарно сбрасывает org intent; Core немедленно закрывает discovery capabilities, typed local/remote app swap применяет env с generation fencing и rollback, а fresh heartbeat подтверждает bounded convergence без ложного `converged`.
 - Friends/social hardening разделил fail-closed operator rollout и школьную policy: school shutdown оставляет историю read-only на 30 дней с пользовательским countdown и отменой удаления при повторном включении, operator shutdown не запускает deletion; добавлены audit/telemetry, capability gating, pagination/isolation hardening и исправление пропуска search cursor.
