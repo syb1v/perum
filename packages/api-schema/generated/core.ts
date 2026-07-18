@@ -248,6 +248,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/platform/social-rollouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Platform Rollouts */
+        get: operations["list_platform_rollouts_api_platform_social_rollouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/platform/schools/{school_id}/social-rollout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Platform Rollout */
+        get: operations["get_platform_rollout_api_platform_schools__school_id__social_rollout_get"];
+        /** Set Platform Rollout */
+        put: operations["set_platform_rollout_api_platform_schools__school_id__social_rollout_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/billing/enforce": {
         parameters: {
             query?: never;
@@ -283,6 +318,24 @@ export interface paths {
          */
         get: operations["list_receivables_api_billing_receivables_get"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/schools/{school_id}/social-rollout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Org Rollout */
+        get: operations["get_org_rollout_api_schools__school_id__social_rollout_get"];
+        /** Set Org Rollout */
+        put: operations["set_org_rollout_api_schools__school_id__social_rollout_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -386,6 +439,23 @@ export interface paths {
         put?: never;
         /** Update School */
         post: operations["update_school_api_agent_schools__school_slug__update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/schools/{school_slug}/social-runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Apply Social Runtime */
+        put: operations["apply_social_runtime_api_agent_schools__school_slug__social_runtime_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2156,6 +2226,16 @@ export interface components {
             admin_email?: string | null;
             /** Host */
             host?: string | null;
+            /**
+             * Social Rollout Enabled
+             * @default false
+             */
+            social_rollout_enabled: boolean;
+            /**
+             * Social Rollout Generation
+             * @default 0
+             */
+            social_rollout_generation: number;
         };
         /** AgentProvisionSchoolResponse */
         AgentProvisionSchoolResponse: {
@@ -2196,6 +2276,29 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** AgentSocialRuntimeConfigRequest */
+        AgentSocialRuntimeConfigRequest: {
+            /** Enabled */
+            enabled: boolean;
+            /** Generation */
+            generation: number;
+        };
+        /** AgentSocialRuntimeConfigResponse */
+        AgentSocialRuntimeConfigResponse: {
+            /** Success */
+            success: boolean;
+            /** School Slug */
+            school_slug: string;
+            /** Applied Generation */
+            applied_generation: number;
+            /**
+             * Rolled Back
+             * @default false
+             */
+            rolled_back: boolean;
+            /** Message */
+            message?: string | null;
+        };
         /** AgentUpdateSchoolRequest */
         AgentUpdateSchoolRequest: {
             /** School Slug */
@@ -2206,6 +2309,16 @@ export interface components {
             from_version?: string | null;
             /** To Version */
             to_version: string;
+            /**
+             * Social Rollout Enabled
+             * @default false
+             */
+            social_rollout_enabled: boolean;
+            /**
+             * Social Rollout Generation
+             * @default 0
+             */
+            social_rollout_generation: number;
         };
         /** AgentUpdateSchoolResponse */
         AgentUpdateSchoolResponse: {
@@ -2686,6 +2799,11 @@ export interface components {
             /** Is Active */
             is_active?: boolean | null;
         };
+        /** OrgEnablePatch */
+        OrgEnablePatch: {
+            /** Org Enabled */
+            org_enabled: boolean;
+        };
         /** OrgPatch */
         OrgPatch: {
             /** Name */
@@ -2807,6 +2925,11 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
+        /** PlatformGrantPatch */
+        PlatformGrantPatch: {
+            /** Platform Granted */
+            platform_granted: boolean;
+        };
         /**
          * ProvisionResult
          * @description Returned by create/reprovision: the org plus (when freshly bootstrapped)
@@ -2890,6 +3013,11 @@ export interface components {
              * @default false
              */
             social_ready: boolean;
+            /**
+             * Social Generation
+             * @default 0
+             */
+            social_generation: number;
             /**
              * Observed At
              * Format: date-time
@@ -3551,6 +3679,98 @@ export interface operations {
             };
         };
     };
+    list_platform_rollouts_api_platform_social_rollouts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    get_platform_rollout_api_platform_schools__school_id__social_rollout_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_platform_rollout_api_platform_schools__school_id__social_rollout_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformGrantPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     enforce_billing_api_billing_enforce_post: {
         parameters: {
             query?: never;
@@ -3591,6 +3811,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_org_rollout_api_schools__school_id__social_rollout_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_org_rollout_api_schools__school_id__social_rollout_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgEnablePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3762,6 +4052,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentUpdateSchoolResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_social_runtime_api_agent_schools__school_slug__social_runtime_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                school_slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSocialRuntimeConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSocialRuntimeConfigResponse"];
                 };
             };
             /** @description Validation Error */

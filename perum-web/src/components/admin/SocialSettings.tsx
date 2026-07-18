@@ -22,7 +22,7 @@ export default function SocialSettings() {
     const [message, setMessage] = useState('');
 
     useEffect(() => {
-        api.patch<SocialSettingsDto>('/admin/social/settings', {})
+        api.get<SocialSettingsDto>('/admin/social/settings')
             .then(setSettings)
             .catch(() => setMessage('Не удалось загрузить настройки общения'));
     }, []);

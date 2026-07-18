@@ -77,6 +77,7 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
         "realtime_ready": False,
         "push_registration_ready": True,
         "push_delivery_ready": False,
-        "social_ready": True,
+            "social_ready": True,
+            "social_generation": settings.SOCIAL_ROLLOUT_GENERATION,
         "observed_at": body["deployment_snapshot"]["observed_at"],
     }

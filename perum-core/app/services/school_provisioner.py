@@ -227,7 +227,7 @@ async def _upsert_subdomain(school: School, host: str, db: AsyncSession) -> None
         domain.activated_at = now
 
 
-async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None, image: str | None = None, host: str | None = None) -> SchoolProvisionOutcome:
+async def provision_school(school: School, db: AsyncSession, settings: Settings | None = None, image: str | None = None, host: str | None = None, social_rollout_enabled: bool | None = None, social_rollout_generation: int | None = None) -> SchoolProvisionOutcome:
     settings = settings or get_settings()
     docker = get_docker_client()
     caddy = get_caddy_admin()
@@ -241,7 +241,10 @@ async def provision_school(school: School, db: AsyncSession, settings: Settings 
     await db.refresh(school)
     await db.refresh(secret)
 
-    spec = build_school_stack_spec(school, secret, settings, image=target_image, host=host)
+    if social_rollout_enabled is None or social_rollout_generation is None:
+        from app.services.social_rollout import desired_runtime
+        social_rollout_enabled, social_rollout_generation = await desired_runtime(db, school.id)
+    spec = build_school_stack_spec(school, secret, settings, image=target_image, host=host, social_rollout_enabled=social_rollout_enabled, social_rollout_generation=social_rollout_generation)
     try:
         outcome = await _bring_up(spec, label_slug, settings, docker, caddy, admin_email=school.admin_email)
     except Exception as exc:
@@ -252,6 +255,12 @@ async def provision_school(school: School, db: AsyncSession, settings: Settings 
     school.status = "active"
     school.activated_at = datetime.utcnow()
     school.release_tag = target_image
+    from app.services.social_rollout import get_or_create
+    rollout = await get_or_create(db, school.id)
+    rollout.applied_generation = social_rollout_generation
+    rollout.applied_enabled = social_rollout_enabled
+    rollout.applied_at = datetime.utcnow()
+    rollout.apply_status = "awaiting_heartbeat"
     await _upsert_subdomain(school, outcome.host, db)
     await db.commit()
     await db.refresh(school)
@@ -489,6 +498,7 @@ async def _swap_app(spec: StackSpec, label_slug: str, image: str, settings: Sett
     """Пересоздать ТОЛЬКО app-контейнер на заданном образе + прогнать миграции.
     БД и её том не трогаются (volume-preserving)."""
     spec.tenant_image = image
+    spec.app_env["RELEASE_IMAGE"] = image
     await docker.ensure_image(image)
     await docker.remove_container(spec.app_container)
     await docker.run_container(**_app_run_kwargs(spec, label_slug))
@@ -498,7 +508,7 @@ async def _swap_app(spec: StackSpec, label_slug: str, image: str, settings: Sett
         raise ProvisioningError(f"alembic upgrade failed (exit {code}):\n{out[-2000:]}")
 
 
-async def update_school(school: School, db: AsyncSession, settings: Settings | None = None, to_image: str | None = None) -> UpdateOutcome:
+async def update_school(school: School, db: AsyncSession, settings: Settings | None = None, to_image: str | None = None, social_rollout_enabled: bool | None = None, social_rollout_generation: int | None = None) -> UpdateOutcome:
     """OTA-обновление школьного стека на текущий релиз: pull нового образа +
     пересоздание app-контейнера (том сохраняется) + миграции. При сбое — откат на
     прежний образ. Это и есть «обновление по кнопке» (опт-ин, без принуждения)."""
@@ -535,7 +545,10 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
         secret.internal_rpc_token = secrets_mod.token_urlsafe(24)
         await db.commit()
         await db.refresh(secret)
-    spec = build_school_stack_spec(school, secret, settings, image=to_image)
+    if social_rollout_enabled is None or social_rollout_generation is None:
+        from app.services.social_rollout import desired_runtime
+        social_rollout_enabled, social_rollout_generation = await desired_runtime(db, school.id)
+    spec = build_school_stack_spec(school, secret, settings, image=to_image, social_rollout_enabled=social_rollout_enabled, social_rollout_generation=social_rollout_generation)
 
     school.status = "updating"
     await db.commit()
@@ -713,12 +726,16 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     await db.commit()
     await db.refresh(secret)
     image = await current_release_image(db, settings)
+    from app.services.social_rollout import desired_runtime
+    social_enabled, social_generation = await desired_runtime(db, school.id)
     req = {
         "school_slug": school.slug, "school_name": school.name, "release_tag": image,
         "db_password": secret.db_password, "secret_key": secret.secret_key,
         "telemetry_token": secret.telemetry_token, "internal_rpc_token": secret.internal_rpc_token,
         "redis_db_index": secret.redis_db_index, "admin_email": school.admin_email,
         "host": host,
+        "social_rollout_enabled": social_enabled,
+        "social_rollout_generation": social_generation,
     }
     try:
         resp = await RemoteNodeClient().provision_school(node, req)
@@ -735,6 +752,12 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     school.status = "active"
     school.activated_at = datetime.utcnow()
     school.release_tag = image
+    from app.services.social_rollout import get_or_create
+    rollout = await get_or_create(db, school.id)
+    rollout.applied_generation = social_generation
+    rollout.applied_enabled = social_enabled
+    rollout.applied_at = datetime.utcnow()
+    rollout.apply_status = "awaiting_heartbeat"
     if host:
         await _upsert_subdomain(school, host, db)
     await db.commit()
@@ -760,6 +783,8 @@ async def update_school_orchestrated(school: School, db: AsyncSession, settings:
         return
 
     image = await current_release_image(db, settings)
+    from app.services.social_rollout import desired_runtime
+    social_enabled, social_generation = await desired_runtime(db, school.id)
     from_image = school.release_tag or settings.TENANT_IMAGE
     if image == from_image:
         logger.info("school %s: уже на текущем релизе (%s)", school.slug, image)
@@ -777,6 +802,8 @@ async def update_school_orchestrated(school: School, db: AsyncSession, settings:
         resp = await RemoteNodeClient().update_school(node, {
             "school_slug": school.slug, "image": image,
             "from_version": from_image, "to_version": image,
+            "social_rollout_enabled": social_enabled,
+            "social_rollout_generation": social_generation,
         })
     except RemoteNodeError as exc:
         school.status = "active"

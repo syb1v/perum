@@ -8,11 +8,11 @@
 
 Реализован базовый student vertical slice: school settings, поиск, заявки,
 дружба/блокировки, direct text conversations, durable read state, web UI,
-mobile Messages UI/offline outbox, privacy-safe audit/telemetry, operational
+mobile Friends/Messages UI и offline outbox, privacy-safe audit/telemetry, operational
 feature flag, reports, evidence-scoped moderation, retention и realtime с polling
-fallback. Целевыми, но не завершёнными остаются Native Friends UI, parent observer
-policy, attachments с production scanner, расширенный anti-abuse, push lifecycle,
-groups (если будут утверждены отдельно) и controlled rollout.
+fallback. Целевыми, но не завершёнными остаются parent observer policy,
+attachments с production scanner, расширенный anti-abuse, push lifecycle,
+groups (если будут утверждены отдельно) и production pilot evidence.
 
 ## 1. Настройки школы
 

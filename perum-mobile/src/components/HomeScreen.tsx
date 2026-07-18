@@ -68,6 +68,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     </View>
     <View style={styles.spacer} />
     {user.role === 'student' && has('offline_homework_state') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/homework')}><Text style={styles.primaryText}>Домашние задания</Text></Pressable> : null}
+    {user.role === 'student' && has('social_friends') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/friends')}><Text style={styles.primaryText}>Друзья</Text></Pressable> : null}
     {user.role === 'student' && has('social_messages') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/messages')}><Text style={styles.primaryText}>Сообщения</Text></Pressable> : null}
     {(user.role === 'student' || user.role === 'parent' || user.role === 'teacher') && has('support_requester') ? <Pressable style={styles.primary} onPress={() => router.push('/support')}><Text style={styles.primaryText}>Поддержка школы</Text></Pressable> : null}
     <Pressable style={styles.primary} onPress={() => router.push('/accounts')}><Text style={styles.primaryText}>Сменить аккаунт</Text></Pressable>

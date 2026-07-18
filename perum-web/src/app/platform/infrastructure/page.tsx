@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { infrastructureApi } from '@/lib/infrastructureApi';
+import { infrastructureApi, socialRolloutApi, type SocialRollout } from '@/lib/infrastructureApi';
 import type { Node, NodeListResponse, CapacityRecommendation, BootstrapScript, Organization } from '@/types';
 import styles from './infrastructure.module.css';
 
@@ -49,6 +49,8 @@ export default function InfrastructurePage() {
     const [schoolCount, setSchoolCount] = useState(10);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [scriptLoading, setScriptLoading] = useState<number | null>(null);
+    const [rollouts, setRollouts] = useState<SocialRollout[]>([]);
+    const [rolloutBusy, setRolloutBusy] = useState<number | null>(null);
 
     useEffect(() => {
         loadNodes();
@@ -59,11 +61,25 @@ export default function InfrastructurePage() {
             setLoading(true);
             const data: NodeListResponse = await infrastructureApi.getNodes();
             setNodes(data.nodes);
+            setRollouts((await socialRolloutApi.listPlatform()).items);
             setError(null);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Не удалось загрузить ноды');
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function setGrant(item: SocialRollout, granted: boolean) {
+        if (!confirm(granted ? `Выдать школе «${item.school_name}» доступ к social rollout? Школа не включится автоматически.` : `Отозвать доступ у школы «${item.school_name}»? Включение организации будет сброшено.`)) return;
+        setRolloutBusy(item.school_id);
+        try {
+            const updated = await socialRolloutApi.setPlatform(item.school_id, granted);
+            setRollouts(current => current.map(value => value.school_id === item.school_id ? updated : value));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось изменить rollout');
+        } finally {
+            setRolloutBusy(null);
         }
     }
 
@@ -128,6 +144,15 @@ export default function InfrastructurePage() {
             </div>
 
             {error && <div className={styles.errorBanner}>{error}</div>}
+
+            <section className={styles.section}>
+                <div className={styles.sectionHeader}><h2>Social rollout <span className={styles.countBadge}>{rollouts.length}</span></h2></div>
+                <div className={styles.nodeList}>{rollouts.map(item => <div key={item.school_id} className={styles.nodeRow}>
+                    <div className={styles.nodeRowLeft}><div className={styles.nodeMain}><span className={styles.nodeName}>{item.school_name}</span><span className={styles.nodeHost}>Организация {item.org_id}, поколение {item.generation}</span></div><span className={styles.statusPill}>{item.status}</span></div>
+                    <div className={styles.nodeRowMeta}><span className={styles.metaItem}>{item.effective ? 'Social включён' : item.platform_granted ? 'Ожидает включения организацией' : 'Доступ не выдан'}</span>{item.error ? <span className={styles.offlineHint}>{item.error}</span> : null}</div>
+                    <div className={styles.nodeRowActions}><button className={item.platform_granted ? styles.btnDanger : styles.btnPrimary} disabled={rolloutBusy === item.school_id} onClick={() => void setGrant(item, !item.platform_granted)}>{item.platform_granted ? 'Отозвать' : 'Выдать доступ'}</button></div>
+                </div>)}</div>
+            </section>
 
             <section className={styles.section}>
                 <div className={styles.sectionHeader}>

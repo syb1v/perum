@@ -747,6 +747,140 @@
         ]
       }
     },
+    "/api/platform/social-rollouts": {
+      "get": {
+        "tags": [
+          "social-rollout"
+        ],
+        "summary": "List Platform Rollouts",
+        "operationId": "list_platform_rollouts_api_platform_social_rollouts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response List Platform Rollouts Api Platform Social Rollouts Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/platform/schools/{school_id}/social-rollout": {
+      "get": {
+        "tags": [
+          "social-rollout"
+        ],
+        "summary": "Get Platform Rollout",
+        "operationId": "get_platform_rollout_api_platform_schools__school_id__social_rollout_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "School Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Platform Rollout Api Platform Schools  School Id  Social Rollout Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "social-rollout"
+        ],
+        "summary": "Set Platform Rollout",
+        "operationId": "set_platform_rollout_api_platform_schools__school_id__social_rollout_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "School Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformGrantPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Set Platform Rollout Api Platform Schools  School Id  Social Rollout Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/billing/enforce": {
       "post": {
         "tags": [
@@ -803,6 +937,112 @@
             "HTTPBearer": []
           }
         ]
+      }
+    },
+    "/api/schools/{school_id}/social-rollout": {
+      "get": {
+        "tags": [
+          "social-rollout"
+        ],
+        "summary": "Get Org Rollout",
+        "operationId": "get_org_rollout_api_schools__school_id__social_rollout_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "School Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Org Rollout Api Schools  School Id  Social Rollout Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "social-rollout"
+        ],
+        "summary": "Set Org Rollout",
+        "operationId": "set_org_rollout_api_schools__school_id__social_rollout_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "School Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgEnablePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Set Org Rollout Api Schools  School Id  Social Rollout Put"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/enroll": {
@@ -1051,6 +1291,74 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentUpdateSchoolResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/schools/{school_slug}/social-runtime": {
+      "put": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Apply Social Runtime",
+        "operationId": "apply_social_runtime_api_agent_schools__school_slug__social_runtime_put",
+        "parameters": [
+          {
+            "name": "school_slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "School Slug"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentSocialRuntimeConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSocialRuntimeConfigResponse"
                 }
               }
             }
@@ -6914,6 +7222,17 @@
               }
             ],
             "title": "Host"
+          },
+          "social_rollout_enabled": {
+            "type": "boolean",
+            "title": "Social Rollout Enabled",
+            "default": false
+          },
+          "social_rollout_generation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Social Rollout Generation",
+            "default": 0
           }
         },
         "type": "object",
@@ -7043,6 +7362,64 @@
         ],
         "title": "AgentSchoolListResponse"
       },
+      "AgentSocialRuntimeConfigRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "generation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Generation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "generation"
+        ],
+        "title": "AgentSocialRuntimeConfigRequest"
+      },
+      "AgentSocialRuntimeConfigResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "school_slug": {
+            "type": "string",
+            "title": "School Slug"
+          },
+          "applied_generation": {
+            "type": "integer",
+            "title": "Applied Generation"
+          },
+          "rolled_back": {
+            "type": "boolean",
+            "title": "Rolled Back",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "school_slug",
+          "applied_generation"
+        ],
+        "title": "AgentSocialRuntimeConfigResponse"
+      },
       "AgentUpdateSchoolRequest": {
         "properties": {
           "school_slug": {
@@ -7067,6 +7444,17 @@
           "to_version": {
             "type": "string",
             "title": "To Version"
+          },
+          "social_rollout_enabled": {
+            "type": "boolean",
+            "title": "Social Rollout Enabled",
+            "default": false
+          },
+          "social_rollout_generation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Social Rollout Generation",
+            "default": 0
           }
         },
         "type": "object",
@@ -8503,6 +8891,19 @@
         "type": "object",
         "title": "OrgAdminPatch"
       },
+      "OrgEnablePatch": {
+        "properties": {
+          "org_enabled": {
+            "type": "boolean",
+            "title": "Org Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_enabled"
+        ],
+        "title": "OrgEnablePatch"
+      },
       "OrgPatch": {
         "properties": {
           "name": {
@@ -8891,6 +9292,19 @@
         ],
         "title": "PlatformAdminRead"
       },
+      "PlatformGrantPatch": {
+        "properties": {
+          "platform_granted": {
+            "type": "boolean",
+            "title": "Platform Granted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "platform_granted"
+        ],
+        "title": "PlatformGrantPatch"
+      },
       "ProvisionResult": {
         "properties": {
           "organization": {
@@ -9114,6 +9528,12 @@
             "type": "boolean",
             "title": "Social Ready",
             "default": false
+          },
+          "social_generation": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Social Generation",
+            "default": 0
           },
           "observed_at": {
             "type": "string",

@@ -3581,6 +3581,30 @@
       }
     },
     "/api/admin/social/settings": {
+      "get": {
+        "tags": [
+          "social-admin"
+        ],
+        "summary": "Admin Settings",
+        "operationId": "admin_settings_api_admin_social_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
       "patch": {
         "tags": [
           "social-admin"

@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agent.schemas import SchoolDeploymentSnapshotV1
 from app.core.db import get_db
 from app.core.ratelimit import _client_ip
-from app.models import School, SchoolDeploymentSnapshot, SchoolMetric, SchoolSecret
+from app.models import School, SchoolDeploymentSnapshot, SchoolMetric, SchoolSecret, SchoolSocialRollout
 
 router = APIRouter()
 
@@ -84,8 +84,13 @@ async def ingest(
         deployment.push_registration_ready = snapshot.push_registration_ready
         deployment.push_delivery_ready = snapshot.push_delivery_ready
         deployment.social_ready = snapshot.social_ready
+        deployment.social_generation = snapshot.social_generation
         deployment.observed_at = observed_at
         deployment.received_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        rollout = await db.get(SchoolSocialRollout, school.id)
+        if rollout is not None and snapshot.social_generation == rollout.generation and snapshot.social_ready == (rollout.platform_granted and rollout.org_enabled):
+            rollout.apply_status = "converged"
+            rollout.apply_error = None
 
     m = payload.metrics or {}
     metric = await db.get(SchoolMetric, school.id)

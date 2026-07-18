@@ -51,6 +51,9 @@ class RemoteNodeClient:
         slug = update_data.get("school_slug")
         return await self._request(node, "POST", f"/schools/{slug}/update", json=update_data)
 
+    async def apply_social_runtime(self, node: Node, school_slug: str, enabled: bool, generation: int) -> dict:
+        return await self._request(node, "PUT", f"/schools/{school_slug}/social-runtime", json={"enabled": enabled, "generation": generation})
+
     async def suspend_school(self, node: Node, school_slug: str) -> dict:
         return await self._request(node, "POST", f"/schools/{school_slug}/suspend")
 

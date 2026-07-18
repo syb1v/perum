@@ -15,16 +15,17 @@
 | Общая готовность продукта | **25-30%, midpoint 27%** | Экспертный диапазон по полному утверждённому scope: backend, web, native parity, policy, billing, operations и rollout; это не среднее двух строк выше |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** подготовка Native Friends UI и controlled rollout. Friends
-hardening, audit/observability, fail-closed feature flag, pagination/isolation и
-30-дневный school shutdown retention завершены. One-school pilot Stage F и multi-device Homework
+**Текущий этап:** выбор production media scanner перед включением social/support
+attachments. Native Friends UI и двухступенчатый controlled rollout foundation
+завершены. One-school pilot Stage F и multi-device Homework
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** назначить владельца и способ включения
-`SOCIAL_ROLLOUT_ENABLED` для конкретной школы; только затем начать Native Friends
-UI и controlled rollout. Stage F возобновляется после предоставления
+**Следующий roadmap:** выбрать scanner и только затем проектировать production
+integration; до выбора attachments остаются fail-closed. После scanner slice —
+native school support admin inbox и delivery observability без зависимости от
+attachments. Stage F возобновляется после предоставления
 opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
 concurrency environment и mobile preview QA window. После этого приоритеты
 продолжаются по workstream table ниже: Friends/media, учебный hardening, support
@@ -46,8 +47,10 @@ restart/conflict evidence.
 2. Friends hardening: завершён, включая privacy-safe audit/telemetry,
    fail-closed feature flag, pagination/isolation tests и 30-дневное read-only
    окно после school shutdown.
-3. Native Friends UI и controlled rollout без attachments. Выполняется только
-   после зелёного hardening и утверждённого rollout flag.
+3. Native Friends UI и controlled rollout foundation без attachments: завершены.
+   Platform grant, отдельный org enable, revoke reset, desired/applied/observed
+   generation и bounded convergence реализованы; production pilot evidence ещё
+   не собрано.
 4. Media scanner selection и production integration. До выбора scanner работа
    останавливается, attachments остаются fail-closed.
 5. School support native admin inbox и delivery observability без attachments.
@@ -614,7 +617,7 @@ Flow:
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
-| P1 | Friends | Частично | durable social cursor и hardening готовы: audit/telemetry, fail-closed operational flag, pagination/isolation, web pagination и 30-дневное read-only окно; остаются назначение rollout owner, Native Friends UI и controlled rollout |
+| P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
 | P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |

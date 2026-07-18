@@ -40,6 +40,11 @@ async def update_settings(payload: SettingsPatch, user: User = Depends(require_a
     return service.settings_out(await service.patch_settings(db, user.school_id, payload, user.role))
 
 
+@admin_router.get("/settings", response_model=SettingsOut)
+async def admin_settings(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return service.settings_out(await service.get_settings(db, user.school_id))
+
+
 @admin_router.get("/moderation/cases")
 async def moderation_cases(cursor: int | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     from app.modules.social import moderation

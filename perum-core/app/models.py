@@ -349,8 +349,39 @@ class SchoolDeploymentSnapshot(Base):
     push_registration_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
     push_delivery_ready: Mapped[bool] = mapped_column(Boolean, nullable=False)
     social_ready: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
+    social_generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     observed_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     received_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class SchoolSocialRollout(Base):
+    __tablename__ = "school_social_rollouts"
+
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), primary_key=True)
+    platform_granted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    org_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    applied_generation: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    applied_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    apply_status: Mapped[str] = mapped_column(String(32), nullable=False, default="converged", server_default="converged")
+    apply_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    desired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+
+
+class SchoolSocialRolloutAudit(Base):
+    __tablename__ = "school_social_rollout_audit"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    school_id: Mapped[int] = mapped_column(ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True)
+    actor_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    actor_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    platform_granted: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    org_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 
 class AgentState(Base):

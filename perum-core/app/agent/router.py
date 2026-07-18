@@ -21,6 +21,8 @@ from app.agent.schemas import (
     AgentProvisionSchoolResponse,
     AgentSchoolActionResponse,
     AgentSchoolListResponse,
+    AgentSocialRuntimeConfigRequest,
+    AgentSocialRuntimeConfigResponse,
     AgentSuspendSchoolRequest,
     AgentUpdateSchoolRequest,
     AgentUpdateSchoolResponse,
@@ -39,6 +41,7 @@ from app.agent.service import (
     suspend_school_on_node,
     unsuspend_school_on_node,
     update_school_on_node,
+    apply_social_runtime_on_node,
 )
 from app.core.config import get_settings
 from app.core.db import get_db
@@ -108,6 +111,13 @@ async def update_school(
         raise HTTPException(400, "update only available in org_agent mode")
     req.school_slug = school_slug
     return await update_school_on_node(db, req)
+
+
+@router.put("/schools/{school_slug}/social-runtime", response_model=AgentSocialRuntimeConfigResponse, dependencies=[Depends(require_agent_token)])
+async def apply_social_runtime(school_slug: str, req: AgentSocialRuntimeConfigRequest, db: AsyncSession = Depends(get_db)) -> AgentSocialRuntimeConfigResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "social-runtime only available in org_agent mode")
+    return await apply_social_runtime_on_node(db, school_slug, req)
 
 
 @router.post("/schools/{school_slug}/suspend", response_model=AgentSchoolActionResponse, dependencies=[Depends(require_agent_token)])

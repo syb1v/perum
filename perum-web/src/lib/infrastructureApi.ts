@@ -111,6 +111,30 @@ export const infrastructureApi = {
     },
 };
 
+export type SocialRollout = {
+    school_id: number;
+    school_name: string;
+    org_id: number;
+    platform_granted: boolean;
+    org_enabled: boolean;
+    effective: boolean;
+    generation: number;
+    applied_generation: number;
+    observed_generation: number | null;
+    observed_ready: boolean | null;
+    status: 'converged' | 'enforcement_pending' | 'applying' | 'awaiting_heartbeat' | 'failed' | 'drift';
+    error: string | null;
+    target_seconds: number;
+};
+
+export const socialRolloutApi = {
+    listPlatform: () => api.get<{ items: SocialRollout[] }>('/platform/social-rollouts'),
+    setPlatform: (schoolId: number, platformGranted: boolean) => api.put<SocialRollout>(`/platform/schools/${schoolId}/social-rollout`, { platform_granted: platformGranted }),
+    getOrg: (schoolId: number) => api.get<SocialRollout>(`/schools/${schoolId}/social-rollout`),
+    setOrg: (schoolId: number, orgEnabled: boolean) => api.put<SocialRollout>(`/schools/${schoolId}/social-rollout`, { org_enabled: orgEnabled }),
+    listOrgSchools: () => api.get<{ schools: Array<{ id: number }> }>('/schools'),
+};
+
 export const updateHistoryApi = {
     async getUpdateHistory(schoolId: number, limit = 20): Promise<UpdateHistoryResponse> {
         return api.get<UpdateHistoryResponse>(`/schools/${schoolId}/update-history?limit=${limit}`);

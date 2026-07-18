@@ -151,7 +151,8 @@ def build_stack_spec(
 
 
 def build_school_stack_spec(
-    school: School, secret: SchoolSecret, settings: Settings, *, image: str | None = None, host: str | None = None
+    school: School, secret: SchoolSecret, settings: Settings, *, image: str | None = None, host: str | None = None,
+    social_rollout_enabled: bool = False, social_rollout_generation: int = 0,
 ) -> StackSpec:
     """Спек школьного стека. Контейнеры `school_<slug>_*`. `image` задаёт тег образа
     приложения (для OTA-обновлений); по умолчанию `settings.TENANT_IMAGE`.
@@ -180,6 +181,9 @@ def build_school_stack_spec(
         "CONTROL_PLANE_URL": settings.CONTROL_PLANE_URL,
         "TELEMETRY_TOKEN": secret.telemetry_token,
         "SECRET_KEY": secret.secret_key,
+        "SOCIAL_ROLLOUT_ENABLED": "true" if social_rollout_enabled else "false",
+        "SOCIAL_ROLLOUT_GENERATION": str(social_rollout_generation),
+        "TELEMETRY_INTERVAL_S": "10",
     }
     # Отдельный токен управления /internal (если у секрета он уже есть — новые школы
     # и обновлённые получают его; легаси-школы без него ходят по telemetry_token).

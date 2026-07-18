@@ -18,6 +18,8 @@ class AgentProvisionSchoolRequest(BaseModel):
     # Полный публичный домен школы (`<subdomain>.<org.domain>`) — воркор ставит на него
     # маршрут в Caddy ноды. Пусто → fallback `<slug>.<base>` (легаси).
     host: str | None = None
+    social_rollout_enabled: StrictBool = False
+    social_rollout_generation: int = Field(default=0, ge=0)
 
 
 class AgentLandingRequest(BaseModel):
@@ -45,6 +47,21 @@ class AgentUpdateSchoolRequest(BaseModel):
     image: str
     from_version: str | None = None
     to_version: str
+    social_rollout_enabled: StrictBool = False
+    social_rollout_generation: int = Field(default=0, ge=0)
+
+
+class AgentSocialRuntimeConfigRequest(BaseModel):
+    enabled: StrictBool
+    generation: int = Field(ge=0)
+
+
+class AgentSocialRuntimeConfigResponse(BaseModel):
+    success: bool
+    school_slug: str
+    applied_generation: int
+    rolled_back: bool = False
+    message: str | None = None
 
 
 class AgentUpdateSchoolResponse(BaseModel):
@@ -128,6 +145,7 @@ class SchoolDeploymentSnapshotV1(BaseModel):
     push_registration_ready: StrictBool
     push_delivery_ready: StrictBool
     social_ready: StrictBool = False
+    social_generation: int = Field(default=0, ge=0)
     observed_at: datetime
 
     @field_validator("observed_at")

@@ -6,9 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.db import get_db
+from app.models import SchoolDeploymentSnapshot, SchoolSocialRollout
 from app.core import ratelimit
 from app.main import app
 from app.routers.public import normalize_tenant_host
+from app.schemas.public import TenantCapabilities
 
 
 class _Result:
@@ -24,15 +26,23 @@ class _Result:
 
 
 class _DB:
-    def __init__(self, *results, deployment_snapshot=None):
+    def __init__(self, *results, deployment_snapshot=None, rollout=None):
         self.results = iter(results)
         self.deployment_snapshot = deployment_snapshot
+        self.rollout = rollout
 
     async def execute(self, statement):
         return _Result(next(self.results, []))
 
     async def get(self, model, key):
-        return self.deployment_snapshot
+        if model is SchoolDeploymentSnapshot:
+            return self.deployment_snapshot
+        if model is SchoolSocialRollout:
+            if self.rollout is not None:
+                return self.rollout
+            if self.deployment_snapshot is not None:
+                return SimpleNamespace(platform_granted=True, org_enabled=True, generation=getattr(self.deployment_snapshot, "social_generation", 0))
+        return None
 
 
 def _client(db):
@@ -415,6 +425,20 @@ def test_snapshot_cannot_raise_build_false_capability():
     )).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
 
     assert not any(response.json()["capabilities"].values())
+
+
+def test_desired_revoke_disables_social_immediately_despite_ready_snapshot():
+    school, organization = _tenant()
+    school.release_tag = "tenant:release-a"
+    domain = SimpleNamespace(status="active")
+    primary = SimpleNamespace(domain="school.example.com")
+    capabilities = dict.fromkeys(TenantCapabilities.model_fields, True)
+    release = SimpleNamespace(id=9, mobile_descriptor_schema_version=1, mobile_compatibility={"mobile_api_version": 1, "minimum_mobile_api_version": 1, "minimum_app_version": "1.0.0"}, mobile_build_capabilities=capabilities)
+    snapshot = SimpleNamespace(release_image=school.release_tag, observed_at=datetime.now(timezone.utc).replace(tzinfo=None), scanner_ready=True, realtime_ready=True, push_registration_ready=True, push_delivery_ready=True, social_ready=True, social_generation=1)
+    rollout = SimpleNamespace(platform_granted=False, org_enabled=False, generation=2)
+    response = _client(_DB([(domain, school, organization)], [(primary,)], [(release,)], deployment_snapshot=snapshot, rollout=rollout)).get("/api/public/tenant-discovery", params={"host": "school.example.com"})
+    assert response.status_code == 200
+    assert response.json()["capabilities"]["social_friends"] is False
 
 
 def test_missing_snapshot_keeps_build_only_capabilities_and_emits_safe_telemetry(caplog):

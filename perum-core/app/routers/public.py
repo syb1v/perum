@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.ratelimit import check_discovery_rate
-from app.models import Organization, OrganizationDomain, Release, School, SchoolDeploymentSnapshot, SchoolDomain
+from app.models import Organization, OrganizationDomain, Release, School, SchoolDeploymentSnapshot, SchoolDomain, SchoolSocialRollout
 from app.schemas.mobile_descriptor import MobileReleaseManifestV1
 from app.schemas.public import (
     TenantCapabilities,
@@ -125,6 +125,7 @@ async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, Tenan
 
     capabilities = TenantCapabilities.model_validate(manifest.capabilities.model_dump())
     snapshot = await db.get(SchoolDeploymentSnapshot, school.id)
+    rollout = await db.get(SchoolSocialRollout, school.id)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     freshness = timedelta(seconds=get_settings().DEPLOYMENT_SNAPSHOT_FRESHNESS_S)
     snapshot_reason = None
@@ -144,7 +145,8 @@ async def _mobile_contract(school: School, db: AsyncSession) -> tuple[int, Tenan
         effective[capability] = effective[capability] and bool(
             snapshot is not None and snapshot_reason is None and getattr(snapshot, readiness, False)
         )
-    social_ready = bool(snapshot is not None and snapshot_reason is None and getattr(snapshot, "social_ready", False))
+    desired_social = bool(rollout and rollout.platform_granted and rollout.org_enabled)
+    social_ready = bool(desired_social and snapshot is not None and snapshot_reason is None and snapshot.social_ready and getattr(snapshot, "social_generation", 0) == rollout.generation)
     for capability in _SOCIAL_CAPABILITIES:
         effective[capability] = effective[capability] and social_ready
     return (

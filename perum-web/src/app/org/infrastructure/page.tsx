@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { infrastructureApi, updateHistoryApi } from '@/lib/infrastructureApi';
+import { infrastructureApi, socialRolloutApi, updateHistoryApi, type SocialRollout } from '@/lib/infrastructureApi';
 import type { Node, NodeListResponse, NodeUtilization, AvailableUpdates, CurrentRelease } from '@/types';
 import styles from './infrastructure.module.css';
 
@@ -47,6 +47,8 @@ export default function OrgInfrastructurePage() {
     const [availableUpdates, setAvailableUpdates] = useState<AvailableUpdates | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [rollouts, setRollouts] = useState<SocialRollout[]>([]);
+    const [rolloutBusy, setRolloutBusy] = useState<number | null>(null);
 
     useEffect(() => {
         loadData();
@@ -64,6 +66,9 @@ export default function OrgInfrastructurePage() {
             setNodes(typedNodes.nodes);
             setCurrentRelease(releaseData.current);
             setAvailableUpdates(updatesData);
+            const orgSchools = await socialRolloutApi.listOrgSchools();
+            const schoolRollouts = await Promise.all(orgSchools.schools.map(school => socialRolloutApi.getOrg(school.id)));
+            setRollouts(schoolRollouts);
 
             const utils: Record<number, NodeUtilization> = {};
             for (const node of typedNodes.nodes) {
@@ -82,6 +87,17 @@ export default function OrgInfrastructurePage() {
         }
     }
 
+    async function setEnabled(item: SocialRollout, enabled: boolean) {
+        if (!confirm(enabled ? `Включить social rollout для школы «${item.school_name}»?` : `Отключить social rollout для школы «${item.school_name}»?`)) return;
+        setRolloutBusy(item.school_id);
+        try {
+            const updated = await socialRolloutApi.setOrg(item.school_id, enabled);
+            setRollouts(current => current.map(value => value.school_id === item.school_id ? updated : value));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Не удалось изменить rollout');
+        } finally { setRolloutBusy(null); }
+    }
+
     if (loading) {
         return <div className={styles.loading}>Загрузка инфраструктуры...</div>;
     }
@@ -91,6 +107,14 @@ export default function OrgInfrastructurePage() {
             <h1>Инфраструктура</h1>
 
             {error && <div className={styles.errorBanner}>{error}</div>}
+
+            <section className={styles.section}>
+                <h2>Social rollout</h2>
+                <div className={styles.nodeList}>{rollouts.map(item => <div key={item.school_id} className={styles.nodeRow}>
+                    <div className={styles.nodeRowLeft}><div className={styles.nodeMain}><span className={styles.nodeName}>{item.school_name}</span><span className={styles.nodeHost}>{item.platform_granted ? `Статус: ${item.status}` : 'Платформа не выдала доступ'}</span></div></div>
+                    <div className={styles.nodeRowActions}><button className={item.org_enabled ? styles.btnWarn : styles.btnPrimary} disabled={!item.platform_granted || rolloutBusy === item.school_id} onClick={() => void setEnabled(item, !item.org_enabled)}>{item.org_enabled ? 'Отключить' : 'Включить'}</button></div>
+                </div>)}</div>
+            </section>
 
             <section className={styles.section}>
                 <h2>Текущий релиз</h2>

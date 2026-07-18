@@ -27,6 +27,8 @@ from app.agent.schemas import (
     AgentSchoolActionResponse,
     AgentSchoolInfo,
     AgentSchoolListResponse,
+    AgentSocialRuntimeConfigRequest,
+    AgentSocialRuntimeConfigResponse,
     AgentUpdateSchoolRequest,
     AgentUpdateSchoolResponse,
 )
@@ -234,7 +236,7 @@ async def provision_school_on_node(
             await db.commit()
 
         # Образ + полный домен школы передаёт ядро (на ноде нет таблицы релизов/орг-домена).
-        await provision_school(school, db, image=req.release_tag, host=req.host)
+        await provision_school(school, db, image=req.release_tag, host=req.host, social_rollout_enabled=req.social_rollout_enabled, social_rollout_generation=req.social_rollout_generation)
         return AgentProvisionSchoolResponse(
             success=True, school_slug=req.school_slug, message="School provisioned successfully"
         )
@@ -256,7 +258,7 @@ async def update_school_on_node(
             return AgentUpdateSchoolResponse(
                 success=False, school_slug=req.school_slug, message="School not found"
             )
-        outcome = await update_school(school, db, to_image=req.image)
+        outcome = await update_school(school, db, to_image=req.image, social_rollout_enabled=req.social_rollout_enabled, social_rollout_generation=req.social_rollout_generation)
         return AgentUpdateSchoolResponse(
             success=True,
             school_slug=req.school_slug,
@@ -268,6 +270,30 @@ async def update_school_on_node(
         return AgentUpdateSchoolResponse(
             success=False, school_slug=req.school_slug, message=str(exc)
         )
+
+
+async def apply_social_runtime_on_node(db: AsyncSession, school_slug: str, req: AgentSocialRuntimeConfigRequest) -> AgentSocialRuntimeConfigResponse:
+    from app.models import School, SchoolSocialRollout
+    school = await db.scalar(select(School).where(School.slug == school_slug))
+    if school is None:
+        return AgentSocialRuntimeConfigResponse(success=False, school_slug=school_slug, applied_generation=0, message="School not found")
+    state = await db.get(SchoolSocialRollout, school.id)
+    current_generation = state.applied_generation if state else 0
+    if req.generation < current_generation:
+        return AgentSocialRuntimeConfigResponse(success=False, school_slug=school_slug, applied_generation=current_generation, message="stale generation")
+    if req.generation == current_generation and state is not None:
+        return AgentSocialRuntimeConfigResponse(success=True, school_slug=school_slug, applied_generation=current_generation)
+    try:
+        from app.services.social_rollout import apply_local_runtime
+        await apply_local_runtime(school, db, req.enabled, req.generation)
+        state = await db.get(SchoolSocialRollout, school.id)
+        state.platform_granted = req.enabled
+        state.org_enabled = req.enabled
+        await db.commit()
+        return AgentSocialRuntimeConfigResponse(success=True, school_slug=school_slug, applied_generation=req.generation)
+    except Exception as exc:
+        logger.error("apply_social_runtime_on_node failed: %s", exc)
+        return AgentSocialRuntimeConfigResponse(success=False, school_slug=school_slug, applied_generation=current_generation, rolled_back=True, message=str(exc))
 
 
 async def suspend_school_on_node(

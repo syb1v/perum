@@ -110,6 +110,7 @@ async def send_once() -> None:
             "push_registration_ready": readiness.push_registration_ready,
             "push_delivery_ready": readiness.push_delivery_ready,
             "social_ready": readiness.social_ready,
+            "social_generation": s.SOCIAL_ROLLOUT_GENERATION,
             "observed_at": utc_now().isoformat(),
         }
     async with httpx.AsyncClient(timeout=10.0) as client:
