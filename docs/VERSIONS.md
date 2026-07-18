@@ -193,4 +193,4 @@
 | 190 | 2026-07-17 | 7b5f40c | docs(plan): отложены юридические ADR и очищен индекс |
 | 191 | 2026-07-18 | 8160822 | feat(social): добавлен durable mobile read cursor |
 | 192 | 2026-07-18 | 8eca47b | feat(social): завершён Friends hardening |
-| 193 | 2026-07-18 | _______ | feat(social): реализованы Native Friends и controlled rollout |
+| 193 | 2026-07-18 | e15ea19 | feat(social): реализованы Native Friends и controlled rollout |
