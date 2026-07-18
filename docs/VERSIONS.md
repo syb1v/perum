@@ -195,4 +195,4 @@
 | 192 | 2026-07-18 | 8eca47b | feat(social): завершён Friends hardening |
 | 193 | 2026-07-18 | e15ea19 | feat(social): реализованы Native Friends и controlled rollout |
 | 194 | 2026-07-18 | 08fa665 | docs(handoff): зафиксирован остаток media/support плана и отчёт сессии |
-| 195 | 2026-07-18 | _______ | docs(plan): синхронизирован live product status |
+| 195 | 2026-07-18 | 2e99715 | docs(plan): синхронизирован live product status |
