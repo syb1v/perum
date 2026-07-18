@@ -4,6 +4,12 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-18
+
+- Утверждён и реализован fail-closed foundation node-local media scanner: один общий ClamAV на school-hosting node, отдельный dual-homed relay для каждой школы, потоковый `INSTREAM` без доступа scanner к школьным volumes, immutable scanner images, минимум 8 ГиБ RAM и signatures не старше 48 часов.
+- Media worker переведён с process-local списка попыток на durable DB leases, retries/backoff и scanner evidence; readiness и backlog передаются без PII. Attachment capabilities не включены: production activation заблокирована реальным EICAR, Docker network-isolation, PostgreSQL migration и operational pilot.
+- Подготовлена передача scanner-цикла: `REMAINING_MEDIA_SUPPORT_PLAN.md` содержит точную точку остановки и порядок завершения, а `SCANNER_OPERATIONS.md` фиксирует topology, требования и обязательные pilot gates.
+
 ## [Unreleased] — 2026-07-17
 
 - Product master plan полностью синхронизирован с состоянием на 2026-07-18: обновлены live/evidence даты, social rollout/retention решения, handoff evidence, Mobile role parity и консервативная общая готовность `28–33%` без изменения незакрытых Stage F descriptor-шкал.

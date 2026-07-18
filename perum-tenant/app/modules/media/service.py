@@ -7,7 +7,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
@@ -16,7 +16,7 @@ from app.core.time import utc_now
 from app.models import User
 from app.models.media import MediaAuditEvent, MediaBinding, MediaObject, MediaScanResult, UploadSession
 from app.models.social import SocialSettings
-from app.modules.media.scanner import MediaScanner, UnavailableScanner
+from app.modules.media.scanner import MediaScanner, scanner_runtime
 from app.modules.media.schemas import UploadSessionCreate
 from app.modules.media.storage import LocalPrivateStorage
 
@@ -190,34 +190,78 @@ async def authorized_object(db: AsyncSession, user: User, object_id: str, conten
     raise HTTPException(status.HTTP_404_NOT_FOUND, "media object not found")
 
 
-async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPrivateStorage, limit: int = 100, attempted: set[str] | None = None) -> dict[str, int]:
+async def claim_pending(db: AsyncSession, limit: int, lease_s: int) -> tuple[str, list[MediaObject]]:
+    now = utc_now()
+    token = str(uuid.uuid4())
+    candidates = list(await db.scalars(
+        select(MediaObject.id)
+        .where(
+            MediaObject.state == "pending",
+            or_(MediaObject.next_scan_at.is_(None), MediaObject.next_scan_at <= now),
+            or_(MediaObject.scan_lease_expires_at.is_(None), MediaObject.scan_lease_expires_at <= now),
+        )
+        .order_by(MediaObject.created_at)
+        .limit(min(limit, 1))
+        .with_for_update(skip_locked=True)
+    ))
+    if not candidates:
+        return token, []
+    await db.execute(
+        update(MediaObject)
+        .where(
+            MediaObject.id.in_(candidates),
+            MediaObject.state == "pending",
+            or_(MediaObject.scan_lease_expires_at.is_(None), MediaObject.scan_lease_expires_at <= now),
+        )
+        .values(scan_lease_token=token, scan_lease_expires_at=now + timedelta(seconds=lease_s))
+    )
+    await db.commit()
+    objects = list(await db.scalars(select(MediaObject).where(MediaObject.scan_lease_token == token).order_by(MediaObject.created_at)))
+    return token, objects
+
+
+async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPrivateStorage, limit: int = 100, settings: Settings | None = None) -> dict[str, int]:
+    settings = settings or get_settings()
     counts = {"clean": 0, "infected": 0, "unavailable": 0, "error": 0, "missing": 0}
-    query = select(MediaObject).where(MediaObject.state == "pending")
-    if attempted:
-        query = query.where(MediaObject.id.not_in(attempted))
-    objects = (await db.scalars(query.order_by(MediaObject.created_at).limit(limit))).all()
-    for object_ in objects:
-        if attempted is not None:
-            attempted.add(object_.id)
+    for _ in range(limit):
+        token, objects = await claim_pending(db, 1, settings.SCANNER_LEASE_S)
+        if not objects:
+            break
+        object_ = objects[0]
+        await db.refresh(object_)
+        if object_.scan_lease_token != token or object_.state != "pending":
+            continue
         if not store.exists(object_.storage_key):
             object_.state = "missing"
             object_.scanned_at = utc_now()
+            object_.scan_lease_token = None
+            object_.scan_lease_expires_at = None
             counts["missing"] += 1
             db.add(_audit(object_.school_id, "scan_completed", "missing", object_id=object_.id))
+            await db.commit()
             continue
         verdict = await scanner.scan(store.path(object_.storage_key))
-        db.add(MediaScanResult(id=str(uuid.uuid4()), school_id=object_.school_id, object_id=object_.id, scanner=verdict.scanner[:80], verdict=verdict.verdict))
+        signature_at = verdict.signature_at.replace(tzinfo=None) if verdict.signature_at else None
+        db.add(MediaScanResult(id=str(uuid.uuid4()), school_id=object_.school_id, object_id=object_.id, scanner=verdict.scanner[:80], verdict=verdict.verdict, engine_version=verdict.engine_version, signature_version=verdict.signature_version, signature_at=signature_at, detail_code=verdict.detail_code, duration_ms=verdict.duration_ms))
         counts[verdict.verdict] += 1
+        object_.scan_attempts += 1
         if verdict.verdict == "clean":
             object_.storage_key = store.promote(object_.storage_key)
             object_.state = "clean"
             object_.scanned_at = utc_now()
+            object_.next_scan_at = None
         elif verdict.verdict == "infected":
             store.delete(object_.storage_key)
             object_.state = "infected"
             object_.scanned_at = utc_now()
+            object_.next_scan_at = None
+        else:
+            delay = min(settings.SCANNER_RETRY_MAX_S, settings.SCANNER_RETRY_BASE_S * (2 ** min(object_.scan_attempts - 1, 10)))
+            object_.next_scan_at = utc_now() + timedelta(seconds=delay)
+        object_.scan_lease_token = None
+        object_.scan_lease_expires_at = None
         db.add(_audit(object_.school_id, "scan_completed", verdict.verdict, object_id=object_.id))
-    await db.commit()
+        await db.commit()
     return counts
 
 
@@ -246,15 +290,12 @@ async def cleanup(db: AsyncSession, store: LocalPrivateStorage, settings: Settin
 
 async def media_loop(interval: int, settings: Settings | None = None, scanner: MediaScanner | None = None) -> None:
     settings = settings or get_settings()
-    scanner = scanner or UnavailableScanner()
+    scanner = scanner or scanner_runtime()
     store = storage(settings)
-    attempted: set[str] = set()
     while True:
         try:
             async with SessionLocal() as db:
-                pending_ids = set(await db.scalars(select(MediaObject.id).where(MediaObject.state == "pending")))
-                attempted.intersection_update(pending_ids)
-                scans = await scan_pending(db, scanner, store, settings.MEDIA_CLEANUP_BATCH_SIZE, attempted)
+                scans = await scan_pending(db, scanner, store, settings.MEDIA_CLEANUP_BATCH_SIZE, settings)
                 cleanup_counts = await cleanup(db, store, settings)
             logger.info("media maintenance scans=%s expired_sessions=%s deleted_objects=%s", sum(scans.values()), cleanup_counts["expired_sessions"], cleanup_counts["deleted_objects"])
         except asyncio.CancelledError:

@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+import asyncio
+import re
+
+import psutil
+
+from app.core.config import Settings
+from app.core.docker_client import DockerClient, DockerClientError, HealthSpec
+from app.services.stack_spec import StackSpec, school_scanner_relay_name
+
+
+SCANNER_LABEL = "node-scanner"
+CLAMD_CONTAINER = "perum_node_clamd"
+SIGNATURE_VOLUME = "perum_node_clam_signatures"
+_node_scanner_lock = asyncio.Lock()
+
+
+def _pinned(image: str) -> bool:
+    return bool(re.fullmatch(r"[^\s]+@sha256:[0-9a-fA-F]{64}", image))
+
+
+async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
+    if not settings.SCANNER_NODE_ENABLED:
+        return
+    if psutil.virtual_memory().total < 8 * 1024 ** 3:
+        raise DockerClientError("scanner-capable node requires at least 8 GiB RAM")
+    if not _pinned(settings.SCANNER_CLAMD_IMAGE) or not _pinned(settings.SCANNER_RELAY_IMAGE):
+        raise DockerClientError("scanner images must be pinned by sha256 digest")
+    async with _node_scanner_lock:
+        await docker.create_network(settings.SCANNER_BACKEND_NETWORK, slug=SCANNER_LABEL, internal=True)
+        await docker.ensure_image(settings.SCANNER_CLAMD_IMAGE)
+        if not await docker.container_exists(CLAMD_CONTAINER):
+            await docker.create_volume(SIGNATURE_VOLUME, slug=SCANNER_LABEL)
+            await docker.run_container(
+                name=CLAMD_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="clamd",
+                network=settings.SCANNER_BACKEND_NETWORK,
+                volumes={SIGNATURE_VOLUME: {"bind": "/var/lib/clamav", "mode": "rw"}},
+                health=HealthSpec(test=["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]),
+                mem_limit=settings.SCANNER_CLAMD_MEMORY,
+                nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000),
+                cap_drop=["ALL"],
+            )
+        await docker.wait_for_healthy(CLAMD_CONTAINER, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
+
+
+async def ensure_school_relay(spec: StackSpec, label_slug: str, settings: Settings, docker: DockerClient) -> None:
+    if not settings.SCANNER_NODE_ENABLED:
+        return
+    await ensure_node_scanner(settings, docker)
+    name = school_scanner_relay_name(spec.slug)
+    await docker.ensure_image(settings.SCANNER_RELAY_IMAGE)
+    await docker.run_container(
+        name=name, image=settings.SCANNER_RELAY_IMAGE, slug=label_slug, role="scanner-relay",
+        environment={"LISTEN_PORT": "3310", "UPSTREAM_HOST": CLAMD_CONTAINER, "UPSTREAM_PORT": "3310"},
+        command=["python", "-m", "app.scanner_relay"],
+        network=spec.network, mem_limit=settings.SCANNER_RELAY_MEMORY,
+        nano_cpus=int(settings.SCANNER_RELAY_CPUS * 1_000_000_000), cap_drop=["ALL"], read_only=True,
+    )
+    await docker.connect_to_network(name, settings.SCANNER_BACKEND_NETWORK, required=True)

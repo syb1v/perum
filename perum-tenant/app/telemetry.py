@@ -21,6 +21,7 @@ from app.core.roles import DIRECTOR, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.time import utc_now
 from app.models import Grade, PageVisit, School, User
 from app.models.social import Conversation, FriendRequest, Friendship, Message, ModerationReport, SocialSettings, UserBlock
+from app.models.media import MediaObject
 
 logger = logging.getLogger("perum.telemetry")
 
@@ -55,6 +56,7 @@ async def collect_metrics(db, school_id: int) -> dict:
         select(func.coalesce(func.sum(User.balance), 0)).where(User.school_id == school_id)
     ) or 0)
     social = await db.get(SocialSettings, school_id)
+    scanner_backlog = int(await db.scalar(select(func.count(MediaObject.id)).where(MediaObject.school_id == school_id, MediaObject.state == "pending")) or 0)
     social_counts = {}
     for key, model in (("friendships_active", Friendship), ("friend_requests_pending", FriendRequest), ("blocks_active", UserBlock), ("conversations", Conversation), ("messages", Message), ("reports", ModerationReport)):
         filters = [model.school_id == school_id]
@@ -82,6 +84,7 @@ async def collect_metrics(db, school_id: int) -> dict:
             "history_deletion_pending": bool(social and social.history_deletes_at),
             **social_counts,
         },
+        "scanner": {"backlog": scanner_backlog},
     }
 
 
@@ -96,8 +99,10 @@ async def send_once() -> None:
         if school_id is None:
             return
         metrics = await collect_metrics(db, school_id)
+    from app.modules.media.scanner import scanner_runtime
     from app.modules.mobile_descriptor import runtime_readiness
 
+    await scanner_runtime().probe()
     readiness = runtime_readiness()
     body = {"slug": s.ORG_SLUG, "metrics": metrics}
     if s.SCHOOL_PUBLIC_ID and s.RELEASE_IMAGE:

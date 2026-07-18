@@ -112,14 +112,15 @@ def test_upload_scan_auth_bind_and_infected_states(tmp_path):
                 await service.authorized_object(db, users[0], object_.id, content=True, settings=settings)
             with pytest.raises(HTTPException):
                 await service.authorized_object(db, users[1], object_.id, settings=settings)
-            attempted = set()
-            unavailable = await service.scan_pending(db, UnavailableScanner(), store, attempted=attempted)
+            unavailable = await service.scan_pending(db, UnavailableScanner(), store, settings=settings)
             assert unavailable["unavailable"] == 1
             assert object_.state == "pending"
-            assert sum((await service.scan_pending(db, UnavailableScanner(), store, attempted=attempted)).values()) == 0
+            assert sum((await service.scan_pending(db, UnavailableScanner(), store, settings=settings)).values()) == 0
             assert await db.scalar(select(func.count()).select_from(MediaScanResult).where(MediaScanResult.object_id == object_.id)) == 1
             assert await db.scalar(select(func.count()).select_from(MediaAuditEvent).where(MediaAuditEvent.object_id == object_.id, MediaAuditEvent.event_type == "scan_completed")) == 1
-            clean = await service.scan_pending(db, FakeScanner("clean"), store)
+            object_.next_scan_at = utc_now() - timedelta(seconds=1)
+            await db.commit()
+            clean = await service.scan_pending(db, FakeScanner("clean"), store, settings=settings)
             assert clean["clean"] == 1
             assert object_.state == "clean"
             assert object_.storage_key.startswith("clean/")
@@ -169,6 +170,27 @@ def test_mismatch_expiry_grace_and_cleanup(tmp_path):
             assert expiring.state == "expired"
             assert object_.state == "deleted"
             assert await service.cleanup(db, store, settings) == {"expired_sessions": 0, "deleted_objects": 0}
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(run())
+
+
+def test_claim_lease_prevents_duplicates_and_recovers_after_crash(tmp_path):
+    async def run():
+        engine, db, users, settings, store = await seed(tmp_path)
+        try:
+            session = await service.create_session(db, users[0], payload(), settings)
+            object_ = await service.upload_content(db, users[0], session.id, upload(), store, settings)
+            first_token, first = await service.claim_pending(db, 10, 120)
+            assert [item.id for item in first] == [object_.id]
+            _, duplicate = await service.claim_pending(db, 10, 120)
+            assert duplicate == []
+            object_.scan_lease_expires_at = utc_now() - timedelta(seconds=1)
+            await db.commit()
+            second_token, recovered = await service.claim_pending(db, 10, 120)
+            assert second_token != first_token
+            assert [item.id for item in recovered] == [object_.id]
         finally:
             await db.close()
             await engine.dispose()

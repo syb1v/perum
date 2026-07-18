@@ -55,6 +55,10 @@ class MediaObject(Base):
     scanned_at: Mapped[datetime | None] = mapped_column(DateTime)
     owner_grace_until: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime)
+    scan_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    next_scan_at: Mapped[datetime | None] = mapped_column(DateTime)
+    scan_lease_token: Mapped[str | None] = mapped_column(String(36))
+    scan_lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
 class MediaBinding(Base):
@@ -86,6 +90,11 @@ class MediaScanResult(Base):
     object_id: Mapped[str] = mapped_column(ForeignKey("media_objects.id", ondelete="CASCADE"), nullable=False)
     scanner: Mapped[str] = mapped_column(String(80), nullable=False)
     verdict: Mapped[str] = mapped_column(String(20), nullable=False)
+    engine_version: Mapped[str | None] = mapped_column(String(40))
+    signature_version: Mapped[str | None] = mapped_column(String(40))
+    signature_at: Mapped[datetime | None] = mapped_column(DateTime)
+    detail_code: Mapped[str | None] = mapped_column(String(40))
+    duration_ms: Mapped[int | None] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
 
 

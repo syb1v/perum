@@ -40,6 +40,13 @@ services:
       # Cloudflare DNS API (авто-управление A-записями школ).
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_DNS_ENABLED: ${CLOUDFLARE_DNS_ENABLED:-false}
+      SCANNER_NODE_ENABLED: ${SCANNER_NODE_ENABLED:-false}
+      SCANNER_CLAMD_IMAGE: ${SCANNER_CLAMD_IMAGE:-}
+      SCANNER_RELAY_IMAGE: ${SCANNER_RELAY_IMAGE:-}
+      SCANNER_CLAMD_MEMORY: ${SCANNER_CLAMD_MEMORY:-3g}
+      SCANNER_CLAMD_CPUS: ${SCANNER_CLAMD_CPUS:-2.0}
+      SCANNER_RELAY_MEMORY: ${SCANNER_RELAY_MEMORY:-128m}
+      SCANNER_RELAY_CPUS: ${SCANNER_RELAY_CPUS:-0.25}
     depends_on:
       perum_control_db:
         condition: service_healthy

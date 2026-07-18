@@ -90,7 +90,7 @@ class DockerClient:
 
         await asyncio.to_thread(_check)
 
-    async def create_network(self, name: str, *, slug: str) -> None:
+    async def create_network(self, name: str, *, slug: str, internal: bool = False) -> None:
         """Создать изолированную сеть школы (если ещё нет)."""
         def _create() -> None:
             try:
@@ -101,11 +101,12 @@ class DockerClient:
             self.client.networks.create(
                 name=name,
                 driver="bridge",
+                internal=internal,
                 labels={LABEL_ORG: slug, LABEL_MANAGED: "true"},
             )
         await asyncio.to_thread(_create)
 
-    async def connect_to_network(self, container_name: str, network_name: str) -> None:
+    async def connect_to_network(self, container_name: str, network_name: str, *, required: bool = False) -> None:
         """Подключить контейнер к сети (для caddy → school network)."""
         def _connect() -> None:
             try:
@@ -113,7 +114,8 @@ class DockerClient:
                 container = self.client.containers.get(container_name)
                 net.connect(container)
             except Exception:
-                pass
+                if required:
+                    raise
         await asyncio.to_thread(_connect)
 
     async def remove_network(self, name: str) -> None:
@@ -176,6 +178,11 @@ class DockerClient:
         health: HealthSpec | None = None,
         network: str,
         restart: str = "unless-stopped",
+        command: list[str] | None = None,
+        mem_limit: str | None = None,
+        nano_cpus: int | None = None,
+        cap_drop: list[str] | None = None,
+        read_only: bool = False,
     ) -> str:
         labels = {LABEL_ORG: slug, LABEL_ROLE: role, LABEL_MANAGED: "true"}
 
@@ -190,6 +197,11 @@ class DockerClient:
                 network=network,
                 restart_policy={"Name": restart},
                 healthcheck=health.to_docker() if health else None,
+                command=command,
+                mem_limit=mem_limit,
+                nano_cpus=nano_cpus,
+                cap_drop=cap_drop,
+                read_only=read_only,
             )
 
         container = await asyncio.to_thread(_run)

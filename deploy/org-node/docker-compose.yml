@@ -17,6 +17,13 @@ services:
       ENROLLMENT_TOKEN: ${ENROLLMENT_TOKEN:?задайте enrollment-токен}
       DATABASE_URL: postgresql+asyncpg://perum:${DB_PASSWORD:-perum}@org_node_db:5432/perum_node
       IMAGE_REGISTRY: ${IMAGE_REGISTRY:-mirror.gcr.io}
+      SCANNER_NODE_ENABLED: ${SCANNER_NODE_ENABLED:-false}
+      SCANNER_CLAMD_IMAGE: ${SCANNER_CLAMD_IMAGE:-}
+      SCANNER_RELAY_IMAGE: ${SCANNER_RELAY_IMAGE:-}
+      SCANNER_CLAMD_MEMORY: ${SCANNER_CLAMD_MEMORY:-3g}
+      SCANNER_CLAMD_CPUS: ${SCANNER_CLAMD_CPUS:-2.0}
+      SCANNER_RELAY_MEMORY: ${SCANNER_RELAY_MEMORY:-128m}
+      SCANNER_RELAY_CPUS: ${SCANNER_RELAY_CPUS:-0.25}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock   # агент провижинит школьные стеки локально
     depends_on:

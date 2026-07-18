@@ -6,26 +6,67 @@ Native Friends UI и controlled social rollout. Live status и проценты 
 
 ## 1. Production media scanner
 
-Текущее состояние:
+Утверждённое решение:
+
+```text
+один node-local clamd на каждую school-hosting node
++ отдельный relay для каждой школы
++ INSTREAM без shared school volumes
++ fail-closed и signatures не старше 48 часов
++ минимум 8 ГиБ RAM на scanner-capable multi-school node
+```
+
+Core не принимает и не проксирует файлы. School app остаётся только в своей
+school network, relay подключён к своей school network и общей internal scanner
+network, а `clamd` подключён только к scanner network. TCP 3310 нельзя публиковать
+на host.
+
+Точка остановки на 2026-07-18:
 
 - private storage, upload sessions, quarantine, MIME/magic/size/SHA-256,
   bindings, authorization, cleanup и shared clients готовы;
-- scanner contract работает fail-closed;
+- production `ClamAVScanner` реализует async `VERSION`/`INSTREAM`, строгий parser,
+  timeouts, concurrency limit и freshness gate;
+- migration `tenant_0037_scanner_foundation` добавляет durable attempts,
+  `next_scan_at`, lease token/expiry и scanner evidence;
+- worker claim/retry/backoff и crash recovery больше не зависят от памяти процесса;
+- provisioning создаёт один internal scanner backend, shared clamd и отдельный
+  relay каждой школы без school volumes и host ports;
+- scanner images обязательны в immutable `@sha256:` формате, scanner mode требует
+  минимум 8 ГиБ RAM;
+- Tenant unit suite: 118 passed; Core full suite: 175 passed; Alembic heads
+  `tenant_0037_scanner_foundation` и `0034_social_rollout`;
 - `social_attachments` и `support_attachments` остаются `false`, пока production
-  scanner не выбран, не развёрнут и не подтверждён heartbeat-ом.
+  scanner не пройдёт pilot gates.
 
-Сравнить минимум три варианта:
+Что не завершено и не должно считаться production evidence:
 
-1. ClamAV daemon/container на каждой node.
-2. Общий ICAP/scanner service внутри доверенной инфраструктуры организации.
-3. Внешний malware scanning API только при допустимых privacy/data residency
-   условиях для данных несовершеннолетних.
+1. Независимый security/code review текущего diff был начат, но прерван handoff.
+2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
+3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
+   проверялись.
+4. PostgreSQL доступен, но локальные credentials были отклонены; migration
+   проверена только SQLite upgrade smoke.
+5. `npm` отсутствовал; frontend не изменялся, но repository-wide npm gates в этом
+   цикле не запускались.
+6. Freshclam persistence, stale-signature recovery, resource benchmark и
+   operational dashboards не проверены на реальной node.
 
-До выбора проверить privacy/data residency, fail-closed timeout/retry, изоляцию
-школ, signature updates/readiness, node capacity, лицензирование, observability и
-incident rollback. Без утверждённого scanner и operational owner интеграцию не
-начинать. После выбора отдельным циклом выполнить deployment, tenant adapter,
-heartbeat gating, malware/quarantine tests и пилот одной школы.
+Порядок продолжения без изменения архитектуры:
+
+1. Провести независимый review scanner protocol, DB lease race/transactions,
+   migration и Docker lifecycle; исправить blocker/high findings.
+2. Собрать approved immutable clamd и relay images; убедиться, что image содержит
+   working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
+3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
+4. На тестовой node с двумя школами выполнить все gates из
+   [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую
+   изоляцию.
+5. Проверить outage/restart/lease recovery, stale signatures и fairness/load при
+   5-10+ школах; записать evidence без PII.
+6. Только после успешного pilot реализовать attachment UI/binding rollout и
+   отдельным циклом изменить release capability flags. Не включать capabilities
+   только на основании unit-тестов.
 
 ## 2. Native school support admin inbox
 
@@ -50,8 +91,8 @@ evidence описаны в [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUI
 
 ## 4. Порядок продолжения
 
-1. Выбрать scanner либо остановиться с подробным сравнением.
-2. Независимо реализовать native support admin inbox без attachments/push.
-3. После scanner pilot отдельно подключить support/social attachments.
+1. Завершить review и production-like scanner pilot по разделу 1.
+2. Независимо можно реализовать native support admin inbox без attachments/push.
+3. После scanner pilot отдельно подключить support/social attachments и UI.
 4. После delivery provider отдельно подключить push.
 5. Каждый цикл отдельно проверять, документировать и коммитить.

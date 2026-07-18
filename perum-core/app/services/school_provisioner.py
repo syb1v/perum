@@ -29,11 +29,13 @@ from app.services.stack_spec import (
     school_container_name,
     school_label_slug,
     school_network_name,
+    school_scanner_relay_name,
     school_volume_name,
 )
 
 _APP_DATA_BIND = "/app/data"  # сюда tenant пишет вложения (UPLOAD_DIR=data/uploads/...)
 from app.services.tenant_provisioner import ProvisioningError
+from app.services.scanner_stack import ensure_school_relay
 
 logger = logging.getLogger("perum.school_provisioner")
 
@@ -179,6 +181,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         if not await docker.volume_exists(appdata_volume):
             created_volumes.append(appdata_volume)
         await docker.create_volume(appdata_volume, slug=label_slug)
+        await ensure_school_relay(spec, label_slug, settings, docker)
         await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
@@ -500,6 +503,8 @@ async def _swap_app(spec: StackSpec, label_slug: str, image: str, settings: Sett
     spec.tenant_image = image
     spec.app_env["RELEASE_IMAGE"] = image
     await docker.ensure_image(image)
+    if settings.SCANNER_NODE_ENABLED and not await docker.container_exists(school_scanner_relay_name(spec.slug)):
+        await ensure_school_relay(spec, label_slug, settings, docker)
     await docker.remove_container(spec.app_container)
     await docker.run_container(**_app_run_kwargs(spec, label_slug))
     await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)

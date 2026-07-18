@@ -45,6 +45,9 @@ async def lifespan(app: FastAPI):
     retention_task = None
     media_task = None
     escalation_task = None
+    from app.modules.media.scanner import scanner_runtime
+
+    await scanner_runtime().probe()
     if settings.TELEMETRY_TOKEN and settings.TELEMETRY_INTERVAL_S > 0:
         from app.telemetry import telemetry_loop
 

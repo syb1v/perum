@@ -28,9 +28,8 @@ def test_alembic_upgrade_head_on_sqlite(tmp_path, monkeypatch) -> None:
     assert {"conversations", "conversation_members", "messages"} <= set(inspector.get_table_names())
     assert "social_realtime_tickets" in inspector.get_table_names()
     assert {"media_upload_sessions", "media_objects", "media_bindings", "media_scan_results", "media_audit_events"} <= set(inspector.get_table_names())
-    assert "next_scan_at" not in {column["name"] for column in inspector.get_columns("media_objects")}
-    assert "scan_attempts" not in {column["name"] for column in inspector.get_columns("media_objects")}
-    assert "signature" not in {column["name"] for column in inspector.get_columns("media_scan_results")}
+    assert {"scan_attempts", "next_scan_at", "scan_lease_token", "scan_lease_expires_at"} <= {column["name"] for column in inspector.get_columns("media_objects")}
+    assert {"engine_version", "signature_version", "signature_at", "detail_code", "duration_ms"} <= {column["name"] for column in inspector.get_columns("media_scan_results")}
     assert {column["name"] for column in inspector.get_columns("social_realtime_tickets")} == {"id", "school_id", "user_id", "token_digest", "created_at", "expires_at", "consumed_at"}
     assert {index["name"] for index in inspector.get_indexes("messages")} >= {"ix_messages_conversation_id", "ix_messages_expires_at"}
     assert {"support_tickets", "support_messages", "support_ticket_participants", "support_ticket_events"} <= set(inspector.get_table_names())

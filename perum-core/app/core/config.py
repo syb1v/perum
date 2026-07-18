@@ -76,6 +76,14 @@ class Settings(BaseSettings):
     # Provisioning timeouts (seconds) for waiting on container health.
     DB_HEALTH_TIMEOUT_S: int = 60
     APP_HEALTH_TIMEOUT_S: int = 90
+    SCANNER_NODE_ENABLED: bool = False
+    SCANNER_BACKEND_NETWORK: str = "perum_scanner_backend"
+    SCANNER_CLAMD_IMAGE: str = ""
+    SCANNER_RELAY_IMAGE: str = ""
+    SCANNER_CLAMD_MEMORY: str = "3g"
+    SCANNER_CLAMD_CPUS: float = 2.0
+    SCANNER_RELAY_MEMORY: str = "128m"
+    SCANNER_RELAY_CPUS: float = 0.25
 
     # Куда писать авто-бэкап БД школы (pg_dump) перед безвозвратным удалением.
     # В проде это смонтированный том perum_backups (см. docker-compose.core.yml).

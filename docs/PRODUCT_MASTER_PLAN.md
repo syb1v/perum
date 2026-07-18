@@ -15,17 +15,24 @@
 | Общая готовность продукта | **28-33%, midpoint 30%** | Консервативная экспертная переоценка полного scope после durable support/social offline slices, Native Friends и controlled rollout foundation; billing, policy, full role parity, scanner/push integrations и production evidence сохраняют большую часть remaining scope |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** выбор production media scanner перед включением social/support
-attachments. Native Friends UI и двухступенчатый controlled rollout foundation
-завершены. One-school pilot Stage F и multi-device Homework
+**Текущий этап:** завершение и production-пилот утверждённого node-local ClamAV
+foundation перед включением social/support attachments. Реализованы один shared
+`clamd` на school-hosting node, отдельные per-school relay, `INSTREAM`, durable
+lease/retry queue, freshness/readiness и privacy-safe backlog telemetry. Реальный
+EICAR, Docker network-isolation и PostgreSQL migration ещё не подтверждены,
+поэтому capability flags остаются `false`. Native Friends UI и двухступенчатый
+controlled rollout foundation завершены. One-school pilot Stage F и multi-device Homework
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** выбрать scanner и только затем проектировать production
-integration; до выбора attachments остаются fail-closed. После scanner slice —
-native school support admin inbox и delivery observability без зависимости от
-attachments. Stage F возобновляется после предоставления
+**Следующий roadmap:** завершить review и production-like scanner pilot по
+[SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md): собрать digest-pinned images,
+проверить PostgreSQL migration, EICAR, network isolation, outage/recovery,
+signature updates и node capacity. Только после evidence отдельно проектировать
+attachment UI и включение capabilities. Параллельно допустим native school
+support admin inbox и delivery observability без attachments. Stage F
+возобновляется после предоставления
 opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
 concurrency environment и mobile preview QA window. После этого приоритеты
 продолжаются по workstream table ниже: Friends/media, учебный hardening, support
@@ -58,8 +65,10 @@ restart/conflict evidence.
    Platform grant, отдельный org enable, revoke reset, desired/applied/observed
    generation и bounded convergence реализованы; production pilot evidence ещё
    не собрано.
-4. Media scanner selection и production integration. До выбора scanner работа
-   останавливается, attachments остаются fail-closed.
+4. Node-local ClamAV foundation реализован: один scanner stack на school-hosting
+   node и отдельный relay каждой школы. Остаются independent review,
+   production-like PostgreSQL/Docker/EICAR pilot и только затем attachment UI;
+   attachments пока fail-closed.
 5. School support native admin inbox и delivery observability без attachments.
    Push подключается только после готовности реального delivery adapter.
 6. Отложено до назначения профильного владельца: юридические ADR по
@@ -100,6 +109,8 @@ restart/conflict evidence.
 | Social revoke | Platform revoke атомарно сбрасывает org intent; новый grant требует повторного org enable |
 | Social convergence | Core discovery закрывается сразу; available node подтверждает env generation свежим heartbeat, unavailable node остаётся `enforcement_pending` |
 | Social shutdown retention | Operator shutdown не запускает удаление; school shutdown оставляет read-only историю на 30 дней, re-enable отменяет удаление, moderation hold сохраняет evidence |
+| Production media scanner | Один node-local `clamd` на school-hosting node; каждая школа обращается только через свой relay, файлы не покидают node, Core не участвует в data plane |
+| Scanner safety | `INSTREAM`, quarantine, fail-closed, signatures максимум 48 часов, минимум 8 ГиБ RAM; capabilities только после EICAR/network pilot |
 
 ## 2. Workstreams
 
@@ -629,7 +640,7 @@ Flow:
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
-| P1 | Media pipeline | Частично | private local storage, upload sessions, streaming MIME/magic/size/SHA-256 validation, quarantine, bindings, authorized download, audit/cleanup и shared clients готовы; scanner не выбран, поэтому production attachments остаются fail-closed и выключенными |
+| P1 | Media pipeline | Частично | private storage/upload foundation и node-local ClamAV adapter готовы; один shared scanner на node изолирован per-school relay, durable leases/retries и readiness/backlog реализованы. Остаются independent review, approved digest images, PostgreSQL migration, real EICAR/network/outage/signature pilot и attachment UI; production attachments остаются fail-closed и выключенными |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester message/read outbox и durable offline ticket creation с persisted reconciliation готовы; остаются attachments, push, native admin inbox и SLA/observability |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |

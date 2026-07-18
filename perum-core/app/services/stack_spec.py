@@ -63,6 +63,10 @@ def school_redis_container_name(slug: str) -> str:
     return f"school_{slug}_redis"
 
 
+def school_scanner_relay_name(slug: str) -> str:
+    return f"school_{slug}_scanner_relay"
+
+
 def school_label_slug(slug: str) -> str:
     """Ключ Docker/Caddy-лейблов школьного стека — namespace, чтобы не
     пересекаться с орг-стеками в `com.perum.org`."""
@@ -185,6 +189,8 @@ def build_school_stack_spec(
         "SOCIAL_ROLLOUT_GENERATION": str(social_rollout_generation),
         "TELEMETRY_INTERVAL_S": "10",
     }
+    if settings.SCANNER_NODE_ENABLED:
+        app_env.update({"SCANNER_HOST": school_scanner_relay_name(slug), "SCANNER_PORT": "3310"})
     # Отдельный токен управления /internal (если у секрета он уже есть — новые школы
     # и обновлённые получают его; легаси-школы без него ходят по telemetry_token).
     internal_rpc_token = getattr(secret, "internal_rpc_token", None)

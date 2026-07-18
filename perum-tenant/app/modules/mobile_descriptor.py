@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, field_validator, model_validator
 
-from app.modules.media.scanner import UnavailableScanner
+from app.modules.media.scanner import ClamAVScanner, scanner_runtime
 from app.modules.push.service import capability as push_capability
 from app.core.config import get_settings
 
@@ -115,8 +115,8 @@ def build_descriptor() -> MobileDescriptor:
 
 
 def runtime_readiness() -> RuntimeReadiness:
-    scanner = UnavailableScanner()
-    scanner_ready = not isinstance(scanner, UnavailableScanner)
+    scanner = scanner_runtime()
+    scanner_ready = isinstance(scanner, ClamAVScanner) and scanner.ready()
     try:
         push = LegacyPushCapabilities.model_validate(push_capability(), strict=True)
     except Exception:

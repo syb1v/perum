@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     MEDIA_UNBOUND_TTL_S: int = 86400
     MEDIA_OWNER_GRACE_S: int = 3600
     MEDIA_CLEANUP_BATCH_SIZE: int = 100
+    SCANNER_HOST: str = ""
+    SCANNER_PORT: int = 3310
+    SCANNER_TIMEOUT_S: float = 15
+    SCANNER_CONNECT_TIMEOUT_S: float = 3
+    SCANNER_CHUNK_BYTES: int = 64 * 1024
+    SCANNER_MAX_PARALLEL: int = 2
+    SCANNER_MAX_SIGNATURE_AGE_H: int = 48
+    SCANNER_LEASE_S: int = 120
+    SCANNER_RETRY_BASE_S: int = 30
+    SCANNER_RETRY_MAX_S: int = 3600
     PUSH_TOKEN_ENCRYPTION_KEY: str = ""
     PUSH_TOKEN_HASH_KEY: str = ""
     PUSH_DELIVERY_ENABLED: bool = False
