@@ -40,6 +40,11 @@ Pilot checklist и обязательные поля operator record описа�
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
 restart/conflict evidence.
 
+**Handoff остатка:** stop gates и порядок media scanner/native support admin
+зафиксированы в [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md),
+итоги последней сессии — в
+[SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md).
+
 **Следующие независимые циклы:**
 
 1. Durable social/chat read cursor: завершён, включая server idempotency,

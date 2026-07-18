@@ -194,3 +194,4 @@
 | 191 | 2026-07-18 | 8160822 | feat(social): добавлен durable mobile read cursor |
 | 192 | 2026-07-18 | 8eca47b | feat(social): завершён Friends hardening |
 | 193 | 2026-07-18 | e15ea19 | feat(social): реализованы Native Friends и controlled rollout |
+| 194 | 2026-07-18 | _______ | docs(handoff): зафиксирован остаток media/support плана и отчёт сессии |

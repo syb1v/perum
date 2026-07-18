@@ -34,6 +34,8 @@
 
 - [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md) — descriptor requirements и Stage F acceptance.
 - [FRIENDS_CHAT_PLAN.md](FRIENDS_CHAT_PLAN.md) — целевые social/chat requirements и текущий implementation gap.
+- [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md) — handoff оставшихся media/support циклов.
+- [SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md) — краткий отчёт последней инженерной сессии.
 
 ## История
 
