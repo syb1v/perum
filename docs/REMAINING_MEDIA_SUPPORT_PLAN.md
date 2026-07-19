@@ -151,6 +151,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   VERSION header должен дать `stale_signatures` и `unavailable` без accepted scan;
   с policy `48h` тот же daemon должен вернуть ready, clean и infected/EICAR.
   Первый green real-Docker run ещё не записан;
+- run `29700085471` fail-closed выявил harness import path: bind-mounted script
+  запускался из `/`, поэтому production `/app/app` package не находился. Harness
+  теперь запускается из image `WORKDIR=/app`; scanner code/assertions не копируются
+  и не изменяются;
 
 Что не завершено и не должно считаться production evidence:
 

@@ -57,7 +57,7 @@ try:
     except RuntimeError as exc:
         raise RuntimeError(f"{exc}; clamd_logs={run('docker', 'logs', daemon, check=False)!r}") from exc
     assert "OK" in direct, f"direct clean response mismatch: {direct!r}"
-    run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[5]}:/freshness.py:ro", "--entrypoint", "python", tenant, "/freshness.py", daemon)
+    run("docker", "run", "--rm", "--network", backend, "--workdir", "/app", "-v", f"{sys.argv[5]}:/app/freshness.py:ro", "--entrypoint", "python", tenant, "freshness.py", daemon)
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
