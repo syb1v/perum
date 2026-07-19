@@ -124,6 +124,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29695043515` подтвердил direct INSTREAM `IncompleteReadError` с нулём bytes.
   Gate добавляет direct `zVERSION` control через тот же socket и clamd logs при
   INSTREAM failure; production framing не меняется без server-side evidence;
+- run `29695203626` подтвердил working direct `VERSION`, healthy daemon и только
+  INSTREAM EOF. Причина runtime contract: read-only clamd не имел writable scan
+  temp. Добавлен bounded `/tmp` tmpfs (`16m`, `noexec`, `nosuid`), который Core
+  создаёт и fail-closed сверяет; signature volume остаётся read-only;
 
 Что не завершено и не должно считаться production evidence:
 

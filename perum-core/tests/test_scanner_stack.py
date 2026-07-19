@@ -47,6 +47,7 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         clamd_verify = docker.verify_container.await_args_list[1].kwargs
         assert clamd_verify["health_test"] == ["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]
         assert clamd_verify["mounts"] == {"perum_node_clam_signatures": ("/var/lib/clamav", "ro")}
+        assert clamd_verify["tmpfs"] == {"/tmp": "rw,noexec,nosuid,size=16m,mode=1777"}
     asyncio.run(run())
 
 

@@ -195,6 +195,7 @@ class DockerClient:
         user: str | None = None,
         security_opt: list[str] | None = None,
         pids_limit: int | None = None,
+        tmpfs: dict[str, str] | None = None,
     ) -> str:
         labels = {LABEL_ORG: slug, LABEL_ROLE: role, LABEL_MANAGED: "true"}
 
@@ -217,6 +218,7 @@ class DockerClient:
                 user=user,
                 security_opt=security_opt,
                 pids_limit=pids_limit,
+                tmpfs=tmpfs,
             )
 
         container = await asyncio.to_thread(_run)
@@ -242,6 +244,7 @@ class DockerClient:
         command: list[str] | None = None,
         environment: dict[str, str] | None = None,
         health_test: list[str] | None = None,
+        tmpfs: dict[str, str] | None = None,
     ) -> None:
         def _assert() -> None:
             container = self.client.containers.get(name)
@@ -276,6 +279,7 @@ class DockerClient:
                 and (host.get("RestartPolicy") or {}).get("Name") == "unless-stopped"
                 and not bool(host.get("Privileged"))
                 and not (host.get("CapAdd") or [])
+                and (tmpfs is None or (host.get("Tmpfs") or {}) == tmpfs)
             )
             if not valid:
                 raise DockerClientError(f"container '{name}' configuration drift")

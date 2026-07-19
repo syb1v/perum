@@ -30,7 +30,7 @@ try:
         time.sleep(2)
     else:
         raise RuntimeError(run("docker", "logs", updater, check=False))
-    run("docker", "run", "-d", "--name", daemon, "--network", backend, "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "3g", "--cpus", "2", "-v", f"{volume}:/var/lib/clamav:ro", clamd)
+    run("docker", "run", "-d", "--name", daemon, "--network", backend, "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=16m,mode=1777", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "64", "--memory", "3g", "--cpus", "2", "-v", f"{volume}:/var/lib/clamav:ro", clamd)
     run("docker", "run", "-d", "--name", proxy, "--network", school, "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "32", "--memory", "128m", "--cpus", "0.25", "-e", f"UPSTREAM_HOST={daemon}", relay)
     run("docker", "network", "connect", backend, proxy)
     for _ in range(60):

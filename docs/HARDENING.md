@@ -41,6 +41,9 @@
   имеет только egress network и RW signature volume; clamd имеет только internal
   backend и RO mount. Между updater и scanner нет network path, единственный
   shared state — проверяемые ClamAV database files.
+- Clamd сохраняет read-only rootfs и RO signature volume; для INSTREAM temporary
+  data разрешён только bounded 16 MiB `/tmp` tmpfs с `noexec,nosuid`, который
+  входит в exact Docker drift contract.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

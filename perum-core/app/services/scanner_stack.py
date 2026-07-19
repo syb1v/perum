@@ -66,6 +66,7 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
                 nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000),
                 cap_drop=["ALL"],
                 read_only=True, user=settings.SCANNER_CLAM_USER, security_opt=["no-new-privileges"], pids_limit=64,
+                tmpfs={"/tmp": "rw,noexec,nosuid,size=16m,mode=1777"},
             )
         await docker.verify_container(
             CLAMD_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="clamd",
@@ -74,6 +75,7 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
             nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000), require_health=True,
             health_test=["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"],
             user=settings.SCANNER_CLAM_USER, security_opt={"no-new-privileges"}, pids_limit=64,
+            tmpfs={"/tmp": "rw,noexec,nosuid,size=16m,mode=1777"},
         )
         await docker.wait_for_healthy(CLAMD_CONTAINER, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
