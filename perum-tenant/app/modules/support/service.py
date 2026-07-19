@@ -45,7 +45,7 @@ async def _out(db: AsyncSession, ticket: SupportTicket, kind: str) -> TicketOut:
     unread_sides = ("shared_inbox",) if kind == "requester" else ("requester", "admin_inbox")
     unread_after = True if participant.last_read_message_id is None else or_(SupportMessage.created_at > participant.read_at, and_(SupportMessage.created_at == participant.read_at, SupportMessage.id > participant.last_read_message_id))
     unread = await db.scalar(select(func.count(SupportMessage.id)).where(SupportMessage.ticket_id == ticket.id, SupportMessage.side.in_(unread_sides), unread_after))
-    return TicketOut(id=ticket.public_id, correlation_id=ticket.correlation_id, subject=ticket.subject, category=ticket.category, status=ticket.status, priority=ticket.priority, escalation_status=ticket.escalation_status, version=ticket.version, last_message_at=ticket.last_message_at, unread=bool(unread), created_at=ticket.created_at, updated_at=ticket.updated_at)
+    return TicketOut(id=ticket.public_id, correlation_id=ticket.correlation_id, subject=ticket.subject, category=ticket.category, status=ticket.status, priority=ticket.priority, assignee_id=ticket.assignee_id, escalation_status=ticket.escalation_status, version=ticket.version, last_message_at=ticket.last_message_at, unread=bool(unread), created_at=ticket.created_at, updated_at=ticket.updated_at)
 
 
 async def create_ticket(db: AsyncSession, user: User, data: TicketCreate) -> TicketCreateOut:

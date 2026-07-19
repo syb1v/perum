@@ -16302,6 +16302,17 @@
             "type": "string",
             "title": "Priority"
           },
+          "assignee_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee Id"
+          },
           "escalation_status": {
             "type": "string",
             "enum": [
@@ -16353,6 +16364,7 @@
           "category",
           "status",
           "priority",
+          "assignee_id",
           "escalation_status",
           "version",
           "last_message_at",

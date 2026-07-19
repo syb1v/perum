@@ -417,6 +417,7 @@ def test_support_assignment_eligibility_replay_assignees_and_events_isolation():
                 assigned = await client.post(f"/api/admin/support/tickets/{ticket_id}/assign", json=assign)
                 assert assigned.status_code == 200
                 assert assigned.json()["version"] == 2
+                assert assigned.json()["assignee_id"] == users["director"].id
                 replay = await client.post(f"/api/admin/support/tickets/{ticket_id}/assign", json=assign)
                 assert replay.status_code == 200
                 assert replay.json() == assigned.json()
@@ -434,6 +435,7 @@ def test_support_assignment_eligibility_replay_assignees_and_events_isolation():
                 unassigned = await client.post(f"/api/admin/support/tickets/{ticket_id}/assign", json=unassign)
                 assert unassigned.status_code == 200
                 assert unassigned.json()["version"] == 3
+                assert unassigned.json()["assignee_id"] is None
                 assert (await client.post(f"/api/admin/support/tickets/{ticket_id}/assign", json=unassign)).json() == unassigned.json()
 
                 events = await client.get(f"/api/admin/support/tickets/{ticket_id}/events")

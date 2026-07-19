@@ -67,6 +67,7 @@ class TicketOut(BaseModel):
     category: str
     status: str
     priority: str
+    assignee_id: int | None
     escalation_status: EscalationStatus
     version: int
     last_message_at: datetime | None

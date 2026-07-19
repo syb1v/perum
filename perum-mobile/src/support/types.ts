@@ -8,6 +8,9 @@ export type SupportMessage = components['schemas']['app__modules__support__schem
 export type SupportMessagePage = components['schemas']['app__modules__support__schemas__MessagePage'];
 export type SupportCategory = SupportTicketCreate['category'];
 export type AdminSupportUnread = components['schemas']['AdminUnreadOut'];
+export type AdminSupportAssignee = components['schemas']['AssigneeOut'];
+export type AdminSupportTicketPatch = components['schemas']['TicketPatch'];
+export type AdminSupportAssign = components['schemas']['AssignCreate'];
 
 export type SupportMutationState = 'pending' | 'sending' | 'retry_wait' | 'failed_permanent';
 

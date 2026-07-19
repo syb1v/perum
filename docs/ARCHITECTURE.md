@@ -60,6 +60,9 @@ Generated remote-node stack пока не включает `perum_web`, а defau
   capability gates. `support_admin` доступен только `school_admin`/`director`;
   cached admin thread может включать organization-only `admin_inbox`, который не
   попадает в requester API или UI.
+- Native admin metadata и assignment используют Tenant `version` и стабильный
+  `client_action_id` без optimistic cache mutation. При `VERSION_CONFLICT` клиент
+  отбрасывает локальное намерение и запрашивает authoritative ticket snapshot.
 - Core-to-node commands используют Agent API; публичная сеть требует защищённого
   transport boundary, описанного в [HARDENING.md](HARDENING.md).
 

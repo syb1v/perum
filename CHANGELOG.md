@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Native school support admin inbox получил conflict-safe управление status/category/priority/assignment: Tenant возвращает `assignee_id`, изменения публикуются только после authoritative versioned response, idempotency key стабилен при retry, а `409 VERSION_CONFLICT` обновляет server snapshot без optimistic overwrite.
 - Добавлен foundation Native school support admin inbox: отдельный `support_admin` descriptor capability, role-gated account-scoped cached list/thread, unread/urgent/unassigned summary и idempotent online reply/read для `school_admin` и `director`; requester privacy boundary сохранена, attachments и push не включены.
 - Добавлен privacy-safe foundation для Stage F descriptor pilot: общий Core resolver сохраняет fail-closed social rollout generation gates, operator diagnostics возвращает только bounded readiness, метрики используют фиксированные reason labels, Mobile ведёт ограниченный локальный ledger, а synthetic collector всегда остаётся `NO-GO`; production pilot по-прежнему не закрыт.
 - Утверждён и реализован fail-closed foundation node-local media scanner: один общий ClamAV на school-hosting node, отдельный dual-homed relay для каждой школы, потоковый `INSTREAM` без доступа scanner к школьным volumes, immutable scanner images, минимум 8 ГиБ RAM и signatures не старше 48 часов.

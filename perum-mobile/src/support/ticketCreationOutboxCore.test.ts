@@ -18,7 +18,7 @@ function memoryStore(seed: SupportTicketCreateMutation[] = []): SupportTicketCre
 
 function result(id: string, replayed = false): SupportTicketCreateOut {
   const now = new Date(0).toISOString();
-  return { ticket: { id, correlation_id: 'correlation', subject: 'Subject', category: 'general', status: 'open', priority: 'normal', escalation_status: 'none', version: 1, last_message_at: now, unread: false, created_at: now, updated_at: now }, initial_message: { id: 'message', sender_id: 1, side: 'requester', body: 'Body', created_at: now }, replayed };
+  return { ticket: { id, correlation_id: 'correlation', subject: 'Subject', category: 'general', status: 'open', priority: 'normal', assignee_id: null, escalation_status: 'none', version: 1, last_message_at: now, unread: false, created_at: now, updated_at: now }, initial_message: { id: 'message', sender_id: 1, side: 'requester', body: 'Body', created_at: now }, replayed };
 }
 
 test('persists immutable identities through retry and reconciliation', async () => {

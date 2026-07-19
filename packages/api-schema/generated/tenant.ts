@@ -4786,6 +4786,8 @@ export interface components {
             status: string;
             /** Priority */
             priority: string;
+            /** Assignee Id */
+            assignee_id: number | null;
             /**
              * Escalation Status
              * @enum {string}

@@ -79,13 +79,17 @@ Foundation завершён 2026-07-19: отдельный `support_admin` relea
 смешиваются; `admin_inbox` сообщения организации остаются видимы только школьным
 операторам. Attachments и push отсутствуют.
 
-1. Добавить assignment, status/category/priority и conflict-safe metadata actions
-   через существующие version/idempotency contracts.
-2. Не делать optimistic metadata updates; при `409` обновлять server snapshot.
-3. Добавить durable admin reply/read mutations, если offline send войдёт в scope.
-4. Delivery observability для tenant outbox/Core relay: pending, delivered,
+Conflict-safe management завершён 2026-07-19: Tenant возвращает текущий
+`assignee_id`, а Native изменяет status/category/priority/assignment только после
+authoritative versioned response. Повтор одного действия сохраняет
+`client_action_id`; `VERSION_CONFLICT` не применяет локальное значение и вызывает
+refetch server ticket/list/unread.
+
+1. Добавить durable admin reply/read/metadata mutations, только если offline send
+   будет отдельно утверждён в scope.
+2. Delivery observability для tenant outbox/Core relay: pending, delivered,
    retrying, failed и age/SLA без содержания сообщений и PII.
-5. Дополнить role/school isolation и contract tests для новых mutation/status API.
+3. Дополнить role/school isolation и contract tests для новых delivery status API.
 
 Не включать attachments до scanner slice, push до delivery adapter, full
 platform/org mobile parity или изменение privacy boundary поддержки.

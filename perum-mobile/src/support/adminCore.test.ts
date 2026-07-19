@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { adminMessageLabel, canReplyToAdminTicket, canUseAdminSupport } from './adminCore';
+import { adminMessageLabel, adminTicketActionPath, adminTicketActionPayload, canReplyToAdminTicket, canUseAdminSupport, isVersionConflict } from './adminCore';
 
 test('admin support requires its capability and an exact school operator role', () => {
   assert.equal(canUseAdminSupport('school_admin', true), true);
@@ -20,4 +20,19 @@ test('admin reply is online only and closed tickets stay read only', () => {
   assert.equal(canReplyToAdminTicket('open', true), true);
   assert.equal(canReplyToAdminTicket('open', false), false);
   assert.equal(canReplyToAdminTicket('closed', true), false);
+});
+
+test('metadata and assignment actions carry version and stable idempotency identity', () => {
+  const metadata = { kind: 'metadata', field: 'priority', value: 'urgent' } as const;
+  assert.equal(adminTicketActionPath('ticket-1', metadata), '/admin/support/tickets/ticket-1');
+  assert.deepEqual(adminTicketActionPayload(metadata, 4, 'action-1'), { client_action_id: 'action-1', expected_version: 4, priority: 'urgent' });
+  const assignment = { kind: 'assignment', assigneeId: 7 } as const;
+  assert.equal(adminTicketActionPath('ticket-1', assignment), '/admin/support/tickets/ticket-1/assign');
+  assert.deepEqual(adminTicketActionPayload(assignment, 5, 'action-2'), { client_action_id: 'action-2', expected_version: 5, assignee_id: 7 });
+});
+
+test('only structured version conflicts trigger server snapshot refresh', () => {
+  assert.equal(isVersionConflict({ status: 409, originalErrorData: { detail: { code: 'VERSION_CONFLICT' } } }), true);
+  assert.equal(isVersionConflict({ status: 409, originalErrorData: { detail: 'client_action_id reused' } }), false);
+  assert.equal(isVersionConflict({ status: 500 }), false);
 });
