@@ -5,7 +5,10 @@ import time
 
 
 def run(*args: str, check=True) -> str:
-    return subprocess.run(args, check=check, capture_output=True, text=True).stdout.strip()
+    result = subprocess.run(args, capture_output=True, text=True)
+    if check and result.returncode:
+        raise RuntimeError(f"command failed: {args!r}; stdout={result.stdout!r}; stderr={result.stderr!r}")
+    return result.stdout.strip()
 
 
 clamd, relay = sys.argv[1:3]

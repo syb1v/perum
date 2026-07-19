@@ -118,6 +118,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694805068` подтвердил EOF и на direct path: harness ждал connection EOF,
   тогда как production adapter читает null-terminated ClamAV response. Candidate
   client синхронизирован с production `readuntil(b"\\0")` и bounded timeout;
+- run `29694915610` показал non-zero direct client, но subprocess wrapper скрывал
+  stderr. Wrapper теперь fail-closed включает stdout/stderr disposable public-test
+  command, чтобы различить timeout, incomplete response и connection failure;
 
 Что не завершено и не должно считаться production evidence:
 
