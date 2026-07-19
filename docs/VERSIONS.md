@@ -225,4 +225,4 @@
 | 222 | 2026-07-19 | 1fb2bb3 | test(media): добавлена Docker protocol stderr diagnostics |
 | 223 | 2026-07-19 | 2289479 | test(media): добавлен direct ClamAV VERSION control |
 | 224 | 2026-07-19 | 6e37fff | fix(media): добавлен bounded clamd scan tmpfs |
-| 225 | 2026-07-19 | _______ | docs(media): зафиксирован ClamAV candidate evidence |
+| 225 | 2026-07-19 | 8f930c8 | docs(media): зафиксирован ClamAV candidate evidence |
