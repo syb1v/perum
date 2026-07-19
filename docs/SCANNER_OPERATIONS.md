@@ -34,6 +34,11 @@ signature databases после удаления/пересоздания clamd, 
 остановленном updater, fail-closed request при остановленном clamd и clean/EICAR
 recovery после recreation. Этот CI evidence не заменяет target-node outage pilot.
 
+Recorded recreation candidate run `29695993596`, source `99c3110`: clamd
+`sha256:61b2d06a30dff6891345d3002b9e5b8eaa7952344ddf7d58656a46b9498087b2`,
+relay `sha256:c26731987bfe7ead0eb1d86f6d1fea2d553f50890a7b361cc7b2ce692949c7d7`.
+Status остаётся `candidate`; target-node coordinates и approval отсутствуют.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.

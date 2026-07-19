@@ -140,6 +140,12 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   требует fail-closed request, пересоздаёт clamd с тем же RO volume и требует
   неизменный fingerprint плюс повторные clean/EICAR. Exact network/mount/tmpfs
   inspect assertions обязательны; первый green run ещё не записан;
+- recreation/outage run `https://github.com/syb1v/perum/actions/runs/29695993596`
+  зелёный. Source `99c3110`; clamd candidate
+  `sha256:61b2d06a30dff6891345d3002b9e5b8eaa7952344ddf7d58656a46b9498087b2`,
+  relay candidate `sha256:c26731987bfe7ead0eb1d86f6d1fea2d553f50890a7b361cc7b2ce692949c7d7`.
+  Fingerprint persistence, updater outage scanning, clamd outage fail-closed и
+  recreated clean/EICAR подтверждены; target-node evidence остаётся открытым;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -160,8 +166,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Получить зелёный disposable recreation/outage run, затем выполнить
-   security/operator review exact candidates и target-node inspect contract.
+2. Выполнить security/operator review exact candidates и target-node inspect,
+   outage/recovery и stale-signature contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

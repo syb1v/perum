@@ -7,6 +7,7 @@
 ## [Unreleased] — 2026-07-18
 
 - Scanner Docker candidate gate расширен recreation/outage evidence: SHA-256 fingerprint signature volume до/после clamd recreation, scanning при updater outage, fail-closed relay request при clamd outage, повторные clean/EICAR и exact mount/tmpfs/network inspect после recovery.
+- Recreation/outage scanner evidence подтверждён run `29695993596`; новые exact clamd/relay digests записаны только как candidates, без operator approval или target-node claims.
 - Реализована least-privilege ClamAV updater topology: freshclam только в отдельной egress network с RW signature volume, clamd только во внутренней scanner network с RO mount. Candidate workflow проверяет cold empty-volume initialization, freshness, exact isolation и clean/EICAR через constrained relay перед immutable GHCR publication с SBOM/provenance; до зелёного run/explicit review это не approved image.
 - Cold-volume candidate readiness ждёт полный валидный `main` + `daily` ClamAV database set вместо первого появившегося файла; при timeout workflow сохраняет fail-closed state/log diagnostics.
 - Clamd candidate включает отдельный `clamav` CLI package и до topology tests проверяет наличие `clamscan`, `clamdscan` и `freshclam`; это устраняет ложный readiness timeout после уже успешной загрузки и встроенной проверки signatures.
