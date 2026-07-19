@@ -97,6 +97,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   `daily/main/bytecode`, но дополнительная readiness validation не запускалась:
   image содержал `clamdscan`, но не `clamscan`. Добавлен пакет `clamav` и explicit
   binary presence gate для `clamscan`, `clamdscan`, `freshclam` до network tests;
+- run `29694085653` fail-closed выявил Debian package split: `clamav-daemon` не
+  предоставляет standalone `clamdscan` client. Image теперь явно устанавливает
+  `clamdscan`; binary contract не ослаблен;
 
 Что не завершено и не должно считаться production evidence:
 

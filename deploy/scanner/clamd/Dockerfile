@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.source="https://github.com/syb1v/perum" \
       org.opencontainers.image.title="PERUM ClamAV daemon and updater"
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates clamav clamav-daemon clamav-freshclam \
+    && apt-get install -y --no-install-recommends ca-certificates clamav clamav-daemon clamav-freshclam clamdscan \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /var/lib/clamav \
     && touch /var/lib/clamav/.volume-owner \
