@@ -206,4 +206,4 @@
 | 203 | 2026-07-19 | c586ae5 | fix(media): добавлены scanner drift checks и relay limits |
 | 204 | 2026-07-19 | 4be745e | test(media): добавлен PostgreSQL scanner integration gate |
 | 205 | 2026-07-19 | e0912d8 | fix(migrations): расширен Alembic revision column |
-| 206 | 2026-07-19 | _______ | test(media): разделены PostgreSQL scanner fixtures |
+| 206 | 2026-07-19 | 5d07885 | test(media): разделены PostgreSQL scanner fixtures |
