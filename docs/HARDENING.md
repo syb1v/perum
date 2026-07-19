@@ -50,6 +50,10 @@
 - Signature freshness определяется production Tenant parser по timestamp из
   ClamAV `VERSION`, не по mtime volume. Stale policy блокирует scan как unavailable;
   recovery policy обязана повторно доказать ready/clean/EICAR на том же daemon.
+- Bounded fairness gate отделяет 5 school networks, ограничивает каждый relay двумя
+  upstream connections и проверяет, что burst одной школы не блокирует peer scans;
+  clamd не получает school network, relay mounts отсутствуют, resource ceilings
+  сверяются через real Docker inspect.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

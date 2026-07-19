@@ -81,6 +81,7 @@ try:
     daemon_attrs = json.loads(run("docker", "inspect", daemon))[0]
     assert daemon_attrs["HostConfig"]["Tmpfs"] == {"/tmp": "rw,noexec,nosuid,size=16m,mode=1777"}
     assert [(item["Destination"], item["RW"]) for item in daemon_attrs["Mounts"]] == [("/var/lib/clamav", False)]
+    run("python", sys.argv[6], relay, daemon, backend, sys.argv[4])
 finally:
     for name in (proxy, daemon, updater):
         run("docker", "rm", "-f", name, check=False)

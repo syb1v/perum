@@ -8,7 +8,7 @@ async def main():
     if os.environ.get("COMMAND") == "VERSION":
         writer.write(b"zVERSION\0")
     else:
-        payload = os.environ["PAYLOAD"].encode()
+        payload = b"A" * int(os.environ["PAYLOAD_BYTES"]) if os.environ.get("PAYLOAD_BYTES") else os.environ["PAYLOAD"].encode()
         writer.write(b"zINSTREAM\0" + struct.pack("!I", len(payload)) + payload + struct.pack("!I", 0))
     await writer.drain()
     print((await asyncio.wait_for(reader.readuntil(b"\0"), 10)).decode())

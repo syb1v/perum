@@ -231,3 +231,4 @@
 | 228 | 2026-07-19 | 5b32e80 | test(media): добавлен stale-signature recovery gate |
 | 229 | 2026-07-19 | e68f7f1 | fix(ci): исправлен Tenant freshness harness import |
 | 230 | 2026-07-19 | 1e87bcc | docs(media): зафиксирован stale-signature evidence |
+| 231 | 2026-07-19 | _______ | test(media): добавлен multi-school scanner fairness gate |

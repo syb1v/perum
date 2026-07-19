@@ -161,6 +161,12 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   Source `e68f7f1`; clamd candidate
   `sha256:ac2643c21d7f43e6dc65be76333c4a804553dc09340dafe050189910ca813002`,
   relay candidate `sha256:8d6af74ba6ce8d75203b82dcbce208bb0707b8761c9aab36f8bb9ed6e6566117`;
+- bounded fairness gate создаёт 5 отдельных internal school networks и 5 relay
+  containers с `MAX_CONNECTIONS=2`. Первая школа отправляет burst `6×1 MiB`,
+  четыре школы одновременно отправляют peer clean scans. Все peers обязаны
+  завершиться менее чем за 20 секунд, burst — менее 45 секунд; inspect сверяет
+  two-network/no-mount/128MiB/0.25CPU/PID32 и отсутствие school networks у clamd.
+  Это deterministic candidate envelope, не production throughput benchmark;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -181,8 +187,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Выполнить bounded multi-school capacity/fairness candidate gate, затем
-   security/operator review exact candidates и target-node inspect/outage contract.
+2. Получить зелёный bounded fairness run, затем выполнить security/operator review
+   exact candidates и target-node inspect/outage/load contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

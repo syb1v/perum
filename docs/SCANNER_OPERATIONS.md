@@ -49,6 +49,11 @@ Recorded freshness candidate run `29700311274`, source `e68f7f1`: clamd
 relay `sha256:8d6af74ba6ce8d75203b82dcbce208bb0707b8761c9aab36f8bb9ed6e6566117`.
 Production Tenant parser/gating пройдены; status остаётся `candidate`.
 
+Disposable fairness gate использует 5 isolated school networks/relays,
+`MAX_CONNECTIONS=2`, burst `6×1 MiB` у одной школы и concurrent peer requests у
+остальных. Он доказывает bounded non-starvation и resource contract только на
+GitHub runner; абсолютные latency/throughput не переносятся на production sizing.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.
