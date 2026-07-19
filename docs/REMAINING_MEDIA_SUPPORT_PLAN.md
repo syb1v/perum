@@ -112,6 +112,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694559400` прошёл cold download и clamd readiness, но combined protocol
   assertion не показывал, какой public test verdict не совпал. Clean/EICAR checks
   разделены и выводят только privacy-safe response mismatch без payload contents;
+- run `29694660860` показал relay clean EOF. Gate добавляет direct-backend clean
+  control перед relay и relay logs при mismatch, чтобы строго разделить clamd
+  protocol/config и relay/network failure без изменения framing/assertions;
 
 Что не завершено и не должно считаться production evidence:
 

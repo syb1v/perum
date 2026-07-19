@@ -39,11 +39,14 @@ try:
         state = run("docker", "inspect", "--format", "{{json .State}}", daemon, check=False)
         logs = run("docker", "logs", daemon, check=False)
         raise RuntimeError(f"clamd readiness failed: state={state} logs={logs}")
+    direct = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "PAYLOAD=clean", "--entrypoint", "python", relay, "/client.py")
+    assert "OK" in direct, f"direct clean response mismatch: {direct!r}"
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
-    assert "OK" in clean, f"clean response mismatch: {clean!r}"
-    assert "FOUND" in eicar, f"EICAR response mismatch: {eicar!r}"
+    relay_logs = run("docker", "logs", proxy, check=False)
+    assert "OK" in clean, f"relay clean response mismatch: {clean!r}; logs={relay_logs!r}"
+    assert "FOUND" in eicar, f"relay EICAR response mismatch: {eicar!r}; logs={relay_logs!r}"
     daemon_networks = set(json.loads(run("docker", "inspect", daemon))[0]["NetworkSettings"]["Networks"])
     updater_networks = set(json.loads(run("docker", "inspect", updater))[0]["NetworkSettings"]["Networks"])
     assert daemon_networks == {backend} and updater_networks == {updates}
