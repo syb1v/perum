@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Real-Docker scanner gate запускает production Tenant `ClamAVScanner` для stale-signature fail-closed/recovery: strict `0h` policy требует `stale_signatures`/`unavailable`, штатная `48h` policy на том же real VERSION header требует ready, clean и EICAR infected. Filesystem mtime не используется как подмена signature timestamp.
 - Scanner Docker candidate gate расширен recreation/outage evidence: SHA-256 fingerprint signature volume до/после clamd recreation, scanning при updater outage, fail-closed relay request при clamd outage, повторные clean/EICAR и exact mount/tmpfs/network inspect после recovery.
 - Recreation/outage scanner evidence подтверждён run `29695993596`; новые exact clamd/relay digests записаны только как candidates, без operator approval или target-node claims.
 - Реализована least-privilege ClamAV updater topology: freshclam только в отдельной egress network с RW signature volume, clamd только во внутренней scanner network с RO mount. Candidate workflow проверяет cold empty-volume initialization, freshness, exact isolation и clean/EICAR через constrained relay перед immutable GHCR publication с SBOM/provenance; до зелёного run/explicit review это не approved image.

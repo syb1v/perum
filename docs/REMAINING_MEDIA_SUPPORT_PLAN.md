@@ -146,6 +146,11 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   relay candidate `sha256:c26731987bfe7ead0eb1d86f6d1fea2d553f50890a7b361cc7b2ce692949c7d7`.
   Fingerprint persistence, updater outage scanning, clamd outage fail-closed и
   recreated clean/EICAR подтверждены; target-node evidence остаётся открытым;
+- stale/recovery candidate scenario использует production Tenant image и
+  `ClamAVScanner`, а не mtime approximation: с `max_signature_age_h=0` real
+  VERSION header должен дать `stale_signatures` и `unavailable` без accepted scan;
+  с policy `48h` тот же daemon должен вернуть ready, clean и infected/EICAR.
+  Первый green real-Docker run ещё не записан;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -166,8 +171,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Выполнить security/operator review exact candidates и target-node inspect,
-   outage/recovery и stale-signature contract.
+2. Получить зелёный production-parser stale/recovery run; затем выполнить
+   security/operator review exact candidates и target-node inspect/outage contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

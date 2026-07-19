@@ -39,6 +39,11 @@ Recorded recreation candidate run `29695993596`, source `99c3110`: clamd
 relay `sha256:c26731987bfe7ead0eb1d86f6d1fea2d553f50890a7b361cc7b2ce692949c7d7`.
 Status остаётся `candidate`; target-node coordinates и approval отсутствуют.
 
+Stale-signature gate должен использовать дату из реального `zVERSION`, которую
+парсит production Tenant `ClamAVScanner`. Изменение filesystem mtime не является
+signature freshness evidence. Strict test policy `0h` проверяет fail-closed
+`stale_signatures`; штатная `48h` policy на той же DB проверяет recovery.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.

@@ -40,8 +40,15 @@ jobs:
           push: false
           tags: perum-clamd:candidate
           build-args: VCS_REF=${{ github.sha }}
+      - name: Build production scanner test client
+        uses: docker/build-push-action@v6
+        with:
+          context: perum-tenant
+          load: true
+          push: false
+          tags: perum-tenant:scanner-test
       - name: Verify isolation, recreation, outages and EICAR
-        run: python deploy/scanner/verify_clamd_topology.py perum-clamd:candidate perum-scanner-relay:candidate "$PWD/deploy/scanner/protocol_client.py"
+        run: python deploy/scanner/verify_clamd_topology.py perum-clamd:candidate perum-scanner-relay:candidate perum-tenant:scanner-test "$PWD/deploy/scanner/protocol_client.py" "$PWD/deploy/scanner/verify_signature_freshness.py"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io

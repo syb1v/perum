@@ -47,6 +47,9 @@
 - Scanner candidate recreation проверяет не только container health: signature DB
   fingerprint должен сохраниться, updater outage не прерывает scanning, clamd
   outage закрывает request fail-closed, а recreated daemon снова даёт clean/EICAR.
+- Signature freshness определяется production Tenant parser по timestamp из
+  ClamAV `VERSION`, не по mtime volume. Stale policy блокирует scan как unavailable;
+  recovery policy обязана повторно доказать ready/clean/EICAR на том же daemon.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

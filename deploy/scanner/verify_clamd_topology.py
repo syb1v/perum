@@ -26,7 +26,7 @@ def wait_healthy(name: str) -> None:
     raise RuntimeError(f"clamd readiness failed: state={state} logs={logs}")
 
 
-clamd, relay = sys.argv[1:3]
+clamd, relay, tenant = sys.argv[1:4]
 suffix = str(int(time.time()))
 backend, updates, school = (f"scanner-{name}-{suffix}" for name in ("backend", "updates", "school"))
 volume = f"scanner-signatures-{suffix}"
@@ -50,14 +50,15 @@ try:
     run("docker", "run", "-d", "--name", proxy, "--network", school, "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "32", "--memory", "128m", "--cpus", "0.25", "-e", f"UPSTREAM_HOST={daemon}", relay)
     run("docker", "network", "connect", backend, proxy)
     wait_healthy(daemon)
-    version = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "COMMAND=VERSION", "--entrypoint", "python", relay, "/client.py")
+    version = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "COMMAND=VERSION", "--entrypoint", "python", relay, "/client.py")
     assert "ClamAV" in version, f"direct version response mismatch: {version!r}"
     try:
-        direct = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "PAYLOAD=clean", "--entrypoint", "python", relay, "/client.py")
+        direct = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "PAYLOAD=clean", "--entrypoint", "python", relay, "/client.py")
     except RuntimeError as exc:
         raise RuntimeError(f"{exc}; clamd_logs={run('docker', 'logs', daemon, check=False)!r}") from exc
     assert "OK" in direct, f"direct clean response mismatch: {direct!r}"
-    base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
+    run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[5]}:/freshness.py:ro", "--entrypoint", "python", tenant, "/freshness.py", daemon)
+    base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
     relay_logs = run("docker", "logs", proxy, check=False)
