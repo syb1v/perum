@@ -106,6 +106,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694223975` дошёл до clamd start и fail-closed выявил invalid config
   directive `MaxStreamLength`; исправлено на поддерживаемое `StreamMaxLength`,
   startup logs направлены в stderr для дальнейшей диагностики;
+- run `29694399412` подтвердил config parse, но ClamAV secure logfile handling
+  отверг `/dev/stderr` symlink. File logging directive удалён: daemon остаётся
+  foreground, Docker captures process output, harness сохраняет state/logs;
 
 Что не завершено и не должно считаться production evidence:
 
