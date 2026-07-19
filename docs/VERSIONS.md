@@ -207,4 +207,4 @@
 | 204 | 2026-07-19 | 4be745e | test(media): добавлен PostgreSQL scanner integration gate |
 | 205 | 2026-07-19 | e0912d8 | fix(migrations): расширен Alembic revision column |
 | 206 | 2026-07-19 | 5d07885 | test(media): разделены PostgreSQL scanner fixtures |
-| 207 | 2026-07-19 | _______ | docs(media): зафиксирован PostgreSQL scanner evidence |
+| 207 | 2026-07-19 | 65169f6 | docs(media): зафиксирован PostgreSQL scanner evidence |
