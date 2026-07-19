@@ -222,4 +222,4 @@
 | 219 | 2026-07-19 | 46b60d4 | test(media): добавлена диагностика ClamAV verdict gate |
 | 220 | 2026-07-19 | 8b13c16 | test(media): разделены direct и relay ClamAV gates |
 | 221 | 2026-07-19 | 97d9d00 | fix(ci): синхронизирован ClamAV response framing |
-| 222 | 2026-07-19 | _______ | test(media): добавлена Docker protocol stderr diagnostics |
+| 222 | 2026-07-19 | 1fb2bb3 | test(media): добавлена Docker protocol stderr diagnostics |
