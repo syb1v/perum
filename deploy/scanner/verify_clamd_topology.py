@@ -42,7 +42,12 @@ try:
         state = run("docker", "inspect", "--format", "{{json .State}}", daemon, check=False)
         logs = run("docker", "logs", daemon, check=False)
         raise RuntimeError(f"clamd readiness failed: state={state} logs={logs}")
-    direct = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "PAYLOAD=clean", "--entrypoint", "python", relay, "/client.py")
+    version = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "COMMAND=VERSION", "--entrypoint", "python", relay, "/client.py")
+    assert "ClamAV" in version, f"direct version response mismatch: {version!r}"
+    try:
+        direct = run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "PAYLOAD=clean", "--entrypoint", "python", relay, "/client.py")
+    except RuntimeError as exc:
+        raise RuntimeError(f"{exc}; clamd_logs={run('docker', 'logs', daemon, check=False)!r}") from exc
     assert "OK" in direct, f"direct clean response mismatch: {direct!r}"
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")

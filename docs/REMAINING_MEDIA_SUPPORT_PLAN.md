@@ -121,6 +121,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694915610` показал non-zero direct client, но subprocess wrapper скрывал
   stderr. Wrapper теперь fail-closed включает stdout/stderr disposable public-test
   command, чтобы различить timeout, incomplete response и connection failure;
+- run `29695043515` подтвердил direct INSTREAM `IncompleteReadError` с нулём bytes.
+  Gate добавляет direct `zVERSION` control через тот же socket и clamd logs при
+  INSTREAM failure; production framing не меняется без server-side evidence;
 
 Что не завершено и не должно считаться production evidence:
 
