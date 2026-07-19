@@ -224,4 +224,4 @@
 | 221 | 2026-07-19 | 97d9d00 | fix(ci): синхронизирован ClamAV response framing |
 | 222 | 2026-07-19 | 1fb2bb3 | test(media): добавлена Docker protocol stderr diagnostics |
 | 223 | 2026-07-19 | 2289479 | test(media): добавлен direct ClamAV VERSION control |
-| 224 | 2026-07-19 | _______ | fix(media): добавлен bounded clamd scan tmpfs |
+| 224 | 2026-07-19 | 6e37fff | fix(media): добавлен bounded clamd scan tmpfs |
