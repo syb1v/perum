@@ -200,4 +200,4 @@
 | 197 | 2026-07-19 | 9e2e177 | feat(discovery): добавлен privacy-safe foundation Stage F pilot |
 | 198 | 2026-07-19 | 0bd36a8 | feat(mobile): добавлен school support admin inbox foundation |
 | 199 | 2026-07-19 | 088b0d1 | feat(mobile): добавлено conflict-safe управление support inbox |
-| 200 | 2026-07-19 | _______ | feat(support): добавлена privacy-safe delivery observability |
+| 200 | 2026-07-19 | c4ca135 | feat(support): добавлена privacy-safe delivery observability |
