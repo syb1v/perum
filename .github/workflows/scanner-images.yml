@@ -57,7 +57,7 @@ jobs:
           IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
           DIGEST: ${{ steps.publish.outputs.digest }}
         run: |
-          python -c 'import json, os; print(json.dumps({"status":"candidate","source_commit":os.environ["GITHUB_SHA"],"relay":{"image":os.environ["IMAGE"]+"@"+os.environ["DIGEST"],"platform":"linux/amd64"}}, sort_keys=True))' > scanner-image-candidate.json
+          python -c 'import json, os; print(json.dumps({"status":"candidate","source_commit":os.environ["GITHUB_SHA"],"relay":{"image":os.environ["IMAGE"]+"@"+os.environ["DIGEST"]}}, sort_keys=True))' > scanner-image-candidate.json
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-relay-candidate-${{ github.sha }}

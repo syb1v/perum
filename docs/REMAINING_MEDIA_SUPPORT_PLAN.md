@@ -72,6 +72,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   fail-closed на GitHub Attestations API, недоступном для user-owned private repo.
   Этот digest не считается recorded evidence; registry-native BuildKit SBOM/
   provenance сохранены, workflow переключён на post-push exact digest inspection;
+- run `29692953493` полностью зелёный и подтвердил constrained runtime/push/digest
+  inspection, но handoff metadata не фиксируется как финальное evidence: BuildKit
+  output digest включает OCI attestation manifests, поэтому misleading single
+  `platform` claim удалён и требуется повторный clean artifact;
 
 Что не завершено и не должно считаться production evidence:
 
