@@ -80,14 +80,22 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   зелёный; artifact фиксирует source commit `1e6929d`, `status=candidate` и exact
   relay OCI digest `sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.
   Это candidate evidence, не operator approval и не test-node pilot;
+- clamd updater topology реализована без dual-homing: managed non-internal update
+  network содержит только non-root freshclam updater; clamd остаётся только в
+  internal backend. Единственный shared channel — signature volume (`rw` updater,
+  `ro` clamd). Core ждёт fresh database до запуска clamd и fail-closed сверяет обе
+  сети, mounts, commands, health, users и limits;
+- candidate workflow собирает clamd/updater image, и на пустом volume обязан
+  скачать валидные signatures, запустить constrained read-only clamd, подтвердить
+  network separation и получить clean `OK`/EICAR `FOUND` через relay. До первого
+  зелёного run эти пункты не считаются evidence;
 
 Что не завершено и не должно считаться production evidence:
 
 1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
    подтверждены approved images на тестовой node.
-2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
-   Clamd updater topology не определена: internal backend исключает freshclam
-   egress; до least-privilege updater/signature import design publication запрещена.
+2. Approved digest-pinned clamd и relay images отсутствуют. Relay имеет только
+   candidate; clamd/updater candidate ждёт real-Docker workflow evidence.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
    проверялись.
 4. PostgreSQL доступен, но локальные credentials были отклонены; migration
@@ -101,8 +109,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Спроектировать least-privilege signature updater/import path для internal clamd
-   backend, затем собрать clamd candidate с empty-volume initialization/freshness.
+2. Получить зелёный clamd/updater candidate run с empty-volume initialization,
+   freshness, isolation и EICAR; зафиксировать exact digest только как candidate.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

@@ -79,10 +79,14 @@ class Settings(BaseSettings):
     APP_HEALTH_TIMEOUT_S: int = 90
     SCANNER_NODE_ENABLED: bool = False
     SCANNER_BACKEND_NETWORK: str = "perum_scanner_backend"
+    SCANNER_UPDATE_NETWORK: str = "perum_scanner_updates"
     SCANNER_CLAMD_IMAGE: str = ""
     SCANNER_RELAY_IMAGE: str = ""
     SCANNER_CLAMD_MEMORY: str = "3g"
     SCANNER_CLAMD_CPUS: float = 2.0
+    SCANNER_UPDATER_MEMORY: str = "512m"
+    SCANNER_UPDATER_CPUS: float = 0.5
+    SCANNER_CLAM_USER: str = "clamav:clamav"
     SCANNER_RELAY_MEMORY: str = "128m"
     SCANNER_RELAY_CPUS: float = 0.25
     SCANNER_RELAY_USER: str = "65532:65532"
@@ -156,7 +160,7 @@ class Settings(BaseSettings):
         if self.SCANNER_NODE_ENABLED:
             if self.SCANNER_RELAY_TOTAL_TIMEOUT_S <= self.SCANNER_RELAY_CONNECT_TIMEOUT_S:
                 raise ValueError("SCANNER_RELAY_TOTAL_TIMEOUT_S must exceed connect timeout")
-            if self.SCANNER_CLAMD_CPUS <= 0 or self.SCANNER_RELAY_CPUS <= 0:
+            if self.SCANNER_CLAMD_CPUS <= 0 or self.SCANNER_UPDATER_CPUS <= 0 or self.SCANNER_RELAY_CPUS <= 0:
                 raise ValueError("scanner CPU limits must be positive")
         if self.ENVIRONMENT != "prod":
             return self

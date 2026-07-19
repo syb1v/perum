@@ -25,7 +25,7 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
     async def run():
         spec, settings = spec_and_settings()
         docker = AsyncMock()
-        docker.container_exists.side_effect = [False, False]
+        docker.container_exists.side_effect = [False, False, False]
         with patch("app.services.scanner_stack.psutil.virtual_memory") as memory:
             memory.return_value.total = 8 * 1024 ** 3
             await ensure_school_relay(spec, "sch-alpha", settings, docker)
@@ -37,12 +37,16 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         docker.connect_to_network.assert_awaited_once_with("school_alpha_scanner_relay", settings.SCANNER_BACKEND_NETWORK, required=True)
         assert relay["security_opt"] == ["no-new-privileges"] and relay["pids_limit"] == 32
         assert relay["environment"]["MAX_BYTES"] == str(settings.SCANNER_RELAY_MAX_BYTES)
-        assert docker.verify_container.await_count == 2
+        assert docker.verify_container.await_count == 3
         relay_verify = docker.verify_container.await_args_list[-1].kwargs
         assert relay_verify["command"] == ["python", "-m", "app.scanner_relay"]
         assert relay_verify["environment"] == relay["environment"]
-        clamd_verify = docker.verify_container.await_args_list[0].kwargs
+        updater_verify = docker.verify_container.await_args_list[0].kwargs
+        assert updater_verify["networks"] == {settings.SCANNER_UPDATE_NETWORK}
+        assert updater_verify["mounts"] == {"perum_node_clam_signatures": ("/var/lib/clamav", "rw")}
+        clamd_verify = docker.verify_container.await_args_list[1].kwargs
         assert clamd_verify["health_test"] == ["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]
+        assert clamd_verify["mounts"] == {"perum_node_clam_signatures": ("/var/lib/clamav", "ro")}
     asyncio.run(run())
 
 
@@ -50,7 +54,7 @@ def test_existing_scanner_resources_are_inspected_and_drift_fails_closed():
     async def run():
         spec, settings = spec_and_settings()
         docker = AsyncMock()
-        docker.container_exists.side_effect = [True, True]
+        docker.container_exists.side_effect = [True, True, True]
         docker.verify_network.side_effect = DockerClientError("network drift")
         with patch("app.services.scanner_stack.psutil.virtual_memory") as memory:
             memory.return_value.total = 8 * 1024 ** 3

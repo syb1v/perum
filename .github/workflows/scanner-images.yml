@@ -14,8 +14,8 @@ permissions:
   packages: write
 
 jobs:
-  relay-candidate:
-    name: Scanner relay candidate
+  scanner-candidates:
+    name: Scanner image candidates
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,13 +31,24 @@ jobs:
           build-args: VCS_REF=${{ github.sha }}
       - name: Verify constrained runtime contract
         run: python deploy/scanner/verify_relay_image.py perum-scanner-relay:candidate
+      - name: Build local clamd candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/scanner/clamd/Dockerfile
+          load: true
+          push: false
+          tags: perum-clamd:candidate
+          build-args: VCS_REF=${{ github.sha }}
+      - name: Verify isolated updater, persistence and EICAR topology
+        run: python deploy/scanner/verify_clamd_topology.py perum-clamd:candidate perum-scanner-relay:candidate "$PWD/deploy/scanner/protocol_client.py"
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and publish immutable candidate
-        id: publish
+        id: relay
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -47,17 +58,34 @@ jobs:
           build-args: VCS_REF=${{ github.sha }}
           sbom: true
           provenance: mode=max
+      - name: Build and publish immutable clamd candidate
+        id: clamd
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/scanner/clamd/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/perum-clamd:git-${{ github.sha }}
+          build-args: VCS_REF=${{ github.sha }}
+          sbom: true
+          provenance: mode=max
       - name: Verify published digest
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
-          DIGEST: ${{ steps.publish.outputs.digest }}
-        run: docker buildx imagetools inspect "${IMAGE}@${DIGEST}"
+          RELAY_IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
+          RELAY_DIGEST: ${{ steps.relay.outputs.digest }}
+          CLAMD_IMAGE: ghcr.io/${{ github.repository_owner }}/perum-clamd
+          CLAMD_DIGEST: ${{ steps.clamd.outputs.digest }}
+        run: |
+          docker buildx imagetools inspect "${RELAY_IMAGE}@${RELAY_DIGEST}"
+          docker buildx imagetools inspect "${CLAMD_IMAGE}@${CLAMD_DIGEST}"
       - name: Record candidate handoff
         env:
-          IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
-          DIGEST: ${{ steps.publish.outputs.digest }}
+          RELAY_IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
+          RELAY_DIGEST: ${{ steps.relay.outputs.digest }}
+          CLAMD_IMAGE: ghcr.io/${{ github.repository_owner }}/perum-clamd
+          CLAMD_DIGEST: ${{ steps.clamd.outputs.digest }}
         run: |
-          python -c 'import json, os; print(json.dumps({"status":"candidate","source_commit":os.environ["GITHUB_SHA"],"relay":{"image":os.environ["IMAGE"]+"@"+os.environ["DIGEST"]}}, sort_keys=True))' > scanner-image-candidate.json
+          python -c 'import json, os; print(json.dumps({"status":"candidate","source_commit":os.environ["GITHUB_SHA"],"relay":{"image":os.environ["RELAY_IMAGE"]+"@"+os.environ["RELAY_DIGEST"]},"clamd":{"image":os.environ["CLAMD_IMAGE"]+"@"+os.environ["CLAMD_DIGEST"]}}, sort_keys=True))' > scanner-image-candidate.json
       - uses: actions/upload-artifact@v4
         with:
           name: scanner-relay-candidate-${{ github.sha }}

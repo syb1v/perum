@@ -37,6 +37,10 @@
   restart policy, privileged/cap-add, exact relay command/environment и exact
   clamd health probe. Relay workflow публикует immutable candidates после
   constrained Docker check с SBOM/provenance; CI не выдаёт approval.
+- Signature updates вынесены из internal clamd network: отдельный non-root updater
+  имеет только egress network и RW signature volume; clamd имеет только internal
+  backend и RO mount. Между updater и scanner нет network path, единственный
+  shared state — проверяемые ClamAV database files.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

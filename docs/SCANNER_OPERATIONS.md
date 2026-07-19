@@ -12,6 +12,12 @@ variables. Relay candidate публикуется после constrained runtime
 SBOM/provenance. Clamd candidate запрещён до least-privilege updater/import design:
 internal backend не предоставляет freshclam egress.
 
+Updater topology: `perum_node_freshclam` находится только в managed non-internal
+update network и монтирует signature volume `rw`; `perum_node_clamd` находится
+только в internal scanner backend и монтирует тот же volume `ro`. Updater не имеет
+school/backend connectivity, clamd не имеет egress. Core запускает clamd только
+после fresh updater health, определяемого наличием database младше 48 часов.
+
 Recorded relay candidate: run `29693030308`, source `1e6929d`, exact OCI digest
 `sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.
 Он прошёл CI runtime/image/digest checks, но остаётся `candidate`; не переносить его

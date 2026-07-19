@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Реализована least-privilege ClamAV updater topology: freshclam только в отдельной egress network с RW signature volume, clamd только во внутренней scanner network с RO mount. Candidate workflow проверяет cold empty-volume initialization, freshness, exact isolation и clean/EICAR через constrained relay перед immutable GHCR publication с SBOM/provenance; до зелёного run/explicit review это не approved image.
 - Добавлен purpose-built scanner relay candidate workflow: constrained Docker contract, non-root/read-only/cap-drop/no-new-privileges/PID/resource checks, immutable GHCR tag, SBOM, provenance и candidate digest artifact без auto-approval. Core reconciliation дополнительно проверяет command/environment/running/restart/privileged/cap-add/health drift. Clamd publication заблокирована до signature updater design для internal network.
 - Relay candidate workflow использует registry-native BuildKit SBOM/provenance и post-push exact digest inspection вместо недоступного GitHub Attestations API для user-owned private repository; failed run digest не принимается как evidence.
 - Relay candidate handoff больше не приписывает OCI index digest единственную platform: BuildKit provenance/SBOM добавляют attestation manifests, поэтому artifact сохраняет только проверенный exact image digest и source commit.

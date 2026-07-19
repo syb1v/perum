@@ -12,6 +12,7 @@ from app.services.stack_spec import StackSpec, school_scanner_relay_name
 
 SCANNER_LABEL = "node-scanner"
 CLAMD_CONTAINER = "perum_node_clamd"
+UPDATER_CONTAINER = "perum_node_freshclam"
 SIGNATURE_VOLUME = "perum_node_clam_signatures"
 _node_scanner_lock = asyncio.Lock()
 
@@ -30,24 +31,49 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
     async with _node_scanner_lock:
         await docker.create_network(settings.SCANNER_BACKEND_NETWORK, slug=SCANNER_LABEL, internal=True)
         await docker.verify_network(settings.SCANNER_BACKEND_NETWORK, slug=SCANNER_LABEL, internal=True)
+        await docker.create_network(settings.SCANNER_UPDATE_NETWORK, slug=SCANNER_LABEL, internal=False)
+        await docker.verify_network(settings.SCANNER_UPDATE_NETWORK, slug=SCANNER_LABEL, internal=False)
         await docker.ensure_image(settings.SCANNER_CLAMD_IMAGE)
+        await docker.create_volume(SIGNATURE_VOLUME, slug=SCANNER_LABEL)
+        updater_health = ["CMD-SHELL", "test -n \"$(find /var/lib/clamav -maxdepth 1 -type f \\( -name 'daily.c?d' -o -name 'main.c?d' \\) -mmin -2880 -print -quit)\""]
+        if not await docker.container_exists(UPDATER_CONTAINER):
+            await docker.run_container(
+                name=UPDATER_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="freshclam",
+                network=settings.SCANNER_UPDATE_NETWORK,
+                volumes={SIGNATURE_VOLUME: {"bind": "/var/lib/clamav", "mode": "rw"}},
+                health=HealthSpec(test=updater_health, start_period_s=30, retries=30),
+                command=["freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf"],
+                mem_limit=settings.SCANNER_UPDATER_MEMORY,
+                nano_cpus=int(settings.SCANNER_UPDATER_CPUS * 1_000_000_000), cap_drop=["ALL"],
+                read_only=True, user=settings.SCANNER_CLAM_USER, security_opt=["no-new-privileges"], pids_limit=32,
+            )
+        await docker.verify_container(
+            UPDATER_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="freshclam",
+            networks={settings.SCANNER_UPDATE_NETWORK}, mounts={SIGNATURE_VOLUME: ("/var/lib/clamav", "rw")},
+            read_only=True, cap_drop={"ALL"}, mem_limit=settings.SCANNER_UPDATER_MEMORY,
+            nano_cpus=int(settings.SCANNER_UPDATER_CPUS * 1_000_000_000), require_health=True,
+            user=settings.SCANNER_CLAM_USER, security_opt={"no-new-privileges"}, pids_limit=32,
+            command=["freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf"], health_test=updater_health,
+        )
+        await docker.wait_for_healthy(UPDATER_CONTAINER, timeout_s=max(settings.APP_HEALTH_TIMEOUT_S, 300))
         if not await docker.container_exists(CLAMD_CONTAINER):
-            await docker.create_volume(SIGNATURE_VOLUME, slug=SCANNER_LABEL)
             await docker.run_container(
                 name=CLAMD_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="clamd",
                 network=settings.SCANNER_BACKEND_NETWORK,
-                volumes={SIGNATURE_VOLUME: {"bind": "/var/lib/clamav", "mode": "rw"}},
+                volumes={SIGNATURE_VOLUME: {"bind": "/var/lib/clamav", "mode": "ro"}},
                 health=HealthSpec(test=["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]),
                 mem_limit=settings.SCANNER_CLAMD_MEMORY,
                 nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000),
                 cap_drop=["ALL"],
+                read_only=True, user=settings.SCANNER_CLAM_USER, security_opt=["no-new-privileges"], pids_limit=64,
             )
         await docker.verify_container(
             CLAMD_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="clamd",
-            networks={settings.SCANNER_BACKEND_NETWORK}, mounts={SIGNATURE_VOLUME: ("/var/lib/clamav", "rw")},
-            read_only=False, cap_drop={"ALL"}, mem_limit=settings.SCANNER_CLAMD_MEMORY,
+            networks={settings.SCANNER_BACKEND_NETWORK}, mounts={SIGNATURE_VOLUME: ("/var/lib/clamav", "ro")},
+            read_only=True, cap_drop={"ALL"}, mem_limit=settings.SCANNER_CLAMD_MEMORY,
             nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000), require_health=True,
             health_test=["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"],
+            user=settings.SCANNER_CLAM_USER, security_opt={"no-new-privileges"}, pids_limit=64,
         )
         await docker.wait_for_healthy(CLAMD_CONTAINER, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
