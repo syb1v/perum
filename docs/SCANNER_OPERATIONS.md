@@ -44,6 +44,11 @@ Stale-signature gate должен использовать дату из реа�
 signature freshness evidence. Strict test policy `0h` проверяет fail-closed
 `stale_signatures`; штатная `48h` policy на той же DB проверяет recovery.
 
+Recorded freshness candidate run `29700311274`, source `e68f7f1`: clamd
+`sha256:ac2643c21d7f43e6dc65be76333c4a804553dc09340dafe050189910ca813002`,
+relay `sha256:8d6af74ba6ce8d75203b82dcbce208bb0707b8761c9aab36f8bb9ed6e6566117`.
+Production Tenant parser/gating пройдены; status остаётся `candidate`.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.

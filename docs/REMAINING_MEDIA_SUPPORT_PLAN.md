@@ -155,6 +155,12 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   запускался из `/`, поэтому production `/app/app` package не находился. Harness
   теперь запускается из image `WORKDIR=/app`; scanner code/assertions не копируются
   и не изменяются;
+- stale/recovery run `https://github.com/syb1v/perum/actions/runs/29700311274`
+  зелёный. Production Tenant scanner подтвердил real VERSION timestamp,
+  `0h` policy `stale_signatures/unavailable` и `48h` recovery ready/clean/EICAR.
+  Source `e68f7f1`; clamd candidate
+  `sha256:ac2643c21d7f43e6dc65be76333c4a804553dc09340dafe050189910ca813002`,
+  relay candidate `sha256:8d6af74ba6ce8d75203b82dcbce208bb0707b8761c9aab36f8bb9ed6e6566117`;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -175,7 +181,7 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Получить зелёный production-parser stale/recovery run; затем выполнить
+2. Выполнить bounded multi-school capacity/fairness candidate gate, затем
    security/operator review exact candidates и target-node inspect/outage contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
