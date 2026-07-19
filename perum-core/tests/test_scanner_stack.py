@@ -25,7 +25,7 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
     async def run():
         spec, settings = spec_and_settings()
         docker = AsyncMock()
-        docker.container_exists.return_value = False
+        docker.container_exists.side_effect = [False, False]
         with patch("app.services.scanner_stack.psutil.virtual_memory") as memory:
             memory.return_value.total = 8 * 1024 ** 3
             await ensure_school_relay(spec, "sch-alpha", settings, docker)
@@ -35,6 +35,23 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         assert clamd["network"] == settings.SCANNER_BACKEND_NETWORK
         assert spec.app_env["SCANNER_HOST"] == "school_alpha_scanner_relay"
         docker.connect_to_network.assert_awaited_once_with("school_alpha_scanner_relay", settings.SCANNER_BACKEND_NETWORK, required=True)
+        assert relay["security_opt"] == ["no-new-privileges"] and relay["pids_limit"] == 32
+        assert relay["environment"]["MAX_BYTES"] == str(settings.SCANNER_RELAY_MAX_BYTES)
+        assert docker.verify_container.await_count == 2
+    asyncio.run(run())
+
+
+def test_existing_scanner_resources_are_inspected_and_drift_fails_closed():
+    async def run():
+        spec, settings = spec_and_settings()
+        docker = AsyncMock()
+        docker.container_exists.side_effect = [True, True]
+        docker.verify_network.side_effect = DockerClientError("network drift")
+        with patch("app.services.scanner_stack.psutil.virtual_memory") as memory:
+            memory.return_value.total = 8 * 1024 ** 3
+            with pytest.raises(DockerClientError, match="network drift"):
+                await ensure_school_relay(spec, "sch-alpha", settings, docker)
+        docker.run_container.assert_not_awaited()
     asyncio.run(run())
 
 

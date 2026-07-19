@@ -85,6 +85,13 @@ class Settings(BaseSettings):
     SCANNER_CLAMD_CPUS: float = 2.0
     SCANNER_RELAY_MEMORY: str = "128m"
     SCANNER_RELAY_CPUS: float = 0.25
+    SCANNER_RELAY_USER: str = "65532:65532"
+    SCANNER_RELAY_MAX_CONNECTIONS: int = Field(default=4, ge=1, le=64)
+    SCANNER_RELAY_CONNECT_TIMEOUT_S: float = Field(default=3, gt=0)
+    SCANNER_RELAY_IDLE_TIMEOUT_S: float = Field(default=10, gt=0)
+    SCANNER_RELAY_TOTAL_TIMEOUT_S: float = Field(default=30, gt=0)
+    SCANNER_RELAY_MAX_BYTES: int = Field(default=12 * 1024 * 1024, ge=1024)
+    SCANNER_RELAY_PIDS_LIMIT: int = Field(default=32, ge=8)
 
     # Куда писать авто-бэкап БД школы (pg_dump) перед безвозвратным удалением.
     # В проде это смонтированный том perum_backups (см. docker-compose.core.yml).
@@ -146,6 +153,11 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_prod_secrets(self) -> "Settings":
+        if self.SCANNER_NODE_ENABLED:
+            if self.SCANNER_RELAY_TOTAL_TIMEOUT_S <= self.SCANNER_RELAY_CONNECT_TIMEOUT_S:
+                raise ValueError("SCANNER_RELAY_TOTAL_TIMEOUT_S must exceed connect timeout")
+            if self.SCANNER_CLAMD_CPUS <= 0 or self.SCANNER_RELAY_CPUS <= 0:
+                raise ValueError("scanner CPU limits must be positive")
         if self.ENVIRONMENT != "prod":
             return self
         insecure = []

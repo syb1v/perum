@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Core scanner provisioning теперь fail-closed отклоняет drift existing network/clamd/relay по pinned image, topology, mounts, ports, capabilities, resources, health и security settings; per-school relay получил non-root/read-only/no-new-privileges/PID hardening и connection/idle/total/byte limits. Реальный Docker/EICAR pilot по-прежнему обязателен.
 - Tenant scanner прошёл review-hardening: добавлены total scan deadline, bounded ClamAV evidence и future-signature rejection, lease-token/expiry fencing перед verdict, cleanup exclusion активных leases, deterministic recovery clean move после crash и удаление infected content только после durable DB verdict; attachment capabilities остаются выключенными до Core relay/Docker hardening и реального pilot evidence.
 - Platform/org dashboards получили bounded support delivery status и явный `unknown` для stale/missing/malformed telemetry; Core экспортирует шесть unlabeled Prometheus gauges и исправляет populated-school `/metrics` liveness path. Notification routing не заявляется настроенным без Alertmanager/contact-point evidence.
 - Добавлена privacy-safe delivery observability поддержки: Tenant outbox публикует admin-only `pending/retrying/delivered`, attempts, durations и SLA, Mobile показывает cached delivery card, aggregate telemetry не содержит IDs/content, а typed Core relay endpoint выводит `pending/delivered` по ACK cursor; несуществующий terminal `failed` не симулируется.

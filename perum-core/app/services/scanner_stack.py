@@ -29,6 +29,7 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
         raise DockerClientError("scanner images must be pinned by sha256 digest")
     async with _node_scanner_lock:
         await docker.create_network(settings.SCANNER_BACKEND_NETWORK, slug=SCANNER_LABEL, internal=True)
+        await docker.verify_network(settings.SCANNER_BACKEND_NETWORK, slug=SCANNER_LABEL, internal=True)
         await docker.ensure_image(settings.SCANNER_CLAMD_IMAGE)
         if not await docker.container_exists(CLAMD_CONTAINER):
             await docker.create_volume(SIGNATURE_VOLUME, slug=SCANNER_LABEL)
@@ -41,6 +42,12 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
                 nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000),
                 cap_drop=["ALL"],
             )
+        await docker.verify_container(
+            CLAMD_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="clamd",
+            networks={settings.SCANNER_BACKEND_NETWORK}, mounts={SIGNATURE_VOLUME: ("/var/lib/clamav", "rw")},
+            read_only=False, cap_drop={"ALL"}, mem_limit=settings.SCANNER_CLAMD_MEMORY,
+            nano_cpus=int(settings.SCANNER_CLAMD_CPUS * 1_000_000_000), require_health=True,
+        )
         await docker.wait_for_healthy(CLAMD_CONTAINER, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
 
@@ -50,11 +57,27 @@ async def ensure_school_relay(spec: StackSpec, label_slug: str, settings: Settin
     await ensure_node_scanner(settings, docker)
     name = school_scanner_relay_name(spec.slug)
     await docker.ensure_image(settings.SCANNER_RELAY_IMAGE)
-    await docker.run_container(
-        name=name, image=settings.SCANNER_RELAY_IMAGE, slug=label_slug, role="scanner-relay",
-        environment={"LISTEN_PORT": "3310", "UPSTREAM_HOST": CLAMD_CONTAINER, "UPSTREAM_PORT": "3310"},
-        command=["python", "-m", "app.scanner_relay"],
-        network=spec.network, mem_limit=settings.SCANNER_RELAY_MEMORY,
-        nano_cpus=int(settings.SCANNER_RELAY_CPUS * 1_000_000_000), cap_drop=["ALL"], read_only=True,
+    if not await docker.container_exists(name):
+        await docker.run_container(
+            name=name, image=settings.SCANNER_RELAY_IMAGE, slug=label_slug, role="scanner-relay",
+            environment={
+                "LISTEN_PORT": "3310", "UPSTREAM_HOST": CLAMD_CONTAINER, "UPSTREAM_PORT": "3310",
+                "MAX_CONNECTIONS": str(settings.SCANNER_RELAY_MAX_CONNECTIONS),
+                "CONNECT_TIMEOUT_S": str(settings.SCANNER_RELAY_CONNECT_TIMEOUT_S),
+                "IDLE_TIMEOUT_S": str(settings.SCANNER_RELAY_IDLE_TIMEOUT_S),
+                "TOTAL_TIMEOUT_S": str(settings.SCANNER_RELAY_TOTAL_TIMEOUT_S),
+                "MAX_BYTES": str(settings.SCANNER_RELAY_MAX_BYTES),
+            },
+            command=["python", "-m", "app.scanner_relay"],
+            network=spec.network, mem_limit=settings.SCANNER_RELAY_MEMORY,
+            nano_cpus=int(settings.SCANNER_RELAY_CPUS * 1_000_000_000), cap_drop=["ALL"], read_only=True,
+            user=settings.SCANNER_RELAY_USER, security_opt=["no-new-privileges"], pids_limit=settings.SCANNER_RELAY_PIDS_LIMIT,
+        )
+        await docker.connect_to_network(name, settings.SCANNER_BACKEND_NETWORK, required=True)
+    await docker.verify_container(
+        name, image=settings.SCANNER_RELAY_IMAGE, slug=label_slug, role="scanner-relay",
+        networks={spec.network, settings.SCANNER_BACKEND_NETWORK}, mounts={}, read_only=True,
+        cap_drop={"ALL"}, mem_limit=settings.SCANNER_RELAY_MEMORY,
+        nano_cpus=int(settings.SCANNER_RELAY_CPUS * 1_000_000_000), require_health=False,
+        user=settings.SCANNER_RELAY_USER, security_opt={"no-new-privileges"}, pids_limit=settings.SCANNER_RELAY_PIDS_LIMIT,
     )
-    await docker.connect_to_network(name, settings.SCANNER_BACKEND_NETWORK, required=True)

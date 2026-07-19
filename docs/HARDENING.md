@@ -25,6 +25,10 @@
   не удаляет active leases cleanup-ом, ограничивает total operation/evidence и
   signature clock skew. Clean move имеет deterministic crash recovery, infected
   content удаляется только после durable infected state.
+- Core scanner provisioning fail-closed проверяет managed internal network и
+  exact container image/topology/mount/port/cap/resource/health/security config.
+  Per-school relay имеет connection, idle, total lifetime и byte limits,
+  non-root user, read-only rootfs, no-new-privileges и PID limit.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

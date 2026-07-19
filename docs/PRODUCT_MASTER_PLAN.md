@@ -29,11 +29,10 @@ conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** Tenant scanner review-hardening завершил total deadline,
-lease fencing, active-lease cleanup exclusion, bounded evidence/signature clock
-checks и crash-recoverable storage transitions. Следующим scanner-циклом нужны
-fail-closed Core Docker drift reconciliation и bounded relay time/bytes/connections,
-затем production-like pilot по
+**Следующий roadmap:** Tenant scanner worker hardening и Core fail-closed Docker
+resource verification/bounded relay завершены статически. Следующий scanner-цикл:
+PostgreSQL two-session lease/fencing и migration round-trip evidence, затем
+approved images и production-like pilot по
 [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md): собрать digest-pinned images,
 проверить PostgreSQL migration, EICAR, network isolation, outage/recovery,
 signature updates и node capacity. Только после evidence отдельно проектировать
@@ -72,8 +71,8 @@ restart/conflict evidence.
    generation и bounded convergence реализованы; production pilot evidence ещё
    не собрано.
 4. Node-local ClamAV foundation и Tenant worker/protocol review-hardening
-   реализованы. Остаются Core Docker drift reconciliation, bounded relay,
-   PostgreSQL concurrency/migration evidence, production-like Docker/EICAR pilot
+   и Core Docker resource verification/bounded relay реализованы. Остаются
+   PostgreSQL concurrency/migration evidence, approved images, production-like Docker/EICAR pilot
    и только затем attachment UI; attachments пока fail-closed.
 5. School support native admin inbox functional scope завершён: отдельный
    capability, role-gated cached list/thread, unread summary, online idempotent
@@ -650,7 +649,7 @@ Flow:
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
-| P1 | Media pipeline | Частично | private storage/upload foundation, node-local ClamAV adapter, durable queue и Tenant review-hardening готовы: total deadline, bounded/fresh evidence, lease fencing, active-lease cleanup exclusion, deterministic crash recovery и durable infected verdict. Остаются Core resource drift reconciliation, bounded relay, approved digest images, PostgreSQL migration/concurrency evidence, real EICAR/network/outage/signature pilot и attachment UI; production attachments остаются fail-closed |
+| P1 | Media pipeline | Частично | private storage/upload foundation, node-local ClamAV adapter, durable queue и Tenant review-hardening готовы. Core fail-closed сверяет managed internal network и exact clamd/relay image/topology/mounts/ports/caps/resources/health/security settings; relay ограничен connections/idle/total/bytes. Остаются approved digest images, PostgreSQL migration/concurrency evidence, real Docker inspect/EICAR/network/outage/signature pilot и attachment UI; production attachments остаются fail-closed |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил cached inbox, conflict-safe controls и delivery/SLA card; Core platform/org dashboards показывают bounded aggregate status и unknown telemetry. Остаются optional durable admin mutations, attachments, push и notification routing |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe relay pull/ack готовы. Typed delivery endpoints, strict telemetry extraction, dashboards и unlabeled Prometheus gauges закрывают current-state monitoring; остаются exact receipts, terminal failure policy, Alertmanager/contact-point delivery и native org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |

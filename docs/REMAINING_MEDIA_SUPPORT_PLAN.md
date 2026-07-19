@@ -43,11 +43,15 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   fenced lease token/expiry, cleanup не удаляет active lease, clean transition
   детерминированно восстанавливается после crash, infected файл удаляется только
   после durable verdict;
+- Core scanner stack fail-closed проверяет existing managed network/container
+  drift: pinned image, exact networks/mounts, no published ports, cap-drop,
+  resources, health/read-only/user/no-new-privileges/PID limits; relay ограничен
+  maximum connections, connect/idle/total timeout и byte budget;
 
 Что не завершено и не должно считаться production evidence:
 
-1. Core scanner stack ещё не inspect/reconcile существующие Docker resources, а
-   byte-transparent relay не имеет total/idle/byte limits.
+1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
+   подтверждены approved images на тестовой node.
 2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
    проверялись.
@@ -60,18 +64,16 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Добавить fail-closed inspect/reconciliation network/clamd/relay и bounded relay
-   time/bytes/connections; проверить drift tests.
-2. Провести PostgreSQL two-session lease/fencing и migration round-trip evidence.
-3. Собрать approved immutable clamd и relay images; убедиться, что image содержит
+1. Провести PostgreSQL two-session lease/fencing и migration round-trip evidence.
+2. Собрать approved immutable clamd и relay images; убедиться, что image содержит
    working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
-4. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
-5. На тестовой node с двумя школами выполнить все gates из
+3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
+4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую
    изоляцию.
-6. Проверить outage/restart/lease recovery, stale signatures и fairness/load при
+5. Проверить outage/restart/lease recovery, stale signatures и fairness/load при
    5-10+ школах; записать evidence без PII.
-7. Только после успешного pilot реализовать attachment UI/binding rollout и
+6. Только после успешного pilot реализовать attachment UI/binding rollout и
    отдельным циклом изменить release capability flags. Не включать capabilities
    только на основании unit-тестов.
 

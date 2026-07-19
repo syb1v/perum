@@ -106,6 +106,15 @@ class DockerClient:
             )
         await asyncio.to_thread(_create)
 
+    async def verify_network(self, name: str, *, slug: str, internal: bool) -> None:
+        def _assert() -> None:
+            network = self.client.networks.get(name)
+            attrs = network.attrs
+            labels = attrs.get("Labels") or {}
+            if attrs.get("Driver") != "bridge" or bool(attrs.get("Internal")) is not internal or labels.get(LABEL_ORG) != slug or labels.get(LABEL_MANAGED) != "true":
+                raise DockerClientError(f"docker network '{name}' configuration drift")
+        await asyncio.to_thread(_assert)
+
     async def connect_to_network(self, container_name: str, network_name: str, *, required: bool = False) -> None:
         """Подключить контейнер к сети (для caddy → school network)."""
         def _connect() -> None:
@@ -183,6 +192,9 @@ class DockerClient:
         nano_cpus: int | None = None,
         cap_drop: list[str] | None = None,
         read_only: bool = False,
+        user: str | None = None,
+        security_opt: list[str] | None = None,
+        pids_limit: int | None = None,
     ) -> str:
         labels = {LABEL_ORG: slug, LABEL_ROLE: role, LABEL_MANAGED: "true"}
 
@@ -202,10 +214,61 @@ class DockerClient:
                 nano_cpus=nano_cpus,
                 cap_drop=cap_drop,
                 read_only=read_only,
+                user=user,
+                security_opt=security_opt,
+                pids_limit=pids_limit,
             )
 
         container = await asyncio.to_thread(_run)
         return container.id
+
+    async def verify_container(
+        self,
+        name: str,
+        *,
+        image: str,
+        slug: str,
+        role: str,
+        networks: set[str],
+        mounts: dict[str, tuple[str, str]],
+        read_only: bool,
+        cap_drop: set[str],
+        mem_limit: str,
+        nano_cpus: int,
+        require_health: bool,
+        user: str | None = None,
+        security_opt: set[str] | None = None,
+        pids_limit: int | None = None,
+    ) -> None:
+        def _assert() -> None:
+            container = self.client.containers.get(name)
+            attrs = container.attrs
+            config = attrs.get("Config") or {}
+            host = attrs.get("HostConfig") or {}
+            labels = config.get("Labels") or {}
+            actual_mounts = {item.get("Name"): (item.get("Destination"), "rw" if item.get("RW") else "ro") for item in attrs.get("Mounts") or []}
+            actual_networks = set(((attrs.get("NetworkSettings") or {}).get("Networks") or {}))
+            expected_memory = docker.utils.parse_bytes(mem_limit)
+            valid = (
+                config.get("Image") == image
+                and labels.get(LABEL_ORG) == slug
+                and labels.get(LABEL_ROLE) == role
+                and labels.get(LABEL_MANAGED) == "true"
+                and actual_networks == networks
+                and actual_mounts == mounts
+                and not any((host.get("PortBindings") or {}).values())
+                and bool(host.get("ReadonlyRootfs")) is read_only
+                and set(host.get("CapDrop") or []) == cap_drop
+                and host.get("Memory") == expected_memory
+                and host.get("NanoCpus") == nano_cpus
+                and (not require_health or bool(config.get("Healthcheck")))
+                and (user is None or config.get("User") == user)
+                and (security_opt is None or set(host.get("SecurityOpt") or []) == security_opt)
+                and (pids_limit is None or host.get("PidsLimit") == pids_limit)
+            )
+            if not valid:
+                raise DockerClientError(f"container '{name}' configuration drift")
+        await asyncio.to_thread(_assert)
 
     async def wait_for_healthy(self, name: str, *, timeout_s: int) -> None:
         """Poll a container until its healthcheck reports healthy.
