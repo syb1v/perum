@@ -93,6 +93,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   database file и запустил clamd до завершения initial `main` + `daily` set.
   Readiness теперь требует оба database files и успешный `clamscan --database`
   validation; timeout diagnostics включают container state и logs;
+- run `29693812474` подтвердил успешные freshclam download и встроенную проверку
+  `daily/main/bytecode`, но дополнительная readiness validation не запускалась:
+  image содержал `clamdscan`, но не `clamscan`. Добавлен пакет `clamav` и explicit
+  binary presence gate для `clamscan`, `clamdscan`, `freshclam` до network tests;
 
 Что не завершено и не должно считаться production evidence:
 
