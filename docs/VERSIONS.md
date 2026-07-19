@@ -227,4 +227,4 @@
 | 224 | 2026-07-19 | 6e37fff | fix(media): добавлен bounded clamd scan tmpfs |
 | 225 | 2026-07-19 | 8f930c8 | docs(media): зафиксирован ClamAV candidate evidence |
 | 226 | 2026-07-19 | 99c3110 | test(media): добавлен scanner recreation outage gate |
-| 227 | 2026-07-19 | _______ | docs(media): зафиксирован scanner recreation evidence |
+| 227 | 2026-07-19 | 0916f6c | docs(media): зафиксирован scanner recreation evidence |
