@@ -76,6 +76,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   inspection, но handoff metadata не фиксируется как финальное evidence: BuildKit
   output digest включает OCI attestation manifests, поэтому misleading single
   `platform` claim удалён и требуется повторный clean artifact;
+- final candidate run `https://github.com/syb1v/perum/actions/runs/29693030308`
+  зелёный; artifact фиксирует source commit `1e6929d`, `status=candidate` и exact
+  relay OCI digest `sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.
+  Это candidate evidence, не operator approval и не test-node pilot;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -95,8 +99,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Получить зелёный relay candidate workflow и зафиксировать digest как candidate,
-   не approved image.
+1. Выполнить security/operator review exact relay candidate digest; не повышать
+   статус без review и test-node evidence.
 2. Спроектировать least-privilege signature updater/import path для internal clamd
    backend, затем собрать clamd candidate с empty-volume initialization/freshness.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.

@@ -12,6 +12,11 @@ variables. Relay candidate публикуется после constrained runtime
 SBOM/provenance. Clamd candidate запрещён до least-privilege updater/import design:
 internal backend не предоставляет freshclam egress.
 
+Recorded relay candidate: run `29693030308`, source `1e6929d`, exact OCI digest
+`sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.
+Он прошёл CI runtime/image/digest checks, но остаётся `candidate`; не переносить его
+в production settings до explicit review и полного test-node pilot.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.
