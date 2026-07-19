@@ -44,6 +44,10 @@ CI поднимает `postgres:15-alpine` с локальными однора�
 production DB. Migration downgrade удаляет scanner lease/evidence metadata и не
 является production rollback strategy.
 
+Первый полный зелёный evidence run: `29691375244`; scanner job завершился
+`2 passed`. Этот результат доказывает PostgreSQL migration/concurrency contract,
+но не заменяет real Docker/ClamAV/EICAR/network pilot.
+
 ## CI
 
 `ci.yml` выполняет core/tenant tests, shared/web/mobile checks, production web

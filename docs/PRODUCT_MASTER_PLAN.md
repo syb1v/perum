@@ -32,8 +32,8 @@ conflict QA явно отложены; их prerequisites вынесены в
 **Следующий roadmap:** Tenant scanner worker hardening, Core fail-closed Docker
 resource verification/bounded relay и обязательный disposable PostgreSQL 15 CI
 gate для `SKIP LOCKED`, stale-worker fencing и destructive migration round-trip
-реализованы. После первого зелёного именованного CI evidence остаются approved
-images и production-like pilot по
+подтверждены зелёным CI run `29691375244`. Остаются approved images и
+production-like pilot по
 [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md): собрать digest-pinned images,
 проверить PostgreSQL migration, EICAR, network isolation, outage/recovery,
 signature updates и node capacity. Только после evidence отдельно проектировать
@@ -73,7 +73,7 @@ restart/conflict evidence.
    не собрано.
 4. Node-local ClamAV foundation и Tenant worker/protocol review-hardening
    Core Docker resource verification/bounded relay и PostgreSQL integration gate
-   реализованы. Остаются первый зелёный named gate evidence, approved images, production-like Docker/EICAR pilot
+   подтверждены. Остаются approved images и production-like Docker/EICAR pilot
    и только затем attachment UI; attachments пока fail-closed.
 5. School support native admin inbox functional scope завершён: отдельный
    capability, role-gated cached list/thread, unread summary, online idempotent
@@ -650,7 +650,7 @@ Flow:
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
-| P1 | Media pipeline | Частично | private storage/upload foundation, scanner worker hardening и Core drift/bounded relay готовы. Отдельный PostgreSQL 15 CI gate без production credentials проверяет held-row `SKIP LOCKED`, expired-lease replacement/stale verdict fencing и `0036→0037→0036→0037` с явной потерей scanner metadata при downgrade; до первого зелёного named run это automation, не evidence. Остаются approved digest images, real Docker inspect/EICAR/network/outage/signature pilot и attachment UI; production attachments fail-closed |
+| P1 | Media pipeline | Частично | private storage/upload foundation, scanner worker hardening и Core drift/bounded relay готовы. PostgreSQL 15 run `29691375244` подтвердил held-row `SKIP LOCKED`, expired-lease replacement/stale verdict fencing и `0036→0037→0036→0037` с явной потерей scanner metadata при downgrade. Остаются approved digest images, real Docker inspect/EICAR/network/outage/signature pilot и attachment UI; production attachments fail-closed |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил cached inbox, conflict-safe controls и delivery/SLA card; Core platform/org dashboards показывают bounded aggregate status и unknown telemetry. Остаются optional durable admin mutations, attachments, push и notification routing |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe relay pull/ack готовы. Typed delivery endpoints, strict telemetry extraction, dashboards и unlabeled Prometheus gauges закрывают current-state monitoring; остаются exact receipts, terminal failure policy, Alertmanager/contact-point delivery и native org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |

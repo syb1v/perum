@@ -60,12 +60,13 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   но выявил test-fixture contamination: concurrency scenario наследовал baseline
   clean result migration-preservation scenario. Fixtures разделены; invariant
   остаётся строгим: один winner result и один audit, без stale evidence;
+- полный CI run `https://github.com/syb1v/perum/actions/runs/29691375244`
+  зелёный: named PostgreSQL scanner job выполнил `2 passed` на PostgreSQL 15.
+  Это закрывает migration/concurrency evidence, но не Docker/EICAR pilot;
 
 Что не завершено и не должно считаться production evidence:
 
-1. Именованный PostgreSQL scanner CI job ещё должен дать первый зелёный run URL;
-   локально без `TEST_POSTGRES_URL` integration tests намеренно skip-ятся.
-2. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
+1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
    подтверждены approved images на тестовой node.
 2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
@@ -79,8 +80,7 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Зафиксировать первый зелёный named PostgreSQL scanner CI evidence.
-2. Собрать approved immutable clamd и relay images; убедиться, что image содержит
+1. Собрать approved immutable clamd и relay images; убедиться, что image содержит
    working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
 3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
 4. На тестовой node с двумя школами выполнить все gates из
