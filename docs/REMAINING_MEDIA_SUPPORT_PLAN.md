@@ -109,6 +109,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694399412` подтвердил config parse, но ClamAV secure logfile handling
   отверг `/dev/stderr` symlink. File logging directive удалён: daemon остаётся
   foreground, Docker captures process output, harness сохраняет state/logs;
+- run `29694559400` прошёл cold download и clamd readiness, но combined protocol
+  assertion не показывал, какой public test verdict не совпал. Clean/EICAR checks
+  разделены и выводят только privacy-safe response mismatch без payload contents;
 
 Что не завершено и не должно считаться production evidence:
 

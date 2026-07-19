@@ -42,7 +42,8 @@ try:
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
-    assert "OK" in clean and "FOUND" in eicar
+    assert "OK" in clean, f"clean response mismatch: {clean!r}"
+    assert "FOUND" in eicar, f"EICAR response mismatch: {eicar!r}"
     daemon_networks = set(json.loads(run("docker", "inspect", daemon))[0]["NetworkSettings"]["Networks"])
     updater_networks = set(json.loads(run("docker", "inspect", updater))[0]["NetworkSettings"]["Networks"])
     assert daemon_networks == {backend} and updater_networks == {updates}
