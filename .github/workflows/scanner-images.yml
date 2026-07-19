@@ -1,0 +1,68 @@
+name: Scanner image candidates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/scanner/**"
+      - "perum-core/app/scanner_relay.py"
+      - ".github/workflows/scanner-images.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+jobs:
+  relay-candidate:
+    name: Scanner relay candidate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build local candidate
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/scanner/relay/Dockerfile
+          load: true
+          push: false
+          tags: perum-scanner-relay:candidate
+          build-args: VCS_REF=${{ github.sha }}
+      - name: Verify constrained runtime contract
+        run: python deploy/scanner/verify_relay_image.py perum-scanner-relay:candidate
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish immutable candidate
+        id: publish
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/scanner/relay/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay:git-${{ github.sha }}
+          build-args: VCS_REF=${{ github.sha }}
+          sbom: true
+          provenance: mode=max
+      - name: Attest candidate provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+      - name: Record candidate handoff
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          python -c 'import json, os; print(json.dumps({"status":"candidate","source_commit":os.environ["GITHUB_SHA"],"relay":{"image":os.environ["IMAGE"]+"@"+os.environ["DIGEST"],"platform":"linux/amd64"}}, sort_keys=True))' > scanner-image-candidate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scanner-relay-candidate-${{ github.sha }}
+          path: scanner-image-candidate.json
+          retention-days: 30

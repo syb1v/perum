@@ -239,6 +239,9 @@ class DockerClient:
         user: str | None = None,
         security_opt: set[str] | None = None,
         pids_limit: int | None = None,
+        command: list[str] | None = None,
+        environment: dict[str, str] | None = None,
+        health_test: list[str] | None = None,
     ) -> None:
         def _assert() -> None:
             container = self.client.containers.get(name)
@@ -249,6 +252,7 @@ class DockerClient:
             actual_mounts = {item.get("Name"): (item.get("Destination"), "rw" if item.get("RW") else "ro") for item in attrs.get("Mounts") or []}
             actual_networks = set(((attrs.get("NetworkSettings") or {}).get("Networks") or {}))
             expected_memory = docker.utils.parse_bytes(mem_limit)
+            actual_environment = dict(item.split("=", 1) for item in config.get("Env") or [] if "=" in item)
             valid = (
                 config.get("Image") == image
                 and labels.get(LABEL_ORG) == slug
@@ -265,6 +269,13 @@ class DockerClient:
                 and (user is None or config.get("User") == user)
                 and (security_opt is None or set(host.get("SecurityOpt") or []) == security_opt)
                 and (pids_limit is None or host.get("PidsLimit") == pids_limit)
+                and (command is None or config.get("Cmd") == command)
+                and (environment is None or all(actual_environment.get(key) == value for key, value in environment.items()))
+                and (health_test is None or (config.get("Healthcheck") or {}).get("Test") == health_test)
+                and (attrs.get("State") or {}).get("Status") == "running"
+                and (host.get("RestartPolicy") or {}).get("Name") == "unless-stopped"
+                and not bool(host.get("Privileged"))
+                and not (host.get("CapAdd") or [])
             )
             if not valid:
                 raise DockerClientError(f"container '{name}' configuration drift")

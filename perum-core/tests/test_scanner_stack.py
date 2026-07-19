@@ -38,6 +38,11 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         assert relay["security_opt"] == ["no-new-privileges"] and relay["pids_limit"] == 32
         assert relay["environment"]["MAX_BYTES"] == str(settings.SCANNER_RELAY_MAX_BYTES)
         assert docker.verify_container.await_count == 2
+        relay_verify = docker.verify_container.await_args_list[-1].kwargs
+        assert relay_verify["command"] == ["python", "-m", "app.scanner_relay"]
+        assert relay_verify["environment"] == relay["environment"]
+        clamd_verify = docker.verify_container.await_args_list[0].kwargs
+        assert clamd_verify["health_test"] == ["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]
     asyncio.run(run())
 
 

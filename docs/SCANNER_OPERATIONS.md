@@ -6,6 +6,12 @@ This foundation is fail-closed and does not enable attachment capabilities. Prod
 
 Handoff status on 2026-07-19: Tenant worker/protocol and Core Docker drift/bounded relay hardening are complete. Disposable PostgreSQL 15 CI run `29691375244` confirms migration round-trip and real two-session lease/fencing. Approved images, real Docker inspect and EICAR/network pilot remain open. See `REMAINING_MEDIA_SUPPORT_PLAN.md` for the exact continuation order. Do not set `SCANNER_NODE_ENABLED=true` on production nodes and do not change attachment capability flags until all pilot gates have recorded evidence.
 
+Image lifecycle разделяет CI-published `candidate`, explicitly reviewed `approved`
+digest и `pilot-approved`. Workflow не повышает статус и не меняет deployment
+variables. Relay candidate публикуется после constrained runtime check с
+SBOM/provenance. Clamd candidate запрещён до least-privilege updater/import design:
+internal backend не предоставляет freshclam egress.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.

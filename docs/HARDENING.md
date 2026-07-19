@@ -33,6 +33,10 @@
   доказательства `SKIP LOCKED`; replacement lease обязан победить blocked stale
   worker, который не может записать verdict/evidence/audit. Integration URL берётся
   только из disposable `TEST_POSTGRES_URL`, без production secrets.
+- Existing scanner containers fail-closed сверяются также по running state,
+  restart policy, privileged/cap-add, exact relay command/environment и exact
+  clamd health probe. Relay workflow публикует immutable candidates после
+  constrained Docker check с SBOM/provenance; CI не выдаёт approval.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

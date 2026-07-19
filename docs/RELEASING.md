@@ -21,6 +21,12 @@ Paths filter независимо определяет изменения `perum
 `perum-tenant/**`. Только изменённые images публикуются в GHCR с immutable
 `git-<12-char-sha>` и mutable `latest` tags.
 
+Scanner relay выпускается отдельным workflow `scanner-images.yml`. Он публикует
+только immutable candidate tag `git-<full-sha>`, генерирует SBOM/provenance и
+выдаёт JSON artifact с digest и `status=candidate`. Artifact не разрешает
+deployment: exact digest должен пройти security/operator review и test-node pilot;
+workflow не включает scanner node или attachment flags.
+
 Текущий automatic control-plane deploy не pin-ит checkout/image к `RELEASE_SHA`:
 он делает `git pull --ff-only` и pull mutable `latest`. До исправления workflow
 это известный release risk; не запускайте параллельные deploy, фиксируйте deployed

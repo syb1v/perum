@@ -63,12 +63,19 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - полный CI run `https://github.com/syb1v/perum/actions/runs/29691375244`
   зелёный: named PostgreSQL scanner job выполнил `2 passed` на PostgreSQL 15.
   Это закрывает migration/concurrency evidence, но не Docker/EICAR pilot;
+- purpose-built relay image копирует только production relay module, запускается
+  как `65532:65532`; candidate workflow проверяет metadata и constrained runtime,
+  затем публикует immutable tag с SBOM/provenance и `status=candidate` artifact;
+- Core reconciliation проверяет running/restart/privileged/cap-add, exact relay
+  command/environment и exact clamd health command;
 
 Что не завершено и не должно считаться production evidence:
 
 1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
    подтверждены approved images на тестовой node.
 2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
+   Clamd updater topology не определена: internal backend исключает freshclam
+   egress; до least-privilege updater/signature import design publication запрещена.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
    проверялись.
 4. PostgreSQL доступен, но локальные credentials были отклонены; migration
@@ -80,9 +87,11 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Собрать approved immutable clamd и relay images; убедиться, что image содержит
-   working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
-3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
+1. Получить зелёный relay candidate workflow и зафиксировать digest как candidate,
+   не approved image.
+2. Спроектировать least-privilege signature updater/import path для internal clamd
+   backend, затем собрать clamd candidate с empty-volume initialization/freshness.
+3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую
    изоляцию.
