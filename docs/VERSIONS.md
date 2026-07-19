@@ -203,4 +203,4 @@
 | 200 | 2026-07-19 | c4ca135 | feat(support): добавлена privacy-safe delivery observability |
 | 201 | 2026-07-19 | 2b6203f | feat(observability): добавлен dashboard support delivery SLA |
 | 202 | 2026-07-19 | 7885cb1 | fix(media): усилены scanner lease и crash recovery |
-| 203 | 2026-07-19 | _______ | fix(media): добавлены scanner drift checks и relay limits |
+| 203 | 2026-07-19 | c586ae5 | fix(media): добавлены scanner drift checks и relay limits |
