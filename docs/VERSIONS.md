@@ -213,3 +213,4 @@
 | 210 | 2026-07-19 | 1e6929d | fix(ci): уточнён relay candidate digest handoff |
 | 211 | 2026-07-19 | f350c00 | docs(media): зафиксирован relay candidate evidence |
 | 212 | 2026-07-19 | 6ffed7e | feat(media): добавлена isolated ClamAV updater topology |
+| 213 | 2026-07-19 | _______ | fix(ci): исправлен ClamAV cold-volume readiness gate |

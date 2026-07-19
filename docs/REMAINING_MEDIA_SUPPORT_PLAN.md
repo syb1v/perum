@@ -89,6 +89,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   скачать валидные signatures, запустить constrained read-only clamd, подтвердить
   network separation и получить clean `OK`/EICAR `FOUND` через relay. До первого
   зелёного run эти пункты не считаются evidence;
+- run `29693610127` fail-closed остановил publication: harness увидел первый
+  database file и запустил clamd до завершения initial `main` + `daily` set.
+  Readiness теперь требует оба database files и успешный `clamscan --database`
+  validation; timeout diagnostics включают container state и logs;
 
 Что не завершено и не должно считаться production evidence:
 

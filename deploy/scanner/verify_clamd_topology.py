@@ -20,8 +20,8 @@ try:
     run("docker", "volume", "create", volume)
     run("docker", "run", "-d", "--name", updater, "--network", updates, "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "32", "--memory", "512m", "--cpus", "0.5", "-v", f"{volume}:/var/lib/clamav:rw", clamd, "freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf")
     for _ in range(150):
-        files = run("docker", "run", "--rm", "-v", f"{volume}:/db:ro", "--entrypoint", "sh", clamd, "-c", "find /db -maxdepth 1 -type f -name '*.c?d' -print -quit")
-        if files:
+        valid = run("docker", "run", "--rm", "-v", f"{volume}:/db:ro", "--entrypoint", "sh", clamd, "-c", "if test -n \"$(find /db -maxdepth 1 -type f -name 'main.c?d' -print -quit)\" && test -n \"$(find /db -maxdepth 1 -type f -name 'daily.c?d' -print -quit)\" && clamscan --database=/db --version >/dev/null; then echo ready; fi")
+        if valid == "ready":
             break
         time.sleep(2)
     else:
@@ -35,7 +35,9 @@ try:
             break
         time.sleep(2)
     else:
-        raise RuntimeError(run("docker", "logs", daemon, check=False))
+        state = run("docker", "inspect", "--format", "{{json .State}}", daemon, check=False)
+        logs = run("docker", "logs", daemon, check=False)
+        raise RuntimeError(f"clamd readiness failed: state={state} logs={logs}")
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[3]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
