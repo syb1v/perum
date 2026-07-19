@@ -57,11 +57,14 @@ class LocalPrivateStorage:
     def path(self, key: str) -> Path:
         return self._path(key)
 
-    def promote(self, key: str) -> str:
+    def promote(self, key: str, clean_key: str | None = None) -> str:
         source = self._path(key)
-        token = secrets.token_hex(24)
-        clean_key = f"clean/{token[:2]}/{token[2:]}"
+        if clean_key is None:
+            token = secrets.token_hex(24)
+            clean_key = f"clean/{token[:2]}/{token[2:]}"
         target = self._path(clean_key)
+        if target.is_file() and not source.exists():
+            return clean_key
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(target.parent, 0o700)
         os.replace(source, target)

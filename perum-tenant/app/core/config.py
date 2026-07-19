@@ -7,7 +7,7 @@ DATABASE_URL, …). There is no hard-coded org anywhere — one image, N instanc
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,18 +55,26 @@ class Settings(BaseSettings):
     MEDIA_OWNER_GRACE_S: int = 3600
     MEDIA_CLEANUP_BATCH_SIZE: int = 100
     SCANNER_HOST: str = ""
-    SCANNER_PORT: int = 3310
-    SCANNER_TIMEOUT_S: float = 15
-    SCANNER_CONNECT_TIMEOUT_S: float = 3
-    SCANNER_CHUNK_BYTES: int = 64 * 1024
-    SCANNER_MAX_PARALLEL: int = 2
-    SCANNER_MAX_SIGNATURE_AGE_H: int = 48
-    SCANNER_LEASE_S: int = 120
-    SCANNER_RETRY_BASE_S: int = 30
-    SCANNER_RETRY_MAX_S: int = 3600
+    SCANNER_PORT: int = Field(default=3310, ge=1, le=65535)
+    SCANNER_TIMEOUT_S: float = Field(default=15, gt=0)
+    SCANNER_CONNECT_TIMEOUT_S: float = Field(default=3, gt=0)
+    SCANNER_CHUNK_BYTES: int = Field(default=64 * 1024, ge=1, le=1024 * 1024)
+    SCANNER_MAX_PARALLEL: int = Field(default=2, ge=1)
+    SCANNER_MAX_SIGNATURE_AGE_H: int = Field(default=48, ge=1)
+    SCANNER_LEASE_S: int = Field(default=120, ge=1)
+    SCANNER_RETRY_BASE_S: int = Field(default=30, ge=1)
+    SCANNER_RETRY_MAX_S: int = Field(default=3600, ge=1)
     PUSH_TOKEN_ENCRYPTION_KEY: str = ""
     PUSH_TOKEN_HASH_KEY: str = ""
     PUSH_DELIVERY_ENABLED: bool = False
+
+    @model_validator(mode="after")
+    def validate_scanner_timing(self) -> "Settings":
+        if self.SCANNER_LEASE_S <= self.SCANNER_TIMEOUT_S + self.SCANNER_CONNECT_TIMEOUT_S:
+            raise ValueError("SCANNER_LEASE_S must exceed scanner operation and connect timeouts")
+        if self.SCANNER_RETRY_BASE_S > self.SCANNER_RETRY_MAX_S:
+            raise ValueError("SCANNER_RETRY_BASE_S cannot exceed SCANNER_RETRY_MAX_S")
+        return self
 
     @property
     def async_database_url(self) -> str:

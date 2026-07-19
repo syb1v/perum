@@ -21,7 +21,7 @@ school network, relay подключён к своей school network и общ�
 network, а `clamd` подключён только к scanner network. TCP 3310 нельзя публиковать
 на host.
 
-Точка остановки на 2026-07-18:
+Точка остановки на 2026-07-19:
 
 - private storage, upload sessions, quarantine, MIME/magic/size/SHA-256,
   bindings, authorization, cleanup и shared clients готовы;
@@ -38,10 +38,16 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   `tenant_0037_scanner_foundation` и `0034_social_rollout`;
 - `social_attachments` и `support_attachments` остаются `false`, пока production
   scanner не пройдёт pilot gates.
+- независимый review Tenant worker/protocol завершён: scan имеет total deadline,
+  evidence ограничен DB contract, future signatures fail closed, финализация
+  fenced lease token/expiry, cleanup не удаляет active lease, clean transition
+  детерминированно восстанавливается после crash, infected файл удаляется только
+  после durable verdict;
 
 Что не завершено и не должно считаться production evidence:
 
-1. Независимый security/code review текущего diff был начат, но прерван handoff.
+1. Core scanner stack ещё не inspect/reconcile существующие Docker resources, а
+   byte-transparent relay не имеет total/idle/byte limits.
 2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
    проверялись.
@@ -54,17 +60,18 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Провести независимый review scanner protocol, DB lease race/transactions,
-   migration и Docker lifecycle; исправить blocker/high findings.
-2. Собрать approved immutable clamd и relay images; убедиться, что image содержит
+1. Добавить fail-closed inspect/reconciliation network/clamd/relay и bounded relay
+   time/bytes/connections; проверить drift tests.
+2. Провести PostgreSQL two-session lease/fencing и migration round-trip evidence.
+3. Собрать approved immutable clamd и relay images; убедиться, что image содержит
    working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
-3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
-4. На тестовой node с двумя школами выполнить все gates из
+4. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.
+5. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую
    изоляцию.
-5. Проверить outage/restart/lease recovery, stale signatures и fairness/load при
+6. Проверить outage/restart/lease recovery, stale signatures и fairness/load при
    5-10+ школах; записать evidence без PII.
-6. Только после успешного pilot реализовать attachment UI/binding rollout и
+7. Только после успешного pilot реализовать attachment UI/binding rollout и
    отдельным циклом изменить release capability flags. Не включать capabilities
    только на основании unit-тестов.
 

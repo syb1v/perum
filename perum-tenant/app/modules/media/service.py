@@ -231,7 +231,9 @@ async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPriv
         await db.refresh(object_)
         if object_.scan_lease_token != token or object_.state != "pending":
             continue
-        if not store.exists(object_.storage_key):
+        clean_key = f"clean/{object_.id[:2]}/{object_.id[2:]}"
+        scan_key = object_.storage_key if store.exists(object_.storage_key) else clean_key if store.exists(clean_key) else None
+        if scan_key is None:
             object_.state = "missing"
             object_.scanned_at = utc_now()
             object_.scan_lease_token = None
@@ -240,18 +242,21 @@ async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPriv
             db.add(_audit(object_.school_id, "scan_completed", "missing", object_id=object_.id))
             await db.commit()
             continue
-        verdict = await scanner.scan(store.path(object_.storage_key))
+        verdict = await scanner.scan(store.path(scan_key))
+        object_ = await db.scalar(select(MediaObject).where(MediaObject.id == object_.id).with_for_update())
+        if object_ is None or object_.state != "pending" or object_.scan_lease_token != token or object_.scan_lease_expires_at is None or object_.scan_lease_expires_at <= utc_now():
+            await db.rollback()
+            continue
         signature_at = verdict.signature_at.replace(tzinfo=None) if verdict.signature_at else None
-        db.add(MediaScanResult(id=str(uuid.uuid4()), school_id=object_.school_id, object_id=object_.id, scanner=verdict.scanner[:80], verdict=verdict.verdict, engine_version=verdict.engine_version, signature_version=verdict.signature_version, signature_at=signature_at, detail_code=verdict.detail_code, duration_ms=verdict.duration_ms))
+        db.add(MediaScanResult(id=str(uuid.uuid4()), school_id=object_.school_id, object_id=object_.id, scanner=verdict.scanner[:80], verdict=verdict.verdict, engine_version=verdict.engine_version[:40] if verdict.engine_version else None, signature_version=verdict.signature_version[:40] if verdict.signature_version else None, signature_at=signature_at, detail_code=verdict.detail_code[:40] if verdict.detail_code else None, duration_ms=verdict.duration_ms))
         counts[verdict.verdict] += 1
         object_.scan_attempts += 1
         if verdict.verdict == "clean":
-            object_.storage_key = store.promote(object_.storage_key)
+            object_.storage_key = store.promote(object_.storage_key, clean_key)
             object_.state = "clean"
             object_.scanned_at = utc_now()
             object_.next_scan_at = None
         elif verdict.verdict == "infected":
-            store.delete(object_.storage_key)
             object_.state = "infected"
             object_.scanned_at = utc_now()
             object_.next_scan_at = None
@@ -262,6 +267,8 @@ async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPriv
         object_.scan_lease_expires_at = None
         db.add(_audit(object_.school_id, "scan_completed", verdict.verdict, object_id=object_.id))
         await db.commit()
+        if verdict.verdict == "infected":
+            store.delete(scan_key)
     return counts
 
 
@@ -273,7 +280,7 @@ async def cleanup(db: AsyncSession, store: LocalPrivateStorage, settings: Settin
         session.state = "expired"
         db.add(_audit(session.school_id, "session_expired", "expired", session_id=session.id))
     cutoff = now - timedelta(seconds=settings.MEDIA_UNBOUND_TTL_S)
-    candidates = (await db.scalars(select(MediaObject).where(MediaObject.state.in_(("infected", "rejected", "missing")) | (MediaObject.state.in_(("pending", "clean")) & (MediaObject.created_at <= cutoff))).order_by(MediaObject.created_at).limit(limit))).all()
+    candidates = (await db.scalars(select(MediaObject).where(MediaObject.state.in_(("infected", "rejected", "missing")) | (MediaObject.state == "clean") & (MediaObject.created_at <= cutoff) | (MediaObject.state == "pending") & (MediaObject.created_at <= cutoff) & (or_(MediaObject.scan_lease_expires_at.is_(None), MediaObject.scan_lease_expires_at <= now))).order_by(MediaObject.created_at).limit(limit).with_for_update(skip_locked=True))).all()
     deleted = 0
     for object_ in candidates:
         bound = await db.scalar(select(MediaBinding.id).where(MediaBinding.object_id == object_.id, MediaBinding.school_id == object_.school_id))

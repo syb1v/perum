@@ -195,3 +195,43 @@ def test_claim_lease_prevents_duplicates_and_recovers_after_crash(tmp_path):
             await db.close()
             await engine.dispose()
     asyncio.run(run())
+
+
+def test_cleanup_preserves_active_scan_lease(tmp_path):
+    async def run():
+        engine, db, users, settings, store = await seed(tmp_path)
+        try:
+            session = await service.create_session(db, users[0], payload(), settings)
+            object_ = await service.upload_content(db, users[0], session.id, upload(), store, settings)
+            object_.created_at = utc_now() - timedelta(seconds=settings.MEDIA_UNBOUND_TTL_S + 1)
+            await db.commit()
+            await service.claim_pending(db, 1, settings.SCANNER_LEASE_S)
+            assert await service.cleanup(db, store, settings) == {"expired_sessions": 0, "deleted_objects": 0}
+            await db.refresh(object_)
+            assert object_.state == "pending"
+            assert store.exists(object_.storage_key)
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(run())
+
+
+def test_clean_transition_recovers_deterministic_target_after_crash(tmp_path):
+    async def run():
+        engine, db, users, settings, store = await seed(tmp_path)
+        try:
+            session = await service.create_session(db, users[0], payload(), settings)
+            object_ = await service.upload_content(db, users[0], session.id, upload(), store, settings)
+            original_key = object_.storage_key
+            clean_key = f"clean/{object_.id[:2]}/{object_.id[2:]}"
+            store.promote(original_key, clean_key)
+            assert not store.exists(original_key) and store.exists(clean_key)
+            counts = await service.scan_pending(db, FakeScanner("clean"), store, settings=settings)
+            await db.refresh(object_)
+            assert counts["clean"] == 1
+            assert object_.state == "clean" and object_.storage_key == clean_key
+            assert store.exists(clean_key)
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(run())

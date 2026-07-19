@@ -70,3 +70,20 @@ def test_timeout_and_stale_signatures_fail_closed(tmp_path):
             server.close()
             await server.wait_closed()
     asyncio.run(run())
+
+
+def test_future_and_oversized_version_evidence_fail_closed(tmp_path):
+    async def run():
+        path = tmp_path / "sample"
+        path.write_bytes(b"content")
+        future = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%a %b %d %H:%M:%S %Y")
+        for version, expected in ((f"ClamAV 1.4.2/1/{future}", "future_signatures"), (f"ClamAV {'x' * 41}/1/{future}", "malformed_version")):
+            server, _ = await fake_clamd(version, b"stream: OK\0")
+            try:
+                scanner = ClamAVScanner("127.0.0.1", server.sockets[0].getsockname()[1])
+                result = await scanner.scan(path)
+                assert (result.verdict, result.detail_code) == ("unavailable", expected)
+            finally:
+                server.close()
+                await server.wait_closed()
+    asyncio.run(run())

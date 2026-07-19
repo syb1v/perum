@@ -202,3 +202,4 @@
 | 199 | 2026-07-19 | 088b0d1 | feat(mobile): добавлено conflict-safe управление support inbox |
 | 200 | 2026-07-19 | c4ca135 | feat(support): добавлена privacy-safe delivery observability |
 | 201 | 2026-07-19 | 2b6203f | feat(observability): добавлен dashboard support delivery SLA |
+| 202 | 2026-07-19 | _______ | fix(media): усилены scanner lease и crash recovery |

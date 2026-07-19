@@ -21,6 +21,10 @@
 - Support Prometheus gauges platform-wide и не содержат labels. Core извлекает
   только allowlisted non-negative integers из fresh telemetry; stale, missing и
   malformed snapshots становятся `unknown`, а не ложным healthy zero.
+- Scanner worker принимает verdict только под действующим lease fencing token,
+  не удаляет active leases cleanup-ом, ограничивает total operation/evidence и
+  signature clock skew. Clean move имеет deterministic crash recovery, infected
+  content удаляется только после durable infected state.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 
