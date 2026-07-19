@@ -23,6 +23,12 @@ Recorded relay candidate: run `29693030308`, source `1e6929d`, exact OCI digest
 Он прошёл CI runtime/image/digest checks, но остаётся `candidate`; не переносить его
 в production settings до explicit review и полного test-node pilot.
 
+Recorded paired candidate run `29695347053`, source `6e37fff`: clamd
+`sha256:48251e249021a5d36fa420d172b0bd4e319e4e1ceb01544f50d85b58d54044e8`,
+relay `sha256:d36e7d760c26f38f8b416d65300b7e6749ad04581bb0579581fb1d1141745c27`.
+Cold signatures, isolation и EICAR пройдены в disposable CI. Это не доказывает
+test-node recreation persistence/outage/capacity и не повышает статус до approved.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.

@@ -128,6 +128,13 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   INSTREAM EOF. Причина runtime contract: read-only clamd не имел writable scan
   temp. Добавлен bounded `/tmp` tmpfs (`16m`, `noexec`, `nosuid`), который Core
   создаёт и fail-closed сверяет; signature volume остаётся read-only;
+- candidate run `https://github.com/syb1v/perum/actions/runs/29695347053`
+  зелёный: empty-volume freshclam validation, network separation, constrained
+  clamd/relay, direct VERSION/clean и relay clean/EICAR пройдены; immutable
+  digests опубликованы с SBOM/provenance и inspected. Source `6e37fff`; clamd
+  `sha256:48251e249021a5d36fa420d172b0bd4e319e4e1ceb01544f50d85b58d54044e8`,
+  relay `sha256:d36e7d760c26f38f8b416d65300b7e6749ad04581bb0579581fb1d1141745c27`.
+  Оба имеют только `candidate` status; recreation persistence не проверена;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -148,8 +155,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Получить зелёный clamd/updater candidate run с empty-volume initialization,
-   freshness, isolation и EICAR; зафиксировать exact digest только как candidate.
+2. Выполнить security/operator review exact candidate digests и на test node
+   проверить recreation persistence, outage/recovery и inspect contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую
