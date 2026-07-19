@@ -37,7 +37,7 @@ class MediaObject(Base):
         CheckConstraint("state IN ('pending', 'clean', 'infected', 'rejected', 'deleted', 'missing')", name="ck_media_objects_state"),
         CheckConstraint("size_bytes > 0", name="ck_media_objects_size"),
         Index("ix_media_objects_scan", "state", "created_at"),
-        Index("ix_media_objects_scan_claim", "state", "next_scan_at", "scan_lease_expires_at"),
+        Index("ix_media_objects_scan_claim", "state", "next_scan_at", "scan_lease_expires_at", "created_at"),
         Index("ix_media_objects_owner", "school_id", "owner_id", "state"),
     )
 

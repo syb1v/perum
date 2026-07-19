@@ -47,10 +47,17 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   drift: pinned image, exact networks/mounts, no published ports, cap-drop,
   resources, health/read-only/user/no-new-privileges/PID limits; relay ограничен
   maximum connections, connect/idle/total timeout и byte budget;
+- добавлен отдельный CI job с disposable PostgreSQL 15: real two-session
+  `FOR UPDATE SKIP LOCKED`, forced expired lease + replacement worker + stale
+  verdict fencing, и Alembic `0036→0037→0036→0037` с schema/index/data assertions;
+  downgrade scanner migration проверяется как data-destructive для lease/evidence
+  metadata при сохранении base media rows;
 
 Что не завершено и не должно считаться production evidence:
 
-1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
+1. Именованный PostgreSQL scanner CI job ещё должен дать первый зелёный run URL;
+   локально без `TEST_POSTGRES_URL` integration tests намеренно skip-ятся.
+2. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
    подтверждены approved images на тестовой node.
 2. Approved digest-pinned clamd и relay images ещё не собраны и не опубликованы.
 3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
@@ -64,7 +71,7 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Порядок продолжения без изменения архитектуры:
 
-1. Провести PostgreSQL two-session lease/fencing и migration round-trip evidence.
+1. Зафиксировать первый зелёный named PostgreSQL scanner CI evidence.
 2. Собрать approved immutable clamd и relay images; убедиться, что image содержит
    working `freshclam`, healthcheck и relay module при `cap_drop=ALL/read_only`.
 3. Выполнить PostgreSQL upgrade/downgrade/upgrade на disposable production-like DB.

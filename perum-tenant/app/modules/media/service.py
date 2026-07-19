@@ -243,7 +243,7 @@ async def scan_pending(db: AsyncSession, scanner: MediaScanner, store: LocalPriv
             await db.commit()
             continue
         verdict = await scanner.scan(store.path(scan_key))
-        object_ = await db.scalar(select(MediaObject).where(MediaObject.id == object_.id).with_for_update())
+        object_ = await db.scalar(select(MediaObject).where(MediaObject.id == object_.id).with_for_update().execution_options(populate_existing=True))
         if object_ is None or object_.state != "pending" or object_.scan_lease_token != token or object_.scan_lease_expires_at is None or object_.scan_lease_expires_at <= utc_now():
             await db.rollback()
             continue

@@ -30,6 +30,20 @@ npm run export:ios --workspace perum-mobile
 Tenant CI также проверяет один Alembic head, SQLite migration smoke и focused
 academic suites. Точные команды всегда сверяются с `.github/workflows/ci.yml`.
 
+Scanner PostgreSQL integration gate не имеет SQLite fallback и требует только
+disposable test database:
+
+```bash
+cd perum-tenant
+TEST_POSTGRES_URL='postgresql+asyncpg://<disposable-test-db>' \
+  python -m pytest tests/integration/test_scanner_postgresql.py -q
+```
+
+CI поднимает `postgres:15-alpine` с локальными одноразовыми credentials. Тест
+сбрасывает `public` schema, поэтому его запрещено направлять на shared/staging/
+production DB. Migration downgrade удаляет scanner lease/evidence metadata и не
+является production rollback strategy.
+
 ## CI
 
 `ci.yml` выполняет core/tenant tests, shared/web/mobile checks, production web

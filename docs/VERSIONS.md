@@ -204,3 +204,4 @@
 | 201 | 2026-07-19 | 2b6203f | feat(observability): добавлен dashboard support delivery SLA |
 | 202 | 2026-07-19 | 7885cb1 | fix(media): усилены scanner lease и crash recovery |
 | 203 | 2026-07-19 | c586ae5 | fix(media): добавлены scanner drift checks и relay limits |
+| 204 | 2026-07-19 | _______ | test(media): добавлен PostgreSQL scanner integration gate |

@@ -29,6 +29,10 @@
   exact container image/topology/mount/port/cap/resource/health/security config.
   Per-school relay имеет connection, idle, total lifetime и byte limits,
   non-root user, read-only rootfs, no-new-privileges и PID limit.
+- Scanner PostgreSQL gate использует независимые sessions и held row lock для
+  доказательства `SKIP LOCKED`; replacement lease обязан победить blocked stale
+  worker, который не может записать verdict/evidence/audit. Integration URL берётся
+  только из disposable `TEST_POSTGRES_URL`, без production secrets.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

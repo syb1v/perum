@@ -4,7 +4,7 @@
 
 This foundation is fail-closed and does not enable attachment capabilities. Production activation remains blocked on a real EICAR and network-isolation pilot plus the attachment UI rollout.
 
-Handoff status on 2026-07-19: Tenant worker/protocol review-hardening and static Core Docker drift/bounded relay hardening are complete. Approved images, PostgreSQL migration/concurrency smoke, real Docker inspect and EICAR/network pilot remain open. See `REMAINING_MEDIA_SUPPORT_PLAN.md` for the exact continuation order. Do not set `SCANNER_NODE_ENABLED=true` on production nodes and do not change attachment capability flags until all pilot gates have recorded evidence.
+Handoff status on 2026-07-19: Tenant worker/protocol and Core Docker drift/bounded relay hardening are complete. A mandatory disposable PostgreSQL 15 CI gate now covers migration round-trip and real two-session lease/fencing; its first green named run still needs recording. Approved images, real Docker inspect and EICAR/network pilot remain open. See `REMAINING_MEDIA_SUPPORT_PLAN.md` for the exact continuation order. Do not set `SCANNER_NODE_ENABLED=true` on production nodes and do not change attachment capability flags until all pilot gates have recorded evidence.
 
 ## Node topology
 
