@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Добавлена privacy-safe delivery observability поддержки: Tenant outbox публикует admin-only `pending/retrying/delivered`, attempts, durations и SLA, Mobile показывает cached delivery card, aggregate telemetry не содержит IDs/content, а typed Core relay endpoint выводит `pending/delivered` по ACK cursor; несуществующий terminal `failed` не симулируется.
 - Native school support admin inbox получил conflict-safe управление status/category/priority/assignment: Tenant возвращает `assignee_id`, изменения публикуются только после authoritative versioned response, idempotency key стабилен при retry, а `409 VERSION_CONFLICT` обновляет server snapshot без optimistic overwrite.
 - Добавлен foundation Native school support admin inbox: отдельный `support_admin` descriptor capability, role-gated account-scoped cached list/thread, unread/urgent/unassigned summary и idempotent online reply/read для `school_admin` и `director`; requester privacy boundary сохранена, attachments и push не включены.
 - Добавлен privacy-safe foundation для Stage F descriptor pilot: общий Core resolver сохраняет fail-closed social rollout generation gates, operator diagnostics возвращает только bounded readiness, метрики используют фиксированные reason labels, Mobile ведёт ограниченный локальный ledger, а synthetic collector всегда остаётся `NO-GO`; production pilot по-прежнему не закрыт.

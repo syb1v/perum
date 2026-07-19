@@ -19,7 +19,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.roles import DIRECTOR, PARENT, SCHOOL_ADMIN, STUDENT, TEACHER
 from app.core.time import utc_now
-from app.models import Grade, PageVisit, School, User
+from app.models import Grade, PageVisit, School, SupportEscalationOutbox, User
 from app.models.social import Conversation, FriendRequest, Friendship, Message, ModerationReport, SocialSettings, UserBlock
 from app.models.media import MediaObject
 
@@ -57,6 +57,10 @@ async def collect_metrics(db, school_id: int) -> dict:
     ) or 0)
     social = await db.get(SocialSettings, school_id)
     scanner_backlog = int(await db.scalar(select(func.count(MediaObject.id)).where(MediaObject.school_id == school_id, MediaObject.state == "pending")) or 0)
+    delivery_rows = list((await db.scalars(select(SupportEscalationOutbox).where(SupportEscalationOutbox.school_id == school_id, SupportEscalationOutbox.status != "delivered"))).all())
+    now = utc_now()
+    delivery_sla = get_settings().SUPPORT_ESCALATION_DELIVERY_SLA_S
+    delivery_ages = [max(0, int((now - row.created_at).total_seconds())) for row in delivery_rows]
     social_counts = {}
     for key, model in (("friendships_active", Friendship), ("friend_requests_pending", FriendRequest), ("blocks_active", UserBlock), ("conversations", Conversation), ("messages", Message), ("reports", ModerationReport)):
         filters = [model.school_id == school_id]
@@ -85,6 +89,12 @@ async def collect_metrics(db, school_id: int) -> dict:
             **social_counts,
         },
         "scanner": {"backlog": scanner_backlog},
+        "support_escalation_delivery": {
+            "pending": sum(row.status == "pending" and row.attempts == 0 for row in delivery_rows),
+            "retrying": sum(row.status == "error" or row.attempts > 0 for row in delivery_rows),
+            "sla_breached": sum(age >= delivery_sla for age in delivery_ages),
+            "oldest_pending_age_seconds": max(delivery_ages, default=0),
+        },
     }
 
 

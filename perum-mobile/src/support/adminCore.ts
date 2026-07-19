@@ -32,3 +32,9 @@ export function isVersionConflict(error: unknown) {
   const candidate = error as { status?: unknown; originalErrorData?: { detail?: { code?: unknown } } };
   return candidate.status === 409 && candidate.originalErrorData?.detail?.code === 'VERSION_CONFLICT';
 }
+
+export function escalationDeliveryLabel(state: 'pending' | 'retrying' | 'delivered') {
+  if (state === 'delivered') return 'Доставлено в PERUM';
+  if (state === 'retrying') return 'Повторная отправка';
+  return 'Ожидает отправки';
+}

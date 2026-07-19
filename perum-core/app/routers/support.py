@@ -16,6 +16,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
+from app.core.config import get_settings
 from app.core.deps import require_org_admin, require_platform_admin
 from app.models import OrgAdmin, Organization, School, SchoolSecret, SupportEscalationEvent, SupportMessage, SupportTicket
 from app.services.notifications import notify_ticket_reply
@@ -63,6 +64,19 @@ class OutboundAck(BaseModel):
     school_public_id: UUID
     correlation_id: str = Field(min_length=1, max_length=128)
     cursor: int = Field(ge=0)
+
+
+class RelayDeliveryItem(BaseModel):
+    relay_id: int
+    state: Literal["pending", "delivered"]
+    created_at: datetime
+    pending_age_seconds: int | None
+    sla_seconds: int
+    sla_breached: bool
+
+
+class RelayDeliveryPage(BaseModel):
+    items: list[RelayDeliveryItem]
 
 
 def _ticket_dict(t: SupportTicket, org_name: str | None = None) -> dict:
@@ -452,6 +466,26 @@ async def escalation_detail(
     result = _ticket_dict(ticket)
     result["redacted_snapshot"] = ticket.redacted_snapshot
     return {"ticket": result, "messages": [_msg_dict(message) for message in messages]}
+
+
+@router.get("/escalations/{ticket_id}/relay-delivery", response_model=RelayDeliveryPage)
+async def escalation_relay_delivery(
+    ticket_id: int,
+    admin: OrgAdmin = Depends(require_org_admin),
+    db: AsyncSession = Depends(get_db),
+) -> RelayDeliveryPage:
+    ticket = await db.get(SupportTicket, ticket_id)
+    if ticket is None or ticket.org_id != admin.org_id or ticket.source != "school":
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "escalation not found")
+    rows = list((await db.scalars(select(SupportMessage).where(SupportMessage.ticket_id == ticket.id, SupportMessage.sender_type == "org_school_relay").order_by(SupportMessage.id))).all())
+    now = datetime.utcnow()
+    sla = get_settings().SUPPORT_RELAY_DELIVERY_SLA_S
+    items = []
+    for row in rows:
+        delivered = row.id <= (ticket.outbound_ack_cursor or 0)
+        age = None if delivered else max(0, int((now - row.created_at).total_seconds()))
+        items.append(RelayDeliveryItem(relay_id=row.id, state="delivered" if delivered else "pending", created_at=row.created_at, pending_age_seconds=age, sla_seconds=sla, sla_breached=age is not None and age >= sla))
+    return RelayDeliveryPage(items=items)
 
 
 async def _decide_escalation(

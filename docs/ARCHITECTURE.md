@@ -63,6 +63,10 @@ Generated remote-node stack пока не включает `perum_web`, а defau
 - Native admin metadata и assignment используют Tenant `version` и стабильный
   `client_action_id` без optimistic cache mutation. При `VERSION_CONFLICT` клиент
   отбрасывает локальное намерение и запрашивает authoritative ticket snapshot.
+- Support delivery observability разделяет workflow и transport state. Tenant
+  outbox публикует admin-only `pending/retrying/delivered`; Core pull-relay
+  публикует `pending/delivered` по ACK cursor. SLA вычисляется сервером, telemetry
+  агрегирована; payload, error text, content и identity не входят в contracts.
 - Core-to-node commands используют Agent API; публичная сеть требует защищённого
   transport boundary, описанного в [HARDENING.md](HARDENING.md).
 

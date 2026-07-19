@@ -85,11 +85,20 @@ authoritative versioned response. Повтор одного действия с�
 `client_action_id`; `VERSION_CONFLICT` не применяет локальное значение и вызывает
 refetch server ticket/list/unread.
 
+Delivery observability foundation завершён 2026-07-19 без миграций и расширения
+privacy boundary. Tenant admin-only endpoint показывает только persisted
+`pending`/`retrying`/`delivered`, attempts, durations и server-calculated SLA;
+Native отображает cached read-only delivery card. Aggregate telemetry содержит
+только counts, breach count и oldest pending age. Core typed endpoint выводит
+`pending`/`delivered` по monotonic ACK cursor. Payload, errors, message content,
+ticket/correlation/user IDs не экспортируются. Terminal `failed` и точный Core
+`delivered_at` не существуют в текущей retry/pull модели и не симулируются.
+
 1. Добавить durable admin reply/read/metadata mutations, только если offline send
    будет отдельно утверждён в scope.
-2. Delivery observability для tenant outbox/Core relay: pending, delivered,
-   retrying, failed и age/SLA без содержания сообщений и PII.
-3. Дополнить role/school isolation и contract tests для новых delivery status API.
+2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
+   если operations утвердит push/outbox semantics; до этого `failed` запрещён.
+3. Подключить production dashboards/alerts к aggregate delivery telemetry и SLA.
 
 Не включать attachments до scanner slice, push до delivery adapter, full
 platform/org mobile parity или изменение privacy boundary поддержки.

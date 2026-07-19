@@ -6615,6 +6615,53 @@
         }
       }
     },
+    "/api/support/escalations/{ticket_id}/relay-delivery": {
+      "get": {
+        "tags": [
+          "support"
+        ],
+        "summary": "Escalation Relay Delivery",
+        "operationId": "escalation_relay_delivery_api_support_escalations__ticket_id__relay_delivery_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelayDeliveryPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/support/escalations/{ticket_id}/approve": {
       "post": {
         "tags": [
@@ -9436,6 +9483,72 @@
         ],
         "title": "ProvisionResult",
         "description": "Returned by create/reprovision: the org plus (when freshly bootstrapped)\nthe initial org_admin login."
+      },
+      "RelayDeliveryItem": {
+        "properties": {
+          "relay_id": {
+            "type": "integer",
+            "title": "Relay Id"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered"
+            ],
+            "title": "State"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "pending_age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Age Seconds"
+          },
+          "sla_seconds": {
+            "type": "integer",
+            "title": "Sla Seconds"
+          },
+          "sla_breached": {
+            "type": "boolean",
+            "title": "Sla Breached"
+          }
+        },
+        "type": "object",
+        "required": [
+          "relay_id",
+          "state",
+          "created_at",
+          "pending_age_seconds",
+          "sla_seconds",
+          "sla_breached"
+        ],
+        "title": "RelayDeliveryItem"
+      },
+      "RelayDeliveryPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelayDeliveryItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "RelayDeliveryPage"
       },
       "ReleaseCreate": {
         "properties": {

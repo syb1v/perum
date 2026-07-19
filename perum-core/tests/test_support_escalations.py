@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -8,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import SupportEscalationEvent, SupportMessage, SupportTicket
-from app.routers.support import EscalationIntake, MessageCreate, TicketCreate, outbound_escalation, _authenticate_school, _platform_visible
+from app.routers.support import EscalationIntake, MessageCreate, TicketCreate, escalation_relay_delivery, outbound_escalation, _authenticate_school, _platform_visible
 
 client = TestClient(app)
 
@@ -23,6 +24,7 @@ def test_escalation_routes_and_auth_gates():
     assert "/api/support/escalations/{ticket_id}/approve" in paths
     assert "/api/support/escalations/{ticket_id}/reject" in paths
     assert "/api/support/escalations/{ticket_id}/relay" in paths
+    assert "/api/support/escalations/{ticket_id}/relay-delivery" in paths
     assert client.get("/api/support/escalations/pending").status_code in (401, 403)
     assert client.post(
         "/internal/support/escalations",
@@ -123,3 +125,29 @@ def test_internal_auth_accepts_exact_token_and_rejects_generically():
             asyncio.run(_authenticate_school(db, uuid4(), token))
         assert exc.value.status_code == 401
         assert exc.value.detail == "invalid internal token"
+
+
+def test_relay_delivery_is_ack_based_bounded_and_privacy_safe():
+    now = datetime.utcnow()
+    ticket = SimpleNamespace(id=7, org_id=3, source="school", outbound_ack_cursor=10)
+    messages = [
+        SimpleNamespace(id=10, created_at=now - timedelta(seconds=20)),
+        SimpleNamespace(id=11, created_at=now - timedelta(seconds=400)),
+    ]
+
+    class Db:
+        async def get(self, model, key):
+            return ticket
+
+        async def scalars(self, query):
+            sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+            assert "support_messages.sender_type = 'org_school_relay'" in sql
+            return SimpleNamespace(all=lambda: messages)
+
+    result = asyncio.run(escalation_relay_delivery(7, SimpleNamespace(org_id=3), Db()))
+    payload = result.model_dump()
+    assert payload["items"][0]["state"] == "delivered"
+    assert payload["items"][0]["pending_age_seconds"] is None
+    assert payload["items"][1]["state"] == "pending"
+    assert payload["items"][1]["sla_breached"] is True
+    assert not {"body", "sender_id", "correlation_id", "client_message_id"} & set(payload["items"][1])

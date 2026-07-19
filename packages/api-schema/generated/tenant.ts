@@ -1081,6 +1081,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/support/tickets/{ticket_id}/escalation-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Escalation Delivery */
+        get: operations["admin_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/support/tickets/{ticket_id}/messages": {
         parameters: {
             query?: never;
@@ -3798,6 +3815,38 @@ export interface components {
             expected_version: number;
             /** Redacted Summary */
             redacted_summary: string;
+        };
+        /** EscalationDeliveryOut */
+        EscalationDeliveryOut: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "retrying" | "delivered";
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Next Attempt At */
+            next_attempt_at: string | null;
+            /** Delivered At */
+            delivered_at: string | null;
+            /** Pending Age Seconds */
+            pending_age_seconds: number | null;
+            /** Delivery Latency Seconds */
+            delivery_latency_seconds: number | null;
+            /** Sla Seconds */
+            sla_seconds: number;
+            /** Sla Breached */
+            sla_breached: boolean;
         };
         /** EventOut */
         EventOut: {
@@ -7809,6 +7858,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalationDeliveryOut"];
                 };
             };
             /** @description Validation Error */

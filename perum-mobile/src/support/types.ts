@@ -11,6 +11,7 @@ export type AdminSupportUnread = components['schemas']['AdminUnreadOut'];
 export type AdminSupportAssignee = components['schemas']['AssigneeOut'];
 export type AdminSupportTicketPatch = components['schemas']['TicketPatch'];
 export type AdminSupportAssign = components['schemas']['AssignCreate'];
+export type AdminSupportEscalationDelivery = components['schemas']['EscalationDeliveryOut'];
 
 export type SupportMutationState = 'pending' | 'sending' | 'retry_wait' | 'failed_permanent';
 

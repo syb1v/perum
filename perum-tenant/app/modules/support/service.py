@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.time import utc_now
 from app.core.config import get_settings
 from app.models import Notification, SupportEscalationOutbox, SupportEvent, SupportMessage, SupportParticipant, SupportTicket, User
-from app.modules.support.schemas import AdminUnreadOut, AssignCreate, AssigneeOut, EscalateCreate, EventOut, EventPage, MessageCreate, MessageOut, MessagePage, TicketCreate, TicketCreateOut, TicketOut, TicketPage, TicketPatch, UnreadOut
+from app.modules.support.schemas import AdminUnreadOut, AssignCreate, AssigneeOut, EscalateCreate, EscalationDeliveryOut, EventOut, EventPage, MessageCreate, MessageOut, MessagePage, TicketCreate, TicketCreateOut, TicketOut, TicketPage, TicketPatch, UnreadOut
 
 
 def _body(value: str) -> str:
@@ -83,6 +83,30 @@ async def list_tickets(db: AsyncSession, user: User, admin: bool, limit: int, cu
 async def get_ticket(db: AsyncSession, user: User, public_id: str, admin: bool) -> TicketOut:
     ticket = await (_admin_ticket(db, user, public_id) if admin else _requester_ticket(db, user, public_id))
     return await _out(db, ticket, "shared_inbox" if admin else "requester")
+
+
+async def escalation_delivery(db: AsyncSession, user: User, public_id: str) -> EscalationDeliveryOut:
+    ticket = await _admin_ticket(db, user, public_id)
+    row = await db.scalar(select(SupportEscalationOutbox).where(SupportEscalationOutbox.ticket_id == ticket.id, SupportEscalationOutbox.school_id == user.school_id))
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Доставка эскалации не найдена")
+    now = utc_now()
+    state = "delivered" if row.status == "delivered" else "retrying" if row.status == "error" or row.attempts > 0 else "pending"
+    pending_age = max(0, int((now - row.created_at).total_seconds())) if state != "delivered" else None
+    latency = max(0, int((row.delivered_at - row.created_at).total_seconds())) if row.delivered_at is not None else None
+    sla = get_settings().SUPPORT_ESCALATION_DELIVERY_SLA_S
+    return EscalationDeliveryOut(
+        state=state,
+        attempts=row.attempts,
+        created_at=row.created_at,
+        updated_at=row.updated_at,
+        next_attempt_at=row.next_attempt_at if state != "delivered" else None,
+        delivered_at=row.delivered_at,
+        pending_age_seconds=pending_age,
+        delivery_latency_seconds=latency,
+        sla_seconds=sla,
+        sla_breached=pending_age is not None and pending_age >= sla,
+    )
 
 
 async def messages(db: AsyncSession, user: User, public_id: str, admin: bool, before: str | None, limit: int) -> MessagePage:

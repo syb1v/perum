@@ -4171,6 +4171,53 @@
         }
       }
     },
+    "/api/admin/support/tickets/{ticket_id}/escalation-delivery": {
+      "get": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Escalation Delivery",
+        "operationId": "admin_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDeliveryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/support/tickets/{ticket_id}/messages": {
       "get": {
         "tags": [
@@ -13378,6 +13425,101 @@
           "redacted_summary"
         ],
         "title": "EscalateCreate"
+      },
+      "EscalationDeliveryOut": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "retrying",
+              "delivered"
+            ],
+            "title": "State"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "pending_age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Age Seconds"
+          },
+          "delivery_latency_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Latency Seconds"
+          },
+          "sla_seconds": {
+            "type": "integer",
+            "title": "Sla Seconds"
+          },
+          "sla_breached": {
+            "type": "boolean",
+            "title": "Sla Breached"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "attempts",
+          "created_at",
+          "updated_at",
+          "next_attempt_at",
+          "delivered_at",
+          "pending_age_seconds",
+          "delivery_latency_seconds",
+          "sla_seconds",
+          "sla_breached"
+        ],
+        "title": "EscalationDeliveryOut"
       },
       "EventOut": {
         "properties": {

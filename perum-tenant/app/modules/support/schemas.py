@@ -119,3 +119,16 @@ class EventOut(BaseModel):
 class EventPage(BaseModel):
     items: list[EventOut]
     next_cursor: str | None = None
+
+
+class EscalationDeliveryOut(BaseModel):
+    state: Literal["pending", "retrying", "delivered"]
+    attempts: int
+    created_at: datetime
+    updated_at: datetime
+    next_attempt_at: datetime | None
+    delivered_at: datetime | None
+    pending_age_seconds: int | None
+    delivery_latency_seconds: int | None
+    sla_seconds: int
+    sla_breached: bool

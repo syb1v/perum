@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { adminMessageLabel, adminTicketActionPath, adminTicketActionPayload, canReplyToAdminTicket, canUseAdminSupport, isVersionConflict } from './adminCore';
+import { adminMessageLabel, adminTicketActionPath, adminTicketActionPayload, canReplyToAdminTicket, canUseAdminSupport, escalationDeliveryLabel, isVersionConflict } from './adminCore';
 
 test('admin support requires its capability and an exact school operator role', () => {
   assert.equal(canUseAdminSupport('school_admin', true), true);
@@ -35,4 +35,10 @@ test('only structured version conflicts trigger server snapshot refresh', () => 
   assert.equal(isVersionConflict({ status: 409, originalErrorData: { detail: { code: 'VERSION_CONFLICT' } } }), true);
   assert.equal(isVersionConflict({ status: 409, originalErrorData: { detail: 'client_action_id reused' } }), false);
   assert.equal(isVersionConflict({ status: 500 }), false);
+});
+
+test('delivery labels expose only truthful persisted states', () => {
+  assert.equal(escalationDeliveryLabel('pending'), 'Ожидает отправки');
+  assert.equal(escalationDeliveryLabel('retrying'), 'Повторная отправка');
+  assert.equal(escalationDeliveryLabel('delivered'), 'Доставлено в PERUM');
 });

@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     SCHOOL_PUBLIC_ID: str = ""
     RELEASE_IMAGE: str = ""
     SUPPORT_ESCALATION_INTERVAL_S: int = 15
+    SUPPORT_ESCALATION_DELIVERY_SLA_S: int = 300
     # Период отправки телеметрии (агрегаты без PII) в ядро, сек. 0 — выключить.
     TELEMETRY_INTERVAL_S: int = 60
     SOCIAL_RETENTION_INTERVAL_S: int = 3600

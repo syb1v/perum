@@ -19,7 +19,7 @@ from app.telemetry import collect_metrics
 
 EXPECTED_KEYS = {
     "users_total", "students", "teachers", "parents", "admins",
-    "grades_total", "avg_grade", "active_24h", "balance_total", "social", "scanner",
+    "grades_total", "avg_grade", "active_24h", "balance_total", "social", "scanner", "support_escalation_delivery",
 }
 
 
@@ -88,6 +88,7 @@ def test_collect_metrics_exact_values():
         "conversations": 0, "messages": 0, "reports": 0,
     }
     assert m["scanner"] == {"backlog": 0}
+    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
 
 
 async def _empty_school():
@@ -108,3 +109,4 @@ def test_collect_metrics_empty_school():
     assert set(m.keys()) == EXPECTED_KEYS
     assert all(isinstance(value, (bool, int)) for value in m["social"].values())
     assert m["scanner"] == {"backlog": 0}
+    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}

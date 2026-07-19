@@ -512,6 +512,12 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 assert created.status_code == 200
                 assert created.json()["escalation_status"] == "pending_delivery"
                 assert created.json()["version"] == 2
+                delivery = await client.get(f"/api/admin/support/tickets/{ticket_id}/escalation-delivery")
+                assert delivery.status_code == 200
+                assert delivery.json()["state"] == "pending"
+                assert delivery.json()["attempts"] == 0
+                assert delivery.json()["sla_seconds"] == 300
+                assert not {"payload_json", "last_error", "subject", "correlation_id"} & set(delivery.json())
                 replay = await client.post(f"/api/admin/support/tickets/{ticket_id}/escalate", json=payload)
                 assert replay.status_code == 200
                 assert replay.json() == created.json()
@@ -561,6 +567,11 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                     assert ticket.escalation_status == "delivery_error"
                     outbox.next_attempt_at = escalation.utc_now()
                     await db.commit()
+                current["value"] = users["admin"].id
+                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                    retrying = await client.get(f"/api/admin/support/tickets/{ticket_id}/escalation-delivery")
+                    assert retrying.json()["state"] == "retrying"
+                    assert retrying.json()["attempts"] == 1
                 await escalation.deliver_outbox(core_client)
                 await escalation.pull_outbound(core_client)
                 await escalation.pull_outbound(core_client)
@@ -578,6 +589,15 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 notifications = list((await db.scalars(select(Notification).where(Notification.text == "Organization answer"))).all())
                 assert notifications == []
                 assert calls == {"intake": 2, "ack": 2}
+
+            current["value"] = users["admin"].id
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                delivered = await client.get(f"/api/admin/support/tickets/{ticket_id}/escalation-delivery")
+                assert delivered.json()["state"] == "delivered"
+                assert delivered.json()["pending_age_seconds"] is None
+                assert delivered.json()["delivery_latency_seconds"] is not None
+                current["value"] = users["foreign_admin"].id
+                assert (await client.get(f"/api/admin/support/tickets/{ticket_id}/escalation-delivery")).status_code == 404
 
             current["value"] = users["student"].id
             async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

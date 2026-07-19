@@ -2016,6 +2016,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/support/escalations/{ticket_id}/relay-delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Escalation Relay Delivery */
+        get: operations["escalation_relay_delivery_api_support_escalations__ticket_id__relay_delivery_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/support/escalations/{ticket_id}/approve": {
         parameters: {
             query?: never;
@@ -2978,6 +2995,32 @@ export interface components {
         ProvisionResult: {
             organization: components["schemas"]["OrganizationRead"];
             org_admin?: components["schemas"]["OrgAdminCredentials"] | null;
+        };
+        /** RelayDeliveryItem */
+        RelayDeliveryItem: {
+            /** Relay Id */
+            relay_id: number;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "pending" | "delivered";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Pending Age Seconds */
+            pending_age_seconds: number | null;
+            /** Sla Seconds */
+            sla_seconds: number;
+            /** Sla Breached */
+            sla_breached: boolean;
+        };
+        /** RelayDeliveryPage */
+        RelayDeliveryPage: {
+            /** Items */
+            items: components["schemas"]["RelayDeliveryItem"][];
         };
         /** ReleaseCreate */
         ReleaseCreate: {
@@ -7519,6 +7562,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    escalation_relay_delivery_api_support_escalations__ticket_id__relay_delivery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelayDeliveryPage"];
                 };
             };
             /** @description Validation Error */

@@ -29,9 +29,10 @@ conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
 
-**Следующий roadmap:** отдельным support-циклом добавить privacy-safe delivery
-state/SLA без message content; durable admin mutations вводить только при
-утверждении offline-send scope. Параллельно завершить review и production-like scanner pilot по
+**Следующий roadmap:** support delivery observability foundation завершён для
+реально persisted states; terminal failure policy и exact Core delivery receipts
+отложены до отдельного transport design. Durable admin mutations вводить только
+при утверждении offline-send scope. Параллельно завершить review и production-like scanner pilot по
 [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md): собрать digest-pinned images,
 проверить PostgreSQL migration, EICAR, network isolation, outage/recovery,
 signature updates и node capacity. Только после evidence отдельно проектировать
@@ -76,8 +77,9 @@ restart/conflict evidence.
 5. School support native admin inbox functional scope завершён: отдельный
    capability, role-gated cached list/thread, unread summary, online idempotent
    reply/read и conflict-safe status/category/priority/assignment без optimistic
-   updates. Остаются optional durable admin mutations и честная delivery
-   observability/SLA; push ждёт реального delivery adapter.
+   updates. Privacy-safe delivery cards/SLA готовы для Tenant outbox и typed Core
+   relay endpoint; остаются terminal failure policy/exact Core receipts, optional
+   durable admin mutations; push ждёт реального delivery adapter.
 6. Отложено до назначения профильного владельца: юридические ADR по
    minors/social/parent, retention, offline conflicts, ЮKassa/fiscalization и
    OS/store matrix. Billing, parent observer policy и store rollout не начинаются
@@ -648,8 +650,8 @@ Flow:
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы; Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox, остаются обработка ambiguity report и расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
 | P1 | Media pipeline | Частично | private storage/upload foundation и node-local ClamAV adapter готовы; один shared scanner на node изолирован per-school relay, durable leases/retries и readiness/backlog реализованы. Остаются independent review, approved digest images, PostgreSQL migration, real EICAR/network/outage/signature pilot и attachment UI; production attachments остаются fail-closed и выключенными |
-| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил отдельный `support_admin` gate, account-scoped cached list/thread, unread/urgent/unassigned summary, idempotent online reply/read и conflict-safe status/category/priority/assignment с server refetch на `409`; остаются optional durable admin mutations, attachments, push и SLA/observability |
-| P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы; requester получает только явный ответ школы, остаются production delivery observability/SLA и native admin/org/platform parity |
+| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил отдельный `support_admin` gate, cached list/thread, conflict-safe controls и privacy-safe Tenant outbox delivery/SLA card; остаются optional durable admin mutations, attachments, push и production SLA operations |
+| P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe platform → org → school admin relay с pull/ack готовы. Typed relay delivery endpoint выводит pending/delivered и SLA из ACK cursor; остаются exact delivery receipts, terminal failure policy, dashboards/alerts и native org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |

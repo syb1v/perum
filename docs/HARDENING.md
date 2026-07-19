@@ -14,6 +14,10 @@
   cross-org existence и не публикуют school, release или user identity в metrics.
   Process-local bounded counters предназначены для aggregate alerting, но сами по
   себе не являются durable production pilot evidence.
+- Support delivery endpoints school/org scoped и возвращают только bounded state,
+  counts и durations. Raw outbox payload, transport errors, message content,
+  correlation/ticket/user identifiers запрещены; retryable error нельзя называть
+  terminal failure без отдельной persisted policy.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 
