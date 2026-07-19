@@ -210,4 +210,4 @@
 | 207 | 2026-07-19 | 65169f6 | docs(media): зафиксирован PostgreSQL scanner evidence |
 | 208 | 2026-07-19 | c15c4ad | feat(media): добавлен relay image candidate gate |
 | 209 | 2026-07-19 | 55144cd | fix(ci): исправлена relay candidate provenance verification |
-| 210 | 2026-07-19 | _______ | fix(ci): уточнён relay candidate digest handoff |
+| 210 | 2026-07-19 | 1e6929d | fix(ci): уточнён relay candidate digest handoff |
