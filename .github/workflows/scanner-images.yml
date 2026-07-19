@@ -12,8 +12,6 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
-  attestations: write
 
 jobs:
   relay-candidate:
@@ -49,12 +47,11 @@ jobs:
           build-args: VCS_REF=${{ github.sha }}
           sbom: true
           provenance: mode=max
-      - name: Attest candidate provenance
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
-          subject-digest: ${{ steps.publish.outputs.digest }}
-          push-to-registry: true
+      - name: Verify published digest
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: docker buildx imagetools inspect "${IMAGE}@${DIGEST}"
       - name: Record candidate handoff
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/perum-scanner-relay

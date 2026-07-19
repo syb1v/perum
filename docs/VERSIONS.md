@@ -209,3 +209,4 @@
 | 206 | 2026-07-19 | 5d07885 | test(media): разделены PostgreSQL scanner fixtures |
 | 207 | 2026-07-19 | 65169f6 | docs(media): зафиксирован PostgreSQL scanner evidence |
 | 208 | 2026-07-19 | c15c4ad | feat(media): добавлен relay image candidate gate |
+| 209 | 2026-07-19 | _______ | fix(ci): исправлена relay candidate provenance verification |

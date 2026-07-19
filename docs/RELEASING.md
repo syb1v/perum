@@ -27,6 +27,10 @@ Scanner relay выпускается отдельным workflow `scanner-images
 deployment: exact digest должен пройти security/operator review и test-node pilot;
 workflow не включает scanner node или attachment flags.
 
+SBOM и provenance публикуются BuildKit как OCI referrers. GitHub Attestations API
+не используется: он недоступен для user-owned private repository. Workflow после
+push отдельно проверяет exact registry digest через `buildx imagetools inspect`.
+
 Текущий automatic control-plane deploy не pin-ит checkout/image к `RELEASE_SHA`:
 он делает `git pull --ff-only` и pull mutable `latest`. До исправления workflow
 это известный release risk; не запускайте параллельные deploy, фиксируйте deployed

@@ -68,6 +68,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   затем публикует immutable tag с SBOM/provenance и `status=candidate` artifact;
 - Core reconciliation проверяет running/restart/privileged/cap-add, exact relay
   command/environment и exact clamd health command;
+- candidate run `29692882209` прошёл constrained runtime и GHCR push, но завершился
+  fail-closed на GitHub Attestations API, недоступном для user-owned private repo.
+  Этот digest не считается recorded evidence; registry-native BuildKit SBOM/
+  provenance сохранены, workflow переключён на post-push exact digest inspection;
 
 Что не завершено и не должно считаться production evidence:
 
