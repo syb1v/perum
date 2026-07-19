@@ -48,6 +48,7 @@ class MobileBuildCapabilitiesV1(BaseModel):
     social_realtime: StrictBool
     social_attachments: StrictBool
     support_requester: StrictBool
+    support_admin: StrictBool
     support_attachments: StrictBool
     offline_preferences: StrictBool
     offline_homework_state: StrictBool

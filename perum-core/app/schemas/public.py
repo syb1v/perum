@@ -24,6 +24,7 @@ class TenantCapabilities(BaseModel):
     social_realtime: bool
     social_attachments: bool
     support_requester: bool
+    support_admin: bool
     support_attachments: bool
     offline_preferences: bool
     offline_homework_state: bool

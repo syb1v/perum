@@ -25,6 +25,7 @@ def _manifest() -> dict:
             "social_realtime": True,
             "social_attachments": False,
             "support_requester": True,
+            "support_admin": True,
             "support_attachments": False,
             "offline_preferences": True,
             "offline_homework_state": True,

@@ -9,5 +9,9 @@ export const queryKeys = {
   supportTickets: (accountId: string) => [...queryKeys.account(accountId), 'support', 'tickets'] as const,
   supportTicket: (accountId: string, ticketId: string) => [...queryKeys.supportTickets(accountId), ticketId] as const,
   supportThread: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support', 'messages', ticketId] as const,
+  adminSupportTickets: (accountId: string) => [...queryKeys.account(accountId), 'support-admin', 'tickets'] as const,
+  adminSupportTicket: (accountId: string, ticketId: string) => [...queryKeys.adminSupportTickets(accountId), ticketId] as const,
+  adminSupportThread: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support-admin', 'messages', ticketId] as const,
+  adminSupportUnread: (accountId: string) => [...queryKeys.account(accountId), 'support-admin', 'unread'] as const,
   homework: (accountId: string) => [...queryKeys.account(accountId), 'homework'] as const,
 };

@@ -198,3 +198,4 @@
 | 195 | 2026-07-18 | 2e99715 | docs(plan): синхронизирован live product status |
 | 196 | 2026-07-18 | ca75564 | feat(media): добавлен foundation node-local ClamAV и durable scan queue |
 | 197 | 2026-07-19 | 9e2e177 | feat(discovery): добавлен privacy-safe foundation Stage F pilot |
+| 198 | 2026-07-19 | _______ | feat(mobile): добавлен school support admin inbox foundation |

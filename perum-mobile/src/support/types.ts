@@ -7,6 +7,7 @@ export type SupportTicketCreateOut = components['schemas']['TicketCreateOut'];
 export type SupportMessage = components['schemas']['app__modules__support__schemas__MessageOut'];
 export type SupportMessagePage = components['schemas']['app__modules__support__schemas__MessagePage'];
 export type SupportCategory = SupportTicketCreate['category'];
+export type AdminSupportUnread = components['schemas']['AdminUnreadOut'];
 
 export type SupportMutationState = 'pending' | 'sending' | 'retry_wait' | 'failed_permanent';
 

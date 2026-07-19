@@ -72,14 +72,20 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 Цикл не зависит от scanner, если выполняется без attachments и push.
 
-1. Native inbox только для `school_admin` и `director`.
-2. Список, thread, unread, assignment, status/category/priority и conflict-safe
-   metadata actions через существующие version/idempotency contracts.
-3. Account-scoped cache и loading/error/empty/offline-read состояния.
-4. Без optimistic metadata updates; `409` показывает server snapshot.
-5. Delivery observability для tenant outbox/Core relay: pending, delivered,
+Foundation завершён 2026-07-19: отдельный `support_admin` release capability
+ограничивает rollout; `school_admin` и `director` получили account-scoped cached
+список и thread, unread/urgent/unassigned summary, idempotent online reply/read и
+явные offline/read-only состояния. Requester и admin routes/query keys не
+смешиваются; `admin_inbox` сообщения организации остаются видимы только школьным
+операторам. Attachments и push отсутствуют.
+
+1. Добавить assignment, status/category/priority и conflict-safe metadata actions
+   через существующие version/idempotency contracts.
+2. Не делать optimistic metadata updates; при `409` обновлять server snapshot.
+3. Добавить durable admin reply/read mutations, если offline send войдёт в scope.
+4. Delivery observability для tenant outbox/Core relay: pending, delivered,
    retrying, failed и age/SLA без содержания сообщений и PII.
-6. Role/school isolation, OpenAPI types, mobile и tenant tests, feature gate.
+5. Дополнить role/school isolation и contract tests для новых mutation/status API.
 
 Не включать attachments до scanner slice, push до delivery adapter, full
 platform/org mobile parity или изменение privacy boundary поддержки.

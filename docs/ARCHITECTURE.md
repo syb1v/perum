@@ -56,6 +56,10 @@ Generated remote-node stack пока не включает `perum_web`, а defau
   descriptor resolver. Effective social capabilities дополнительно требуют
   platform grant, org enable, fresh matching deployment snapshot и совпадение
   desired/observed rollout generation; revoke поэтому закрывает discovery сразу.
+- Native support разделяет requester и school-admin маршруты, query namespaces и
+  capability gates. `support_admin` доступен только `school_admin`/`director`;
+  cached admin thread может включать organization-only `admin_inbox`, который не
+  попадает в requester API или UI.
 - Core-to-node commands используют Agent API; публичная сеть требует защищённого
   transport boundary, описанного в [HARDENING.md](HARDENING.md).
 

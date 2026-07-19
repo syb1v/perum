@@ -15,6 +15,7 @@
     "social_realtime": true,
     "social_attachments": false,
     "support_requester": true,
+    "support_admin": true,
     "support_attachments": false,
     "offline_preferences": true,
     "offline_homework_state": true,

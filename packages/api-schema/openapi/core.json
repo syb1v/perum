@@ -8074,6 +8074,10 @@
             "type": "boolean",
             "title": "Support Requester"
           },
+          "support_admin": {
+            "type": "boolean",
+            "title": "Support Admin"
+          },
           "support_attachments": {
             "type": "boolean",
             "title": "Support Attachments"
@@ -8119,6 +8123,7 @@
           "social_realtime",
           "social_attachments",
           "support_requester",
+          "support_admin",
           "support_attachments",
           "offline_preferences",
           "offline_homework_state",
@@ -9769,6 +9774,10 @@
             "type": "boolean",
             "title": "Support Requester"
           },
+          "support_admin": {
+            "type": "boolean",
+            "title": "Support Admin"
+          },
           "support_attachments": {
             "type": "boolean",
             "title": "Support Attachments"
@@ -9814,6 +9823,7 @@
           "social_realtime",
           "social_attachments",
           "support_requester",
+          "support_admin",
           "support_attachments",
           "offline_preferences",
           "offline_homework_state",

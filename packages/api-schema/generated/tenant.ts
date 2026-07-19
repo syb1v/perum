@@ -4076,6 +4076,8 @@ export interface components {
             social_attachments: boolean;
             /** Support Requester */
             support_requester: boolean;
+            /** Support Admin */
+            support_admin: boolean;
             /** Support Attachments */
             support_attachments: boolean;
             /** Offline Preferences */

@@ -71,6 +71,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     {user.role === 'student' && has('social_friends') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/friends')}><Text style={styles.primaryText}>Друзья</Text></Pressable> : null}
     {user.role === 'student' && has('social_messages') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/messages')}><Text style={styles.primaryText}>Сообщения</Text></Pressable> : null}
     {(user.role === 'student' || user.role === 'parent' || user.role === 'teacher') && has('support_requester') ? <Pressable style={styles.primary} onPress={() => router.push('/support')}><Text style={styles.primaryText}>Поддержка школы</Text></Pressable> : null}
+    {(user.role === 'school_admin' || user.role === 'director') && has('support_admin') ? <Pressable style={styles.primary} onPress={() => router.push('/admin-support')}><Text style={styles.primaryText}>Очередь поддержки</Text></Pressable> : null}
     <Pressable style={styles.primary} onPress={() => router.push('/accounts')}><Text style={styles.primaryText}>Сменить аккаунт</Text></Pressable>
     <Pressable disabled={busy} style={styles.secondary} onPress={() => void signOut()}><Text style={styles.secondaryText}>{busy ? 'Выходим…' : 'Выйти из аккаунта'}</Text></Pressable>
   </Screen>;
