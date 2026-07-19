@@ -44,6 +44,9 @@
 - Clamd сохраняет read-only rootfs и RO signature volume; для INSTREAM temporary
   data разрешён только bounded 16 MiB `/tmp` tmpfs с `noexec,nosuid`, который
   входит в exact Docker drift contract.
+- Scanner candidate recreation проверяет не только container health: signature DB
+  fingerprint должен сохраниться, updater outage не прерывает scanning, clamd
+  outage закрывает request fail-closed, а recreated daemon снова даёт clean/EICAR.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

@@ -135,6 +135,11 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   `sha256:48251e249021a5d36fa420d172b0bd4e319e4e1ceb01544f50d85b58d54044e8`,
   relay `sha256:d36e7d760c26f38f8b416d65300b7e6749ad04581bb0579581fb1d1141745c27`.
   Оба имеют только `candidate` status; recreation persistence не проверена;
+- candidate gate расширен: фиксирует SHA-256 fingerprint всех signature DB,
+  останавливает updater и требует продолжения clean scans, останавливает clamd и
+  требует fail-closed request, пересоздаёт clamd с тем же RO volume и требует
+  неизменный fingerprint плюс повторные clean/EICAR. Exact network/mount/tmpfs
+  inspect assertions обязательны; первый green run ещё не записан;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -155,8 +160,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Выполнить security/operator review exact candidate digests и на test node
-   проверить recreation persistence, outage/recovery и inspect contract.
+2. Получить зелёный disposable recreation/outage run, затем выполнить
+   security/operator review exact candidates и target-node inspect contract.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

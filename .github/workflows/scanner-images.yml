@@ -40,7 +40,7 @@ jobs:
           push: false
           tags: perum-clamd:candidate
           build-args: VCS_REF=${{ github.sha }}
-      - name: Verify isolated updater, cold volume and EICAR topology
+      - name: Verify isolation, recreation, outages and EICAR
         run: python deploy/scanner/verify_clamd_topology.py perum-clamd:candidate perum-scanner-relay:candidate "$PWD/deploy/scanner/protocol_client.py"
       - uses: docker/login-action@v3
         with:

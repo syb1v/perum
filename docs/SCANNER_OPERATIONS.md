@@ -29,6 +29,11 @@ relay `sha256:d36e7d760c26f38f8b416d65300b7e6749ad04581bb0579581fb1d1141745c27`.
 Cold signatures, isolation и EICAR пройдены в disposable CI. Это не доказывает
 test-node recreation persistence/outage/capacity и не повышает статус до approved.
 
+Disposable recreation gate обязан доказать неизменный SHA-256 fingerprint
+signature databases после удаления/пересоздания clamd, продолжение scanning при
+остановленном updater, fail-closed request при остановленном clamd и clean/EICAR
+recovery после recreation. Этот CI evidence не заменяет target-node outage pilot.
+
 ## Node topology
 
 Each scanner-capable school-hosting node runs one `clamd` on the internal `perum_scanner_backend` Docker network. Every school has a separate relay connected to exactly its own `school_<slug>_net` and the scanner backend. School apps never join the scanner backend; `clamd` never joins a school network; no scanner port is published on the host. Relays have no volume, and school files are sent as ClamAV `INSTREAM` bytes. Core and the node agent never carry file bytes.
