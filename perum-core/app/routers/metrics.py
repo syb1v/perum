@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.models import OrgAdmin, Organization, Release, School, SchoolMetric
-from app.services.stats import is_online
+from app.services.stats import is_online, school_stat, support_delivery_rollup
 from app.services.descriptor_observability import descriptor_counter_samples
 
 router = APIRouter()
@@ -90,20 +90,32 @@ async def metrics(
     now = datetime.utcnow()
     sm_rows = (
         await db.execute(
-            select(School.slug, Organization.slug, SchoolMetric)
+            select(School, Organization.slug, SchoolMetric)
             .join(Organization, School.org_id == Organization.id)
             .outerjoin(SchoolMetric, SchoolMetric.school_id == School.id)
             .where(School.status != "archived")
         )
     ).all()
     up_samples, students_samples, users_samples = [], [], []
-    for school_slug, org_slug, metric in sm_rows:
-        lbl = f'{{org="{_esc(org_slug)}",school="{_esc(school_slug)}"}}'
-        up_samples.append((lbl, 1 if is_online(metric, now) else 0))
+    support_schools = []
+    for school, org_slug, metric in sm_rows:
+        lbl = f'{{org="{_esc(org_slug)}",school="{_esc(school.slug)}"}}'
+        up_samples.append((lbl, 1 if is_online(school, metric, now) else 0))
         students_samples.append((lbl, metric.students if metric else 0))
         users_samples.append((lbl, metric.users_total if metric else 0))
+        support_schools.append(school_stat(school, metric, now))
     gauge("perum_school_up", "Школа жива (свежий heartbeat) = 1", up_samples or [('{org="none",school="none"}', 0)])
     gauge("perum_school_students", "Учеников в школе (последний снимок)", students_samples or [('{org="none",school="none"}', 0)])
     gauge("perum_school_users", "Пользователей в школе (последний снимок)", users_samples or [('{org="none",school="none"}', 0)])
+    support = support_delivery_rollup(support_schools)
+    for name, help_, key in (
+        ("perum_support_escalation_delivery_pending", "Support escalations pending delivery", "pending"),
+        ("perum_support_escalation_delivery_retrying", "Support escalations retrying delivery", "retrying"),
+        ("perum_support_escalation_delivery_sla_breached", "Support escalations beyond delivery SLA", "sla_breached"),
+        ("perum_support_escalation_delivery_oldest_pending_seconds", "Oldest undelivered support escalation age", "oldest_pending_age_seconds"),
+        ("perum_support_escalation_delivery_reporting_schools", "Schools with fresh valid support delivery telemetry", "schools_reporting"),
+        ("perum_support_escalation_delivery_unknown_schools", "Schools with stale missing or invalid support delivery telemetry", "schools_unknown"),
+    ):
+        gauge(name, help_, [("", support[key])])
 
     return "\n".join(lines) + "\n"

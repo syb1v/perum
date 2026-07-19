@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services.stats import HEARTBEAT_FRESH_S, is_online, rollup, school_stat
+from app.services.stats import HEARTBEAT_FRESH_S, is_online, rollup, school_stat, support_delivery
 
 client = TestClient(app)
 
@@ -16,6 +16,7 @@ def _metric(**kw):
     base = dict(
         last_heartbeat_at=None, users_total=0, students=0, teachers=0, parents=0,
         admins=0, grades_total=0, avg_grade=None, active_24h=0, balance_total=0,
+        payload=None,
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -46,6 +47,7 @@ def test_rollup_sums_and_counts_online():
     assert agg["schools_online"] == 2  # свежий heartbeat + школа без метрик
     assert agg["students"] == 15
     assert agg["users_total"] == 23
+    assert agg["support_escalation_delivery"]["schools_unknown"] == 3
     assert len(schools) == 3
 
 
@@ -56,6 +58,23 @@ def test_school_stat_shape():
     # активная школа без снимка телеметрии — online (контейнеры только поднялись, телеметрии ещё нет)
     d0 = school_stat(_school(8), None, now)
     assert d0["online"] is True and d0["students"] == 0
+
+
+def test_support_delivery_requires_fresh_strict_aggregate_and_rolls_up():
+    now = datetime(2026, 6, 12, 12, 0, 0)
+    payload = {"support_escalation_delivery": {"pending": 2, "retrying": 1, "sla_breached": 0, "oldest_pending_age_seconds": 90}}
+    result = support_delivery(_metric(last_heartbeat_at=now, payload=payload), now)
+    assert result == {**payload["support_escalation_delivery"], "telemetry_status": "warning"}
+    critical = {"support_escalation_delivery": {"pending": 0, "retrying": 1, "sla_breached": 1, "oldest_pending_age_seconds": 400}}
+    agg, schools = rollup([
+        (_school(1), _metric(last_heartbeat_at=now, payload=payload)),
+        (_school(2), _metric(last_heartbeat_at=now, payload=critical)),
+        (_school(3), _metric(last_heartbeat_at=now - timedelta(hours=1), payload=payload)),
+    ], now)
+    assert schools[1]["support_escalation_delivery"]["telemetry_status"] == "critical"
+    assert agg["support_escalation_delivery"] == {"pending": 2, "retrying": 2, "sla_breached": 1, "oldest_pending_age_seconds": 400, "schools_reporting": 2, "schools_unknown": 1}
+    for invalid in ({}, {"support_escalation_delivery": {"pending": -1}}, {"support_escalation_delivery": {"pending": True}}):
+        assert support_delivery(_metric(last_heartbeat_at=now, payload=invalid), now) is None
 
 
 def test_endpoints_registered():

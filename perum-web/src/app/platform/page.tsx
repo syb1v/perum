@@ -369,13 +369,17 @@ export default function PlatformConsole() {
               <Kpi v={stats.teachers} l="Учителей" />
               <Kpi v={stats.grades_total} l="Оценок" />
               <Kpi v={stats.active_24h} l="Активны за 24ч" />
+              <Kpi v={stats.support_escalation_delivery?.pending ?? "—"} l="Support: ожидают" />
+              <Kpi v={stats.support_escalation_delivery?.retrying ?? "—"} l="Support: повторы" />
+              <Kpi v={stats.support_escalation_delivery?.sla_breached ?? "—"} l="Support: SLA нарушен" />
+              <Kpi v={stats.support_escalation_delivery?.schools_unknown ?? "—"} l="Support: нет телеметрии" />
             </div>
           ) : <p className={c.muted}>Загрузка статистики…</p>}
           <div className={styles.card}>
             <h2 className={styles.cardTitle}>По организациям</h2>
             <div className={styles.tableContainer}>
               <table className={styles.table}>
-                <thead><tr><th>Организация</th><th>План</th><th>Статус</th><th>Школ</th><th>Онлайн</th><th>Учеников</th><th>Учителей</th></tr></thead>
+                <thead><tr><th>Организация</th><th>План</th><th>Статус</th><th>Школ</th><th>Онлайн</th><th>Учеников</th><th>Учителей</th><th>Support delivery</th></tr></thead>
                 <tbody>
                   {stats?.per_org?.map((o: any) => (
                     <tr key={o.slug}>
@@ -386,6 +390,7 @@ export default function PlatformConsole() {
                       <td><span className={o.schools_online > 0 ? c.dotOnline : c.dotOffline}>{o.schools_online}</span></td>
                       <td>{o.students}</td>
                       <td>{o.teachers}</td>
+                      <td>{o.support_escalation_delivery?.sla_breached ? <span style={{ color: "var(--danger)", fontWeight: 700 }}>SLA: {o.support_escalation_delivery.sla_breached}</span> : o.support_escalation_delivery?.schools_unknown ? <span className={c.muted}>Нет данных: {o.support_escalation_delivery.schools_unknown}</span> : o.support_escalation_delivery?.retrying ? <span style={{ color: "var(--warning)", fontWeight: 700 }}>Повторы: {o.support_escalation_delivery.retrying}</span> : <span style={{ color: "var(--success)", fontWeight: 700 }}>OK</span>}</td>
                     </tr>
                   ))}
                 </tbody>

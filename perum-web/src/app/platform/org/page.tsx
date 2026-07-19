@@ -269,6 +269,10 @@ export default function OrgConsole() {
               <Kpi v={stats.users_total} l="Всего пользователей" />
               <Kpi v={stats.grades_total} l="Оценок" />
               <Kpi v={stats.active_24h} l="Активны за 24ч" />
+              <Kpi v={stats.support_escalation_delivery?.pending ?? "—"} l="Support: ожидают" />
+              <Kpi v={stats.support_escalation_delivery?.retrying ?? "—"} l="Support: повторы" />
+              <Kpi v={stats.support_escalation_delivery?.sla_breached ?? "—"} l="Support: SLA нарушен" />
+              <Kpi v={stats.support_escalation_delivery?.schools_unknown ?? "—"} l="Support: нет телеметрии" />
             </div>
           ) : <p className={c.muted}>Загрузка статистики…</p>}
           {billing && (
@@ -282,8 +286,8 @@ export default function OrgConsole() {
               <h2 className={styles.cardTitle}>По школам</h2>
               <div className={styles.tableContainer}>
                 <table className={styles.table}>
-                  <thead><tr><th>Школа</th><th>Онлайн</th><th>Ученики</th><th>Учителя</th><th>Ср. балл</th><th>Активны 24ч</th></tr></thead>
-                  <tbody>{stats.schools?.map((s: any) => (<tr key={s.id}><td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td><td><span className={s.online ? c.dotOnline : c.dotOffline}>●</span></td><td>{s.students}</td><td>{s.teachers}</td><td>{s.avg_grade ?? "—"}</td><td>{s.active_24h}</td></tr>))}</tbody>
+                  <thead><tr><th>Школа</th><th>Онлайн</th><th>Ученики</th><th>Учителя</th><th>Ср. балл</th><th>Активны 24ч</th><th>Support delivery</th></tr></thead>
+                  <tbody>{stats.schools?.map((s: any) => { const delivery = s.support_escalation_delivery; return <tr key={s.id}><td><b>{s.name}</b><br /><span className={c.muted}>{s.subdomain || s.slug}</span></td><td><span className={s.online ? c.dotOnline : c.dotOffline}>●</span></td><td>{s.students}</td><td>{s.teachers}</td><td>{s.avg_grade ?? "—"}</td><td>{s.active_24h}</td><td>{!delivery ? <span className={c.muted}>Нет свежих данных</span> : delivery.telemetry_status === "critical" ? <span style={{ color: "var(--danger)", fontWeight: 700 }}>SLA: {delivery.sla_breached} · {Math.ceil(delivery.oldest_pending_age_seconds / 60)} мин</span> : delivery.telemetry_status === "warning" ? <span style={{ color: "var(--warning)", fontWeight: 700 }}>Ожидает: {delivery.pending} · повтор: {delivery.retrying}</span> : <span style={{ color: "var(--success)", fontWeight: 700 }}>OK</span>}</td></tr>; })}</tbody>
                 </table>
                 {stats.schools?.length === 0 && <p className={styles.emptyState}>Нет школ.</p>}
               </div>

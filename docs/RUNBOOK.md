@@ -56,6 +56,26 @@ tokens/keys/sessions и документируйте timeline. Не удаляй
 registry access, disk pressure и Docker daemon. Не перезапускайте все school stacks
 до оценки impact. Node bootstrap: [NODE_DEPLOYMENT.md](NODE_DEPLOYMENT.md).
 
+## Support delivery monitoring
+
+Platform и org dashboard показывают Tenant escalation delivery из последнего
+school telemetry snapshot. `healthy` означает свежую валидную телеметрию без
+очереди; `warning` — pending/retrying в пределах SLA; `critical` — хотя бы один
+SLA breach; `unknown` — snapshot отсутствует, старше 180 секунд или malformed.
+`unknown` нельзя интерпретировать как нулевой backlog.
+
+Prometheus экспортирует unlabeled gauges с префиксом
+`perum_support_escalation_delivery_`: `pending`, `retrying`, `sla_breached`,
+`oldest_pending_seconds`, `reporting_schools`, `unknown_schools`. Начните triage с
+`sla_breached > 0`, затем проверьте `retrying` и freshness telemetry выбранной
+школы. При диагностике outbox не выводите `payload_json`, `last_error`, message
+content или identifiers; используйте только status/count/timestamps.
+
+Tenant `error` означает автоматический retry, а не terminal failure. Core relay
+является pull/ACK и имеет только pending/delivered. Prometheus gauges и PromQL
+условия не означают доставку уведомлений: Alertmanager/contact points и receivers
+не настроены, пока отдельный operations cycle не подтвердит test notification.
+
 ## Required external configuration
 
 GitHub variables/secrets, production env, DNS/provider tokens, encryption keys,

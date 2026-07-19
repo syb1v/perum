@@ -18,6 +18,9 @@
   counts и durations. Raw outbox payload, transport errors, message content,
   correlation/ticket/user identifiers запрещены; retryable error нельзя называть
   terminal failure без отдельной persisted policy.
+- Support Prometheus gauges platform-wide и не содержат labels. Core извлекает
+  только allowlisted non-negative integers из fresh telemetry; stale, missing и
+  malformed snapshots становятся `unknown`, а не ложным healthy zero.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

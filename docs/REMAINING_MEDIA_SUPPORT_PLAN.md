@@ -94,11 +94,20 @@ Native отображает cached read-only delivery card. Aggregate telemetry 
 ticket/correlation/user IDs не экспортируются. Terminal `failed` и точный Core
 `delivered_at` не существуют в текущей retry/pull модели и не симулируются.
 
+Operational dashboard slice завершён 2026-07-19: Core строго принимает только
+четыре non-negative aggregate поля из свежего telemetry snapshot, stale/missing/
+malformed данные маркирует `unknown`, platform/org dashboards показывают bounded
+summary и school status, а `/metrics` экспортирует шесть platform-wide gauges без
+labels. Prometheus может вычислять условия SLA/retry/unknown, но Alertmanager,
+receivers и notification routing в репозитории не настроены и production alert
+delivery не заявляется.
+
 1. Добавить durable admin reply/read/metadata mutations, только если offline send
    будет отдельно утверждён в scope.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
-3. Подключить production dashboards/alerts к aggregate delivery telemetry и SLA.
+3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,
+   secret-backed receivers, deduplication и test notification delivery.
 
 Не включать attachments до scanner slice, push до delivery adapter, full
 platform/org mobile parity или изменение privacy boundary поддержки.

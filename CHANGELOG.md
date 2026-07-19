@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Platform/org dashboards получили bounded support delivery status и явный `unknown` для stale/missing/malformed telemetry; Core экспортирует шесть unlabeled Prometheus gauges и исправляет populated-school `/metrics` liveness path. Notification routing не заявляется настроенным без Alertmanager/contact-point evidence.
 - Добавлена privacy-safe delivery observability поддержки: Tenant outbox публикует admin-only `pending/retrying/delivered`, attempts, durations и SLA, Mobile показывает cached delivery card, aggregate telemetry не содержит IDs/content, а typed Core relay endpoint выводит `pending/delivered` по ACK cursor; несуществующий terminal `failed` не симулируется.
 - Native school support admin inbox получил conflict-safe управление status/category/priority/assignment: Tenant возвращает `assignee_id`, изменения публикуются только после authoritative versioned response, idempotency key стабилен при retry, а `409 VERSION_CONFLICT` обновляет server snapshot без optimistic overwrite.
 - Добавлен foundation Native school support admin inbox: отдельный `support_admin` descriptor capability, role-gated account-scoped cached list/thread, unread/urgent/unassigned summary и idempotent online reply/read для `school_admin` и `director`; requester privacy boundary сохранена, attachments и push не включены.
