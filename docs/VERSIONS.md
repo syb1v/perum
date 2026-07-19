@@ -229,4 +229,4 @@
 | 226 | 2026-07-19 | 99c3110 | test(media): добавлен scanner recreation outage gate |
 | 227 | 2026-07-19 | 0916f6c | docs(media): зафиксирован scanner recreation evidence |
 | 228 | 2026-07-19 | 5b32e80 | test(media): добавлен stale-signature recovery gate |
-| 229 | 2026-07-19 | _______ | fix(ci): исправлен Tenant freshness harness import |
+| 229 | 2026-07-19 | e68f7f1 | fix(ci): исправлен Tenant freshness harness import |
