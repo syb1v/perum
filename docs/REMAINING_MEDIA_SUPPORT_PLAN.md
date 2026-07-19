@@ -56,6 +56,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   blocker: `tenant_0028_grade_optimistic_lock` не помещался в стандартный
   `alembic_version.version_num VARCHAR(32)`; migration расширяет поле до 64 до
   Alembic revision update, повторный green evidence обязателен;
+- run `29691240581` подтвердил migration round-trip, `SKIP LOCKED` и winner state,
+  но выявил test-fixture contamination: concurrency scenario наследовал baseline
+  clean result migration-preservation scenario. Fixtures разделены; invariant
+  остаётся строгим: один winner result и один audit, без stale evidence;
 
 Что не завершено и не должно считаться production evidence:
 

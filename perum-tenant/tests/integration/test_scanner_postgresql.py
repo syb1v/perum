@@ -36,14 +36,15 @@ async def reset_schema():
     await engine.dispose()
 
 
-async def seed_media_row():
+async def seed_media_row(*, with_result=False):
     engine = create_async_engine(POSTGRES_URL)
     async with engine.begin() as connection:
         await connection.execute(text("INSERT INTO organizations (id, slug, name) VALUES (1, 'org', 'Org')"))
         await connection.execute(text("INSERT INTO schools (id, org_id, name, is_active) VALUES (1, 1, 'School', true)"))
         await connection.execute(text("INSERT INTO users (id, school_id, role, login, password_hash, is_active, must_change_password, balance) VALUES (1, 1, 'student', 'student', 'x', true, false, 0)"))
         await connection.execute(text("INSERT INTO media_objects (id, school_id, owner_id, purpose, filename, mime_type, extension, size_bytes, sha256, storage_key, state, owner_grace_until) VALUES ('00000000-0000-0000-0000-000000000001', 1, 1, 'support', 'a.png', 'image/png', '.png', 4, :sha, 'quarantine/a', 'pending', now())"), {"sha": "a" * 64})
-        await connection.execute(text("INSERT INTO media_scan_results (id, school_id, object_id, scanner, verdict) VALUES ('00000000-0000-0000-0000-000000000002', 1, '00000000-0000-0000-0000-000000000001', 'clamav', 'clean')"))
+        if with_result:
+            await connection.execute(text("INSERT INTO media_scan_results (id, school_id, object_id, scanner, verdict) VALUES ('00000000-0000-0000-0000-000000000002', 1, '00000000-0000-0000-0000-000000000001', 'clamav', 'clean')"))
     await engine.dispose()
 
 
@@ -66,7 +67,7 @@ def test_scanner_migration_postgresql_round_trip(monkeypatch):
     asyncio.run(reset_schema())
     config = alembic_config(monkeypatch)
     command.upgrade(config, "tenant_0036_social_hardening")
-    asyncio.run(seed_media_row())
+    asyncio.run(seed_media_row(with_result=True))
     command.upgrade(config, "tenant_0037_scanner_foundation")
     object_columns, result_columns, indexes = asyncio.run(schema_snapshot())
     assert {"scan_attempts", "next_scan_at", "scan_lease_token", "scan_lease_expires_at"} <= object_columns
