@@ -167,6 +167,11 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   завершиться менее чем за 20 секунд, burst — менее 45 секунд; inspect сверяет
   two-network/no-mount/128MiB/0.25CPU/PID32 и отсутствие school networks у clamd.
   Это deterministic candidate envelope, не production throughput benchmark;
+- fairness run `https://github.com/syb1v/perum/actions/runs/29700812844`
+  зелёный. Source `380be3e`; clamd candidate
+  `sha256:7bae7c5ad91408183d3e6813359ef9dfb231bd3f836aacaf7834db75e171863a`,
+  relay candidate `sha256:2c9dc02e827a7878288cbe9f7674549b9bf601a28abf022b07635c0943f2d553`.
+  Bounds/resource isolation подтверждены только на disposable GitHub runner;
 
 Что не завершено и не должно считаться production evidence:
 
@@ -187,8 +192,8 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Выполнить security/operator review exact relay candidate digest; не повышать
    статус без review и test-node evidence.
-2. Получить зелёный bounded fairness run, затем выполнить security/operator review
-   exact candidates и target-node inspect/outage/load contract.
+2. Выполнить security/operator review exact candidates и target-node
+   inspect/outage/load contract; CI result не использовать для production sizing.
 3. PostgreSQL upgrade/downgrade/upgrade закрыт run `29691375244`.
 4. На тестовой node с двумя школами выполнить все gates из
    [SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md), включая EICAR и сетевую

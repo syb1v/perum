@@ -7,6 +7,7 @@
 ## [Unreleased] — 2026-07-18
 
 - Добавлен bounded 5-school scanner fairness gate: отдельная network/relay на школу, `MAX_CONNECTIONS=2`, burst `6×1 MiB`, concurrent peer scans, bounded deadlines и real inspect resource/network/no-mount assertions. Gate не выдаётся за production throughput benchmark до target-node load pilot.
+- Bounded multi-school fairness подтверждён run `29700812844`; exact clamd/relay digests записаны только как candidates, без production sizing или target-node claims.
 - Real-Docker scanner gate запускает production Tenant `ClamAVScanner` для stale-signature fail-closed/recovery: strict `0h` policy требует `stale_signatures`/`unavailable`, штатная `48h` policy на том же real VERSION header требует ready, clean и EICAR infected. Filesystem mtime не используется как подмена signature timestamp.
 - Production Tenant freshness harness запускается из image `/app`, чтобы импортировать фактический packaged `app.modules.media.scanner`; scanner implementation и assertions не дублируются.
 - Production stale-signature fail-closed/recovery подтверждён real-Docker run `29700311274`: real VERSION timestamp, strict `0h` unavailable и штатный `48h` ready/clean/EICAR; новые exact digests остаются candidates.
