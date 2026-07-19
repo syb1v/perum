@@ -205,3 +205,4 @@
 | 202 | 2026-07-19 | 7885cb1 | fix(media): усилены scanner lease и crash recovery |
 | 203 | 2026-07-19 | c586ae5 | fix(media): добавлены scanner drift checks и relay limits |
 | 204 | 2026-07-19 | 4be745e | test(media): добавлен PostgreSQL scanner integration gate |
+| 205 | 2026-07-19 | _______ | fix(migrations): расширен Alembic revision column |

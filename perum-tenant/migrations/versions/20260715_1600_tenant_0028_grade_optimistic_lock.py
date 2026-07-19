@@ -13,6 +13,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    if op.get_bind().dialect.name == "postgresql":
+        op.alter_column("alembic_version", "version_num", type_=sa.String(64), existing_type=sa.String(32), nullable=False)
     op.add_column("grades", sa.Column("version", sa.Integer(), nullable=False, server_default="1"))
 
 

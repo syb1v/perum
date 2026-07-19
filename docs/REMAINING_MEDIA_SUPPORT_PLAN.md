@@ -52,6 +52,10 @@ network, а `clamd` подключён только к scanner network. TCP 3310
   verdict fencing, и Alembic `0036→0037→0036→0037` с schema/index/data assertions;
   downgrade scanner migration проверяется как data-destructive для lease/evidence
   metadata при сохранении base media rows;
+- первый run `29690972983` fail-closed выявил исторический PostgreSQL migration
+  blocker: `tenant_0028_grade_optimistic_lock` не помещался в стандартный
+  `alembic_version.version_num VARCHAR(32)`; migration расширяет поле до 64 до
+  Alembic revision update, повторный green evidence обязателен;
 
 Что не завершено и не должно считаться production evidence:
 
