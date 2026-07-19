@@ -115,6 +115,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694660860` показал relay clean EOF. Gate добавляет direct-backend clean
   control перед relay и relay logs при mismatch, чтобы строго разделить clamd
   protocol/config и relay/network failure без изменения framing/assertions;
+- run `29694805068` подтвердил EOF и на direct path: harness ждал connection EOF,
+  тогда как production adapter читает null-terminated ClamAV response. Candidate
+  client синхронизирован с production `readuntil(b"\\0")` и bounded timeout;
 
 Что не завершено и не должно считаться production evidence:
 

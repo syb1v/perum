@@ -221,3 +221,4 @@
 | 218 | 2026-07-19 | 226875b | fix(media): исправлен clamd foreground logging |
 | 219 | 2026-07-19 | 46b60d4 | test(media): добавлена диагностика ClamAV verdict gate |
 | 220 | 2026-07-19 | 8b13c16 | test(media): разделены direct и relay ClamAV gates |
+| 221 | 2026-07-19 | _______ | fix(ci): синхронизирован ClamAV response framing |
