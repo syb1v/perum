@@ -14,9 +14,7 @@ backend, updates, school = (f"scanner-{name}-{suffix}" for name in ("backend", "
 volume = f"scanner-signatures-{suffix}"
 updater, daemon, proxy = (f"scanner-{name}-{suffix}" for name in ("updater", "clamd", "relay"))
 try:
-    run("docker", "run", "--rm", "--entrypoint", "clamscan", clamd, "--version")
-    run("docker", "run", "--rm", "--entrypoint", "clamdscan", clamd, "--version")
-    run("docker", "run", "--rm", "--entrypoint", "freshclam", clamd, "--version")
+    run("docker", "run", "--rm", "--entrypoint", "sh", clamd, "-c", "command -v clamscan && command -v clamdscan && command -v freshclam")
     run("docker", "network", "create", "--internal", backend)
     run("docker", "network", "create", updates)
     run("docker", "network", "create", "--internal", school)

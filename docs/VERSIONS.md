@@ -216,3 +216,4 @@
 | 213 | 2026-07-19 | 8b9405c | fix(ci): исправлен ClamAV cold-volume readiness gate |
 | 214 | 2026-07-19 | f1f2f44 | fix(media): добавлен ClamAV database validation CLI |
 | 215 | 2026-07-19 | 853c736 | fix(media): добавлен clamdscan client package |
+| 216 | 2026-07-19 | _______ | fix(ci): исправлен ClamAV binary preflight |

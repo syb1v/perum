@@ -100,6 +100,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694085653` fail-closed выявил Debian package split: `clamav-daemon` не
   предоставляет standalone `clamdscan` client. Image теперь явно устанавливает
   `clamdscan`; binary contract не ослаблен;
+- run `29694159245` подтвердил наличие `clamdscan`, но preflight ошибочно запускал
+  daemon client до старта daemon. Presence теперь проверяется через `command -v`;
+  функциональность клиента по-прежнему обязательна после startup через health и EICAR;
 
 Что не завершено и не должно считаться production evidence:
 
