@@ -324,6 +324,15 @@ Stage F не дублирует эту реализацию: он проверя
 | Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | `Tenant release descriptor contract gate`, [CI run 29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) | passed |
 | Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | operator record | pending |
 
+Pilot-readiness foundation автоматизирован: public discovery и scoped operator
+diagnostics используют один resolver, который сохраняет platform grant, org intent,
+generation heartbeat и snapshot freshness gates для всех social capabilities. Core
+экспортирует только bounded reason counters без school/release labels, а Mobile
+хранит bounded privacy-safe diagnostic ledger. Read-only API collector работает по
+public school UUID без перечисления школ и выдаёт `NO-GO`, пока deliberate rollback
+и защищённый operator export Mobile ledger не подтверждены внешним record. Эти
+инструменты не являются production evidence и не меняют статус строки.
+
 Строка закрывается только ссылкой на automated test/CI run или recorded manual
 evidence. После закрытия всех строк обновляются DoD ниже и live percentages в
 `PRODUCT_MASTER_PLAN.md`.

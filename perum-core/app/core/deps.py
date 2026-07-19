@@ -36,6 +36,29 @@ async def require_platform_admin(
     return admin
 
 
+async def require_operator(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: AsyncSession = Depends(get_db),
+) -> PlatformAdmin | OrgAdmin:
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "missing bearer token", _UNAUTH)
+    try:
+        payload = decode_access_token(credentials.credentials)
+    except jwt.PyJWTError:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired token", _UNAUTH)
+    role = payload.get("role")
+    sub = payload.get("sub")
+    model = PlatformAdmin if role == "platform_admin" else OrgAdmin if role == "org_admin" else None
+    try:
+        principal_id = int(sub) if model is not None and sub is not None else None
+    except (TypeError, ValueError, OverflowError):
+        principal_id = None
+    principal = await db.get(model, principal_id) if model is not None and principal_id is not None else None
+    if principal is None or not principal.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "operator not found or inactive", _UNAUTH)
+    return principal
+
+
 async def _resolve_org_admin(
     credentials: HTTPAuthorizationCredentials | None,
     db: AsyncSession,

@@ -197,3 +197,4 @@
 | 194 | 2026-07-18 | 08fa665 | docs(handoff): зафиксирован остаток media/support плана и отчёт сессии |
 | 195 | 2026-07-18 | 2e99715 | docs(plan): синхронизирован live product status |
 | 196 | 2026-07-18 | ca75564 | feat(media): добавлен foundation node-local ClamAV и durable scan queue |
+| 197 | 2026-07-19 | _______ | feat(discovery): добавлен privacy-safe foundation Stage F pilot |

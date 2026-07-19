@@ -10,6 +10,10 @@
 - Login/discovery rate limits; metrics auth при настроенном token.
 - Confirmed backup before destructive school purge.
 - Release identity/no-op guards и descriptor fail-closed semantics.
+- Descriptor diagnostics доступны только active platform/org operators, скрывают
+  cross-org existence и не публикуют school, release или user identity в metrics.
+  Process-local bounded counters предназначены для aggregate alerting, но сами по
+  себе не являются durable production pilot evidence.
 - Private media quarantine/authorization foundation; attachments остаются
   выключенными без production scanner readiness.
 

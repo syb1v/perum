@@ -8,6 +8,7 @@ import { removeAccountLocalData } from '../query/persistence';
 import type { ApiClient } from '@perum/api-client';
 import { assertDiscoveryDescriptor, DescriptorGateError, resolveAccountDescriptor, type DescriptorReason, type InternalDescriptorReason } from './descriptorCore';
 import { createTenantTrafficGate } from './trafficCore';
+import { recordDescriptorEvent } from './descriptorLedger';
 
 const roles = new Set<TenantRole>(['student', 'parent', 'teacher', 'admin', 'school_admin', 'director']);
 
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       discoverById: discoverTenantById,
       discoverByHost: discoverTenant,
       appVersion,
+      recordEvent: recordDescriptorEvent,
     });
     saved = resolution.account;
     if (resolution.source === 'rediscovered') {
@@ -241,7 +243,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const current = registryRef.current.accounts.find((item) => item.id === accountId);
     if (!current) return;
     try {
-      const resolution = await resolveAccountDescriptor(current, { discoverById: discoverTenantById, discoverByHost: discoverTenant, appVersion, force: true });
+      const resolution = await resolveAccountDescriptor(current, { discoverById: discoverTenantById, discoverByHost: discoverTenant, appVersion, force: true, recordEvent: recordDescriptorEvent });
       const updated = resolution.account;
       const next = await updateRegistry((latest) => ({ ...latest, accounts: latest.accounts.map((item) => item.id === accountId ? { ...item, ...updated, refreshToken: item.refreshToken, user: item.user } : item) }));
       if (generation !== trafficGeneration.current) return;

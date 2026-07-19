@@ -1,5 +1,6 @@
 import { ApiClientError } from '@perum/api-client';
 import type { Discovery, TenantAccount, TenantCapabilities, TenantCompatibility } from './types';
+import type { DescriptorEventReason } from './descriptorLedgerCore';
 
 export const MOBILE_API_VERSION = 1;
 export const MOBILE_DESCRIPTOR_SCHEMA_VERSION = 1;
@@ -29,6 +30,7 @@ type DiscoveryDependencies = {
   appVersion: string;
   force?: boolean;
   now?: () => number;
+  recordEvent?: (reason: DescriptorEventReason) => Promise<void>;
 };
 
 export type DescriptorResolution = {
@@ -146,11 +148,17 @@ export async function resolveAccountDescriptor(
   dependencies: DiscoveryDependencies,
 ): Promise<DescriptorResolution> {
   const now = dependencies.now?.() ?? Date.now();
-  if (!dependencies.force && isDescriptorFresh(account, now)) {
-    assertDiscoveryCompatibility(account.descriptorCompatibility!, dependencies.appVersion);
-    return { account, source: 'cached' };
-  }
+  let recorded = false;
+  const record = async (reason: DescriptorEventReason) => {
+    if (recorded) return;
+    recorded = true;
+    try { await dependencies.recordEvent?.(reason); } catch {}
+  };
   try {
+    if (!dependencies.force && isDescriptorFresh(account, now)) {
+      assertDiscoveryCompatibility(account.descriptorCompatibility!, dependencies.appVersion);
+      return { account, source: 'cached' };
+    }
     const discovery = account.schoolId
       ? await dependencies.discoverById(account.schoolId)
       : await dependencies.discoverByHost(account.tenantHost);
@@ -158,12 +166,24 @@ export async function resolveAccountDescriptor(
   } catch (error) {
     if (isDiscoveryUnavailable(error)) {
       if (!isDescriptorComplete(account)) throw new DescriptorGateError('core_unavailable', 'Core временно недоступен', error);
-      assertDiscoveryCompatibility(account.descriptorCompatibility!, dependencies.appVersion);
+      try {
+        assertDiscoveryCompatibility(account.descriptorCompatibility!, dependencies.appVersion);
+      } catch (compatibilityError) {
+        if (compatibilityError instanceof DescriptorGateError && (compatibilityError.reason === 'app_outdated' || compatibilityError.reason === 'tenant_release_outdated')) await record(compatibilityError.reason);
+        throw compatibilityError;
+      }
       const expiresAt = Date.parse(account.descriptorExpiresAt!);
-      if (now <= expiresAt + DESCRIPTOR_GRACE_MS) return { account, source: 'offline-fallback', degradedReason: 'core_unavailable' };
+      if (now <= expiresAt + DESCRIPTOR_GRACE_MS) {
+        await record('grace_fallback');
+        return { account, source: 'offline-fallback', degradedReason: 'core_unavailable' };
+      }
+      await record('grace_expired');
       throw new DescriptorGateError('grace_expired', 'Срок автономной работы истёк. Подключитесь к сети', error);
     }
     if (error instanceof ApiClientError) throw new DescriptorGateError('feature_unavailable', error.message, error);
+    if (error instanceof DescriptorGateError && ['app_outdated', 'tenant_release_outdated', 'malformed', 'identity_mismatch'].includes(error.reason)) {
+      await record(error.reason as DescriptorEventReason);
+    }
     throw error;
   }
 }

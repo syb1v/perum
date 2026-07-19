@@ -289,7 +289,7 @@ from fastapi import Depends  # noqa: E402
 
 from app.agent.router import router as agent_router  # noqa: E402
 from app.core.deps import require_org_admin, require_platform_admin  # noqa: E402
-from app.routers import auth, billing, contact, enroll, health, internal_domains, metrics, news, nodes, notifications, org_self, organizations, ota_config, public, releases, releases_ci, schools, social_rollout, stats, support, telemetry  # noqa: E402
+from app.routers import auth, billing, contact, diagnostics, enroll, health, internal_domains, metrics, news, nodes, notifications, org_self, organizations, ota_config, public, releases, releases_ci, schools, social_rollout, stats, support, telemetry  # noqa: E402
 
 app.include_router(health.router)
 # Prometheus-метрики на /metrics (скрейп напрямую по внутренней сети).
@@ -299,6 +299,7 @@ app.include_router(internal_domains.router, prefix="/internal", tags=["internal"
 app.include_router(support.internal_router, prefix="/internal/support", tags=["internal-support"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(public.router, prefix="/api/public", tags=["public"])
+app.include_router(diagnostics.router, prefix="/api/diagnostics", tags=["diagnostics"])
 # Лиды лендинга: POST публичный (форма «Связаться»), GET/PATCH — platform_admin.
 app.include_router(contact.router, prefix="/api/contact", tags=["contact"])
 # Приём телеметрии от школьных стеков — публичный путь, auth по telemetry-token.

@@ -11,6 +11,7 @@ from app.core import ratelimit
 from app.main import app
 from app.routers.public import normalize_tenant_host
 from app.schemas.public import TenantCapabilities
+from app.services.descriptor_observability import descriptor_counter_samples, reset_descriptor_counters
 
 
 class _Result:
@@ -63,6 +64,7 @@ def _tenant():
 def teardown_function():
     app.dependency_overrides.clear()
     ratelimit._discovery_hits.clear()
+    reset_descriptor_counters()
 
 
 @pytest.mark.parametrize(
@@ -475,9 +477,10 @@ def test_missing_snapshot_keeps_build_only_capabilities_and_emits_safe_telemetry
     effective = response.json()["capabilities"]
     assert effective["refresh_sessions"] is True
     assert effective["push_registration"] is False
-    record = next(record for record in caplog.records if record.msg == "mobile_descriptor_deployment_unavailable")
+    record = next(record for record in caplog.records if record.getMessage().startswith("mobile_descriptor_deployment_unavailable"))
     assert record.descriptor_reason == "missing_snapshot"
-    assert record.school_id == school.id
+    assert not hasattr(record, "school_id")
+    assert "reason=missing_snapshot" in caplog.text
     assert "secret-release" not in caplog.text
 
 
@@ -503,12 +506,14 @@ def test_release_resolution_failures_emit_reason_codes_without_release_identity(
             "/api/public/tenant-discovery", params={"host": "school.example.com"}
         )
 
-    records = [record for record in caplog.records if record.msg == "mobile_descriptor_resolution_failed"]
+    records = [record for record in caplog.records if record.getMessage().startswith("mobile_descriptor_resolution_failed")]
     assert [record.descriptor_reason for record in records] == [
         "missing_release", "unknown_release", "invalid_manifest"
     ]
-    assert all(record.school_id == school.id for record in records)
+    assert all(not hasattr(record, "school_id") and not hasattr(record, "release_id") for record in records)
     assert "secret-unknown" not in caplog.text
+    release_reasons, _ = descriptor_counter_samples()
+    assert release_reasons == {"missing_release": 1, "unknown_release": 1, "invalid_manifest": 1}
 
 
 @pytest.mark.parametrize(

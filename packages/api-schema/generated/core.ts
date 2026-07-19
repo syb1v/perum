@@ -175,6 +175,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagnostics/schools/{school_public_id}/deployment-descriptor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Deployment Descriptor Diagnostic */
+        get: operations["deployment_descriptor_diagnostic_api_diagnostics_schools__school_public_id__deployment_descriptor_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/contact": {
         parameters: {
             query?: never;
@@ -2400,6 +2417,27 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /** DeploymentDescriptorDiagnostic */
+        DeploymentDescriptorDiagnostic: {
+            /** Schema Valid */
+            schema_valid: boolean;
+            /** Release Match */
+            release_match: boolean;
+            /** Snapshot Present */
+            snapshot_present: boolean;
+            /** Snapshot Fresh */
+            snapshot_fresh: boolean;
+            /**
+             * Snapshot Age Bucket
+             * @enum {string}
+             */
+            snapshot_age_bucket: "absent" | "future" | "lt_1m" | "1m_5m" | "5m_15m" | "15m_1h" | "gte_1h";
+            /** Snapshot Accepted */
+            snapshot_accepted: boolean;
+            /** Social Rollout Converged */
+            social_rollout_converged: boolean;
+            effective_capabilities: components["schemas"]["TenantCapabilities"];
+        };
         /** DomainCreate */
         DomainCreate: {
             /** Domain */
@@ -3506,6 +3544,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TenantDiscoveryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deployment_descriptor_diagnostic_api_diagnostics_schools__school_public_id__deployment_descriptor_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_public_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeploymentDescriptorDiagnostic"];
                 };
             };
             /** @description Validation Error */

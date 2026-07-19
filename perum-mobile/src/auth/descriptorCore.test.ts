@@ -178,6 +178,23 @@ test('fallback includes the grace boundary and blocks immediately after it', asy
   }
 });
 
+test('each descriptor resolution records one bounded outcome and ledger failure is non-blocking', async () => {
+  const events: string[] = [];
+  const expired = account({ descriptorExpiresAt: new Date(now - 1).toISOString() });
+  const fallback = await resolveAccountDescriptor(expired, {
+    discoverById: async () => { throw new TypeError('offline'); }, discoverByHost: async () => { throw new Error('unexpected'); },
+    appVersion: '1.0.0', now: () => now, recordEvent: async (reason) => { events.push(reason); },
+  });
+  assert.equal(fallback.source, 'offline-fallback');
+  assert.deepEqual(events, ['grace_fallback']);
+  await assert.rejects(resolveAccountDescriptor(expired, {
+    discoverById: async () => discovery({ compatibility: { mobile_api_version: 1, minimum_mobile_api_version: 1, minimum_app_version: '2.0.0' } }),
+    discoverByHost: async () => { throw new Error('unexpected'); }, appVersion: '1.0.0', now: () => now,
+    recordEvent: async (reason) => { events.push(reason); throw new Error('storage failed'); },
+  }), (error) => error instanceof DescriptorGateError && error.reason === 'app_outdated');
+  assert.deepEqual(events, ['grace_fallback', 'app_outdated']);
+});
+
 test('incomplete legacy descriptor is stale and never fallback eligible', async () => {
   const legacy = account({ descriptorCapabilities: undefined });
   assert.equal(isDescriptorFresh(legacy, now), false);

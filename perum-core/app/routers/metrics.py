@@ -18,6 +18,7 @@ from app.core.config import get_settings
 from app.core.db import get_db
 from app.models import OrgAdmin, Organization, Release, School, SchoolMetric
 from app.services.stats import is_online
+from app.services.descriptor_observability import descriptor_counter_samples
 
 router = APIRouter()
 
@@ -75,6 +76,15 @@ async def metrics(
           [(f'{{channel="{_esc(cur.channel)}",version="{_esc(cur.version_tag)}"}}', 1)] if cur else [('{channel="none",version="none"}', 0)])
 
     gauge("perum_up", "Контрол-плейн жив", [("", 1)])
+
+    release_reasons, deployment_reasons = descriptor_counter_samples()
+    for name, help_, samples in (
+        ("perum_mobile_descriptor_release_total", "Mobile descriptor release resolution failures", release_reasons),
+        ("perum_mobile_descriptor_deployment_total", "Mobile descriptor deployment snapshot failures", deployment_reasons),
+    ):
+        lines.append(f"# HELP {name} {help_}")
+        lines.append(f"# TYPE {name} counter")
+        lines.extend(f'{name}{{reason="{reason}"}} {value}' for reason, value in samples.items())
 
     # Живость и нагрузка школ из снимков телеметрии (разрез по орг/школе).
     now = datetime.utcnow()

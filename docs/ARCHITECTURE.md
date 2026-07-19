@@ -52,6 +52,10 @@ Generated remote-node stack пока не включает `perum_web`, а defau
 - Mobile request-time traffic lease привязан к account, descriptor revision,
   canonical route и validity window; resume, account switch и rediscovery
   синхронно инвалидируют ранее выданные clients до принятия нового descriptor.
+- Core public discovery и scoped operator diagnostics используют единый mobile
+  descriptor resolver. Effective social capabilities дополнительно требуют
+  platform grant, org enable, fresh matching deployment snapshot и совпадение
+  desired/observed rollout generation; revoke поэтому закрывает discovery сразу.
 - Core-to-node commands используют Agent API; публичная сеть требует защищённого
   transport boundary, описанного в [HARDENING.md](HARDENING.md).
 

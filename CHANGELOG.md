@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Добавлен privacy-safe foundation для Stage F descriptor pilot: общий Core resolver сохраняет fail-closed social rollout generation gates, operator diagnostics возвращает только bounded readiness, метрики используют фиксированные reason labels, Mobile ведёт ограниченный локальный ledger, а synthetic collector всегда остаётся `NO-GO`; production pilot по-прежнему не закрыт.
 - Утверждён и реализован fail-closed foundation node-local media scanner: один общий ClamAV на school-hosting node, отдельный dual-homed relay для каждой школы, потоковый `INSTREAM` без доступа scanner к школьным volumes, immutable scanner images, минимум 8 ГиБ RAM и signatures не старше 48 часов.
 - Media worker переведён с process-local списка попыток на durable DB leases, retries/backoff и scanner evidence; readiness и backlog передаются без PII. Attachment capabilities не включены: production activation заблокирована реальным EICAR, Docker network-isolation, PostgreSQL migration и operational pilot.
 - Подготовлена передача scanner-цикла: `REMAINING_MEDIA_SUPPORT_PLAN.md` содержит точную точку остановки и порядок завершения, а `SCANNER_OPERATIONS.md` фиксирует topology, требования и обязательные pilot gates.

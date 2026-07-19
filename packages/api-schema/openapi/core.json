@@ -511,6 +511,54 @@
         }
       }
     },
+    "/api/diagnostics/schools/{school_public_id}/deployment-descriptor": {
+      "get": {
+        "tags": [
+          "diagnostics"
+        ],
+        "summary": "Deployment Descriptor Diagnostic",
+        "operationId": "deployment_descriptor_diagnostic_api_diagnostics_schools__school_public_id__deployment_descriptor_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "school_public_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "School Public Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentDescriptorDiagnostic"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/contact": {
       "post": {
         "tags": [
@@ -7680,6 +7728,62 @@
           "email"
         ],
         "title": "ContactCreate"
+      },
+      "DeploymentDescriptorDiagnostic": {
+        "properties": {
+          "schema_valid": {
+            "type": "boolean",
+            "title": "Schema Valid"
+          },
+          "release_match": {
+            "type": "boolean",
+            "title": "Release Match"
+          },
+          "snapshot_present": {
+            "type": "boolean",
+            "title": "Snapshot Present"
+          },
+          "snapshot_fresh": {
+            "type": "boolean",
+            "title": "Snapshot Fresh"
+          },
+          "snapshot_age_bucket": {
+            "type": "string",
+            "enum": [
+              "absent",
+              "future",
+              "lt_1m",
+              "1m_5m",
+              "5m_15m",
+              "15m_1h",
+              "gte_1h"
+            ],
+            "title": "Snapshot Age Bucket"
+          },
+          "snapshot_accepted": {
+            "type": "boolean",
+            "title": "Snapshot Accepted"
+          },
+          "social_rollout_converged": {
+            "type": "boolean",
+            "title": "Social Rollout Converged"
+          },
+          "effective_capabilities": {
+            "$ref": "#/components/schemas/TenantCapabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_valid",
+          "release_match",
+          "snapshot_present",
+          "snapshot_fresh",
+          "snapshot_age_bucket",
+          "snapshot_accepted",
+          "social_rollout_converged",
+          "effective_capabilities"
+        ],
+        "title": "DeploymentDescriptorDiagnostic"
       },
       "DomainCreate": {
         "properties": {
