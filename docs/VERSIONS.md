@@ -199,4 +199,4 @@
 | 196 | 2026-07-18 | ca75564 | feat(media): добавлен foundation node-local ClamAV и durable scan queue |
 | 197 | 2026-07-19 | 9e2e177 | feat(discovery): добавлен privacy-safe foundation Stage F pilot |
 | 198 | 2026-07-19 | 0bd36a8 | feat(mobile): добавлен school support admin inbox foundation |
-| 199 | 2026-07-19 | _______ | feat(mobile): добавлено conflict-safe управление support inbox |
+| 199 | 2026-07-19 | 088b0d1 | feat(mobile): добавлено conflict-safe управление support inbox |
