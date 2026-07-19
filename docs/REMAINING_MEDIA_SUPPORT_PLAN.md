@@ -103,6 +103,9 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 - run `29694159245` подтвердил наличие `clamdscan`, но preflight ошибочно запускал
   daemon client до старта daemon. Presence теперь проверяется через `command -v`;
   функциональность клиента по-прежнему обязательна после startup через health и EICAR;
+- run `29694223975` дошёл до clamd start и fail-closed выявил invalid config
+  directive `MaxStreamLength`; исправлено на поддерживаемое `StreamMaxLength`,
+  startup logs направлены в stderr для дальнейшей диагностики;
 
 Что не завершено и не должно считаться production evidence:
 
