@@ -238,8 +238,11 @@ labels. Prometheus может вычислять условия SLA/retry/unknow
 receivers и notification routing в репозитории не настроены и production alert
 delivery не заявляется.
 
-1. Добавить durable admin reply/read/metadata mutations, только если offline send
-   будет отдельно утверждён в scope.
+1. Durable admin metadata/assignment mutations завершены 2026-07-21: одна
+   account-scoped SQLite mutation на ticket, immutable `client_action_id` и
+   `expected_version`, crash recovery, bounded retry, capability guard и terminal
+   conflict с server refetch без optimistic overwrite. Reply/read остаются
+   online-only и требуют отдельного scope решения.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,

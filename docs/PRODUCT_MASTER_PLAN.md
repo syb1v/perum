@@ -2,7 +2,7 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-19**.
+> эти оценки. Последнее обновление live-блока: **2026-07-21**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
@@ -18,13 +18,14 @@
 **Текущий этап:** security hardening и production-пилот утверждённого node-local ClamAV
 foundation перед включением social/support attachments. Реализованы один shared
 `clamd` на school-hosting node, отдельные per-school relay, `INSTREAM`, durable
-lease/retry queue, freshness/readiness и privacy-safe backlog telemetry. Реальный
-EICAR, Docker network-isolation и PostgreSQL migration ещё не подтверждены,
-поэтому capability flags остаются `false`. Native Friends UI и двухступенчатый
+lease/retry queue, freshness/readiness и privacy-safe backlog telemetry. Disposable
+PostgreSQL и real-Docker candidate evidence подтверждены, но operator review,
+target-node inspect/load pilot и production sizing ещё не выполнены, поэтому
+capability flags остаются `false`. Native Friends UI и двухступенчатый
 controlled rollout foundation завершены. Native `school_admin`/`director` inbox
 получил отдельный release capability, cached list/thread, unread summary,
-idempotent online reply/read и conflict-safe metadata/assignment без attachments
-и push. One-school pilot Stage F и multi-device Homework
+idempotent online reply/read и durable conflict-safe metadata/assignment без
+optimistic updates, attachments и push. One-school pilot Stage F и multi-device Homework
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
@@ -87,9 +88,11 @@ restart/conflict evidence.
 5. School support native admin inbox functional scope завершён: отдельный
    capability, role-gated cached list/thread, unread summary, online idempotent
    reply/read и conflict-safe status/category/priority/assignment без optimistic
-   updates. Privacy-safe delivery cards/SLA готовы для Tenant outbox и typed Core
-   relay endpoint; остаются terminal failure policy/exact Core receipts, optional
-   durable admin mutations; push ждёт реального delivery adapter.
+   updates. Metadata/assignment сохраняются в account-scoped SQLite с неизменными
+   `client_action_id`/`expected_version`, bounded retry и terminal conflict без
+   stale offline chains. Privacy-safe delivery cards/SLA готовы для Tenant outbox
+   и typed Core relay endpoint; admin reply/read остаются online-only, остаются
+   terminal failure policy/exact Core receipts; push ждёт реального delivery adapter.
 6. Отложено до назначения профильного владельца: юридические ADR по
    minors/social/parent, retention, offline conflicts, ЮKassa/fiscalization и
    OS/store matrix. Billing, parent observer policy и store rollout не начинаются
@@ -660,7 +663,7 @@ Flow:
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы. Ambiguity report имеет typed OpenAPI contract, server-enforced report acknowledgement и Web safe-only apply/refresh flow; direct POST не может обойти просмотр текущего report. Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox. Остаётся расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Остаются production pilot evidence, attachments, push и расширенный anti-abuse |
 | P1 | Media pipeline | Частично | PostgreSQL run `29691375244` подтвердил concurrency/migration. Candidate run `29700812844` подтвердил cold signatures, isolation, persistence/outage, production Tenant stale recovery и bounded 5-school fairness (`MAX_CONNECTIONS=2`, burst `6×1 MiB`, concurrent peers, exact resource inspect). Это candidate envelope, не production sizing. Exact digests остаются candidate. Остаются operator review, target-node inspect/load pilot и attachment UI; production attachments fail-closed |
-| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил cached inbox, conflict-safe controls и delivery/SLA card; Core platform/org dashboards показывают bounded aggregate status и unknown telemetry. Остаются optional durable admin mutations, attachments, push и notification routing |
+| P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Native school admin/director получил cached inbox, durable account-scoped metadata/assignment queue с stable identity/version, terminal conflict и без optimistic updates, а также delivery/SLA card; Core platform/org dashboards показывают bounded aggregate status и unknown telemetry. Admin reply/read остаются online-only; остаются attachments, push и notification routing |
 | P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe relay pull/ack готовы. Typed delivery endpoints, strict telemetry extraction, dashboards и unlabeled Prometheus gauges закрывают current-state monitoring; остаются exact receipts, terminal failure policy, Alertmanager/contact-point delivery и native org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы; остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |

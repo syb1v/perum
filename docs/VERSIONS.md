@@ -234,3 +234,4 @@
 | 231 | 2026-07-19 | 380be3e | test(media): добавлен multi-school scanner fairness gate |
 | 232 | 2026-07-19 | ad0d9a7 | docs(media): зафиксирован scanner fairness evidence |
 | 233 | 2026-07-19 | 49ddf93 | fix(academic): добавлен acknowledgement ambiguity report |
+| 234 | 2026-07-21 | _______ | feat(mobile): добавлена очередь действий support admin |
