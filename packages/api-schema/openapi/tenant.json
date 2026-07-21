@@ -1627,9 +1627,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Occurrence Backfill Preview Api Admin Maintenance Occurrence Backfill Get"
+                  "$ref": "#/components/schemas/OccurrenceBackfillPlan"
                 }
               }
             }
@@ -1663,9 +1661,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Occurrence Backfill Apply Api Admin Maintenance Occurrence Backfill Post"
+                  "$ref": "#/components/schemas/OccurrenceBackfillResult"
                 }
               }
             }
@@ -14662,6 +14658,17 @@
           "plan_token": {
             "type": "string",
             "title": "Plan Token"
+          },
+          "ambiguity_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ambiguity Token"
           }
         },
         "type": "object",
@@ -14669,6 +14676,340 @@
           "plan_token"
         ],
         "title": "OccurrenceBackfillApply"
+      },
+      "OccurrenceBackfillCandidate": {
+        "properties": {
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "schedule_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Id"
+          },
+          "lesson_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Number"
+          }
+        },
+        "type": "object",
+        "title": "OccurrenceBackfillCandidate"
+      },
+      "OccurrenceBackfillItem": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Table"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          },
+          "total_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Count"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncated"
+          },
+          "class_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Id"
+          },
+          "subject_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Id"
+          },
+          "lesson_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Date"
+          },
+          "source_rows": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "integer"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Rows"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceBackfillCandidate"
+            },
+            "type": "array",
+            "title": "Candidates",
+            "default": []
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "work_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Type Id"
+          },
+          "create": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Create"
+          },
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "schedule_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Id"
+          },
+          "lesson_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Number"
+          }
+        },
+        "type": "object",
+        "title": "OccurrenceBackfillItem"
+      },
+      "OccurrenceBackfillPlan": {
+        "properties": {
+          "school_id": {
+            "type": "integer",
+            "title": "School Id"
+          },
+          "safe": {
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceBackfillItem"
+            },
+            "type": "array",
+            "title": "Safe"
+          },
+          "ambiguities": {
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceBackfillItem"
+            },
+            "type": "array",
+            "title": "Ambiguities"
+          },
+          "plan_token": {
+            "type": "string",
+            "title": "Plan Token"
+          },
+          "ambiguity_token": {
+            "type": "string",
+            "title": "Ambiguity Token"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/OccurrenceBackfillSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "school_id",
+          "safe",
+          "ambiguities",
+          "plan_token",
+          "ambiguity_token",
+          "summary"
+        ],
+        "title": "OccurrenceBackfillPlan"
+      },
+      "OccurrenceBackfillResult": {
+        "properties": {
+          "applied": {
+            "type": "boolean",
+            "title": "Applied"
+          },
+          "occurrences_created": {
+            "type": "integer",
+            "title": "Occurrences Created"
+          },
+          "rows_linked": {
+            "type": "integer",
+            "title": "Rows Linked"
+          },
+          "ambiguities": {
+            "items": {
+              "$ref": "#/components/schemas/OccurrenceBackfillItem"
+            },
+            "type": "array",
+            "title": "Ambiguities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "applied",
+          "occurrences_created",
+          "rows_linked",
+          "ambiguities"
+        ],
+        "title": "OccurrenceBackfillResult"
+      },
+      "OccurrenceBackfillSummary": {
+        "properties": {
+          "groups": {
+            "type": "integer",
+            "title": "Groups"
+          },
+          "safe_groups": {
+            "type": "integer",
+            "title": "Safe Groups"
+          },
+          "ambiguous_groups": {
+            "type": "integer",
+            "title": "Ambiguous Groups"
+          },
+          "occurrences_to_create": {
+            "type": "integer",
+            "title": "Occurrences To Create"
+          },
+          "rows_to_link": {
+            "type": "integer",
+            "title": "Rows To Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "groups",
+          "safe_groups",
+          "ambiguous_groups",
+          "occurrences_to_create",
+          "rows_to_link"
+        ],
+        "title": "OccurrenceBackfillSummary"
       },
       "ParsedGradeRaw": {
         "properties": {

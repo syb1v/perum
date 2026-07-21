@@ -2,6 +2,9 @@
 
 ## Действующие controls
 
+- Occurrence backfill при наличии ambiguity report требует отдельный
+  `ambiguity_token`. Отсутствующий или устаревший acknowledgement отклоняется
+  `409` до writes; `plan_token` независимо защищает полный plan от TOCTOU.
 - School silo: отдельные runtime, DB credentials и persistent volumes.
 - Раздельные Core/Tenant token domains и role dependencies.
 - Отдельные internal RPC и telemetry tokens; constant-time token checks.

@@ -31,7 +31,11 @@ def test_backfill_links_only_unambiguous_groups_and_reports_homework():
         preview = await build_plan(db, school.id)
         assert preview["summary"]["safe_groups"] == 1
         assert any(item["reason"] == "unsupported_homework_semantics" for item in preview["ambiguities"])
-        result = await apply_plan(db, school.id, preview["plan_token"])
+        with pytest.raises(HTTPException) as missing_ack: await apply_plan(db, school.id, preview["plan_token"])
+        assert missing_ack.value.detail["code"] == "AMBIGUITY_REPORT_ACK_REQUIRED"
+        with pytest.raises(HTTPException) as changed_ack: await apply_plan(db, school.id, preview["plan_token"], "sha256:" + "0" * 64)
+        assert changed_ack.value.detail["code"] == "AMBIGUITY_REPORT_CHANGED"
+        result = await apply_plan(db, school.id, preview["plan_token"], preview["ambiguity_token"])
         assert result == {**result, "applied": True, "occurrences_created": 1, "rows_linked": 2}
         await db.refresh(grade); await db.refresh(template); await db.refresh(homework)
         assert grade.occurrence_id == template.occurrence_id

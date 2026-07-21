@@ -4220,6 +4220,95 @@ export interface components {
         OccurrenceBackfillApply: {
             /** Plan Token */
             plan_token: string;
+            /** Ambiguity Token */
+            ambiguity_token?: string | null;
+        };
+        /** OccurrenceBackfillCandidate */
+        OccurrenceBackfillCandidate: {
+            /** Occurrence Id */
+            occurrence_id?: number | null;
+            /** Schedule Id */
+            schedule_id?: number | null;
+            /** Lesson Number */
+            lesson_number?: number | null;
+        };
+        /** OccurrenceBackfillItem */
+        OccurrenceBackfillItem: {
+            /** Reason */
+            reason?: string | null;
+            /** Table */
+            table?: string | null;
+            /** Ids */
+            ids?: number[] | null;
+            /** Total Count */
+            total_count?: number | null;
+            /** Truncated */
+            truncated?: boolean | null;
+            /** Class Id */
+            class_id?: number | null;
+            /** Subject Id */
+            subject_id?: number | null;
+            /** Lesson Date */
+            lesson_date?: string | null;
+            /** Source Rows */
+            source_rows?: {
+                [key: string]: number[];
+            } | null;
+            /**
+             * Candidates
+             * @default []
+             */
+            candidates: components["schemas"]["OccurrenceBackfillCandidate"][];
+            /** Topic Id */
+            topic_id?: number | null;
+            /** Work Type Id */
+            work_type_id?: number | null;
+            /** Create */
+            create?: boolean | null;
+            /** Occurrence Id */
+            occurrence_id?: number | null;
+            /** Schedule Id */
+            schedule_id?: number | null;
+            /** Lesson Number */
+            lesson_number?: number | null;
+        };
+        /** OccurrenceBackfillPlan */
+        OccurrenceBackfillPlan: {
+            /** School Id */
+            school_id: number;
+            /** Safe */
+            safe: components["schemas"]["OccurrenceBackfillItem"][];
+            /** Ambiguities */
+            ambiguities: components["schemas"]["OccurrenceBackfillItem"][];
+            /** Plan Token */
+            plan_token: string;
+            /** Ambiguity Token */
+            ambiguity_token: string;
+            summary: components["schemas"]["OccurrenceBackfillSummary"];
+        };
+        /** OccurrenceBackfillResult */
+        OccurrenceBackfillResult: {
+            /** Applied */
+            applied: boolean;
+            /** Occurrences Created */
+            occurrences_created: number;
+            /** Rows Linked */
+            rows_linked: number;
+            /** Ambiguities */
+            ambiguities: components["schemas"]["OccurrenceBackfillItem"][];
+        };
+        /** OccurrenceBackfillSummary */
+        OccurrenceBackfillSummary: {
+            /** Groups */
+            groups: number;
+            /** Safe Groups */
+            safe_groups: number;
+            /** Ambiguous Groups */
+            ambiguous_groups: number;
+            /** Occurrences To Create */
+            occurrences_to_create: number;
+            /** Rows To Link */
+            rows_to_link: number;
         };
         /** ParsedGradeRaw */
         ParsedGradeRaw: {
@@ -6178,9 +6267,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["OccurrenceBackfillPlan"];
                 };
             };
         };
@@ -6204,9 +6291,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["OccurrenceBackfillResult"];
                 };
             };
             /** @description Validation Error */

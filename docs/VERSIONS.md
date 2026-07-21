@@ -233,3 +233,4 @@
 | 230 | 2026-07-19 | 1e87bcc | docs(media): зафиксирован stale-signature evidence |
 | 231 | 2026-07-19 | 380be3e | test(media): добавлен multi-school scanner fairness gate |
 | 232 | 2026-07-19 | ad0d9a7 | docs(media): зафиксирован scanner fairness evidence |
+| 233 | 2026-07-19 | _______ | fix(academic): добавлен acknowledgement ambiguity report |

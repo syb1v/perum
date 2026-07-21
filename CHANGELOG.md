@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Occurrence backfill ambiguity report получил server-enforced SHA-256 acknowledgement: при спорных группах direct apply без текущего `ambiguity_token` отклоняется до writes, а Web отправляет token только после явного safe-only confirmation и перезагружает report при conflict. Preview/apply responses описаны typed Pydantic/OpenAPI models.
 - Добавлен bounded 5-school scanner fairness gate: отдельная network/relay на школу, `MAX_CONNECTIONS=2`, burst `6×1 MiB`, concurrent peer scans, bounded deadlines и real inspect resource/network/no-mount assertions. Gate не выдаётся за production throughput benchmark до target-node load pilot.
 - Bounded multi-school fairness подтверждён run `29700812844`; exact clamd/relay digests записаны только как candidates, без production sizing или target-node claims.
 - Real-Docker scanner gate запускает production Tenant `ClamAVScanner` для stale-signature fail-closed/recovery: strict `0h` policy требует `stale_signatures`/`unavailable`, штатная `48h` policy на том же real VERSION header требует ready, clean и EICAR infected. Filesystem mtime не используется как подмена signature timestamp.

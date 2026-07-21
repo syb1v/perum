@@ -81,20 +81,70 @@ class SyncAssignmentsRequest(BaseModel):
 
 class OccurrenceBackfillApply(BaseModel):
     plan_token: str
+    ambiguity_token: str | None = None
+
+
+class OccurrenceBackfillCandidate(BaseModel):
+    occurrence_id: int | None = None
+    schedule_id: int | None = None
+    lesson_number: int | None = None
+
+
+class OccurrenceBackfillItem(BaseModel):
+    reason: str | None = None
+    table: str | None = None
+    ids: list[int] | None = None
+    total_count: int | None = None
+    truncated: bool | None = None
+    class_id: int | None = None
+    subject_id: int | None = None
+    lesson_date: str | None = None
+    source_rows: dict[str, list[int]] | None = None
+    candidates: list[OccurrenceBackfillCandidate] = []
+    topic_id: int | None = None
+    work_type_id: int | None = None
+    create: bool | None = None
+    occurrence_id: int | None = None
+    schedule_id: int | None = None
+    lesson_number: int | None = None
+
+
+class OccurrenceBackfillSummary(BaseModel):
+    groups: int
+    safe_groups: int
+    ambiguous_groups: int
+    occurrences_to_create: int
+    rows_to_link: int
+
+
+class OccurrenceBackfillPlan(BaseModel):
+    school_id: int
+    safe: list[OccurrenceBackfillItem]
+    ambiguities: list[OccurrenceBackfillItem]
+    plan_token: str
+    ambiguity_token: str
+    summary: OccurrenceBackfillSummary
+
+
+class OccurrenceBackfillResult(BaseModel):
+    applied: bool
+    occurrences_created: int
+    rows_linked: int
+    ambiguities: list[OccurrenceBackfillItem]
 
 
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
 
 
-@router.get("/maintenance/occurrence-backfill")
+@router.get("/maintenance/occurrence-backfill", response_model=OccurrenceBackfillPlan)
 async def occurrence_backfill_preview(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     return await build_plan(db, await _school(user, db))
 
 
-@router.post("/maintenance/occurrence-backfill")
+@router.post("/maintenance/occurrence-backfill", response_model=OccurrenceBackfillResult)
 async def occurrence_backfill_apply(payload: OccurrenceBackfillApply, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
-    return await apply_plan(db, await _school(user, db), payload.plan_token)
+    return await apply_plan(db, await _school(user, db), payload.plan_token, payload.ambiguity_token)
 
 
 # Школами и их администраторами управляет org_admin в ЯДРЕ (perum-core,

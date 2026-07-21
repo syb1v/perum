@@ -101,14 +101,18 @@ async def build_plan(db: AsyncSession, school_id: int) -> dict:
         ambiguities.append({"reason": "unsupported_homework_semantics", "table": "homework", "ids": legacy_homework[:100], "total_count": len(legacy_homework), "truncated": len(legacy_homework) > 100})
     stable = {"school_id": school_id, "safe": safe, "ambiguities": ambiguities}
     token = "sha256:" + hashlib.sha256(json.dumps(stable, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    ambiguity_token = "sha256:" + hashlib.sha256(json.dumps(ambiguities, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     rows_to_link = sum(sum(len(ids) for ids in item["source_rows"].values()) for item in safe)
-    return {**stable, "plan_token": token, "summary": {"groups": len(groups), "safe_groups": len(safe), "ambiguous_groups": len(ambiguities), "occurrences_to_create": sum(item["create"] for item in safe), "rows_to_link": rows_to_link}}
+    return {**stable, "plan_token": token, "ambiguity_token": ambiguity_token, "summary": {"groups": len(groups), "safe_groups": len(safe), "ambiguous_groups": len(ambiguities), "occurrences_to_create": sum(item["create"] for item in safe), "rows_to_link": rows_to_link}}
 
 
-async def apply_plan(db: AsyncSession, school_id: int, plan_token: str) -> dict:
+async def apply_plan(db: AsyncSession, school_id: int, plan_token: str, ambiguity_token: str | None = None) -> dict:
     plan = await build_plan(db, school_id)
     if plan["plan_token"] != plan_token:
         raise HTTPException(status.HTTP_409_CONFLICT, {"code": "BACKFILL_PLAN_CHANGED", "current_plan_token": plan["plan_token"]})
+    if plan["ambiguities"] and ambiguity_token != plan["ambiguity_token"]:
+        code = "AMBIGUITY_REPORT_ACK_REQUIRED" if ambiguity_token is None else "AMBIGUITY_REPORT_CHANGED"
+        raise HTTPException(status.HTTP_409_CONFLICT, {"code": code, "ambiguity_token": plan["ambiguity_token"]})
     linked = 0
     created = 0
     for item in plan["safe"]:

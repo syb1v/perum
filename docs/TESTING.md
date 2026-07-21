@@ -30,6 +30,16 @@ npm run export:ios --workspace perum-mobile
 Tenant CI также проверяет один Alembic head, SQLite migration smoke и focused
 academic suites. Точные команды всегда сверяются с `.github/workflows/ci.yml`.
 
+Occurrence backfill ambiguity acknowledgement:
+
+```bash
+cd perum-tenant
+python -m pytest tests/unit/test_occurrence_backfill.py -q
+```
+
+Focused suite проверяет safe-only writes, обязательный/устаревший ambiguity token,
+plan change conflict, metadata conflict и отсутствие автоматического guess.
+
 Scanner PostgreSQL integration gate не имеет SQLite fallback и требует только
 disposable test database:
 
