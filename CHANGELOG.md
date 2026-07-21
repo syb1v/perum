@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-21
 
+- Friend-request idempotency теперь fingerprint-ит target student: exact retry возвращает historical row, а reuse одного `client_request_id` для другого target даёт deterministic `409`. Service восстанавливается после PostgreSQL client/pair unique-index contention через authoritative winner lookup; disposable PostgreSQL 15 tests покрывают same-direction, reverse-direction и conflicting identity races без duplicate pending/audit или raw `IntegrityError`.
 - Native school support admin read cursor получил отдельный durable account-scoped SQLite outbox: offline observation, immutable `client_action_id`, exact dedup, crash recovery, bounded retry, capability pause, logout isolation и visible unsynced/permanent state с explicit retry. Requester/admin endpoints и stores разделены; opaque message IDs не сортируются клиентом, monotonic cursor остаётся authoritative на Tenant.
 - Native school support admin text replies получили отдельный durable account-scoped SQLite outbox: offline enqueue, immutable `client_message_id`/body, FIFO per ticket, crash recovery, bounded retry, capability pause и logout cleanup. Pending/permanent-failure bubbles видимы в thread, успешный authoritative response обновляет thread/detail/list/unread; admin/requester endpoints и storage не смешиваются. Read cursor был закрыт следующим отдельным slice выше.
 

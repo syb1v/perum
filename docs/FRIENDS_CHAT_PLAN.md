@@ -18,6 +18,11 @@ Friend-request expiration enforcement завершён: stale `pending` атом
 исторический `client_request_id` воспроизводит ту же expired запись, а новый id
 может занять освобождённый active-pair slot. Новые rate limits/thresholds не
 вводятся без отдельного утверждения anti-abuse policy.
+`client_request_id` fingerprint включает target student: exact retry возвращает
+историческую запись, reuse для другого target даёт deterministic `409`.
+PostgreSQL uniqueness является authority для concurrent same/reverse normalized
+pair и requester identity; loser после rollback перечитывает winner, поэтому race
+не создаёт duplicate pending/audit и не выходит raw integrity error.
 
 ## 1. Настройки школы
 
@@ -57,6 +62,7 @@ social_moderation_enabled            bool, всегда true при social_enabl
 - `client_request_id`, `created_at`, `responded_at`, `expires_at`.
 - Запрет заявки себе, cross-school и пользователю вне разрешённого scope.
 - Одна активная заявка на нормализованную пару пользователей.
+- Один requester `client_request_id` не может обозначать разные target payloads.
 - Просроченная заявка не считается активной, не возвращается в pending lists и
   не может быть принята/отклонена/отменена; lifecycle transition сохраняет
   `responded_at` и privacy-safe aggregate audit count без user/request IDs.

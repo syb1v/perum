@@ -49,6 +49,19 @@ cd perum-tenant
 python -m pytest tests/unit/test_occurrence_backfill.py -q
 ```
 
+Friends request identity/concurrency gate:
+
+```bash
+cd perum-tenant
+python -m pytest tests/unit/test_social_friends.py -q
+TEST_POSTGRES_URL=postgresql+asyncpg://... python -m pytest tests/integration/test_social_friends_postgresql.py -q
+```
+
+PostgreSQL test использует disposable database и проверяет same-direction,
+reverse-direction normalized-pair contention и concurrent reuse одного
+`client_request_id` для разных targets. Локальный зелёный прогон не заменяет
+named CI evidence; CI выполняет этот файл в существующем PostgreSQL 15 job.
+
 Focused suite проверяет safe-only writes, обязательный/устаревший ambiguity token,
 plan change conflict, metadata conflict и отсутствие автоматического guess.
 

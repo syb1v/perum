@@ -100,6 +100,24 @@ def test_default_disabled_and_pending_pair_normalized():
     asyncio.run(run())
 
 
+def test_client_request_id_reuse_with_another_target_is_rejected():
+    async def run():
+        engine, db, users, school = await seed()
+        try:
+            await service.patch_settings(db, school.id, SettingsPatch(social_enabled=True, friend_scope="school"))
+            first = await service.create_request(db, users[0], users[1].id, "stable-id")
+            with pytest.raises(HTTPException) as mismatch:
+                await service.create_request(db, users[0], users[2].id, "stable-id")
+            assert mismatch.value.status_code == 409
+            assert mismatch.value.detail == "client_request_id reused with different target"
+            assert (await service.create_request(db, users[0], users[1].id, "stable-id")).id == first.id
+            assert len((await db.scalars(select(FriendRequest))).all()) == 1
+        finally:
+            await db.close()
+            await engine.dispose()
+    asyncio.run(run())
+
+
 def test_expired_request_is_hidden_rejected_and_replaced_with_new_identity():
     async def run():
         engine, db, users, school = await seed()

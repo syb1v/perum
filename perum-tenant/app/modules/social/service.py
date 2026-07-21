@@ -157,6 +157,8 @@ async def create_request(db: AsyncSession, user: User, student_id: int, client_r
     if expired:
         await db.commit()
     if existing is not None:
+        if existing.addressee_id != student_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "client_request_id reused with different target")
         if expired:
             await db.refresh(existing)
         return existing
@@ -167,7 +169,21 @@ async def create_request(db: AsyncSession, user: User, student_id: int, client_r
     pending = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.user_low_id == low, FriendRequest.user_high_id == high, FriendRequest.status == "pending"))
     if pending is not None: return pending
     request = FriendRequest(school_id=user.school_id, requester_id=user.id, addressee_id=student_id, user_low_id=low, user_high_id=high, client_request_id=client_request_id, expires_at=utc_now() + timedelta(days=30))
-    db.add(request); db.add(audit_event(user.school_id, "friend_request_created", user.role)); await db.commit(); await db.refresh(request); return request
+    db.add(request); db.add(audit_event(user.school_id, "friend_request_created", user.role))
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        identity_winner = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.requester_id == user.id, FriendRequest.client_request_id == client_request_id))
+        if identity_winner is not None:
+            if identity_winner.addressee_id != student_id:
+                raise HTTPException(status.HTTP_409_CONFLICT, "client_request_id reused with different target")
+            return identity_winner
+        winner = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.user_low_id == low, FriendRequest.user_high_id == high, FriendRequest.status == "pending"))
+        if winner is not None:
+            return winner
+        raise
+    await db.refresh(request); return request
 
 
 async def friend_requests(db: AsyncSession, user: User, direction: str) -> list[FriendRequest]:
