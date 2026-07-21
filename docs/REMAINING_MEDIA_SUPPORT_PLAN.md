@@ -241,8 +241,12 @@ delivery не заявляется.
 1. Durable admin metadata/assignment mutations завершены 2026-07-21: одна
    account-scoped SQLite mutation на ticket, immutable `client_action_id` и
    `expected_version`, crash recovery, bounded retry, capability guard и terminal
-   conflict с server refetch без optimistic overwrite. Reply/read остаются
-   online-only и требуют отдельного scope решения.
+   conflict с server refetch без optimistic overwrite. Durable text reply
+   завершён 2026-07-21 отдельной account-scoped SQLite queue: immutable
+   `client_message_id`/body, FIFO per ticket, crash recovery, bounded retry,
+   capability pause, account cleanup и visible permanent local failure. Успех
+   обновляет authoritative thread/detail/list/unread; requester/admin endpoints и
+   storage не смешиваются. Read остаётся online-only и требует отдельного slice.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,

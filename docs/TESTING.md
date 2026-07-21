@@ -17,6 +17,12 @@ npm run export:android --workspace perum-mobile
 npm run export:ios --workspace perum-mobile
 ```
 
+Native support admin reply durability проверяется общим mobile suite в
+`perum-mobile/src/support/adminReplyOutbox.test.ts`: admin-only endpoint, immutable
+message identity/body, capability pause, bounded retry, FIFO per ticket и account
+cleanup. Backend exact replay/mismatch regression находится в
+`perum-tenant/tests/unit/test_support.py`.
+
 `npm run typecheck` уже запускает workspace typechecks. Отдельные команды выше
 полезны для воспроизведения конкретного CI job.
 

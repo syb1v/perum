@@ -236,3 +236,4 @@
 | 233 | 2026-07-19 | 49ddf93 | fix(academic): добавлен acknowledgement ambiguity report |
 | 234 | 2026-07-21 | 9d03e7d | feat(mobile): добавлена очередь действий support admin |
 | 235 | 2026-07-21 | c7ed0d3 | fix(social): добавлено истечение заявок в друзья |
+| 236 | 2026-07-21 | _______ | feat(mobile): добавлена очередь ответов support admin |

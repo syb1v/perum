@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-21
+
+- Native school support admin text replies получили отдельный durable account-scoped SQLite outbox: offline enqueue, immutable `client_message_id`/body, FIFO per ticket, crash recovery, bounded retry, capability pause и logout cleanup. Pending/permanent-failure bubbles видимы в thread, успешный authoritative response обновляет thread/detail/list/unread; admin/requester endpoints и storage не смешиваются, read cursor остаётся online-only.
+
 ## [Unreleased] — 2026-07-18
 
 - Friend-request expiration lifecycle теперь enforced сервером: stale `pending` атомарно становится `expired` на create/list/action paths, late accept/reject/cancel возвращает non-disclosing 404, historical idempotency replay остаётся deterministic, а новый request identity может занять освобождённый normalized-pair slot. Social telemetry исключает просроченные requests из active pending count.

@@ -8,7 +8,7 @@ import { useCapabilities } from '../../src/auth/CapabilityProvider';
 import { FeatureUnavailable } from '../../src/components/FeatureUnavailable';
 import { Screen } from '../../src/components/Screen';
 import { queryKeys } from '../../src/query/queryKeys';
-import { adminMessageLabel, canReplyToAdminTicket, canUseAdminSupport, escalationDeliveryLabel, type AdminTicketAction } from '../../src/support/adminCore';
+import { adminMessageLabel, canQueueAdminReply, canUseAdminSupport, escalationDeliveryLabel, type AdminTicketAction } from '../../src/support/adminCore';
 import { useAdminActionSync } from '../../src/support/AdminActionProvider';
 import type { AdminSupportAssignee, AdminSupportEscalationDelivery, SupportMessagePage, SupportTicket } from '../../src/support/types';
 import { colors } from '../../src/theme';
@@ -16,6 +16,7 @@ import { colors } from '../../src/theme';
 const statuses = [['open', 'Открыто'], ['in_progress', 'В работе'], ['waiting_requester', 'Ждёт пользователя'], ['resolved', 'Решено'], ['closed', 'Закрыто']] as const;
 const categories = [['general', 'Общее'], ['technical', 'Техническое'], ['account', 'Аккаунт'], ['academic', 'Учебное'], ['safety', 'Безопасность'], ['other', 'Другое']] as const;
 const priorities = [['low', 'Низкий'], ['normal', 'Обычный'], ['high', 'Высокий'], ['urgent', 'Срочный']] as const;
+type DisplayMessage = SupportMessagePage['items'][number] & { localId?: string; delivery?: 'pending' | 'failed' };
 
 export default function AdminSupportThreadScreen() {
   const { ticketId = '' } = useLocalSearchParams<{ ticketId: string }>();
@@ -24,9 +25,7 @@ export default function AdminSupportThreadScreen() {
   const network = useNetInfo();
   const queryClient = useQueryClient();
   const [reply, setReply] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const replyId = useRef<string | null>(null);
-  const { pending: pendingActions, enqueue: enqueueAction, discard: discardAction } = useAdminActionSync();
+  const { pending: pendingActions, pendingReplies, enqueue: enqueueAction, enqueueReply, retryReply, discard: discardAction } = useAdminActionSync();
   const readMessageId = useRef<string | null>(null);
   const enabled = has('support_admin');
   const eligible = canUseAdminSupport(account?.user.role, enabled);
@@ -41,8 +40,10 @@ export default function AdminSupportThreadScreen() {
   });
   const refresh = useCallback(() => { if (!eligible) return; void detail.refetch(); void thread.refetch(); }, [eligible, detail.refetch, thread.refetch]);
   useFocusEffect(refresh);
-  const messages = thread.data?.pages.slice().reverse().flatMap((page) => page.items) ?? [];
-  const latest = messages.at(-1);
+  const serverMessages = thread.data?.pages.slice().reverse().flatMap((page) => page.items) ?? [];
+  const localMessages: DisplayMessage[] = pendingReplies.filter(item => item.ticketId === ticketId).map(item => ({ id: item.clientMessageId, sender_id: account?.user.id ?? null, side: 'shared_inbox', body: item.body, created_at: new Date(item.createdAt).toISOString(), localId: item.id, delivery: item.state === 'failed_permanent' ? 'failed' : 'pending' }));
+  const messages: DisplayMessage[] = [...serverMessages, ...localMessages];
+  const latest = serverMessages.at(-1);
   useEffect(() => {
     if (!apiClient || !eligible || network.isConnected === false || !latest || latest.side !== 'requester' || readMessageId.current === latest.id) return;
     readMessageId.current = latest.id;
@@ -53,35 +54,21 @@ export default function AdminSupportThreadScreen() {
   }, [apiClient, eligible, network.isConnected, latest?.id, latest?.side, ticketId, account?.id]);
   if (!enabled) return <FeatureUnavailable />;
   if (!account || !apiClient || !eligible) return null;
-  const canReply = canReplyToAdminTicket(detail.data?.status ?? 'closed', network.isConnected !== false);
+  const canReply = canQueueAdminReply(detail.data?.status ?? 'closed', enabled);
   const send = async () => {
     const value = reply.trim();
     if (!value || !canReply) return;
-    const clientMessageId = replyId.current ?? crypto.randomUUID();
-    replyId.current = clientMessageId;
-    setError(null);
-    try {
-      await apiClient.post(`/admin/support/tickets/${ticketId}/messages`, { client_message_id: clientMessageId, body: value });
-      replyId.current = null;
-      setReply('');
-      await Promise.all([
-        thread.refetch(), detail.refetch(),
-        queryClient.invalidateQueries({ queryKey: queryKeys.adminSupportTickets(account.id) }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.adminSupportUnread(account.id) }),
-      ]);
-    } catch {
-      setError('Не удалось отправить ответ. Повтор использует тот же идентификатор и не создаст дубль.');
-    }
+    setReply('');
+    await enqueueReply(ticketId, value);
   };
   const applyAction = async (action: AdminTicketAction) => {
     if (!detail.data || pendingAction) return;
-    setError(null);
     await enqueueAction(ticketId, detail.data.version, action);
   };
   const controls = (label: string, field: 'status' | 'category' | 'priority', options: readonly (readonly [string, string])[], current: string) => <View style={styles.controlGroup}><Text style={styles.controlLabel}>{label}</Text><View style={styles.chips}>{options.map(([value, title]) => <Pressable key={value} disabled={Boolean(pendingAction) || value === current} style={[styles.chip, value === current && styles.chipActive]} onPress={() => void applyAction({ kind: 'metadata', field, value })}><Text style={[styles.chipText, value === current && styles.chipTextActive]}>{title}</Text></Pressable>)}</View></View>;
   return <Screen><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>Назад</Text></Pressable><Text numberOfLines={2} style={styles.title}>{detail.data?.subject ?? 'Обращение'}</Text><Text style={styles.status}>{detail.data?.status ?? 'Загрузка'}</Text></View>
-    {network.isConnected === false ? <Text style={styles.offline}>Офлайн: изменения обработки сохраняются в очередь. Ответить можно после подключения.</Text> : null}
+    {network.isConnected === false ? <Text style={styles.offline}>Офлайн: ответы и изменения обработки сохраняются в очередь до подключения.</Text> : null}
     {delivery.data ? <View style={[styles.deliveryCard, delivery.data.sla_breached && styles.deliveryLate]}><Text style={styles.controlsTitle}>Доставка эскалации</Text><Text style={styles.deliveryState}>{escalationDeliveryLabel(delivery.data.state)}</Text><Text style={styles.deliveryMeta}>Попыток: {delivery.data.attempts}</Text>{delivery.data.pending_age_seconds !== null ? <Text style={styles.deliveryMeta}>В очереди: {delivery.data.pending_age_seconds} сек.</Text> : null}{delivery.data.delivery_latency_seconds !== null ? <Text style={styles.deliveryMeta}>Доставлено за {delivery.data.delivery_latency_seconds} сек.</Text> : null}<Text style={[styles.deliveryMeta, delivery.data.sla_breached && styles.deliveryLateText]}>{delivery.data.sla_breached ? 'SLA превышен' : `SLA: ${delivery.data.sla_seconds} сек.`}</Text></View> : null}
     {detail.data ? <View style={styles.controls}>
       <Text style={styles.controlsTitle}>Обработка обращения</Text>
@@ -93,13 +80,12 @@ export default function AdminSupportThreadScreen() {
     </View> : null}
     {thread.isLoading && !messages.length ? <ActivityIndicator color={colors.primary} /> : null}
     <FlatList
-      data={messages} keyExtractor={(item) => item.id} contentContainerStyle={styles.list}
+      data={messages} keyExtractor={(item) => item.localId ?? item.id} contentContainerStyle={styles.list}
       ListHeaderComponent={thread.hasNextPage ? <Pressable disabled={thread.isFetchingNextPage} onPress={() => void thread.fetchNextPage()}><Text style={styles.more}>{thread.isFetchingNextPage ? 'Загрузка…' : 'Показать ранние сообщения'}</Text></Pressable> : null}
       ListEmptyComponent={!thread.isLoading ? <Text style={styles.empty}>Сообщений пока нет</Text> : null}
-      renderItem={({ item }) => { const own = item.side !== 'requester'; return <View style={[styles.messageRow, own && styles.ownRow]}><View style={[styles.bubble, own ? styles.own : styles.requester]}><Text style={[styles.label, own && styles.ownMeta]}>{adminMessageLabel(item.side)}</Text><Text style={[styles.message, own && styles.ownText]}>{item.body}</Text><Text style={[styles.time, own && styles.ownMeta]}>{new Date(item.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</Text></View></View>; }}
+      renderItem={({ item }) => { const own = item.side !== 'requester'; return <View style={[styles.messageRow, own && styles.ownRow]}><View style={[styles.bubble, own ? styles.own : styles.requester]}><Text style={[styles.label, own && styles.ownMeta]}>{adminMessageLabel(item.side)}</Text><Text style={[styles.message, own && styles.ownText]}>{item.body}</Text><Text style={[styles.time, own && styles.ownMeta]}>{new Date(item.created_at).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</Text>{item.delivery ? <Pressable disabled={item.delivery !== 'failed'} onPress={() => item.localId && void retryReply(item.localId)}><Text style={[styles.time, own && styles.ownMeta]}>{item.delivery === 'failed' ? 'Не отправлено. Повторить' : 'Ожидает отправки…'}</Text></Pressable> : null}</View></View>; }}
     />
-    {error ? <Text style={styles.error}>{error}</Text> : null}
-    {!canReply ? <Text style={styles.closed}>{detail.data?.status === 'closed' ? 'Обращение закрыто. Переписка доступна только для чтения.' : 'Ответы доступны только при подключении к сети.'}</Text> : <View style={styles.composer}><TextInput value={reply} onChangeText={(value) => { setReply(value); replyId.current = null; }} maxLength={4000} multiline placeholder="Ответить пользователю" placeholderTextColor={colors.muted} style={styles.input} /><Pressable disabled={!reply.trim()} style={[styles.send, !reply.trim() && styles.disabled]} onPress={() => void send()}><Text style={styles.sendText}>Отправить</Text></Pressable><Text style={styles.note}>Только текст. Вложения и push пока недоступны.</Text></View>}
+    {!canReply ? <Text style={styles.closed}>Обращение закрыто. Переписка доступна только для чтения.</Text> : <View style={styles.composer}><TextInput value={reply} onChangeText={setReply} maxLength={4000} multiline placeholder="Ответить пользователю" placeholderTextColor={colors.muted} style={styles.input} /><Pressable disabled={!reply.trim()} style={[styles.send, !reply.trim() && styles.disabled]} onPress={() => void send()}><Text style={styles.sendText}>Отправить</Text></Pressable><Text style={styles.note}>Текст сохраняется в очередь офлайн. Вложения и push пока недоступны.</Text></View>}
   </KeyboardAvoidingView></Screen>;
 }
 

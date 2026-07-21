@@ -10,8 +10,8 @@ export function adminMessageLabel(side: SupportMessage['side']) {
   return 'Школа';
 }
 
-export function canReplyToAdminTicket(status: string, online: boolean) {
-  return online && status !== 'closed';
+export function canQueueAdminReply(status: string, enabled: boolean) {
+  return enabled && status !== 'closed';
 }
 
 export type AdminTicketAction =
@@ -20,6 +20,10 @@ export type AdminTicketAction =
 
 export function adminTicketActionPath(ticketId: string, action: AdminTicketAction) {
   return action.kind === 'assignment' ? `/admin/support/tickets/${ticketId}/assign` : `/admin/support/tickets/${ticketId}`;
+}
+
+export function adminTicketReplyPath(ticketId: string) {
+  return `/admin/support/tickets/${ticketId}/messages`;
 }
 
 export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string) {
