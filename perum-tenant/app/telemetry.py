@@ -67,7 +67,7 @@ async def collect_metrics(db, school_id: int) -> dict:
         if model is Friendship:
             filters.append(Friendship.ended_at.is_(None))
         elif model is FriendRequest:
-            filters.append(FriendRequest.status == "pending")
+            filters.extend((FriendRequest.status == "pending", FriendRequest.expires_at > now))
         elif model is UserBlock:
             filters.append(UserBlock.released_at.is_(None))
         social_counts[key] = int(await db.scalar(select(func.count(model.id)).where(*filters)) or 0)

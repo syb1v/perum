@@ -13,6 +13,11 @@ feature flag, reports, evidence-scoped moderation, retention и realtime с poll
 fallback. Целевыми, но не завершёнными остаются parent observer policy,
 attachments с production scanner, расширенный anti-abuse, push lifecycle,
 groups (если будут утверждены отдельно) и production pilot evidence.
+Friend-request expiration enforcement завершён: stale `pending` атомарно становится
+`expired` на create/list/action paths, late action возвращает non-disclosing 404,
+исторический `client_request_id` воспроизводит ту же expired запись, а новый id
+может занять освобождённый active-pair slot. Новые rate limits/thresholds не
+вводятся без отдельного утверждения anti-abuse policy.
 
 ## 1. Настройки школы
 
@@ -52,6 +57,9 @@ social_moderation_enabled            bool, всегда true при social_enabl
 - `client_request_id`, `created_at`, `responded_at`, `expires_at`.
 - Запрет заявки себе, cross-school и пользователю вне разрешённого scope.
 - Одна активная заявка на нормализованную пару пользователей.
+- Просроченная заявка не считается активной, не возвращается в pending lists и
+  не может быть принята/отклонена/отменена; lifecycle transition сохраняет
+  `responded_at` и privacy-safe aggregate audit count без user/request IDs.
 
 ### `friendships`
 

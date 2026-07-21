@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-18
 
+- Friend-request expiration lifecycle теперь enforced сервером: stale `pending` атомарно становится `expired` на create/list/action paths, late accept/reject/cancel возвращает non-disclosing 404, historical idempotency replay остаётся deterministic, а новый request identity может занять освобождённый normalized-pair slot. Social telemetry исключает просроченные requests из active pending count.
 - Native school support admin metadata/assignment получили durable account-scoped SQLite outbox: offline intent сохраняет исходные `client_action_id` и `expected_version`, transient failures используют bounded retry/crash recovery, а `409` становится terminal visible conflict с server refetch. На один ticket допускается только одна незавершённая mutation, поэтому stale offline chains невозможны; reply/read остаются online-only.
 - Occurrence backfill ambiguity report получил server-enforced SHA-256 acknowledgement: при спорных группах direct apply без текущего `ambiguity_token` отклоняется до writes, а Web отправляет token только после явного safe-only confirmation и перезагружает report при conflict. Preview/apply responses описаны typed Pydantic/OpenAPI models.
 - Добавлен bounded 5-school scanner fairness gate: отдельная network/relay на школу, `MAX_CONNECTIONS=2`, burst `6×1 MiB`, concurrent peer scans, bounded deadlines и real inspect resource/network/no-mount assertions. Gate не выдаётся за production throughput benchmark до target-node load pilot.

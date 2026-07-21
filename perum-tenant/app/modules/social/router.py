@@ -8,7 +8,7 @@ from app.core.db import get_db
 from app.core.deps import require_admin, require_student
 from app.models import User
 from app.models.academic import Class, ClassStudent
-from app.models.social import Conversation, FriendRequest, Friendship, Message, UserBlock
+from app.models.social import Conversation, Friendship, Message, UserBlock
 from app.modules.social import service
 from app.modules.social.schemas import BlockCreate, BlockOut, ConversationCreate, ConversationOut, ConversationPage, FriendRequestCreate, FriendRequestOut, MessageCreate, MessageOut, MessagePage, ModerationActionCreate, ReadCreate, RealtimeTicketOut, ReportCreate, ReportOut, SettingsOut, SettingsPatch, StudentPage, UnreadCountOut
 
@@ -73,9 +73,7 @@ async def student_search(query: str = "", cursor: int | None = None, limit: int 
 
 @router.get("/friend-requests", response_model=list[FriendRequestOut])
 async def requests(direction: Literal["incoming", "outgoing"], user: User = Depends(require_student), db: AsyncSession = Depends(get_db)):
-    await service._social_context(db, user)
-    field = FriendRequest.addressee_id if direction == "incoming" else FriendRequest.requester_id
-    rows = (await db.scalars(select(FriendRequest).where(FriendRequest.school_id == user.school_id, field == user.id, FriendRequest.status == "pending").order_by(FriendRequest.id.desc()))).all()
+    rows = await service.friend_requests(db, user, direction)
     profiles = await _profiles(db, [row.requester_id if direction == "incoming" else row.addressee_id for row in rows])
     return [{"id": row.id, "status": row.status, "student": profiles[row.requester_id if direction == "incoming" else row.addressee_id], "created_at": row.created_at, "expires_at": row.expires_at} for row in rows]
 

@@ -4,7 +4,7 @@ import re
 import unicodedata
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,6 +74,19 @@ def _pair(first: int, second: int) -> tuple[int, int]:
     return (first, second) if first < second else (second, first)
 
 
+async def _expire_requests(db: AsyncSession, school_id: int, *filters) -> int:
+    now = utc_now()
+    result = await db.execute(
+        update(FriendRequest)
+        .where(FriendRequest.school_id == school_id, FriendRequest.status == "pending", FriendRequest.expires_at <= now, *filters)
+        .values(status="expired", responded_at=now)
+    )
+    count = result.rowcount or 0
+    if count:
+        db.add(audit_event(school_id, "friend_requests_expired", "system", {"count": count}))
+    return count
+
+
 _LINK_RE = re.compile(r"(?i)(?:https?\s*:\s*/\s*/|www\s*\.|(?<![\w@])(?:[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?\s*\.\s*)+(?:com|org|net|edu|gov|io|ru|рф|su|me|app|dev|site|online|xyz|info|biz)(?=$|[^\w]))")
 
 
@@ -138,9 +151,15 @@ async def students(db: AsyncSession, user: User, query: str, cursor: int | None,
 
 async def create_request(db: AsyncSession, user: User, student_id: int, client_request_id: str):
     await _eligible_target(db, user, student_id)
-    existing = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.requester_id == user.id, FriendRequest.client_request_id == client_request_id))
-    if existing is not None: return existing
     low, high = _pair(user.id, student_id)
+    expired = await _expire_requests(db, user.school_id, FriendRequest.user_low_id == low, FriendRequest.user_high_id == high)
+    existing = await db.scalar(select(FriendRequest).where(FriendRequest.school_id == user.school_id, FriendRequest.requester_id == user.id, FriendRequest.client_request_id == client_request_id))
+    if expired:
+        await db.commit()
+    if existing is not None:
+        if expired:
+            await db.refresh(existing)
+        return existing
     if await db.scalar(select(Friendship.id).where(Friendship.school_id == user.school_id, Friendship.user_low_id == low, Friendship.user_high_id == high, Friendship.ended_at.is_(None))):
         raise HTTPException(status.HTTP_409_CONFLICT, "already friends")
     if await db.scalar(select(UserBlock.id).where(UserBlock.school_id == user.school_id, UserBlock.released_at.is_(None), or_(and_(UserBlock.blocker_id == user.id, UserBlock.blocked_id == student_id), and_(UserBlock.blocker_id == student_id, UserBlock.blocked_id == user.id)))):
@@ -151,9 +170,19 @@ async def create_request(db: AsyncSession, user: User, student_id: int, client_r
     db.add(request); db.add(audit_event(user.school_id, "friend_request_created", user.role)); await db.commit(); await db.refresh(request); return request
 
 
+async def friend_requests(db: AsyncSession, user: User, direction: str) -> list[FriendRequest]:
+    await _social_context(db, user)
+    field = FriendRequest.addressee_id if direction == "incoming" else FriendRequest.requester_id
+    if await _expire_requests(db, user.school_id, field == user.id):
+        await db.commit()
+    return list((await db.scalars(select(FriendRequest).where(FriendRequest.school_id == user.school_id, field == user.id, FriendRequest.status == "pending", FriendRequest.expires_at > utc_now()).order_by(FriendRequest.id.desc()))).all())
+
+
 async def request_action(db: AsyncSession, user: User, request_id: int, action: str):
     await _social_context(db, user)
     request = await db.scalar(select(FriendRequest).where(FriendRequest.id == request_id, FriendRequest.school_id == user.school_id))
+    if request is not None and request.status == "pending" and request.expires_at <= utc_now():
+        request.status = "expired"; request.responded_at = utc_now(); db.add(audit_event(user.school_id, "friend_requests_expired", "system", {"count": 1})); await db.commit()
     allowed = request is not None and request.status == "pending" and ((action in {"accept", "reject"} and request.addressee_id == user.id) or (action == "cancel" and request.requester_id == user.id))
     if not allowed: raise HTTPException(status.HTTP_404_NOT_FOUND, "request not found")
     request.status = {"accept": "accepted", "reject": "rejected", "cancel": "cancelled"}[action]; request.responded_at = utc_now()
