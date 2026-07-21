@@ -237,4 +237,4 @@
 | 234 | 2026-07-21 | 9d03e7d | feat(mobile): добавлена очередь действий support admin |
 | 235 | 2026-07-21 | c7ed0d3 | fix(social): добавлено истечение заявок в друзья |
 | 236 | 2026-07-21 | 9b10404 | feat(mobile): добавлена очередь ответов support admin |
-| 237 | 2026-07-21 | _______ | feat(mobile): добавлен read cursor support admin |
+| 237 | 2026-07-21 | e33ecc4 | feat(mobile): добавлен read cursor support admin |
