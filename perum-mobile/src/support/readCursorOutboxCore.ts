@@ -75,5 +75,13 @@ export function createSupportReadCursorOutboxCore(options: {
     }
   }
 
-  return { enqueue, run, recover: options.store.recover, getByAccount: options.store.getByAccount, removeAccount: options.store.removeAccount };
+  async function retry(accountId: string, id: string) {
+    const mutation = (await options.store.getByAccount(accountId)).find(item => item.id === id);
+    if (!mutation) return;
+    await options.store.put({ ...mutation, state: 'pending', nextAttemptAt: 0, error: null });
+    await options.onChange?.(accountId);
+    await run(accountId);
+  }
+
+  return { enqueue, run, retry, recover: options.store.recover, getByAccount: options.store.getByAccount, removeAccount: options.store.removeAccount };
 }

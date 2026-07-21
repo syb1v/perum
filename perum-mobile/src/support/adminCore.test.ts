@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { adminMessageLabel, adminTicketActionPath, adminTicketActionPayload, adminTicketReplyPath, canQueueAdminReply, canUseAdminSupport, escalationDeliveryLabel, isVersionConflict } from './adminCore';
+import { adminMessageLabel, adminTicketActionPath, adminTicketActionPayload, adminTicketReadPath, adminTicketReplyPath, canQueueAdminReply, canUseAdminSupport, escalationDeliveryLabel, isVersionConflict } from './adminCore';
 
 test('admin support requires its capability and an exact school operator role', () => {
   assert.equal(canUseAdminSupport('school_admin', true), true);
@@ -33,6 +33,10 @@ test('metadata and assignment actions carry version and stable idempotency ident
 
 test('admin replies use only the school operator endpoint', () => {
   assert.equal(adminTicketReplyPath('ticket-1'), '/admin/support/tickets/ticket-1/messages');
+});
+
+test('admin reads use only the school operator endpoint', () => {
+  assert.equal(adminTicketReadPath('ticket-1'), '/admin/support/tickets/ticket-1/read');
 });
 
 test('only structured version conflicts trigger server snapshot refresh', () => {

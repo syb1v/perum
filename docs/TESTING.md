@@ -23,6 +23,12 @@ message identity/body, capability pause, bounded retry, FIFO per ticket и accou
 cleanup. Backend exact replay/mismatch regression находится в
 `perum-tenant/tests/unit/test_support.py`.
 
+Native support admin read durability проверяется в
+`perum-mobile/src/support/adminReadOutbox.test.ts`: admin-only endpoint, exact
+observation dedup, immutable action identity, capability pause, transport retry,
+permanent failure/explicit retry и account isolation. Клиент не сравнивает opaque
+message IDs; server monotonic cursor покрыт Tenant support regression.
+
 `npm run typecheck` уже запускает workspace typechecks. Отдельные команды выше
 полезны для воспроизведения конкретного CI job.
 

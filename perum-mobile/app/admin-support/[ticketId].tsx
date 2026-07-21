@@ -1,7 +1,7 @@
-import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useCapabilities } from '../../src/auth/CapabilityProvider';
@@ -23,13 +23,12 @@ export default function AdminSupportThreadScreen() {
   const { account, apiClient } = useAuth();
   const { has } = useCapabilities();
   const network = useNetInfo();
-  const queryClient = useQueryClient();
   const [reply, setReply] = useState('');
-  const { pending: pendingActions, pendingReplies, enqueue: enqueueAction, enqueueReply, retryReply, discard: discardAction } = useAdminActionSync();
-  const readMessageId = useRef<string | null>(null);
+  const { pending: pendingActions, pendingReplies, pendingReads, enqueue: enqueueAction, enqueueReply, markRead, retryReply, retryRead, discard: discardAction } = useAdminActionSync();
   const enabled = has('support_admin');
   const eligible = canUseAdminSupport(account?.user.role, enabled);
   const pendingAction = pendingActions.find(item => item.ticketId === ticketId);
+  const pendingRead = pendingReads.find(item => item.ticketId === ticketId);
   const detail = useQuery({ queryKey: queryKeys.adminSupportTicket(account?.id ?? '', ticketId), enabled: Boolean(account && apiClient && eligible && ticketId), queryFn: () => apiClient!.get<SupportTicket>(`/admin/support/tickets/${ticketId}`), refetchInterval: 10_000 });
   const assignees = useQuery({ queryKey: queryKeys.adminSupportAssignees(account?.id ?? ''), enabled: Boolean(account && apiClient && eligible), queryFn: () => apiClient!.get<AdminSupportAssignee[]>('/admin/support/assignees') });
   const delivery = useQuery({ queryKey: queryKeys.adminSupportEscalationDelivery(account?.id ?? '', ticketId), enabled: Boolean(account && apiClient && eligible && detail.data?.escalation_status !== 'none'), queryFn: () => apiClient!.get<AdminSupportEscalationDelivery>(`/admin/support/tickets/${ticketId}/escalation-delivery`), refetchInterval: (query) => query.state.data?.state === 'delivered' ? false : 10_000 });
@@ -45,13 +44,9 @@ export default function AdminSupportThreadScreen() {
   const messages: DisplayMessage[] = [...serverMessages, ...localMessages];
   const latest = serverMessages.at(-1);
   useEffect(() => {
-    if (!apiClient || !eligible || network.isConnected === false || !latest || latest.side !== 'requester' || readMessageId.current === latest.id) return;
-    readMessageId.current = latest.id;
-    void apiClient.post(`/admin/support/tickets/${ticketId}/read`, { client_action_id: crypto.randomUUID(), message_id: latest.id }).then(() => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.adminSupportTickets(account!.id) });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.adminSupportUnread(account!.id) });
-    }).catch(() => { readMessageId.current = null; });
-  }, [apiClient, eligible, network.isConnected, latest?.id, latest?.side, ticketId, account?.id]);
+    if (!apiClient || !eligible || !latest || latest.side !== 'requester') return;
+    void markRead(ticketId, latest.id);
+  }, [apiClient, eligible, latest?.id, latest?.side, ticketId, account?.id]);
   if (!enabled) return <FeatureUnavailable />;
   if (!account || !apiClient || !eligible) return null;
   const canReply = canQueueAdminReply(detail.data?.status ?? 'closed', enabled);
@@ -69,6 +64,7 @@ export default function AdminSupportThreadScreen() {
   return <Screen><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>Назад</Text></Pressable><Text numberOfLines={2} style={styles.title}>{detail.data?.subject ?? 'Обращение'}</Text><Text style={styles.status}>{detail.data?.status ?? 'Загрузка'}</Text></View>
     {network.isConnected === false ? <Text style={styles.offline}>Офлайн: ответы и изменения обработки сохраняются в очередь до подключения.</Text> : null}
+    {pendingRead ? <Pressable disabled={pendingRead.state !== 'failed_permanent'} onPress={() => void retryRead(pendingRead.id)}><Text style={pendingRead.state === 'failed_permanent' ? styles.error : styles.saving}>{pendingRead.state === 'failed_permanent' ? 'Не удалось синхронизировать прочтение. Повторить.' : 'Прочтение сохранено на устройстве и ожидает подтверждения сервера.'}</Text></Pressable> : null}
     {delivery.data ? <View style={[styles.deliveryCard, delivery.data.sla_breached && styles.deliveryLate]}><Text style={styles.controlsTitle}>Доставка эскалации</Text><Text style={styles.deliveryState}>{escalationDeliveryLabel(delivery.data.state)}</Text><Text style={styles.deliveryMeta}>Попыток: {delivery.data.attempts}</Text>{delivery.data.pending_age_seconds !== null ? <Text style={styles.deliveryMeta}>В очереди: {delivery.data.pending_age_seconds} сек.</Text> : null}{delivery.data.delivery_latency_seconds !== null ? <Text style={styles.deliveryMeta}>Доставлено за {delivery.data.delivery_latency_seconds} сек.</Text> : null}<Text style={[styles.deliveryMeta, delivery.data.sla_breached && styles.deliveryLateText]}>{delivery.data.sla_breached ? 'SLA превышен' : `SLA: ${delivery.data.sla_seconds} сек.`}</Text></View> : null}
     {detail.data ? <View style={styles.controls}>
       <Text style={styles.controlsTitle}>Обработка обращения</Text>

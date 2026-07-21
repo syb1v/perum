@@ -246,7 +246,12 @@ delivery не заявляется.
    `client_message_id`/body, FIFO per ticket, crash recovery, bounded retry,
    capability pause, account cleanup и visible permanent local failure. Успех
    обновляет authoritative thread/detail/list/unread; requester/admin endpoints и
-   storage не смешиваются. Read остаётся online-only и требует отдельного slice.
+   storage не смешиваются. Durable admin read cursor завершён 2026-07-21:
+   отдельная account-scoped SQLite queue, immutable `client_action_id`, exact
+   observation dedup, crash recovery, bounded retry, capability pause, visible
+   unsynced/permanent state и explicit retry. Message IDs opaque, поэтому client
+   не выдумывает их порядок; monotonic cursor гарантирует Tenant. Requester/admin
+   read stores и endpoints не смешиваются.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,

@@ -26,6 +26,10 @@ export function adminTicketReplyPath(ticketId: string) {
   return `/admin/support/tickets/${ticketId}/messages`;
 }
 
+export function adminTicketReadPath(ticketId: string) {
+  return `/admin/support/tickets/${ticketId}/read`;
+}
+
 export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string) {
   if (action.kind === 'assignment') return { client_action_id: clientActionId, expected_version: expectedVersion, assignee_id: action.assigneeId };
   return { client_action_id: clientActionId, expected_version: expectedVersion, [action.field]: action.value };
