@@ -255,3 +255,4 @@
 | 252 | 2026-07-22 | 0c30c0c | fix(push): восстановлен registration status |
 | 253 | 2026-07-22 | 6a76ead | fix(contracts): типизированы social mutation payloads |
 | 254 | 2026-07-22 | f687e9b | fix(contracts): типизированы requester support payloads |
+| 255 | 2026-07-22 | _______ | fix(contracts): типизированы admin support payloads |

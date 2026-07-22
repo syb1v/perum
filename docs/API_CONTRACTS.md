@@ -53,6 +53,11 @@ Requester support mutation requests также curated: ticket creation испо
 `client_action_id` в read schema намеренно optional для существующих Web consumers,
 но Mobile durable mapper обязан отправлять его при каждом replay.
 
+Admin support mutation requests curated отдельно: metadata PATCH использует
+`TicketPatch`, assignment POST — `AssignCreate`, operator reply/read переиспользуют
+support `MessageCreate`/`ReadCreate`. Mobile action union должен брать допустимые
+status/category/priority values из generated patch schema, а не из `string`.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

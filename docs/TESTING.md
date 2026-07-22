@@ -149,6 +149,19 @@ npm test --workspace perum-mobile
 (cd perum-tenant && python -m pytest tests/unit/test_support.py -q)
 ```
 
+Admin support mutation gate проверяет metadata PATCH, assignment, operator reply
+и read request bindings. Existing Mobile admin core/outbox tests фиксируют
+generated metadata literals, expected version, stable action identity, endpoint
+separation, conflict и retry semantics:
+
+```bash
+npm run contracts:check
+npm test --workspace perum-mobile
+(cd perum-tenant && python -m pytest tests/unit/test_support.py -q)
+```
+
+Native escalation request и Core terminal delivery receipts этим не покрываются.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

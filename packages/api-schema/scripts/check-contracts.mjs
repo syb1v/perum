@@ -200,6 +200,26 @@ for (const [name, fields] of [
 if (!tenantOpenapi.components.schemas.app__modules__support__schemas__ReadCreate.properties?.client_action_id) {
   throw new Error('Support ReadCreate must expose optional client_action_id for durable clients');
 }
+for (const [path, method, schema] of [
+  ['/api/admin/support/tickets/{ticket_id}', 'patch', 'TicketPatch'],
+  ['/api/admin/support/tickets/{ticket_id}/assign', 'post', 'AssignCreate'],
+  ['/api/admin/support/tickets/{ticket_id}/messages', 'post', 'app__modules__support__schemas__MessageCreate'],
+  ['/api/admin/support/tickets/{ticket_id}/read', 'post', 'app__modules__support__schemas__ReadCreate'],
+]) {
+  const requestRef = tenantOpenapi.paths[path][method].requestBody.content['application/json'].schema.$ref;
+  if (requestRef !== `#/components/schemas/${schema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must accept ${schema}`);
+  }
+}
+for (const [name, fields] of [
+  ['TicketPatch', ['client_action_id', 'expected_version']],
+  ['AssignCreate', ['client_action_id', 'expected_version']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the admin support mutation contract`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

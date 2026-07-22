@@ -1,4 +1,4 @@
-import type { SupportMessage } from './types';
+import type { AdminSupportAssign, AdminSupportTicketPatch, SupportMessage } from './types';
 
 import { isSchoolSupportOperator } from '@perum/domain';
 
@@ -17,7 +17,9 @@ export function canQueueAdminReply(status: string, enabled: boolean) {
 }
 
 export type AdminTicketAction =
-  | { kind: 'metadata'; field: 'status' | 'category' | 'priority'; value: string }
+  | { kind: 'metadata'; field: 'status'; value: NonNullable<AdminSupportTicketPatch['status']> }
+  | { kind: 'metadata'; field: 'category'; value: NonNullable<AdminSupportTicketPatch['category']> }
+  | { kind: 'metadata'; field: 'priority'; value: NonNullable<AdminSupportTicketPatch['priority']> }
   | { kind: 'assignment'; assigneeId: number | null };
 
 export function adminTicketActionPath(ticketId: string, action: AdminTicketAction) {
@@ -32,9 +34,11 @@ export function adminTicketReadPath(ticketId: string) {
   return `/admin/support/tickets/${ticketId}/read`;
 }
 
-export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string) {
+export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string): AdminSupportTicketPatch | AdminSupportAssign {
   if (action.kind === 'assignment') return { client_action_id: clientActionId, expected_version: expectedVersion, assignee_id: action.assigneeId };
-  return { client_action_id: clientActionId, expected_version: expectedVersion, [action.field]: action.value };
+  if (action.field === 'status') return { client_action_id: clientActionId, expected_version: expectedVersion, status: action.value };
+  if (action.field === 'category') return { client_action_id: clientActionId, expected_version: expectedVersion, category: action.value };
+  return { client_action_id: clientActionId, expected_version: expectedVersion, priority: action.value };
 }
 
 export function isVersionConflict(error: unknown) {
