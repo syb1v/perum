@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.time import utc_now
-from app.models import Notification, SupportEscalationOutbox, SupportEscalationReceipt, SupportEvent, SupportMessage, SupportTicket
+from app.models import Notification, SupportEscalationOutbox, SupportEscalationReceipt, SupportEvent, SupportMessage, SupportTicket, User
 
 logger = logging.getLogger("perum.tenant.support.escalation")
 
@@ -87,6 +87,20 @@ async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
             db.add_all([
                 SupportEscalationReceipt(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, core_message_id=core_message_id, message_id=message.id, created_at=utc_now()),
                 SupportEvent(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, action="organization_reply_received", metadata_json={"message_id": message.id}, created_at=utc_now()),
+            ])
+            operator_ids = list((await db.scalars(select(User.id).where(User.school_id == ticket.school_id, User.role.in_(("school_admin", "director")), User.is_active.is_(True)))).all())
+            db.add_all([
+                Notification(
+                    school_id=ticket.school_id,
+                    user_id=user_id,
+                    title=f"Ответ организации: {ticket.subject}",
+                    text=item["body"][:255],
+                    type="support",
+                    ref_type="admin_support_ticket",
+                    ref_id=ticket.public_id,
+                    created_at=now,
+                )
+                for user_id in operator_ids
             ])
             ticket.last_message_id = message.id
             ticket.last_message_side = "admin_inbox"

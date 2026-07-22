@@ -178,10 +178,10 @@ async def mark_read(db: AsyncSession, user: User, public_id: str, message_id: st
     if advanced or client_action_id is not None:
         metadata = {"fingerprint": fingerprint} if client_action_id is not None else {"message_id": message.id}
         db.add(SupportEvent(id=str(uuid4()), school_id=user.school_id, ticket_id=ticket.id, actor_id=user.id, action="ticket_read", client_action_id=client_action_id, metadata_json=metadata, created_at=utc_now()))
-    if not admin:
-        notifications = list((await db.scalars(select(Notification).where(Notification.user_id == user.id, Notification.ref_type == "school_support_ticket", Notification.ref_id == ticket.public_id, Notification.is_read.is_(False)))).all())
-        for notification in notifications:
-            notification.is_read = True
+    ref_type = "admin_support_ticket" if admin else "school_support_ticket"
+    notifications = list((await db.scalars(select(Notification).where(Notification.user_id == user.id, Notification.ref_type == ref_type, Notification.ref_id == ticket.public_id, Notification.is_read.is_(False)))).all())
+    for notification in notifications:
+        notification.is_read = True
     try:
         await db.commit()
     except IntegrityError:

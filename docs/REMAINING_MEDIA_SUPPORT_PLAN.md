@@ -252,6 +252,12 @@ delivery не заявляется.
    unsynced/permanent state и explicit retry. Message IDs opaque, поэтому client
    не выдумывает их порядок; monotonic cursor гарантирует Tenant. Requester/admin
    read stores и endpoints не смешиваются.
+   Organization reply in-app routing завершён 2026-07-22: relay receipt, admin
+   inbox message и notifications активным `school_admin`/`director` одной школы
+   фиксируются одной транзакцией; replay не создаёт повторный fan-out. Admin read
+   закрывает только notification текущего оператора. `admin_support_ticket`
+   reference сохранён, но clickable Web/Mobile navigation и push delivery остаются
+   отдельными незакрытыми slices.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,

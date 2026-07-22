@@ -586,8 +586,16 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 assert len(organization_messages) == 1
                 assert organization_messages[0].side == "admin_inbox"
                 assert organization_messages[0].sender_id is None
-                notifications = list((await db.scalars(select(Notification).where(Notification.text == "Organization answer"))).all())
-                assert notifications == []
+                notifications = list((await db.scalars(select(Notification).where(Notification.text == "Organization answer").order_by(Notification.user_id))).all())
+                assert [notification.user_id for notification in notifications] == sorted((users["admin"].id, users["director"].id))
+                assert all(notification.school_id == users["admin"].school_id for notification in notifications)
+                assert all(notification.title == "Ответ организации: Question 1" for notification in notifications)
+                assert all(notification.type == "support" for notification in notifications)
+                assert all(notification.ref_type == "admin_support_ticket" for notification in notifications)
+                assert all(notification.ref_id == ticket_id for notification in notifications)
+                assert users["inactive_admin"].id not in {notification.user_id for notification in notifications}
+                assert users["foreign_admin"].id not in {notification.user_id for notification in notifications}
+                assert users["org_admin"].id not in {notification.user_id for notification in notifications}
                 assert calls == {"intake": 2, "ack": 2}
 
             current["value"] = users["admin"].id
@@ -610,6 +618,11 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 admin_thread = await client.get(f"/api/admin/support/tickets/{ticket_id}/messages")
                 relayed = [item for item in admin_thread.json()["items"] if item["body"] == "Organization answer"]
                 assert relayed == [{**relayed[0], "sender_id": None, "side": "admin_inbox", "sender_snapshot": "organization_support"}]
+                assert (await client.post(f"/api/admin/support/tickets/{ticket_id}/read", json={"message_id": relayed[0]["id"]})).status_code == 204
+
+            async with sessions() as db:
+                notifications = list((await db.scalars(select(Notification).where(Notification.text == "Organization answer").order_by(Notification.user_id))).all())
+                assert [notification.is_read for notification in notifications] == [True, False]
         finally:
             get_settings.cache_clear()
             await engine.dispose()

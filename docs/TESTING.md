@@ -23,6 +23,17 @@ message identity/body, capability pause, bounded retry, FIFO per ticket и accou
 cleanup. Backend exact replay/mismatch regression находится в
 `perum-tenant/tests/unit/test_support.py`.
 
+Organization reply in-app notification routing проверяется тем же focused suite:
+
+```bash
+cd perum-tenant
+python -m pytest tests/unit/test_support.py -q
+```
+
+Suite проверяет same-school active school admin/director fan-out, exclusion
+inactive/foreign/requester recipients, replay deduplication, typed admin ticket
+reference и operator-scoped read lifecycle.
+
 Native support admin read durability проверяется в
 `perum-mobile/src/support/adminReadOutbox.test.ts`: admin-only endpoint, exact
 observation dedup, immutable action identity, capability pause, transport retry,

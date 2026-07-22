@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-22
+
+- Tenant relay pull теперь в одной транзакции с materialized organization reply создаёт durable in-app notifications для активных `school_admin`/`director` только той же школы. Core message receipt сохраняет replay idempotency без повторного fan-out, а admin read отмечает прочитанным только notification текущего оператора; typed `admin_support_ticket` reference готов для последующего clickable Web/Mobile routing.
+
 ## [Unreleased] — 2026-07-21
 
 - Friend-request idempotency теперь fingerprint-ит target student: exact retry возвращает historical row, а reuse одного `client_request_id` для другого target даёт deterministic `409`. Service восстанавливается после PostgreSQL client/pair unique-index contention через authoritative winner lookup; disposable PostgreSQL 15 tests покрывают same-direction, reverse-direction и conflicting identity races без duplicate pending/audit или raw `IntegrityError`.
