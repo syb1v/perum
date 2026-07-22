@@ -252,4 +252,4 @@
 | 249 | 2026-07-22 | 2a050cf | fix(telemetry): добавлена очистка metrics payload |
 | 250 | 2026-07-22 | ed8903d | test(contracts): добавлен deployment snapshot fixture |
 | 251 | 2026-07-22 | a12b3f1 | fix(contracts): типизирован preferences response |
-| 252 | 2026-07-22 | _______ | fix(push): восстановлен registration status |
+| 252 | 2026-07-22 | 0c30c0c | fix(push): восстановлен registration status |
