@@ -29,6 +29,10 @@ function responseSchema(document, path, method) {
   return dereference(document, response.content['application/json'].schema);
 }
 
+function responseSchemaRef(document, path, method) {
+  return document.paths[path][method].responses['200'].content['application/json'].schema.$ref;
+}
+
 function assertClosedObject(name, schema) {
   if (schema.additionalProperties !== false) {
     throw new Error(`${name} must set additionalProperties=false`);
@@ -77,6 +81,39 @@ function schemaVersion(schema) {
 }
 if (schemaVersion(tenantSchemaVersion) !== 1 || schemaVersion(coreSchemaVersion) !== 1) {
   throw new Error('Core/Tenant mobile descriptor schema_version must be exactly 1');
+}
+
+for (const path of ['/api/social/students', '/api/social/friends']) {
+  if (responseSchemaRef(tenantOpenapi, path, 'get') !== '#/components/schemas/StudentPage') {
+    throw new Error(`${path} must return StudentPage`);
+  }
+}
+for (const [path, itemSchema] of [
+  ['/api/social/friend-requests', 'FriendRequestOut'],
+  ['/api/social/blocks', 'BlockOut'],
+]) {
+  const schema = responseSchema(tenantOpenapi, path, 'get');
+  if (schema.type !== 'array' || schema.items?.$ref !== `#/components/schemas/${itemSchema}`) {
+    throw new Error(`${path} must return ${itemSchema}[]`);
+  }
+}
+const studentPage = tenantOpenapi.components.schemas.StudentPage;
+if (!studentPage.required?.includes('items') || !studentPage.required?.includes('next_cursor')) {
+  throw new Error('StudentPage must require items and next_cursor');
+}
+const cursorVariants = studentPage.properties.next_cursor.anyOf ?? [];
+if (!cursorVariants.some(schema => schema.type === 'integer') || !cursorVariants.some(schema => schema.type === 'null')) {
+  throw new Error('StudentPage next_cursor must be a nullable integer');
+}
+for (const [name, fields] of [
+  ['StudentProfile', ['id', 'name', 'avatar', 'class_name']],
+  ['FriendRequestOut', ['id', 'status', 'student', 'created_at', 'expires_at']],
+  ['BlockOut', ['id', 'student', 'reason_code', 'created_at']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the social client contract`);
+  }
 }
 
 console.log(`OpenAPI contract and mobile descriptor parity passed: ${manifest.tenant.length + manifest.core.length} paths`);

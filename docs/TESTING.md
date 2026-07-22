@@ -33,6 +33,13 @@ npm test --workspace @perum/domain
 только `school_admin`/`director`, а общий legacy school-admin helper продолжает
 включать `admin`. Общий `npm run test:shared` обязан запускать этот suite.
 
+Friends Web/Mobile используют generated Tenant schemas `StudentProfile`,
+`StudentPage`, `FriendRequestOut` и `BlockOut`. `npm run contracts:check`
+проверяет, что `/api/social/students` и `/api/social/friends` возвращают
+`StudentPage`, request/block list привязаны к своим item schemas, обязательные
+client fields не исчезли, а `next_cursor` остаётся required nullable integer.
+После изменения social schemas обязательны оба client typecheck и Web build.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

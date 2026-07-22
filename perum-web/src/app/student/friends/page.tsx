@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { components } from '@perum/api-schema/tenant';
 import type { Conversation } from '@/types/messages';
 import api from '@/lib/apiClient';
 import styles from './page.module.css';
 
-type StudentDto = { id: number; name: string; avatar: string | null; class_name: string };
-type StudentPageDto = { items: StudentDto[]; next_cursor: number | null };
-type RequestDto = { id: number; status: string; student: StudentDto; created_at: string; expires_at: string };
-type BlockDto = { id: number; student: StudentDto; reason_code: string | null; created_at: string };
+type StudentDto = components['schemas']['StudentProfile'];
+type StudentPageDto = components['schemas']['StudentPage'];
+type RequestDto = components['schemas']['FriendRequestOut'];
+type BlockDto = components['schemas']['BlockOut'];
 type Tab = 'friends' | 'requests' | 'search' | 'blocks';
 
 const tabs: { id: Tab; label: string }[] = [{ id: 'friends', label: 'Друзья' }, { id: 'requests', label: 'Заявки' }, { id: 'search', label: 'Поиск' }, { id: 'blocks', label: 'Блокировки' }];

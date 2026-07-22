@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Friends Web/Mobile переведены с ручных student/page/request/block DTO на generated Tenant OpenAPI schemas. Contract gate теперь проверяет точные social endpoint-to-schema bindings, обязательные client fields и required nullable integer `next_cursor`, предотвращая незаметный drift pagination и expiry/block shapes при регенерации.
 - School support role boundary вынесен в shared `@perum/domain`: Web notification routing, Native support inbox/Home и Mobile notification resolver используют один exact helper для `school_admin`/`director`. Отдельный domain contract test гарантирует, что legacy роль `admin` не получает support operator access, не изменяя более широкую общую school-admin policy.
 - Native school admin/director получил cached in-app notification inbox с unread count и clickable переходом по exact `admin_support_ticket` в authoritative support ticket. Tenant notification contract теперь typed в Pydantic/OpenAPI; read подтверждается сервером до удаления из списка, а unknown reference, неподходящая роль/capability и transport failure не запускают navigation. Push delivery и tap lifecycle остаются выключенными до реального adapter/credentials.
 - Web-панель школьного администратора получила notification bell с автообновлением, badge, очисткой и actionable переходом по typed `admin_support_ticket` reference. Клик отмечает только выбранное уведомление прочитанным и открывает authoritative support ticket по shareable URL, включая refresh и тикеты вне первой страницы очереди.
