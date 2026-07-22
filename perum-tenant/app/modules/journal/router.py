@@ -15,6 +15,7 @@ from app.modules.journal import service
 from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
+    JournalWorkTypesOut,
     LessonTemplateUpdate,
     LessonOccurrenceUpdate,
     TopicCreate,
@@ -41,7 +42,7 @@ async def teacher_subjects(user: User = Depends(require_teacher), db: AsyncSessi
     return await service.teacher_subjects(db, await _school(user, db), user)
 
 
-@router.get("/work-types")
+@router.get("/work-types", response_model=JournalWorkTypesOut)
 async def work_types(user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)) -> dict:
     return {"success": True, "work_types": await service.list_work_types(db, await _school(user, db))}
 

@@ -4076,6 +4076,22 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** JournalWorkTypeOut */
+        JournalWorkTypeOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Weight */
+            weight: number;
+        };
+        /** JournalWorkTypesOut */
+        JournalWorkTypesOut: {
+            /** Success */
+            success: boolean;
+            /** Work Types */
+            work_types: components["schemas"]["JournalWorkTypeOut"][];
+        };
         /** LegacyCapabilities */
         LegacyCapabilities: {
             /** Refresh Sessions */
@@ -9529,9 +9545,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalWorkTypesOut"];
                 };
             };
         };

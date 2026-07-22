@@ -1,6 +1,21 @@
 from datetime import date
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class JournalWorkTypeOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    weight: float
+
+
+class JournalWorkTypesOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    work_types: list[JournalWorkTypeOut]
 
 
 class AddGradeRequest(BaseModel):

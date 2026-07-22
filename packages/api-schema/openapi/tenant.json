@@ -6289,9 +6289,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Work Types Api Journal Work Types Get"
+                  "$ref": "#/components/schemas/JournalWorkTypesOut"
                 }
               }
             }
@@ -14290,6 +14288,52 @@
           "amount"
         ],
         "title": "InvestRequest"
+      },
+      "JournalWorkTypeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "weight"
+        ],
+        "title": "JournalWorkTypeOut"
+      },
+      "JournalWorkTypesOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "work_types": {
+            "items": {
+              "$ref": "#/components/schemas/JournalWorkTypeOut"
+            },
+            "type": "array",
+            "title": "Work Types"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "work_types"
+        ],
+        "title": "JournalWorkTypesOut"
       },
       "LegacyCapabilities": {
         "properties": {

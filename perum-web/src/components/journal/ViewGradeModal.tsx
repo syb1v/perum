@@ -5,7 +5,11 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { Grade, WorkType, Topic } from '@/types';
+import type { Grade, Topic } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
+
+type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
+type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 
 interface ViewGradeModalProps {
     gradeId: number;
@@ -34,11 +38,11 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
     const [editType, setEditType] = useState('');
     const [editComment, setEditComment] = useState('');
     const [editTopicId, setEditTopicId] = useState<string | null>(null);
-    const [workTypes, setWorkTypes] = useState<WorkType[]>([]);
+    const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
     const [topics, setTopics] = useState<Topic[]>([]);
 
     useEffect(() => {
-        api.get<{ success: boolean; work_types: WorkType[] }>('/journal/work-types')
+        api.get<JournalWorkTypes>('/journal/work-types')
             .then(data => {
                 if (data.work_types) setWorkTypes(data.work_types);
             })

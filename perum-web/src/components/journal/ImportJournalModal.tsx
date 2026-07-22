@@ -1,5 +1,9 @@
 import React, { useState, useRef, useCallback } from 'react';
 import api from '@/lib/apiClient';
+import type { components } from '@perum/api-schema/tenant';
+
+type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
+type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 
 interface Props {
     classId: number;
@@ -39,7 +43,7 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
     const [mapping, setMapping] = useState<Record<string, number>>({});
     
     // Work types for mapping
-    const [workTypes, setWorkTypes] = useState<{ id: number, name: string }[]>([]);
+    const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
     
     // Step 3 Data
     const [execResult, setExecResult] = useState<any>(null);
@@ -53,7 +57,7 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
 
     // Fetch work types on mount
     React.useEffect(() => {
-        api.get<{ work_types: { id: number, name: string }[] }>('/journal/work-types')
+        api.get<JournalWorkTypes>('/journal/work-types')
             .then(res => setWorkTypes(res.work_types || []))
             .catch(() => {});
     }, []);

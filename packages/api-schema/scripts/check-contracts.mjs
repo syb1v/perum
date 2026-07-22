@@ -267,6 +267,26 @@ for (const field of ['class_name', 'subject_name']) {
     throw new Error(`TeacherHomeworkOut ${field} must be a nullable string`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
+  throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
+}
+for (const [name, fields] of [
+  ['JournalWorkTypesOut', ['success', 'work_types']],
+  ['JournalWorkTypeOut', ['id', 'name', 'weight']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  const required = schema.required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the journal work types client contract`);
+  }
+  if (fields.some(field => schema.properties[field].nullable === true || schema.properties[field].anyOf?.some(variant => variant.type === 'null'))) {
+    throw new Error(`${name} fields must not be nullable`);
+  }
+}
+const journalWorkTypesItemsRef = tenantOpenapi.components.schemas.JournalWorkTypesOut.properties.work_types.items?.$ref;
+if (journalWorkTypesItemsRef !== '#/components/schemas/JournalWorkTypeOut') {
+  throw new Error('JournalWorkTypesOut work_types must contain JournalWorkTypeOut items');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }
