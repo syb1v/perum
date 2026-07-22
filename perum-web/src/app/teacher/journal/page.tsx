@@ -11,8 +11,11 @@ import TeacherScheduleTab from '@/components/journal/TeacherScheduleTab';
 import TeacherLessonModal from '@/components/journal/TeacherLessonModal';
 import TeacherWorksTab from '@/components/journal/TeacherWorksTab';
 import styles from './page.module.css';
+import type { components } from '@perum/api-schema/tenant';
 
 type ViewType = 'schedule' | 'grades' | 'works';
+type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
+type JournalTeacherClass = components['schemas']['JournalTeacherClassOut'];
 
 function TeacherJournalContent() {
     const { showError } = useToast();
@@ -26,8 +29,7 @@ function TeacherJournalContent() {
     const [journalLoading, setJournalLoading] = useState(false);
 
     // Data
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [teacherClasses, setTeacherClasses] = useState<any[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<JournalTeacherClass[]>([]);
     const [journal, setJournal] = useState<JournalData | null>(null);
 
     // Selection
@@ -65,8 +67,7 @@ function TeacherJournalContent() {
 
     // Initial Load
     useEffect(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        api.get<{ classes: any[] }>('/journal/teacher/subjects')
+        api.get<JournalTeacherSubjects>('/journal/teacher/subjects')
             .then(data => {
                 const sortedClasses = (data.classes || []).sort((a, b) =>
                     a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
@@ -87,8 +88,7 @@ function TeacherJournalContent() {
     }, [selectedClassId, teacherClasses]);
 
     const currentSubject = useMemo(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return availableSubjects.find((s: any) => s.id === selectedSubjectId);
+        return availableSubjects.find(s => s.id === selectedSubjectId);
     }, [selectedSubjectId, availableSubjects]);
 
     const currentClass = useMemo(() => {

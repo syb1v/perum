@@ -4076,6 +4076,33 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** JournalTeacherClassOut */
+        JournalTeacherClassOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Grade Level */
+            grade_level: number | null;
+            /** Subjects */
+            subjects: components["schemas"]["JournalTeacherSubjectOut"][];
+        };
+        /** JournalTeacherSubjectOut */
+        JournalTeacherSubjectOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Short Name */
+            short_name: string | null;
+            /** Category */
+            category: string;
+        };
+        /** JournalTeacherSubjectsOut */
+        JournalTeacherSubjectsOut: {
+            /** Classes */
+            classes: components["schemas"]["JournalTeacherClassOut"][];
+        };
         /** JournalWorkTypeOut */
         JournalWorkTypeOut: {
             /** Id */
@@ -9523,9 +9550,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalTeacherSubjectsOut"];
                 };
             };
         };

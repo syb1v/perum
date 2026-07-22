@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import styles from '../../app/teacher/journal/page.module.css';
 import api from '@/lib/apiClient';
-import type { JournalStudent, Subject, PeriodInfo } from '@/types';
+import type { JournalStudent, PeriodInfo } from '@/types';
+
+interface SubjectOption {
+    id: number;
+    name: string;
+}
 
 interface FinalGradeModalProps {
     student: JournalStudent | null;
-    subject: Subject | null;
+    subject: SubjectOption | null;
     classId: number;
     period: PeriodInfo | null;
     existingGrade: { id: number; value: number; type: string; comment?: string } | null;

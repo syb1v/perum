@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.modules.journal.schemas import JournalWorkTypesOut
+from app.modules.journal.schemas import JournalTeacherSubjectsOut, JournalWorkTypesOut
 
 
 def test_journal_work_types_contract_accepts_items_and_empty_list() -> None:
@@ -33,3 +33,52 @@ def test_journal_work_types_contract_accepts_items_and_empty_list() -> None:
 def test_journal_work_types_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         JournalWorkTypesOut.model_validate(payload)
+
+
+def test_journal_teacher_subjects_contract_accepts_nested_nullable_picker() -> None:
+    response = JournalTeacherSubjectsOut.model_validate(
+        {
+            "classes": [
+                {"id": 1, "name": "7A", "grade_level": None, "subjects": []},
+                {
+                    "id": 2,
+                    "name": "8B",
+                    "grade_level": 8,
+                    "subjects": [
+                        {"id": 3, "name": "Mathematics", "short_name": None, "category": "normal"}
+                    ],
+                },
+            ]
+        }
+    )
+    empty = JournalTeacherSubjectsOut.model_validate({"classes": []})
+
+    assert response.classes[0].grade_level is None
+    assert response.classes[1].subjects[0].short_name is None
+    assert empty.classes == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"classes": [], "school_id": 1},
+        {"classes": [{"id": 1, "name": "7A", "grade_level": None, "subjects": [], "school_id": 1}]},
+        {
+            "classes": [
+                {
+                    "id": 1,
+                    "name": "7A",
+                    "grade_level": 7,
+                    "subjects": [
+                        {"id": 2, "name": "Mathematics", "short_name": None, "category": "normal", "school_id": 1}
+                    ],
+                }
+            ]
+        },
+        {"classes": [{"id": 1, "name": "7A", "grade_level": 7}]},
+        {"classes": None},
+    ],
+)
+def test_journal_teacher_subjects_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        JournalTeacherSubjectsOut.model_validate(payload)

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './TeacherWorksTab.module.css';
 import journalStyles from '../../app/teacher/journal/page.module.css';
-import { ClassInfo, Subject } from '@/types';
+
+interface PickerOption {
+    id: number;
+    name: string;
+}
 
 interface WorkItem {
     id: string; // Composite ID like 'hw_1' or 'cw_2'
@@ -18,8 +22,8 @@ interface WorkItem {
 
 
 interface TeacherWorksTabProps {
-    classes: ClassInfo[];
-    subjects: Subject[];
+    classes: PickerOption[];
+    subjects: PickerOption[];
 }
 
 export default function TeacherWorksTab({ classes, subjects }: TeacherWorksTabProps) {

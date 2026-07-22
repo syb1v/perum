@@ -5,6 +5,9 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import api from '@/lib/apiClient';
 import styles from './page.module.css';
+import type { components } from '@perum/api-schema/tenant';
+
+type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
 
 interface SubjectInfo {
     id: number;
@@ -34,19 +37,16 @@ export default function TopicsPage() {
     const [editTopicName, setEditTopicName] = useState('');
 
     useEffect(() => {
-        api.get<unknown>('/journal/teacher/subjects')
-            .then((data: unknown) => {
+        api.get<JournalTeacherSubjects>('/journal/teacher/subjects')
+            .then((data) => {
                 const uniqueSubjects = new Map<number, SubjectInfo>();
-                const responseData = data as { classes?: { subjects: { id: number; name: string }[] }[] };
-                if (responseData.classes) {
-                    responseData.classes.forEach((cls) => {
-                        cls.subjects.forEach((subj) => {
-                            if (!uniqueSubjects.has(subj.id)) {
-                                uniqueSubjects.set(subj.id, { id: subj.id, name: subj.name });
-                            }
-                        });
+                data.classes.forEach((cls) => {
+                    cls.subjects.forEach((subj) => {
+                        if (!uniqueSubjects.has(subj.id)) {
+                            uniqueSubjects.set(subj.id, { id: subj.id, name: subj.name });
+                        }
                     });
-                }
+                });
                 const subjList = Array.from(uniqueSubjects.values()).sort((a, b) => a.name.localeCompare(b.name));
                 setSubjects(subjList);
                 if (subjList.length > 0) {

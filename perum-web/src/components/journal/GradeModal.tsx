@@ -5,15 +5,20 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { JournalStudent, Subject, Topic } from '@/types';
+import type { JournalStudent, Topic } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 
+interface SubjectOption {
+    id: number;
+    name: string;
+}
+
 interface GradeModalProps {
     student: JournalStudent | null;
-    subject: Subject | null;
+    subject: SubjectOption | null;
     classId: number;
     date: string; // YYYY-MM-DD
     lessonNumber?: number;

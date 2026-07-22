@@ -287,6 +287,36 @@ const journalWorkTypesItemsRef = tenantOpenapi.components.schemas.JournalWorkTyp
 if (journalWorkTypesItemsRef !== '#/components/schemas/JournalWorkTypeOut') {
   throw new Error('JournalWorkTypesOut work_types must contain JournalWorkTypeOut items');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/journal/teacher/subjects', 'get') !== '#/components/schemas/JournalTeacherSubjectsOut') {
+  throw new Error('GET /api/journal/teacher/subjects must return JournalTeacherSubjectsOut');
+}
+for (const [name, fields] of [
+  ['JournalTeacherSubjectsOut', ['classes']],
+  ['JournalTeacherClassOut', ['id', 'name', 'grade_level', 'subjects']],
+  ['JournalTeacherSubjectOut', ['id', 'name', 'short_name', 'category']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the journal teacher subjects client contract`);
+  }
+}
+const journalTeacherClasses = tenantOpenapi.components.schemas.JournalTeacherSubjectsOut.properties.classes;
+if (journalTeacherClasses.items?.$ref !== '#/components/schemas/JournalTeacherClassOut') {
+  throw new Error('JournalTeacherSubjectsOut classes must contain JournalTeacherClassOut items');
+}
+const journalTeacherClass = tenantOpenapi.components.schemas.JournalTeacherClassOut.properties;
+if (journalTeacherClass.subjects.items?.$ref !== '#/components/schemas/JournalTeacherSubjectOut') {
+  throw new Error('JournalTeacherClassOut subjects must contain JournalTeacherSubjectOut items');
+}
+for (const [schema, requiredType, label] of [
+  [journalTeacherClass.grade_level, 'integer', 'JournalTeacherClassOut grade_level'],
+  [tenantOpenapi.components.schemas.JournalTeacherSubjectOut.properties.short_name, 'string', 'JournalTeacherSubjectOut short_name'],
+]) {
+  const variants = schema.anyOf ?? [];
+  if (!variants.some(variant => variant.type === requiredType) || !variants.some(variant => variant.type === 'null')) {
+    throw new Error(`${label} must be required nullable`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

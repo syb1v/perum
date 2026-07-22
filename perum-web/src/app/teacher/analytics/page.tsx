@@ -5,8 +5,6 @@ import { useToast } from '@/context/ToastContext';
 import api from '@/lib/apiClient';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
-    ClassInfo,
-    Subject,
     AnalyticsDashboardResponse,
     AnalyticsTopicsResponse,
 } from '@/types';
@@ -20,6 +18,11 @@ import styles from './page.module.css';
 import journalStyles from '../journal/page.module.css';
 import { generateReportHTML, getReportDataForExcel } from '@/utils/reportGenerator';
 import { exportToExcel } from '@/utils/exportUtils';
+import type { components } from '@perum/api-schema/tenant';
+
+type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
+type JournalTeacherClass = components['schemas']['JournalTeacherClassOut'];
+type JournalTeacherSubject = components['schemas']['JournalTeacherSubjectOut'];
 
 interface SchoolPeriod {
     id: number;
@@ -39,8 +42,8 @@ export default function TeacherAnalytics() {
     const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
 
     // Data State
-    const [teacherClasses, setTeacherClasses] = useState<ClassInfo[]>([]);
-    const [availableSubjects, setAvailableSubjects] = useState<Subject[]>([]);
+    const [teacherClasses, setTeacherClasses] = useState<JournalTeacherClass[]>([]);
+    const [availableSubjects, setAvailableSubjects] = useState<JournalTeacherSubject[]>([]);
 
     // Tab State
     const [currentTab, setCurrentTab] = useState<'dashboard' | 'reports'>('dashboard');
@@ -68,30 +71,8 @@ export default function TeacherAnalytics() {
     useEffect(() => {
         const loadInitialData = async () => {
             try {
-                // Fetch classes
-                // const classesRes = await api.get<{ classes: ClassInfo[] }>('/journal/teacher/subjects'); unused
-
-                // The API returns classes with nested subjects probably, but let's stick to known structure from Journal
-                // Wait, in Journal we used /journal/teacher/subjects and it returned { classes: [...] }
-                // Let's assume the basic ClassInfo structure is correct.
-
-                // Correction: In Journal we saw that we need to extract subjects from classes or fetch them separately.
-                // In analytics.js: loadTeacherClasses -> /teacher/classes
-                // loadTeacherSubjects -> /teacher/subjects
-
-                // Let's try to match existing API calls from Journal if possible, or use the ones from analytics.js if they are different endpoints.
-                // Since I am porting analytics.js, I should probably respect its endpoints if backend supports them.
-                // analytics.js: GET /teacher/classes
-                // analytics.js: GET /teacher/subjects
-
-                // Let's check api.get('/teacher/classes') in previous steps or assume parity.
-                // I'll stick to what analytics.js uses.
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const data = await api.get<{ classes: any[] }>('/journal/teacher/subjects').catch(() => ({ classes: [] }));
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const sortedClasses = (data.classes || []).sort((a: any, b: any) =>
+                const data = await api.get<JournalTeacherSubjects>('/journal/teacher/subjects').catch(() => ({ classes: [] }));
+                const sortedClasses = data.classes.sort((a, b) =>
                     a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
                 );
                 setTeacherClasses(sortedClasses);
@@ -120,13 +101,11 @@ export default function TeacherAnalytics() {
         if (selectedClassId) {
             sessionStorage.setItem('analytics_selected_class_id', String(selectedClassId));
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cls = teacherClasses.find(c => c.id === selectedClassId) as any;
+            const cls = teacherClasses.find(c => c.id === selectedClassId);
             if (cls && cls.subjects) {
                 setAvailableSubjects(cls.subjects);
                 // If currently selected subject is not in the new class subjects, reset it
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                if (selectedSubjectId && !cls.subjects.find((s: any) => s.id === selectedSubjectId)) {
+                if (selectedSubjectId && !cls.subjects.find(s => s.id === selectedSubjectId)) {
                     setSelectedSubjectId(0);
                 }
             } else {

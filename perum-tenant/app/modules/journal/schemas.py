@@ -18,6 +18,30 @@ class JournalWorkTypesOut(BaseModel):
     work_types: list[JournalWorkTypeOut]
 
 
+class JournalTeacherSubjectOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    short_name: str | None
+    category: str
+
+
+class JournalTeacherClassOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    grade_level: int | None
+    subjects: list[JournalTeacherSubjectOut]
+
+
+class JournalTeacherSubjectsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    classes: list[JournalTeacherClassOut]
+
+
 class AddGradeRequest(BaseModel):
     student_id: int
     subject_id: int

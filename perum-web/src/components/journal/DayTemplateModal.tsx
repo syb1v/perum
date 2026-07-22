@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/apiClient';
-import type { Topic, Subject } from '@/types';
+import type { Topic } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 import styles from '../../app/teacher/journal/page.module.css';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 
+interface SubjectOption {
+    id: number;
+    name: string;
+}
+
 interface DayTemplateModalProps {
     date: string;
-    subject: Subject;
+    subject: SubjectOption;
     initialWorkTypeId?: string;
     initialTopicId?: string;
     lessonNumbers: number[];

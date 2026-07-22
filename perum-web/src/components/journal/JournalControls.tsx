@@ -1,7 +1,11 @@
 'use client';
 
-import { ClassInfo, Subject } from '@/types';
 import styles from '../../app/teacher/journal/page.module.css';
+
+interface PickerOption {
+    id: number;
+    name: string;
+}
 
 interface PeriodOption {
     id: number;
@@ -12,8 +16,8 @@ interface PeriodOption {
 }
 
 interface JournalControlsProps {
-    classes: ClassInfo[];
-    subjects: Subject[];
+    classes: PickerOption[];
+    subjects: PickerOption[];
     selectedClassId: number;
     selectedSubjectId: number;
     periods: PeriodOption[];
@@ -99,4 +103,3 @@ export default function JournalControls({
         </div>
     );
 }
-

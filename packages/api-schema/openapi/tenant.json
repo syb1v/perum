@@ -6261,9 +6261,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Teacher Subjects Api Journal Teacher Subjects Get"
+                  "$ref": "#/components/schemas/JournalTeacherSubjectsOut"
                 }
               }
             }
@@ -14288,6 +14286,98 @@
           "amount"
         ],
         "title": "InvestRequest"
+      },
+      "JournalTeacherClassOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "grade_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Level"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/JournalTeacherSubjectOut"
+            },
+            "type": "array",
+            "title": "Subjects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "grade_level",
+          "subjects"
+        ],
+        "title": "JournalTeacherClassOut"
+      },
+      "JournalTeacherSubjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "short_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "short_name",
+          "category"
+        ],
+        "title": "JournalTeacherSubjectOut"
+      },
+      "JournalTeacherSubjectsOut": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/JournalTeacherClassOut"
+            },
+            "type": "array",
+            "title": "Classes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classes"
+        ],
+        "title": "JournalTeacherSubjectsOut"
       },
       "JournalWorkTypeOut": {
         "properties": {

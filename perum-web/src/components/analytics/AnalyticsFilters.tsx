@@ -1,11 +1,15 @@
 'use client';
 
-import { ClassInfo, Subject } from '@/types';
 import journalStyles from '../../app/teacher/journal/page.module.css';
 
+interface PickerOption {
+    id: number;
+    name: string;
+}
+
 interface AnalyticsFiltersProps {
-    classes: ClassInfo[];
-    subjects: Subject[];
+    classes: PickerOption[];
+    subjects: PickerOption[];
     selectedClassId: number;
     selectedSubjectId: number;
     selectedPeriod: string;

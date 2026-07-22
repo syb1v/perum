@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from 'react';
 import api from '@/lib/apiClient';
-import { JournalData, JournalStudent, ClassInfo, Subject } from '@/types';
+import { JournalData, JournalStudent } from '@/types';
 import JournalControls from '@/components/journal/JournalControls';
 import GradeModal from '@/components/journal/GradeModal';
 import ViewGradeModal from '@/components/journal/ViewGradeModal';
@@ -11,6 +11,10 @@ import DayTemplateModal from '@/components/journal/DayTemplateModal';
 import ImportJournalModal from '@/components/journal/ImportJournalModal';
 import styles from '../../app/teacher/journal/page.module.css';
 import { useToast } from '@/context/ToastContext';
+import type { components } from '@perum/api-schema/tenant';
+
+type JournalTeacherClass = components['schemas']['JournalTeacherClassOut'];
+type JournalTeacherSubject = components['schemas']['JournalTeacherSubjectOut'];
 
 export interface PeriodOption {
     id: number;
@@ -21,16 +25,16 @@ export interface PeriodOption {
 }
 
 interface TeacherGradesTabProps {
-    teacherClasses: ClassInfo[];
+    teacherClasses: JournalTeacherClass[];
     selectedClassId: number;
     selectedSubjectId: number;
     selectedPeriodId: number;
     selectedDate: string;
     journal: JournalData | null;
     journalLoading: boolean;
-    availableSubjects: Subject[];
-    currentSubject: Subject | null;
-    currentClass: ClassInfo | null;
+    availableSubjects: JournalTeacherSubject[];
+    currentSubject: JournalTeacherSubject | null;
+    currentClass: JournalTeacherClass | null;
     onClassChange: (id: number) => void;
     onSubjectChange: (id: number) => void;
     onPeriodChange: (id: number) => void;
@@ -187,7 +191,7 @@ export default function TeacherGradesTab({
     return (
         <div style={{ padding: '0 24px' }}>
             <JournalControls
-                classes={teacherClasses as ClassInfo[]}
+                classes={teacherClasses}
                 subjects={availableSubjects}
                 selectedClassId={selectedClassId}
                 selectedSubjectId={selectedSubjectId}

@@ -37,6 +37,7 @@
     "/api/teacher/classes",
     "/api/teacher/homework",
     "/api/journal/grades",
+    "/api/journal/teacher/subjects",
     "/api/journal/work-types",
     "/api/homework",
     "/api/control-works",
