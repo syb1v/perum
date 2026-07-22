@@ -40,6 +40,19 @@ Friends Web/Mobile используют generated Tenant schemas `StudentProfile
 client fields не исчезли, а `next_cursor` остаётся required nullable integer.
 После изменения social schemas обязательны оба client typecheck и Web build.
 
+Teacher classes response проверяется focused backend suite и contract gate:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_teacher_contracts.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Pydantic suite фиксирует nullable `created_at` и запрет extra envelope fields.
+Contract gate проверяет `TeacherClassesOut` binding, `TeacherClassOut` item schema,
+required fields и nullable `date-time`; Web typecheck гарантирует использование
+generated response без ручного cast.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

@@ -256,3 +256,4 @@
 | 253 | 2026-07-22 | 6a76ead | fix(contracts): типизированы social mutation payloads |
 | 254 | 2026-07-22 | f687e9b | fix(contracts): типизированы requester support payloads |
 | 255 | 2026-07-22 | 9405c91 | fix(contracts): типизированы admin support payloads |
+| 256 | 2026-07-22 | fe3abca | fix(contracts): типизирован список классов учителя |

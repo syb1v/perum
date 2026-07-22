@@ -58,6 +58,11 @@ Admin support mutation requests curated отдельно: metadata PATCH исп�
 support `MessageCreate`/`ReadCreate`. Mobile action union должен брать допустимые
 status/category/priority values из generated patch schema, а не из `string`.
 
+Teacher classes read также является curated contract: GET `/api/teacher/classes`
+обязан возвращать `TeacherClassesOut` с `TeacherClassOut[]`. Все item fields
+required, а `created_at` остаётся nullable `date-time`; Web использует generated
+response и не должен поддерживать отдельную копию wire DTO.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

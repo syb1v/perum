@@ -124,6 +124,12 @@ generated `TicketPatch`, `AssignCreate`, support `MessageCreate` и `ReadCreate`
 operator request bindings и обязательные action/version identities. Native
 escalation request не реализован и в этот slice не входит.
 
+Teacher classes read contract теперь typed end-to-end: Tenant возвращает закрытые
+`TeacherClassesOut`/`TeacherClassOut`, включая required nullable `created_at`, а
+Web больше не дублирует response DTO и не приводит generated `unknown` двойным
+cast. Curated gate фиксирует endpoint binding, item schema, required fields и
+date-time nullability. Остальные teacher endpoints и query families этим не закрыты.
+
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
 может быть принят, освобождает active-pair slot для нового idempotency identity;
@@ -165,7 +171,7 @@ Native Friends UI и двухступенчатый controlled rollout нахо�
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
 social/support query plans, versioned telemetry/deployment fixtures/sanitizer и
-curated Friends/Homework/preferences/push/social/support-mutation/moderation OpenAPI contracts прошли Core/Tenant full
+curated Friends/Homework/preferences/push/social/support-mutation/moderation/teacher-classes OpenAPI contracts прошли Core/Tenant full
 pytest, mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
@@ -764,7 +770,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются остальные query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation/teacher-classes contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются остальные teacher/query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, sanitized metrics persistence и cross-component deployment snapshot fixture зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; fixture не является Mobile telemetry evidence; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, generated preferences/push-registration DTO, Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы. Push registration status восстанавливается из server receipt; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push delivery/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
