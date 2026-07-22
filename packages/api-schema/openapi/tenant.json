@@ -11892,9 +11892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Classes Api Teacher Classes Get"
+                  "$ref": "#/components/schemas/TeacherClassesOut"
                 }
               }
             }
@@ -17294,6 +17292,60 @@
           "context_id"
         ],
         "title": "SyncAssignmentsRequest"
+      },
+      "TeacherClassOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "student_count": {
+            "type": "integer",
+            "title": "Student Count"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "student_count",
+          "created_at"
+        ],
+        "title": "TeacherClassOut"
+      },
+      "TeacherClassesOut": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherClassOut"
+            },
+            "type": "array",
+            "title": "Classes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classes"
+        ],
+        "title": "TeacherClassesOut"
       },
       "TeacherScheduleItemIn": {
         "properties": {

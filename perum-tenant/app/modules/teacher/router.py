@@ -11,6 +11,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.teacher import service
+from app.modules.teacher.schemas import TeacherClassesOut
 
 router = APIRouter()
 
@@ -19,7 +20,7 @@ async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
 
 
-@router.get("/classes")
+@router.get("/classes", response_model=TeacherClassesOut)
 async def classes(user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)) -> dict:
     return {"classes": await service.teacher_classes(db, await _school(user, db), user)}
 

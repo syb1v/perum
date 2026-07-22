@@ -34,6 +34,7 @@
     "/api/admin/support/unread-count",
     "/api/student/diary",
     "/api/student/grades",
+    "/api/teacher/classes",
     "/api/journal/grades",
     "/api/homework",
     "/api/control-works",

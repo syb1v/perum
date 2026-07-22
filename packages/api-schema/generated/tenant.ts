@@ -5086,6 +5086,22 @@ export interface components {
              */
             class_ids: number[];
         };
+        /** TeacherClassOut */
+        TeacherClassOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Student Count */
+            student_count: number;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** TeacherClassesOut */
+        TeacherClassesOut: {
+            /** Classes */
+            classes: components["schemas"]["TeacherClassOut"][];
+        };
         /** TeacherScheduleItemIn */
         TeacherScheduleItemIn: {
             /** Subject Id */
@@ -12963,9 +12979,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherClassesOut"];
                 };
             };
         };

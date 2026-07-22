@@ -12,17 +12,6 @@ interface ActivityItem {
     subject_name?: string;
 }
 
-interface ClassResponse {
-    id: number;
-    name: string;
-    student_count: number;
-    created_at: string;
-}
-
-interface ClassesResponse {
-    classes: ClassResponse[];
-}
-
 interface HomeworkResponse {
     homework: ActivityItem[];
 }
@@ -37,7 +26,7 @@ export function useTeacherProfile() {
             const { data, error } = await client.GET('/api/teacher/classes', {});
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if (error) throw new Error((error as any)?.detail || 'Ошибка загрузки классов');
-            return data as unknown as ClassesResponse;
+            return data;
         },
         enabled: !!user,
     });

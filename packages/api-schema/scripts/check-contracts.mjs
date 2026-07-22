@@ -220,6 +220,26 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the admin support mutation contract`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/classes', 'get') !== '#/components/schemas/TeacherClassesOut') {
+  throw new Error('GET /api/teacher/classes must return TeacherClassesOut');
+}
+for (const [name, fields] of [
+  ['TeacherClassesOut', ['classes']],
+  ['TeacherClassOut', ['id', 'name', 'student_count', 'created_at']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the teacher classes client contract`);
+  }
+}
+const teacherClassesItemsRef = tenantOpenapi.components.schemas.TeacherClassesOut.properties.classes.items?.$ref;
+if (teacherClassesItemsRef !== '#/components/schemas/TeacherClassOut') {
+  throw new Error('TeacherClassesOut classes must contain TeacherClassOut items');
+}
+const teacherClassCreatedAt = tenantOpenapi.components.schemas.TeacherClassOut.properties.created_at.anyOf ?? [];
+if (!teacherClassCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time') || !teacherClassCreatedAt.some(schema => schema.type === 'null')) {
+  throw new Error('TeacherClassOut created_at must be a nullable date-time');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }
