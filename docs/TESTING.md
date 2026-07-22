@@ -58,6 +58,19 @@ generated response без ручного cast.
 nullable `date-time` и nullable class/subject names. Web typecheck и build обязаны
 подтвердить явную обработку отсутствующих metadata без возврата к ручному DTO.
 
+Journal work types contract проверяется отдельно:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_journal_contracts.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Focused suite фиксирует полный и пустой response, required `weight`, non-null поля
+и запрет extra envelope/item data. Curated gate проверяет
+`JournalWorkTypesOut`/`JournalWorkTypeOut` binding, а Web typecheck сохраняет один
+generated transport DTO во всех четырёх journal consumer-ах.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

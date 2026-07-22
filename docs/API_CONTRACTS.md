@@ -69,6 +69,12 @@ Teacher profile homework feed использует отдельный curated co
 `/api/homework`; `created_at`, `class_name` и `subject_name` required nullable,
 тогда как `description` всегда нормализован в строку.
 
+Journal work types являются отдельным curated reference-data contract: GET
+`/api/journal/work-types` возвращает `JournalWorkTypesOut` с
+`JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`
+обязательны и non-null; Web journal consumers используют generated response вместо
+локальных сокращённых shapes.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

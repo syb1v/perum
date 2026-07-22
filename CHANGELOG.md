@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Tenant `GET /api/journal/work-types` получил закрытые `JournalWorkTypesOut`/`JournalWorkTypeOut` schemas с required non-null envelope и item fields. Четыре Web journal consumer-а переведены с трёх расходящихся ручных response shapes на один generated DTO; curated gate фиксирует endpoint/item binding и обязательный `weight`, не расширяя slice до journal query/cache refactor.
 - Tenant `GET /api/teacher/homework` получил отдельные закрытые `TeacherHomeworkListOut`/`TeacherHomeworkOut` schemas для profile feed без смешения с расширенным `/api/homework`. Web удалил ручные `ActivityItem`/response DTO и двойной cast, а nullable date/class/subject metadata теперь отображаются явно; curated gate фиксирует binding, required fields и nullability.
 - Tenant `GET /api/teacher/classes` получил закрытые `TeacherClassesOut`/`TeacherClassOut` response schemas с required nullable `created_at`. Web удалил ручную копию DTO и двойной `unknown` cast; curated gate фиксирует endpoint/item binding, required fields и date-time nullability. Остальные teacher endpoints и query families остаются отдельным scope.
 - Mobile admin support metadata/assignment/reply/read paths связаны с generated `TicketPatch`, `AssignCreate` и support `MessageCreate`/`ReadCreate`. Action union больше не принимает произвольные metadata strings, UI сохраняет generated literals до durable enqueue, curated gate фиксирует четыре operator request bindings и action/version identities. Native escalation и Core terminal receipts не входят в slice.
