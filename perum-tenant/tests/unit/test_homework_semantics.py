@@ -11,7 +11,7 @@ from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent, LessonOccurrence, Schedule, Subject
 from app.core.time import utc_now
 from app.models.journal import Homework, HomeworkStudentState
-from app.modules.coursework.schemas import HomeworkCreate, HomeworkStateUpdate
+from app.modules.coursework.schemas import HomeworkCreate, HomeworkListOut, HomeworkStateOut, HomeworkStateUpdate
 from app.modules.coursework.service import create_homework, list_homework, update_homework_state
 
 
@@ -66,6 +66,7 @@ def test_homework_semantics_separate_occurrences_publication_and_deadline():
             visible = (await list_homework(db, school.id, student, cls.id, subject.id))["homework"]
             assert visible[0]["deadline_at"].startswith("2026-07-18T08:00:00")
             assert visible[0]["student_state"] == {"status": "not_started", "version": 0, "completed_at": None}
+            assert HomeworkListOut.model_validate({"homework": visible}).homework[0].student_state.version == 0
         finally:
             await db.close()
             await engine.dispose()
@@ -91,6 +92,7 @@ def test_legacy_due_date_does_not_create_target_occurrence_and_state_is_versione
             assert [item["id"] for item in visible] == [homework.id]
 
             state = await update_homework_state(db, school.id, homework.id, HomeworkStateUpdate(client_action_id="complete-1", version=0, status="completed"), student)
+            assert HomeworkStateOut.model_validate(state).replayed is False
             assert state["version"] == 1
             assert state["completed_at"] is not None
             with pytest.raises(HTTPException) as stale:

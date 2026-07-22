@@ -40,6 +40,20 @@ Friends Web/Mobile используют generated Tenant schemas `StudentProfile
 client fields не исчезли, а `next_cursor` остаётся required nullable integer.
 После изменения social schemas обязательны оба client typecheck и Web build.
 
+Homework read и versioned state receipt проверяются focused backend suite и
+contract gate:
+
+```bash
+cd perum-tenant
+python -m pytest tests/unit/test_homework_semantics.py -q
+```
+
+`npm run contracts:check` фиксирует `HomeworkListOut` для `GET /api/homework` и
+`HomeworkStateOut` для `PUT /api/homework/{homework_id}/state`, включая required
+`status`, `version`, `completed_at`, `homework_id` и `replayed`. Mobile test
+`perum-mobile/src/homework/types.test.ts` проверяет fail-closed student decoder:
+role-shaped row с `student_state=null` не попадает в student UI.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

@@ -3919,6 +3919,15 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** HomeworkAttachmentOut */
+        HomeworkAttachmentOut: {
+            /** Id */
+            id: number;
+            /** Filename */
+            filename: string | null;
+            /** Url Link */
+            url_link: string | null;
+        };
         /** HomeworkCreate */
         HomeworkCreate: {
             /** Class Id */
@@ -3942,6 +3951,61 @@ export interface components {
             /** Deadline At */
             deadline_at?: string | null;
         };
+        /** HomeworkListOut */
+        HomeworkListOut: {
+            /** Homework */
+            homework: components["schemas"]["HomeworkOut"][];
+        };
+        /** HomeworkOut */
+        HomeworkOut: {
+            /** Id */
+            id: number;
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string | null;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** Assigned Occurrence Id */
+            assigned_occurrence_id: number | null;
+            /** Target Occurrence Id */
+            target_occurrence_id: number | null;
+            /** Published At */
+            published_at: string | null;
+            /** Deadline At */
+            deadline_at: string | null;
+            /** Is Overdue */
+            is_overdue: boolean;
+            student_state: components["schemas"]["HomeworkStudentStateOut"] | null;
+            /** Created At */
+            created_at: string | null;
+            /** Attachments */
+            attachments: components["schemas"]["HomeworkAttachmentOut"][];
+        };
+        /** HomeworkStateOut */
+        HomeworkStateOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "in_progress" | "completed";
+            /** Version */
+            version: number;
+            /** Completed At */
+            completed_at: string | null;
+            /** Homework Id */
+            homework_id: number;
+            /** Replayed */
+            replayed: boolean;
+        };
         /** HomeworkStateUpdate */
         HomeworkStateUpdate: {
             /** Client Action Id */
@@ -3950,6 +4014,18 @@ export interface components {
             version: number;
             /** Status */
             status: string;
+        };
+        /** HomeworkStudentStateOut */
+        HomeworkStudentStateOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "in_progress" | "completed";
+            /** Version */
+            version: number;
+            /** Completed At */
+            completed_at: string | null;
         };
         /** HomeworkUpdate */
         HomeworkUpdate: {
@@ -5924,9 +6000,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HomeworkListOut"];
                 };
             };
             /** @description Validation Error */
@@ -6066,9 +6140,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HomeworkStateOut"];
                 };
             };
             /** @description Validation Error */

@@ -1064,9 +1064,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response List Homework Api Homework Get"
+                  "$ref": "#/components/schemas/HomeworkListOut"
                 }
               }
             }
@@ -1275,9 +1273,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Update Homework State Api Homework  Homework Id  State Put"
+                  "$ref": "#/components/schemas/HomeworkStateOut"
                 }
               }
             }
@@ -13701,6 +13697,43 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HomeworkAttachmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "url_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Link"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "url_link"
+        ],
+        "title": "HomeworkAttachmentOut"
+      },
       "HomeworkCreate": {
         "properties": {
           "class_id": {
@@ -13806,6 +13839,232 @@
         ],
         "title": "HomeworkCreate"
       },
+      "HomeworkListOut": {
+        "properties": {
+          "homework": {
+            "items": {
+              "$ref": "#/components/schemas/HomeworkOut"
+            },
+            "type": "array",
+            "title": "Homework"
+          }
+        },
+        "type": "object",
+        "required": [
+          "homework"
+        ],
+        "title": "HomeworkListOut"
+      },
+      "HomeworkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "assigned_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned Occurrence Id"
+          },
+          "target_occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Occurrence Id"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue"
+          },
+          "student_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HomeworkStudentStateOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/HomeworkAttachmentOut"
+            },
+            "type": "array",
+            "title": "Attachments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "class_id",
+          "class_name",
+          "subject_id",
+          "subject_name",
+          "title",
+          "description",
+          "due_date",
+          "assigned_occurrence_id",
+          "target_occurrence_id",
+          "published_at",
+          "deadline_at",
+          "is_overdue",
+          "student_state",
+          "created_at",
+          "attachments"
+        ],
+        "title": "HomeworkOut"
+      },
+      "HomeworkStateOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "homework_id": {
+            "type": "integer",
+            "title": "Homework Id"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "completed_at",
+          "homework_id",
+          "replayed"
+        ],
+        "title": "HomeworkStateOut"
+      },
       "HomeworkStateUpdate": {
         "properties": {
           "client_action_id": {
@@ -13832,6 +14091,42 @@
           "status"
         ],
         "title": "HomeworkStateUpdate"
+      },
+      "HomeworkStudentStateOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "completed_at"
+        ],
+        "title": "HomeworkStudentStateOut"
       },
       "HomeworkUpdate": {
         "properties": {

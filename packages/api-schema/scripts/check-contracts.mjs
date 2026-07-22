@@ -115,5 +115,21 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the social client contract`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
+  throw new Error('/api/homework must return HomeworkListOut');
+}
+if (responseSchemaRef(tenantOpenapi, '/api/homework/{homework_id}/state', 'put') !== '#/components/schemas/HomeworkStateOut') {
+  throw new Error('/api/homework/{homework_id}/state must return HomeworkStateOut');
+}
+for (const [name, fields] of [
+  ['HomeworkOut', ['id', 'title', 'student_state', 'deadline_at', 'due_date', 'attachments']],
+  ['HomeworkStudentStateOut', ['status', 'version', 'completed_at']],
+  ['HomeworkStateOut', ['homework_id', 'status', 'version', 'completed_at', 'replayed']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the homework client contract`);
+  }
+}
 
 console.log(`OpenAPI contract and mobile descriptor parity passed: ${manifest.tenant.length + manifest.core.length} paths`);

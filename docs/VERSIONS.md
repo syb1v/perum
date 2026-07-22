@@ -244,3 +244,4 @@
 | 241 | 2026-07-22 | 38f8b46 | feat(mobile): добавлен переход из уведомления в support ticket |
 | 242 | 2026-07-22 | 57e76fb | refactor(domain): унифицированы роли операторов поддержки |
 | 243 | 2026-07-22 | 92ff849 | refactor(contracts): унифицированы Friends DTO |
+| 244 | 2026-07-22 | _______ | fix(contracts): типизированы Homework responses |

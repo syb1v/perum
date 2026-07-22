@@ -1,4 +1,12 @@
-export type HomeworkStatus = 'not_started' | 'in_progress' | 'completed';
-export type HomeworkState = { status: HomeworkStatus; version: number; completed_at: string | null };
-export type Homework = { id: number; title: string; description?: string | null; subject_name?: string | null; deadline_at?: string | null; due_date?: string | null; is_overdue?: boolean; student_state: HomeworkState };
+import type { components } from '@perum/api-schema/tenant';
+
+export type HomeworkStatus = components['schemas']['HomeworkStudentStateOut']['status'];
+export type HomeworkState = components['schemas']['HomeworkStudentStateOut'];
+export type HomeworkStateResponse = components['schemas']['HomeworkStateOut'];
+export type HomeworkList = components['schemas']['HomeworkListOut'];
+export type Homework = components['schemas']['HomeworkOut'] & { student_state: HomeworkState };
 export type HomeworkMutation = { id: string; accountId: string; homeworkId: number; clientActionId: string; version: number; status: HomeworkStatus; state: 'pending' | 'sending' | 'retry_wait' | 'conflict' | 'failed_permanent'; attempts: number; nextAttemptAt: number; error: string | null; serverState: HomeworkState | null; createdAt: number };
+
+export function studentHomework(list: HomeworkList): Homework[] {
+  return list.homework.filter((item): item is Homework => item.student_state !== null);
+}

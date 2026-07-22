@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -52,6 +53,46 @@ class HomeworkStateUpdate(BaseModel):
     client_action_id: str = Field(min_length=1, max_length=64)
     version: int = Field(ge=0)
     status: str = Field(pattern=r"^(not_started|in_progress|completed)$")
+
+
+class HomeworkStudentStateOut(BaseModel):
+    status: Literal["not_started", "in_progress", "completed"]
+    version: int
+    completed_at: datetime | None
+
+
+class HomeworkAttachmentOut(BaseModel):
+    id: int
+    filename: str | None
+    url_link: str | None
+
+
+class HomeworkOut(BaseModel):
+    id: int
+    class_id: int
+    class_name: str | None
+    subject_id: int
+    subject_name: str | None
+    title: str
+    description: str | None
+    due_date: datetime | None
+    assigned_occurrence_id: int | None
+    target_occurrence_id: int | None
+    published_at: datetime | None
+    deadline_at: datetime | None
+    is_overdue: bool
+    student_state: HomeworkStudentStateOut | None
+    created_at: datetime | None
+    attachments: list[HomeworkAttachmentOut]
+
+
+class HomeworkListOut(BaseModel):
+    homework: list[HomeworkOut]
+
+
+class HomeworkStateOut(HomeworkStudentStateOut):
+    homework_id: int
+    replayed: bool
 
 
 class ControlWorkCreate(BaseModel):

@@ -16,7 +16,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user, require_teacher
 from app.models import User
 from app.modules.coursework import service
-from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkStateUpdate, HomeworkUpdate
+from app.modules.coursework.schemas import ControlWorkCreate, HomeworkCreate, HomeworkListOut, HomeworkStateOut, HomeworkStateUpdate, HomeworkUpdate
 from app.modules.school_admin.service import resolve_school_id
 
 router = APIRouter()
@@ -27,7 +27,7 @@ async def _school(user: User, db: AsyncSession) -> int:
 
 
 # ---- homework ----
-@router.get("/homework")
+@router.get("/homework", response_model=HomeworkListOut)
 async def list_homework(
     class_id: int | None = None,
     subject_id: int | None = None,
@@ -61,7 +61,7 @@ async def delete_homework(
     return await service.delete_homework(db, await _school(user, db), homework_id, user)
 
 
-@router.put("/homework/{homework_id}/state")
+@router.put("/homework/{homework_id}/state", response_model=HomeworkStateOut)
 async def update_homework_state(
     homework_id: int,
     payload: HomeworkStateUpdate,

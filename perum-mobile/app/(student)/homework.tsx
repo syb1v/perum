@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/auth/AuthProvider';
 import { useHomeworkSync } from '../../src/homework/HomeworkProvider';
-import type { Homework, HomeworkStatus } from '../../src/homework/types';
+import { studentHomework, type HomeworkList, type HomeworkStatus } from '../../src/homework/types';
 import { queryKeys } from '../../src/query/queryKeys';
 import { colors } from '../../src/theme';
 import { Screen } from '../../src/components/Screen';
@@ -14,11 +14,11 @@ export default function HomeworkScreen() {
   const { has } = useCapabilities();
   const enabled = has('offline_homework_state');
   const sync = useHomeworkSync();
-  const query = useQuery({ queryKey: queryKeys.homework(account?.id ?? ''), enabled: Boolean(enabled && account && apiClient), queryFn: () => apiClient!.get<{ homework: Homework[] }>('/homework') });
+  const query = useQuery({ queryKey: queryKeys.homework(account?.id ?? ''), enabled: Boolean(enabled && account && apiClient), queryFn: () => apiClient!.get<HomeworkList>('/homework') });
   if (!enabled) return <FeatureUnavailable />;
   return <Screen>
     <Text style={styles.title}>Домашние задания</Text>
-    {query.data?.homework.map(item => {
+    {query.data ? studentHomework(query.data).map(item => {
       const queued = [...sync.pending].reverse().find(value => value.homeworkId === item.id);
       const status = queued?.status ?? item.student_state.status;
       return <View key={item.id} style={styles.card}>
@@ -33,7 +33,7 @@ export default function HomeworkScreen() {
         </View> : null}
         <View style={styles.actions}>{([['not_started', 'Не начато'], ['in_progress', 'В процессе'], ['completed', 'Готово']] as [HomeworkStatus, string][]).map(([value, label]) => <Pressable key={value} disabled={status === value || queued?.state === 'conflict'} onPress={() => void sync.enqueue(item.id, item.student_state.version, value)}><Text style={[styles.action, status === value && styles.active]}>{label}</Text></Pressable>)}</View>
       </View>;
-    })}
+    }) : null}
     {query.isLoading ? <Text>Загрузка…</Text> : null}
   </Screen>;
 }
