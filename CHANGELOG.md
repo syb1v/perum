@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Core telemetry ingest больше не сохраняет произвольный authenticated `metrics` dict: versioned `school_metrics.v1.json` связывает Tenant exporter и Core allowlists, sanitizer оставляет только finite non-negative scalar aggregates и exact social/scanner/support sections. Unknown top-level data отбрасывается, malformed/extended nested section исключается целиком, heartbeat compatibility сохраняется без claims о Mobile telemetry evidence.
 - Добавлен versioned cross-component fixture для support escalation delivery telemetry: Tenant exporter и Core parser проверяют один exact four-field aggregate contract и healthy/warning/critical semantics. Core исправлен на fail-closed rejection дополнительных ключей, включая identifier-подобный `school_id`; malformed/extended payload становится unknown, fixture не содержит production coordinates или user data.
 - Mobile requester/admin support cache invalidation переведён на раздельные account-scoped query plans. Requester operations не затрагивают operator cache, admin action/conflict/reply/read обновляют unread, thread инвалидируется только после reply, а redundant detail calls удалены в пользу TanStack tickets-prefix semantics; isolation закреплена pure tests.
 - Mobile social cache invalidation объединён в account-scoped query plans для reconnect, realtime events и durable send/read success. Ручной broad messages key удалён; offline read cursor replay теперь также обновляет unread count, а pure tests запрещают cross-account и support/Homework cache invalidation.

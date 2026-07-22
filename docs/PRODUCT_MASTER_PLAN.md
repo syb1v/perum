@@ -72,6 +72,13 @@ Core parser/status rollup. Exact allowlist содержит только чет�
 aggregate поля; extra identifiers, включая `school_id`, теперь fail closed дают
 unknown вместо молчаливого принятия. Fixture не содержит school/user/host data.
 
+Весь school metrics persistence boundary теперь также versioned и sanitized:
+`school_metrics.v1.json` связывает Tenant exporter с Core allowlist для scalar,
+social, scanner и support sections. Core сохраняет только finite non-negative
+aggregates; unknown top-level fields отбрасывает, malformed/extended nested section
+не сохраняет целиком. Heartbeat request остаётся совместимым со старыми Tenant
+images, но произвольный authenticated dict больше не попадает в JSON payload.
+
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
 может быть принят, освобождает active-pair slot для нового idempotency identity;
@@ -112,7 +119,7 @@ support/social read cursors, offline support ticket creation, Friends hardening,
 Native Friends UI и двухступенчатый controlled rollout находится в `main`; CI run
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
-social/support query plans, cross-component telemetry fixture и curated
+social/support query plans, versioned telemetry fixtures/sanitizer и curated
 Friends/Homework/moderation OpenAPI contracts прошли Core/Tenant full pytest,
 mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
@@ -712,8 +719,8 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends DTO, typed Homework/moderation contracts, Mobile social/support query plans и versioned cross-component support-delivery telemetry fixture готовы; tests фиксируют role/pagination/version/privacy, cache isolation и exact aggregate allowlist. Остаются остальные query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
-| P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, bounded telemetry и безопасный collector foundation зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends DTO, typed Homework/moderation contracts, Mobile social/support query plans и versioned support-delivery/whole-school-metrics fixtures готовы; Core ingest sanitizer сохраняет только exact finite non-negative aggregates. Остаются остальные query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
+| P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, bounded telemetry, безопасный collector foundation и sanitized metrics persistence зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; это изменение не является Mobile telemetry evidence; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
 | P1 | Учебный hardening | Частично | optimistic locking Grade, version-safe LessonOccurrence/safe transfer, preview/token-gated occurrence backfill и soft archive Subject/Topic готовы. Ambiguity report имеет typed OpenAPI contract, server-enforced report acknowledgement и Web safe-only apply/refresh flow; direct POST не может обойти просмотр текущего report. Homework разделён на assigned/target occurrence, publication/deadline и versioned student state с web/mobile outbox; list/state receipt теперь typed в Pydantic/OpenAPI, Mobile fail closed исключает role-shaped rows без student state. Остаётся расширенный conflict QA; multi-device QA временно отложен до готовности concurrency environment и preview window |

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "scalar_fields": [
+    "active_24h",
+    "admins",
+    "avg_grade",
+    "balance_total",
+    "grades_total",
+    "parents",
+    "students",
+    "teachers",
+    "users_total"
+  ],
+  "sections": {
+    "scanner": [
+      "backlog"
+    ],
+    "social": [
+      "blocks_active",
+      "conversations",
+      "friend_requests_pending",
+      "friendships_active",
+      "history_deletion_pending",
+      "messages",
+      "operator_enabled",
+      "reports",
+      "school_enabled"
+    ],
+    "support_escalation_delivery": [
+      "oldest_pending_age_seconds",
+      "pending",
+      "retrying",
+      "sla_breached"
+    ]
+  }
+}

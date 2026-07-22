@@ -89,6 +89,14 @@ rejected examples через strict parser/status rollup. Extra fields, вклю
 `school_id`, обязаны возвращать unknown (`None` внутри parser), а не игнорироваться.
 Fixture должен оставаться без school/user/host identifiers.
 
+Whole school metrics persistence contract находится в
+`fixtures/contracts/school_metrics.v1.json`. Tenant `test_collect_metrics.py`
+сверяет exporter scalar/section keys, Core `test_deployment_snapshot.py` — sanitizer
+allowlists и фактический persisted payload. Unknown top-level identifier/content
+должен отбрасываться; nested section с extra/missing key, boolean вместо count,
+negative или non-finite number не должен сохраняться. HTTP heartbeat compatibility
+сохраняется: malformed optional section не отклоняет весь authenticated request.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

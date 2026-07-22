@@ -24,6 +24,7 @@ EXPECTED_KEYS = {
     "grades_total", "avg_grade", "active_24h", "balance_total", "social", "scanner", "support_escalation_delivery",
 }
 DELIVERY_FIXTURE = json.loads((Path(__file__).parents[3] / "fixtures/contracts/support_escalation_delivery.v1.json").read_text())
+METRICS_FIXTURE = json.loads((Path(__file__).parents[3] / "fixtures/contracts/school_metrics.v1.json").read_text())
 
 
 async def _engine():
@@ -94,6 +95,8 @@ def test_collect_metrics_exact_values():
     assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
     assert m["support_escalation_delivery"] in [case["metrics"] for case in DELIVERY_FIXTURE["accepted"]]
     assert sorted(m["support_escalation_delivery"]) == DELIVERY_FIXTURE["fields"]
+    assert sorted(key for key, value in m.items() if not isinstance(value, dict)) == METRICS_FIXTURE["scalar_fields"]
+    assert {key: sorted(value) for key, value in m.items() if isinstance(value, dict)} == METRICS_FIXTURE["sections"]
 
 
 async def _empty_school():

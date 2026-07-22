@@ -251,6 +251,14 @@ exporter и Core parser используют один fixture в tests; Core т�
 extra identifiers вроде `school_id` и возвращает unknown. Fixture не содержит
 school/user/host identifiers и не меняет exact receipt semantics.
 
+Whole-envelope persistence allowlist добавлен 2026-07-22 в
+`fixtures/contracts/school_metrics.v1.json`. Tenant exporter test фиксирует exact
+scalar/nested sections, Core sanitizer и test используют тот же fixture. Unknown
+top-level fields отбрасываются; nested `social`/`scanner`/delivery section с
+missing/extra/invalid полем не сохраняется целиком. Ingest продолжает принимать
+heartbeat старых Tenant images, но arbitrary authenticated payload больше не
+копируется в `SchoolMetric.payload`. Это не Mobile telemetry proof и не exact receipt.
+
 1. Durable admin metadata/assignment mutations завершены 2026-07-21: одна
    account-scoped SQLite mutation на ticket, immutable `client_action_id` и
    `expected_version`, crash recovery, bounded retry, capability guard и terminal

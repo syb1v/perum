@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from math import isfinite
 import secrets as secrets_mod
 import time
 from collections import defaultdict, deque
@@ -27,6 +28,21 @@ router = APIRouter()
 _INGEST_LIMIT = 60
 _INGEST_WINDOW_S = 60
 _hits: dict[str, deque[float]] = defaultdict(deque)
+_METRIC_SCALARS = {
+    "users_total", "students", "teachers", "parents", "admins", "grades_total",
+    "avg_grade", "active_24h", "balance_total",
+}
+_METRIC_SECTIONS = {
+    "social": {
+        "operator_enabled", "school_enabled", "history_deletion_pending",
+        "friendships_active", "friend_requests_pending", "blocks_active",
+        "conversations", "messages", "reports",
+    },
+    "scanner": {"backlog"},
+    "support_escalation_delivery": {
+        "pending", "retrying", "sla_breached", "oldest_pending_age_seconds",
+    },
+}
 
 
 def _throttle(request: Request) -> None:
@@ -44,6 +60,32 @@ class TelemetryIn(BaseModel):
     slug: str
     metrics: dict = {}
     deployment_snapshot: SchoolDeploymentSnapshotV1 | None = None
+
+
+def _sanitize_metrics(raw: dict) -> dict:
+    metrics = {}
+    for key in _METRIC_SCALARS:
+        value = raw.get(key)
+        if key == "avg_grade":
+            if value is None or not isinstance(value, bool) and isinstance(value, (int, float)) and isfinite(value) and value >= 0:
+                metrics[key] = value
+        elif isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            metrics[key] = value
+    for section, fields in _METRIC_SECTIONS.items():
+        value = raw.get(section)
+        if not isinstance(value, dict) or set(value) != fields:
+            continue
+        if section == "social":
+            booleans = {"operator_enabled", "school_enabled", "history_deletion_pending"}
+            valid = all(
+                isinstance(item, bool) if key in booleans else isinstance(item, int) and not isinstance(item, bool) and item >= 0
+                for key, item in value.items()
+            )
+        else:
+            valid = all(isinstance(item, int) and not isinstance(item, bool) and item >= 0 for item in value.values())
+        if valid:
+            metrics[section] = value
+    return metrics
 
 
 @router.post("")
@@ -92,7 +134,7 @@ async def ingest(
             rollout.apply_status = "converged"
             rollout.apply_error = None
 
-    m = payload.metrics or {}
+    m = _sanitize_metrics(payload.metrics or {})
     metric = await db.get(SchoolMetric, school.id)
     if metric is None:
         metric = SchoolMetric(school_id=school.id)
