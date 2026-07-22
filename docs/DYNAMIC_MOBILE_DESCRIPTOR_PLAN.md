@@ -144,6 +144,7 @@ Agent heartbeat расширяется безопасным versioned snapshot:
 - realtime readiness;
 - push registration readiness;
 - push delivery readiness;
+- social readiness и applied generation;
 - timestamp наблюдения.
 
 Core принимает snapshot только от уже аутентифицированного school/node agent,
@@ -151,6 +152,13 @@ Core принимает snapshot только от уже аутентифици
 release manifest. Snapshot старше настраиваемого окна считается unavailable.
 Build capability никогда не может быть повышена snapshot-ом: effective value
 равно `build && deployment`, если функция зависит от deployment.
+
+Automated producer/consumer parity усилена 2026-07-22 fixture
+`fixtures/contracts/deployment_snapshot.v1.json`: Tenant sender и Core
+`SchoolDeploymentSnapshotV1` сверяют exact field set, schema version, strict bool,
+non-negative generation, timezone-aware timestamp и extra-field rejection. Fixture
+synthetic и не является operator Mobile telemetry, rollback или Stage F evidence;
+таблица lifecycle и проценты не меняются.
 
 ### 4.3. Discovery
 

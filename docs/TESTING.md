@@ -97,6 +97,14 @@ allowlists и фактический persisted payload. Unknown top-level identi
 negative или non-finite number не должен сохраняться. HTTP heartbeat compatibility
 сохраняется: malformed optional section не отклоняет весь authenticated request.
 
+Deployment snapshot producer/consumer contract находится в
+`fixtures/contracts/deployment_snapshot.v1.json`. Tenant `test_telemetry.py`
+сверяет emitted exact fields/readiness/generation, Core
+`test_deployment_snapshot.py` валидирует тот же accepted payload и rejected schema
+version, integer-as-bool, negative generation, naive timestamp и extra field.
+Fixture synthetic: он не закрывает operator Mobile ledger export, deliberate
+rollback или Stage F pilot evidence.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

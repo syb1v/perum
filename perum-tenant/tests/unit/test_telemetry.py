@@ -2,10 +2,14 @@
 (сбор метрик требует БД и проверяется интеграционно)."""
 
 import asyncio
+import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import app.telemetry as t
+
+SNAPSHOT_FIXTURE = json.loads((Path(__file__).parents[3] / "fixtures/contracts/deployment_snapshot.v1.json").read_text())
 
 
 def test_send_once_noop_without_token(monkeypatch):
@@ -69,15 +73,12 @@ def test_send_once_includes_deployment_snapshot(monkeypatch):
     asyncio.run(t.send_once())
 
     body = post.await_args.kwargs["json"]
-    assert body["deployment_snapshot"] == {
-        "schema_version": 1,
+    snapshot = body["deployment_snapshot"]
+    assert sorted(snapshot) == SNAPSHOT_FIXTURE["fields"]
+    assert snapshot == {
+        **SNAPSHOT_FIXTURE["accepted"],
         "school_id": settings.SCHOOL_PUBLIC_ID,
         "release_image": "tenant:release-a",
-        "scanner_ready": True,
-        "realtime_ready": False,
-        "push_registration_ready": True,
-        "push_delivery_ready": False,
-            "social_ready": True,
-            "social_generation": settings.SOCIAL_ROLLOUT_GENERATION,
-        "observed_at": body["deployment_snapshot"]["observed_at"],
+        "social_generation": settings.SOCIAL_ROLLOUT_GENERATION,
+        "observed_at": snapshot["observed_at"],
     }

@@ -4,6 +4,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core.db import get_db
@@ -12,6 +13,7 @@ from app.models import SchoolDeploymentSnapshot, SchoolMetric, SchoolSecret
 from app.routers import telemetry
 
 METRICS_FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures/contracts/school_metrics.v1.json").read_text())
+SNAPSHOT_FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures/contracts/deployment_snapshot.v1.json").read_text())
 
 
 class _Result:
@@ -210,3 +212,14 @@ def test_snapshot_schema_is_strict_and_versioned():
         app.dependency_overrides.clear()
         telemetry._hits.clear()
     assert invalid.status_code == 422
+
+
+def test_snapshot_schema_matches_versioned_cross_component_fixture():
+    accepted = SNAPSHOT_FIXTURE["accepted"]
+    parsed = telemetry.SchoolDeploymentSnapshotV1.model_validate(accepted)
+    assert parsed.schema_version == SNAPSHOT_FIXTURE["schema_version"]
+    assert sorted(accepted) == SNAPSHOT_FIXTURE["fields"]
+    for mutation in SNAPSHOT_FIXTURE["rejected"]:
+        invalid = {**accepted, mutation["field"]: mutation["value"]}
+        with pytest.raises(ValueError):
+            telemetry.SchoolDeploymentSnapshotV1.model_validate(invalid)
