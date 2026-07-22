@@ -15,5 +15,6 @@ export const queryKeys = {
   adminSupportUnread: (accountId: string) => [...queryKeys.account(accountId), 'support-admin', 'unread'] as const,
   adminSupportAssignees: (accountId: string) => [...queryKeys.account(accountId), 'support-admin', 'assignees'] as const,
   adminSupportEscalationDelivery: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support-admin', 'delivery', ticketId] as const,
+  notifications: (accountId: string) => [...queryKeys.account(accountId), 'notifications'] as const,
   homework: (accountId: string) => [...queryKeys.account(accountId), 'homework'] as const,
 };

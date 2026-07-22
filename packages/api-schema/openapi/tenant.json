@@ -11752,9 +11752,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response My Notifications Api User Notifications Get"
+                  "$ref": "#/components/schemas/NotificationListOut"
                 }
               }
             }
@@ -11778,9 +11776,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response My Notifications Clear Api User Notifications Delete"
+                  "$ref": "#/components/schemas/SuccessOut"
                 }
               }
             }
@@ -11822,9 +11818,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response My Notification Read Api User Notifications  Notification Id  Read Post"
+                  "$ref": "#/components/schemas/SuccessOut"
                 }
               }
             }
@@ -11871,9 +11865,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response My Notification Delete Api User Notifications  Notification Id  Delete"
+                  "$ref": "#/components/schemas/SuccessOut"
                 }
               }
             }
@@ -14613,6 +14605,102 @@
         "type": "object",
         "title": "NewsUpdate"
       },
+      "NotificationListOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "notifications": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Notifications"
+          },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "notifications",
+          "unread_count"
+        ],
+        "title": "NotificationListOut"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "ref_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Type"
+          },
+          "ref_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref Id"
+          },
+          "is_read": {
+            "type": "boolean",
+            "title": "Is Read"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "text",
+          "type",
+          "ref_type",
+          "ref_id",
+          "is_read",
+          "created_at"
+        ],
+        "title": "NotificationOut"
+      },
       "NotifySend": {
         "properties": {
           "message": {
@@ -16583,6 +16671,19 @@
           "name"
         ],
         "title": "SubjectUpdate"
+      },
+      "SuccessOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "SuccessOut"
       },
       "SyncAssignmentsRequest": {
         "properties": {

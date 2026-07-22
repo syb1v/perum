@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
+import type { components } from '@perum/api-schema/tenant';
 
 import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -56,7 +57,7 @@ const BellSchedulesManager = dynamic(() => import('@/components/admin/BellSchedu
 
 type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'school-support' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'social-settings' | 'social-moderation' | 'schools';
 
-type Notification = { id: number; text: string; ref_type: string | null; ref_id: string | null; is_read: boolean };
+type Notification = components['schemas']['NotificationOut'];
 
 export default function AdminDashboard() {
     const { user, isLoading, logout } = useAuth();

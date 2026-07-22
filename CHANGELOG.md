@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Native school admin/director получил cached in-app notification inbox с unread count и clickable переходом по exact `admin_support_ticket` в authoritative support ticket. Tenant notification contract теперь typed в Pydantic/OpenAPI; read подтверждается сервером до удаления из списка, а unknown reference, неподходящая роль/capability и transport failure не запускают navigation. Push delivery и tap lifecycle остаются выключенными до реального adapter/credentials.
 - Web-панель школьного администратора получила notification bell с автообновлением, badge, очисткой и actionable переходом по typed `admin_support_ticket` reference. Клик отмечает только выбранное уведомление прочитанным и открывает authoritative support ticket по shareable URL, включая refresh и тикеты вне первой страницы очереди.
 - Tenant relay pull теперь в одной транзакции с materialized organization reply создаёт durable in-app notifications для активных `school_admin`/`director` только той же школы. Core message receipt сохраняет replay idempotency без повторного fan-out, а admin read отмечает прочитанным только notification текущего оператора; typed `admin_support_ticket` reference готов для последующего clickable Web/Mobile routing.
 

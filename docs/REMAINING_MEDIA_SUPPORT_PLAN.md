@@ -258,8 +258,12 @@ delivery не заявляется.
    закрывает только notification текущего оператора. `admin_support_ticket`
    reference сохранён. Clickable Web routing завершён 2026-07-22: реальный admin
    notification bell отмечает record прочитанным и открывает authoritative ticket
-   по shareable URL даже вне первой страницы очереди. Mobile navigation и push
-   delivery остаются отдельными незакрытыми slices.
+   по shareable URL даже вне первой страницы очереди. Clickable Mobile in-app
+   routing завершён 2026-07-22: cached operator inbox доступен только при
+   `support_admin` для `school_admin`/`director`, read подтверждается Tenant до
+   удаления из unread списка, exact `admin_support_ticket` открывает native admin
+   ticket, unknown reference fail closed без navigation. Push delivery и tap
+   lifecycle остаются отдельным незакрытым slice до реального adapter/credentials.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,
@@ -276,7 +280,8 @@ evidence описаны в [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUI
 ## 4. Порядок продолжения
 
 1. Завершить review и production-like scanner pilot по разделу 1.
-2. Независимо можно реализовать native support admin inbox без attachments/push.
+2. Native support admin inbox и clickable in-app notification routing завершены;
+   push не включать до delivery adapter и credentials.
 3. После scanner pilot отдельно подключить support/social attachments и UI.
 4. После delivery provider отдельно подключить push.
 5. Каждый цикл отдельно проверять, документировать и коммитить.

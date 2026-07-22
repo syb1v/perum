@@ -39,6 +39,16 @@ build. `/admin?section=school-support&ticket=<public_id>` должен откр�
 authoritative GET независимо от первой страницы inbox; unknown notification
 references не должны запускать navigation.
 
+Mobile clickable in-app routing проверяется общим mobile suite, включая
+`perum-mobile/src/notifications/core.test.ts`. Resolver разрешает только exact
+`admin_support_ticket` при capability `support_admin` для `school_admin` и
+`director`; неизвестный reference, пустой ticket id, другая роль или выключенная
+capability не запускают navigation. Экран использует account-scoped persisted
+React Query cache, подтверждает owner-scoped read до перехода и при ошибке не
+удаляет unread record. `npm run contracts:check` дополнительно фиксирует typed
+`NotificationListOut`/`NotificationOut` с `ref_type` и `ref_id` в Tenant OpenAPI.
+Push delivery и tap lifecycle этим тестом не покрываются и готовыми не считаются.
+
 Native support admin read durability проверяется в
 `perum-mobile/src/support/adminReadOutbox.test.ts`: admin-only endpoint, exact
 observation dedup, immutable action identity, capability pause, transport retry,

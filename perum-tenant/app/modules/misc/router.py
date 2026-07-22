@@ -14,6 +14,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user, require_admin
 from app.models import User
 from app.modules.misc import service
+from app.modules.misc.schemas import NotificationListOut, SuccessOut
 from app.modules.school_admin.service import resolve_school_id
 
 admin_router = APIRouter()
@@ -78,21 +79,21 @@ async def online_users(user: User = Depends(require_admin)) -> dict:
 
 # ---- Пользовательские уведомления ----
 
-@user_router.get("/notifications")
+@user_router.get("/notifications", response_model=NotificationListOut)
 async def my_notifications(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.list_user_notifications(db, user)
 
 
-@user_router.post("/notifications/{notification_id}/read")
+@user_router.post("/notifications/{notification_id}/read", response_model=SuccessOut)
 async def my_notification_read(notification_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.mark_notification_read(db, user, notification_id)
 
 
-@user_router.delete("/notifications/{notification_id}")
+@user_router.delete("/notifications/{notification_id}", response_model=SuccessOut)
 async def my_notification_delete(notification_id: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.delete_notification(db, user, notification_id)
 
 
-@user_router.delete("/notifications")
+@user_router.delete("/notifications", response_model=SuccessOut)
 async def my_notifications_clear(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.clear_notifications(db, user)

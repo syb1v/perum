@@ -4202,6 +4202,34 @@ export interface components {
             /** Media */
             media?: unknown;
         };
+        /** NotificationListOut */
+        NotificationListOut: {
+            /** Success */
+            success: boolean;
+            /** Notifications */
+            notifications: components["schemas"]["NotificationOut"][];
+            /** Unread Count */
+            unread_count: number;
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Text */
+            text: string;
+            /** Type */
+            type: string;
+            /** Ref Type */
+            ref_type: string | null;
+            /** Ref Id */
+            ref_id: string | null;
+            /** Is Read */
+            is_read: boolean;
+            /** Created At */
+            created_at: string | null;
+        };
         /** NotifySend */
         NotifySend: {
             /** Message */
@@ -4842,6 +4870,11 @@ export interface components {
              * @default false
              */
             is_profile_track: boolean;
+        };
+        /** SuccessOut */
+        SuccessOut: {
+            /** Success */
+            success: boolean;
         };
         /** SyncAssignmentsRequest */
         SyncAssignmentsRequest: {
@@ -12650,9 +12683,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["NotificationListOut"];
                 };
             };
         };
@@ -12672,9 +12703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessOut"];
                 };
             };
         };
@@ -12696,9 +12725,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessOut"];
                 };
             };
             /** @description Validation Error */
@@ -12729,9 +12756,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SuccessOut"];
                 };
             };
             /** @description Validation Error */
