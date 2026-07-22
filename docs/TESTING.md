@@ -23,6 +23,16 @@ message identity/body, capability pause, bounded retry, FIFO per ticket и accou
 cleanup. Backend exact replay/mismatch regression находится в
 `perum-tenant/tests/unit/test_support.py`.
 
+Shared role boundary между Web и Mobile проверяется domain workspace suite:
+
+```bash
+npm test --workspace @perum/domain
+```
+
+`packages/domain/test/roles.test.ts` фиксирует, что school support operator —
+только `school_admin`/`director`, а общий legacy school-admin helper продолжает
+включать `admin`. Общий `npm run test:shared` обязан запускать этот suite.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

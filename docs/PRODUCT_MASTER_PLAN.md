@@ -2,7 +2,7 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-21**.
+> эти оценки. Последнее обновление live-блока: **2026-07-22**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
@@ -29,6 +29,12 @@ optimistic updates, attachments и push. One-school pilot Stage F и multi-devic
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
+
+Shared domain policy для school support operator теперь один для Web и Mobile:
+exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
+как более широкий legacy `isSchoolAdmin` по-прежнему включает `admin`. Domain
+contract test фиксирует это различие и не позволяет случайно расширить доступ к
+support inbox/notification routing при изменении клиентских экранов.
 
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
@@ -69,8 +75,9 @@ escalation, chats/moderation, billing, role parity и production rollout.
 support/social read cursors, offline support ticket creation, Friends hardening,
 Native Friends UI и двухступенчатый controlled rollout находится в `main`; CI run
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
-Stage F automation, а последние social/support slices прошли Core/Tenant full
-pytest, mobile/shared tests, contract gates, typecheck и web production build.
+Stage F automation, а последние social/support slices и shared exact support-role
+policy прошли Core/Tenant full pytest, mobile/shared/domain tests, contract gates,
+typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
@@ -668,7 +675,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | query/telemetry/test-utils, расширение curated OpenAPI и contract tests; tenant-scoped mobile auth adapter с single-flight refresh готов |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter с single-flight refresh и shared exact school-support operator role policy для Web/Mobile готовы; domain contract test отдельно фиксирует отличие от более широкой legacy school-admin policy. Остаются query/telemetry/test-utils и дальнейшее расширение curated OpenAPI/contract tests |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, bounded telemetry и безопасный collector foundation зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |

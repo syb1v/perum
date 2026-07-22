@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { components } from '@perum/api-schema/tenant';
+import { isSchoolSupportOperator } from '@perum/domain';
 
 import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -100,7 +101,7 @@ export default function AdminDashboard() {
         }
         setNotifications(current => current.filter(item => item.id !== notification.id));
         setNotificationsOpen(false);
-        if (notification.ref_type === 'admin_support_ticket' && notification.ref_id && (user?.role === 'school_admin' || user?.role === 'director')) {
+        if (notification.ref_type === 'admin_support_ticket' && notification.ref_id && isSchoolSupportOperator(user?.role)) {
             localStorage.setItem('admin_active_section', 'school-support');
             setActiveSection('school-support');
             router.push(`/admin?section=school-support&ticket=${encodeURIComponent(notification.ref_id)}`);

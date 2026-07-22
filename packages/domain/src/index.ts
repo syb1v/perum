@@ -2,6 +2,7 @@ export const USER_ROLES = ['student', 'teacher', 'parent', 'admin', 'school_admi
 export type UserRole = (typeof USER_ROLES)[number];
 
 export const SCHOOL_ADMIN_ROLES = ['admin', 'school_admin', 'director'] as const;
+export const SCHOOL_SUPPORT_OPERATOR_ROLES = ['school_admin', 'director'] as const;
 
 export function isTeacher(role: string): boolean {
   return role === 'teacher' || SCHOOL_ADMIN_ROLES.includes(role as (typeof SCHOOL_ADMIN_ROLES)[number]);
@@ -9,6 +10,10 @@ export function isTeacher(role: string): boolean {
 
 export function isSchoolAdmin(role: string): boolean {
   return SCHOOL_ADMIN_ROLES.includes(role as (typeof SCHOOL_ADMIN_ROLES)[number]);
+}
+
+export function isSchoolSupportOperator(role: string | null | undefined): boolean {
+  return typeof role === 'string' && SCHOOL_SUPPORT_OPERATOR_ROLES.includes(role as (typeof SCHOOL_SUPPORT_OPERATOR_ROLES)[number]);
 }
 
 export function lessonTemplateKey(date: string, lessonNumber: number): string {

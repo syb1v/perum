@@ -11,6 +11,7 @@ import { preferencesSnapshot, usePreferencesSync } from '../preferences/Preferen
 import type { Preferences, PreferencesSnapshot } from '../preferences/types';
 import { usePush } from '../push/PushProvider';
 import { useCapabilities } from '../auth/CapabilityProvider';
+import { isSchoolSupportOperator } from '@perum/domain';
 
 const roleNames: Record<string, string> = { student: 'Ученик', parent: 'Родитель', teacher: 'Учитель', admin: 'Администратор', school_admin: 'Администратор школы', director: 'Директор' };
 
@@ -31,12 +32,13 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     queryFn: () => apiClient.get<TenantUser>('/user/me'),
   });
   const user = me.data ?? account.user;
+  const supportOperator = isSchoolSupportOperator(user.role) && has('support_admin');
   const preferences = useQuery({
     queryKey: queryKeys.preferences(account.id),
     queryFn: async () => preferencesSnapshot(await apiClient.get<Preferences>('/user/preferences')),
     enabled: has('offline_preferences'),
   });
-  const notifications = useQuery({ queryKey: queryKeys.notifications(account.id), enabled: (user.role === 'school_admin' || user.role === 'director') && has('support_admin'), queryFn: () => apiClient.get<import('../notifications/core').NotificationList>('/user/notifications'), refetchInterval: 30_000 });
+  const notifications = useQuery({ queryKey: queryKeys.notifications(account.id), enabled: supportOperator, queryFn: () => apiClient.get<import('../notifications/core').NotificationList>('/user/notifications'), refetchInterval: 30_000 });
   const server = preferences.data as PreferencesSnapshot | undefined;
   const desired = sync.mutation?.desired ?? server?.data.push_preview_enabled ?? false;
   const syncLabels = { pending: 'Ожидает синхронизации', sending: 'Синхронизация…', retry_wait: 'Повторим автоматически', conflict: 'Конфликт версии', blocked_auth: 'Требуется авторизация', failed_permanent: 'Не удалось синхронизировать' };
@@ -72,8 +74,8 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     {user.role === 'student' && has('social_friends') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/friends')}><Text style={styles.primaryText}>Друзья</Text></Pressable> : null}
     {user.role === 'student' && has('social_messages') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/messages')}><Text style={styles.primaryText}>Сообщения</Text></Pressable> : null}
     {(user.role === 'student' || user.role === 'parent' || user.role === 'teacher') && has('support_requester') ? <Pressable style={styles.primary} onPress={() => router.push('/support')}><Text style={styles.primaryText}>Поддержка школы</Text></Pressable> : null}
-    {(user.role === 'school_admin' || user.role === 'director') && has('support_admin') ? <Pressable style={styles.primary} onPress={() => router.push('/admin-support')}><Text style={styles.primaryText}>Очередь поддержки</Text></Pressable> : null}
-    {(user.role === 'school_admin' || user.role === 'director') && has('support_admin') ? <Pressable style={styles.primary} onPress={() => router.push('/notifications')}><Text style={styles.primaryText}>Уведомления{notifications.data?.unread_count ? ` · ${notifications.data.unread_count}` : ''}</Text></Pressable> : null}
+    {supportOperator ? <Pressable style={styles.primary} onPress={() => router.push('/admin-support')}><Text style={styles.primaryText}>Очередь поддержки</Text></Pressable> : null}
+    {supportOperator ? <Pressable style={styles.primary} onPress={() => router.push('/notifications')}><Text style={styles.primaryText}>Уведомления{notifications.data?.unread_count ? ` · ${notifications.data.unread_count}` : ''}</Text></Pressable> : null}
     <Pressable style={styles.primary} onPress={() => router.push('/accounts')}><Text style={styles.primaryText}>Сменить аккаунт</Text></Pressable>
     <Pressable disabled={busy} style={styles.secondary} onPress={() => void signOut()}><Text style={styles.secondaryText}>{busy ? 'Выходим…' : 'Выйти из аккаунта'}</Text></Pressable>
   </Screen>;

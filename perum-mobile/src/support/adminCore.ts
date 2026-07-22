@@ -1,7 +1,9 @@
 import type { SupportMessage } from './types';
 
+import { isSchoolSupportOperator } from '@perum/domain';
+
 export function canUseAdminSupport(role: string | undefined, enabled: boolean) {
-  return enabled && (role === 'school_admin' || role === 'director');
+  return enabled && isSchoolSupportOperator(role);
 }
 
 export function adminMessageLabel(side: SupportMessage['side']) {
