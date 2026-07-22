@@ -54,6 +54,19 @@ python -m pytest tests/unit/test_homework_semantics.py -q
 `perum-mobile/src/homework/types.test.ts` проверяет fail-closed student decoder:
 role-shaped row с `student_state=null` не попадает в student UI.
 
+Social moderation privacy contract проверяется focused suite:
+
+```bash
+cd perum-tenant
+python -m pytest tests/unit/test_social_moderation_retention.py -q
+```
+
+Suite валидирует Pydantic-модели на router-shaped whitelist payload, а не на ORM
+row: inbox содержит только summary/version/timestamps, detail отдельно раскрывает
+evidence с opaque participant label и nullable body, action receipt возвращает
+новую optimistic `version`. `npm run contracts:check` фиксирует bindings трёх
+admin moderation endpoints, required fields и nullable integer inbox cursor.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

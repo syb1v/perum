@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import api, { ApiClientError } from '@/lib/apiClient';
-import type { ModerationActionCreate, ModerationCaseDetail, ModerationCasePage, ModerationCaseSummary } from '@/types/messages';
+import type { ModerationActionCreate, ModerationActionOut, ModerationCaseDetail, ModerationCasePage, ModerationCaseSummary } from '@/types/messages';
 import styles from './SocialModeration.module.css';
 
 const labels: Record<string, string> = { open: 'Открыто', dismissed: 'Отклонено', actioned: 'Приняты меры' };
@@ -27,7 +27,7 @@ export default function SocialModeration() {
         finally { setLoading(false); }
     }, []);
 
-    const openCase = async (item: ModerationCaseSummary) => {
+    const openCase = async (item: Pick<ModerationCaseSummary, 'id'>) => {
         setError('');
         try { setDetail(await api.get<ModerationCaseDetail>(`/admin/social/moderation/cases/${item.id}`)); setReason(''); setClientActionId(''); }
         catch { setError('Не удалось открыть материалы обращения'); }
@@ -42,7 +42,7 @@ export default function SocialModeration() {
         if (!clientActionId) setClientActionId(id);
         setSubmitting(true); setError('');
         const payload: ModerationActionCreate = { action, reason: reason.trim(), client_action_id: id, expected_version: detail.version };
-        try { await api.post(`/admin/social/moderation/cases/${detail.id}/actions`, payload); await Promise.all([openCase(detail), loadCases()]); }
+        try { await api.post<ModerationActionOut>(`/admin/social/moderation/cases/${detail.id}/actions`, payload); await Promise.all([openCase(detail), loadCases()]); }
         catch (value) { if (value instanceof ApiClientError && value.status === 409) { setError('Обращение уже изменено другим модератором. Данные обновлены.'); await openCase(detail); await loadCases(); } else setError('Не удалось выполнить действие. Повторите попытку.'); }
         finally { setSubmitting(false); }
     };

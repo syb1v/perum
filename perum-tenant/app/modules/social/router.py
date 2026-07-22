@@ -10,7 +10,7 @@ from app.models import User
 from app.models.academic import Class, ClassStudent
 from app.models.social import Conversation, Friendship, Message, UserBlock
 from app.modules.social import service
-from app.modules.social.schemas import BlockCreate, BlockOut, ConversationCreate, ConversationOut, ConversationPage, FriendRequestCreate, FriendRequestOut, MessageCreate, MessageOut, MessagePage, ModerationActionCreate, ReadCreate, RealtimeTicketOut, ReportCreate, ReportOut, SettingsOut, SettingsPatch, StudentPage, UnreadCountOut
+from app.modules.social.schemas import BlockCreate, BlockOut, ConversationCreate, ConversationOut, ConversationPage, FriendRequestCreate, FriendRequestOut, MessageCreate, MessageOut, MessagePage, ModerationActionCreate, ModerationActionOut, ModerationCaseDetailOut, ModerationCasePageOut, ReadCreate, RealtimeTicketOut, ReportCreate, ReportOut, SettingsOut, SettingsPatch, StudentPage, UnreadCountOut
 
 router = APIRouter(prefix="/social")
 admin_router = APIRouter(prefix="/social")
@@ -45,20 +45,20 @@ async def admin_settings(user: User = Depends(require_admin), db: AsyncSession =
     return service.settings_out(await service.get_settings(db, user.school_id))
 
 
-@admin_router.get("/moderation/cases")
+@admin_router.get("/moderation/cases", response_model=ModerationCasePageOut)
 async def moderation_cases(cursor: int | None = None, limit: int = Query(20, ge=1, le=100), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     from app.modules.social import moderation
     rows = await moderation.inbox(db, user.school_id, cursor, limit)
     return {"items": [{"id": row.id, "status": row.status, "version": row.version, "created_at": row.created_at, "updated_at": row.updated_at} for row in rows[:limit]], "next_cursor": rows[limit - 1].id if len(rows) > limit else None}
 
 
-@admin_router.get("/moderation/cases/{case_id}")
+@admin_router.get("/moderation/cases/{case_id}", response_model=ModerationCaseDetailOut)
 async def moderation_case(case_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     from app.modules.social import moderation
     return await moderation.detail(db, user, case_id)
 
 
-@admin_router.post("/moderation/cases/{case_id}/actions")
+@admin_router.post("/moderation/cases/{case_id}/actions", response_model=ModerationActionOut)
 async def moderation_action(case_id: int, payload: ModerationActionCreate, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     from app.modules.social import moderation
     row = await moderation.action(db, user, case_id, payload)

@@ -131,5 +131,30 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the homework client contract`);
   }
 }
+for (const [path, method, schema] of [
+  ['/api/admin/social/moderation/cases', 'get', 'ModerationCasePageOut'],
+  ['/api/admin/social/moderation/cases/{case_id}', 'get', 'ModerationCaseDetailOut'],
+  ['/api/admin/social/moderation/cases/{case_id}/actions', 'post', 'ModerationActionOut'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, method) !== `#/components/schemas/${schema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must return ${schema}`);
+  }
+}
+for (const [name, fields] of [
+  ['ModerationCaseSummaryOut', ['id', 'status', 'version', 'created_at', 'updated_at']],
+  ['ModerationCasePageOut', ['items', 'next_cursor']],
+  ['ModerationCaseDetailOut', ['id', 'status', 'version', 'category', 'comment', 'created_at', 'evidence', 'other_participant']],
+  ['ModerationEvidenceOut', ['message_id', 'sender', 'body', 'created_at']],
+  ['ModerationActionOut', ['id', 'status', 'version', 'updated_at']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the moderation client contract`);
+  }
+}
+const moderationCursor = tenantOpenapi.components.schemas.ModerationCasePageOut.properties.next_cursor.anyOf ?? [];
+if (!moderationCursor.some(schema => schema.type === 'integer') || !moderationCursor.some(schema => schema.type === 'null')) {
+  throw new Error('ModerationCasePageOut next_cursor must be a nullable integer');
+}
 
 console.log(`OpenAPI contract and mobile descriptor parity passed: ${manifest.tenant.length + manifest.core.length} paths`);

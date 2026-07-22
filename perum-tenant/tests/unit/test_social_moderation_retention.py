@@ -9,7 +9,7 @@ from app.core.time import utc_now
 from app.models import User
 from app.models.social import ConversationMember, EvidenceHold, Message, ModerationAuditEvent, ModerationCase
 from app.modules.social import moderation, retention, service
-from app.modules.social.schemas import ModerationActionCreate, ReportCreate
+from app.modules.social.schemas import ModerationActionCreate, ModerationActionOut, ModerationCaseDetailOut, ModerationCasePageOut, ReportCreate
 from tests.unit.test_social_messages import seed
 
 
@@ -28,12 +28,17 @@ def test_report_case_action_lock_replay_and_tombstone():
             case_id = case.id
             rows = await moderation.inbox(db, school.id, None, 20)
             assert [row.id for row in rows] == [case.id]
+            page = {"items": [{"id": row.id, "status": row.status, "version": row.version, "created_at": row.created_at, "updated_at": row.updated_at} for row in rows], "next_cursor": None}
+            assert ModerationCasePageOut.model_validate(page).items[0].version == 1
             detail = await moderation.detail(db, admin, case.id)
+            assert ModerationCaseDetailOut.model_validate(detail).evidence[0].sender == "reported"
             assert detail["evidence"][0]["body"] == "evidence"
             assert detail["other_participant"] == "participant"
             assert await db.scalar(select(func.count(ModerationAuditEvent.id)).where(ModerationAuditEvent.event_type == "content_viewed")) == 1
             payload = ModerationActionCreate(action="lock_conversation", reason="safety", client_action_id="action-1", expected_version=1)
-            assert (await moderation.action(db, admin, case.id, payload)).version == 2
+            actioned = await moderation.action(db, admin, case.id, payload)
+            receipt = {"id": actioned.id, "status": actioned.status, "version": actioned.version, "updated_at": actioned.updated_at}
+            assert ModerationActionOut.model_validate(receipt).version == 2
             assert (await moderation.action(db, admin, case.id, payload)).version == 2
             assert (await service.send_message(db, users[1], conversation.id, "reported", "evidence")).id == message.id
             with pytest.raises(HTTPException) as locked:

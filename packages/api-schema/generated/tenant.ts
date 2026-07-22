@@ -4253,6 +4253,85 @@ export interface components {
             /** Expected Version */
             expected_version: number;
         };
+        /** ModerationActionOut */
+        ModerationActionOut: {
+            /** Id */
+            id: number;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ModerationCaseDetailOut */
+        ModerationCaseDetailOut: {
+            /** Id */
+            id: number;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+            /** Category */
+            category: string;
+            /** Comment */
+            comment: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Evidence */
+            evidence: components["schemas"]["ModerationEvidenceOut"][];
+            /** Other Participant */
+            other_participant: string;
+        };
+        /** ModerationCasePageOut */
+        ModerationCasePageOut: {
+            /** Items */
+            items: components["schemas"]["ModerationCaseSummaryOut"][];
+            /** Next Cursor */
+            next_cursor: number | null;
+        };
+        /** ModerationCaseSummaryOut */
+        ModerationCaseSummaryOut: {
+            /** Id */
+            id: number;
+            /** Status */
+            status: string;
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ModerationEvidenceOut */
+        ModerationEvidenceOut: {
+            /** Message Id */
+            message_id: number;
+            /**
+             * Sender
+             * @constant
+             */
+            sender: "reported";
+            /** Body */
+            body: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** NewsCreate */
         NewsCreate: {
             /** Title */
@@ -7779,7 +7858,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ModerationCasePageOut"];
                 };
             };
             /** @description Validation Error */
@@ -7810,7 +7889,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ModerationCaseDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -7845,7 +7924,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ModerationActionOut"];
                 };
             };
             /** @description Validation Error */

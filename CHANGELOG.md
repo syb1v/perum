@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Tenant social moderation inbox, evidence detail и action receipt получили раздельные privacy-minimized Pydantic/OpenAPI schemas; Web удалил ручные case/evidence DTO и использует generated contracts. Contract gate фиксирует endpoint bindings, nullable cursor, evidence whitelist и optimistic version receipt, не расширяя доступ к содержимому сообщений.
 - Tenant Homework list и versioned state receipt получили typed Pydantic/OpenAPI responses; Mobile заменил ручные server DTO на generated schemas. Student decoder fail closed отбрасывает role-shaped rows с `student_state=null`, а contract gate фиксирует endpoint bindings и обязательные version/replay fields без claims о завершённом multi-device QA.
 - Friends Web/Mobile переведены с ручных student/page/request/block DTO на generated Tenant OpenAPI schemas. Contract gate теперь проверяет точные social endpoint-to-schema bindings, обязательные client fields и required nullable integer `next_cursor`, предотвращая незаметный drift pagination и expiry/block shapes при регенерации.
 - School support role boundary вынесен в shared `@perum/domain`: Web notification routing, Native support inbox/Home и Mobile notification resolver используют один exact helper для `school_admin`/`director`. Отдельный domain contract test гарантирует, что legacy роль `admin` не получает support operator access, не изменяя более широкую общую school-admin policy.

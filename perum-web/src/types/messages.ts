@@ -10,11 +10,7 @@ export type ReportCreate = components['schemas']['ReportCreate'];
 export type ReportOut = components['schemas']['ReportOut'];
 export type ModerationActionCreate = components['schemas']['ModerationActionCreate'];
 
-export type ModerationCaseSummary = { id: number; status: string; version: number; created_at: string; updated_at: string };
-export type ModerationCasePage = { items: ModerationCaseSummary[]; next_cursor: number | null };
-export type ModerationCaseDetail = ModerationCaseSummary & {
-    category: string;
-    comment: string | null;
-    evidence: Array<{ message_id: number; sender: string; body: string | null; created_at: string }>;
-    other_participant: string;
-};
+export type ModerationCaseSummary = components['schemas']['ModerationCaseSummaryOut'];
+export type ModerationCasePage = components['schemas']['ModerationCasePageOut'];
+export type ModerationCaseDetail = components['schemas']['ModerationCaseDetailOut'];
+export type ModerationActionOut = components['schemas']['ModerationActionOut'];

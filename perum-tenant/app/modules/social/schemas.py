@@ -152,3 +152,41 @@ class ModerationActionCreate(BaseModel):
     reason: str = Field(min_length=1, max_length=1000)
     client_action_id: str = Field(min_length=1, max_length=64)
     expected_version: int = Field(ge=1)
+
+
+class ModerationCaseSummaryOut(BaseModel):
+    id: int
+    status: str
+    version: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ModerationCasePageOut(BaseModel):
+    items: list[ModerationCaseSummaryOut]
+    next_cursor: int | None
+
+
+class ModerationEvidenceOut(BaseModel):
+    message_id: int
+    sender: Literal["reported"]
+    body: str | None
+    created_at: datetime
+
+
+class ModerationCaseDetailOut(BaseModel):
+    id: int
+    status: str
+    version: int
+    category: str
+    comment: str | None
+    created_at: datetime
+    evidence: list[ModerationEvidenceOut]
+    other_participant: str
+
+
+class ModerationActionOut(BaseModel):
+    id: int
+    status: str
+    version: int
+    updated_at: datetime
