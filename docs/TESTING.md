@@ -34,6 +34,11 @@ Suite проверяет same-school active school admin/director fan-out, exclu
 inactive/foreign/requester recipients, replay deduplication, typed admin ticket
 reference и operator-scoped read lifecycle.
 
+Web clickable routing дополнительно проверяется strict typecheck и production
+build. `/admin?section=school-support&ticket=<public_id>` должен открыть ticket
+authoritative GET независимо от первой страницы inbox; unknown notification
+references не должны запускать navigation.
+
 Native support admin read durability проверяется в
 `perum-mobile/src/support/adminReadOutbox.test.ts`: admin-only endpoint, exact
 observation dedup, immutable action identity, capability pause, transport retry,

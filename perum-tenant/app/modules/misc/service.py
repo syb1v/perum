@@ -107,6 +107,7 @@ async def list_user_notifications(db: AsyncSession, user: User) -> dict:
         "success": True,
         "notifications": [
             {"id": n.id, "title": n.title, "text": n.text, "type": n.type,
+             "ref_type": n.ref_type, "ref_id": n.ref_id,
              "is_read": n.is_read, "created_at": n.created_at.isoformat() if n.created_at else None}
             for n in rows
         ],

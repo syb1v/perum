@@ -256,8 +256,10 @@ delivery не заявляется.
    inbox message и notifications активным `school_admin`/`director` одной школы
    фиксируются одной транзакцией; replay не создаёт повторный fan-out. Admin read
    закрывает только notification текущего оператора. `admin_support_ticket`
-   reference сохранён, но clickable Web/Mobile navigation и push delivery остаются
-   отдельными незакрытыми slices.
+   reference сохранён. Clickable Web routing завершён 2026-07-22: реальный admin
+   notification bell отмечает record прочитанным и открывает authoritative ticket
+   по shareable URL даже вне первой страницы очереди. Mobile navigation и push
+   delivery остаются отдельными незакрытыми slices.
 2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
    если operations утвердит push/outbox semantics; до этого `failed` запрещён.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,

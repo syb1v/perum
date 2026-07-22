@@ -1403,6 +1403,16 @@
     flex-shrink: 0;
 }
 
+.notificationWrap { position: relative; }
+.notificationButton { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; }
+.notificationBadge { position: absolute; top: -5px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #ef4444; color: #fff; font-size: 11px; line-height: 18px; font-weight: 700; }
+.notificationMenu { position: absolute; top: 48px; right: 0; z-index: 120; width: min(360px, calc(100vw - 32px)); max-height: 420px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 14px; background: var(--bg-secondary); box-shadow: 0 16px 40px rgba(0, 0, 0, .2); }
+.notificationMenuHead { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-color); }
+.notificationMenuHead button { border: 0; background: none; color: var(--accent-primary); cursor: pointer; }
+.notificationMenu p { margin: 0; padding: 24px 16px; color: var(--text-secondary); text-align: center; }
+.notificationItem { display: block; width: 100%; padding: 14px 16px; border: 0; border-bottom: 1px solid var(--border-color); background: none; color: var(--text-primary); text-align: left; line-height: 1.4; cursor: pointer; }
+.notificationItem:hover { background: var(--bg-tertiary); }
+
 /* Sidebar Overlay */
 .sidebarOverlay {
     display: none;

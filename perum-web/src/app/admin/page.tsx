@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useAuth } from '@/context/AuthContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -55,10 +56,16 @@ const BellSchedulesManager = dynamic(() => import('@/components/admin/BellSchedu
 
 type AdminSection = 'dashboard' | 'deep-economy' | 'performance' | 'users' | 'register' | 'notifications' | 'subjects' | 'teachers-subjects' | 'classes' | 'quests' | 'inquiries' | 'school-support' | 'news' | 'market' | 'exchange' | 'academic-years' | 'school-periods' | 'control-works' | 'bell-schedules' | 'work-types' | 'school-settings' | 'social-settings' | 'social-moderation' | 'schools';
 
+type Notification = { id: number; text: string; ref_type: string | null; ref_id: string | null; is_read: boolean };
+
 export default function AdminDashboard() {
     const { user, isLoading, logout } = useAuth();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const initializeSection = (): AdminSection => {
         if (typeof window !== 'undefined') {
+            const requested = new URLSearchParams(window.location.search).get('section');
+            if (requested) return requested as AdminSection;
             const saved = localStorage.getItem('admin_active_section');
             if (saved) return saved as AdminSection;
         }
@@ -68,6 +75,45 @@ export default function AdminDashboard() {
     const [activeSection, setActiveSection] = useState<AdminSection>(initializeSection);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [supportUnread, setSupportUnread] = useState(0);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+    const loadNotifications = useCallback(() => {
+        void api.get<{ notifications: Notification[] }>('/user/notifications')
+            .then(data => setNotifications(data.notifications.filter(notification => !notification.is_read)))
+            .catch(() => undefined);
+    }, []);
+
+    useEffect(() => {
+        loadNotifications();
+        const timer = window.setInterval(loadNotifications, 30000);
+        window.addEventListener('focus', loadNotifications);
+        return () => { window.clearInterval(timer); window.removeEventListener('focus', loadNotifications); };
+    }, [loadNotifications]);
+
+    const openNotification = async (notification: Notification) => {
+        try {
+            await api.post(`/user/notifications/${notification.id}/read`);
+        } catch {
+            return;
+        }
+        setNotifications(current => current.filter(item => item.id !== notification.id));
+        setNotificationsOpen(false);
+        if (notification.ref_type === 'admin_support_ticket' && notification.ref_id && (user?.role === 'school_admin' || user?.role === 'director')) {
+            localStorage.setItem('admin_active_section', 'school-support');
+            setActiveSection('school-support');
+            router.push(`/admin?section=school-support&ticket=${encodeURIComponent(notification.ref_id)}`);
+        }
+    };
+
+    const clearNotifications = async () => {
+        try {
+            await api.del('/user/notifications');
+        } catch {
+            return;
+        }
+        setNotifications([]);
+    };
 
     useEffect(() => {
         const load = () => api.get<{ messages: number }>('/admin/support/unread-count').then(data => setSupportUnread(data.messages)).catch(() => undefined);
@@ -124,7 +170,7 @@ export default function AdminDashboard() {
             case 'school-settings': return <SystemSettings />;
             case 'social-settings': return <SocialSettings />;
             case 'social-moderation': return <SocialModeration />;
-            case 'school-support': return <SchoolSupportInbox onUnreadChange={setSupportUnread} />;
+            case 'school-support': return <SchoolSupportInbox onUnreadChange={setSupportUnread} initialTicketId={searchParams.get('ticket')} />;
             default: return <UserManagement />;
         }
     };
@@ -183,6 +229,16 @@ export default function AdminDashboard() {
                         <h1 className={styles.pageTitle}>{sectionTitles[activeSection]}</h1>
                     </div>
                     <div className={styles.headerRight}>
+                        <div className={styles.notificationWrap}>
+                            <button className={styles.notificationButton} onClick={() => setNotificationsOpen(open => !open)} aria-label="Уведомления" aria-expanded={notificationsOpen}>
+                                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+                                {notifications.length > 0 && <span className={styles.notificationBadge}>{notifications.length > 99 ? '99+' : notifications.length}</span>}
+                            </button>
+                            {notificationsOpen && <div className={styles.notificationMenu}>
+                                <div className={styles.notificationMenuHead}><strong>Уведомления</strong>{notifications.length > 0 && <button onClick={() => void clearNotifications()}>Очистить все</button>}</div>
+                                {notifications.length === 0 ? <p>Новых уведомлений нет</p> : notifications.map(notification => <button key={notification.id} className={styles.notificationItem} onClick={() => void openNotification(notification)}>{notification.text}</button>)}
+                            </div>}
+                        </div>
                         <div className={styles.userInfo}>
                             <span className={styles.userName}>{user.first_name || user.login}</span>
                             <div className={styles.userAvatar}>

@@ -15,7 +15,7 @@ const categoryLabels: Record<string, string> = {
 };
 const formatDate = (value: string | null) => value ? new Intl.DateTimeFormat('ru', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '';
 
-export default function SchoolSupportInbox({ onUnreadChange }: { onUnreadChange?: (count: number) => void }) {
+export default function SchoolSupportInbox({ onUnreadChange, initialTicketId }: { onUnreadChange?: (count: number) => void; initialTicketId?: string | null }) {
     const [tickets, setTickets] = useState<SupportTicket[]>([]);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [active, setActive] = useState<SupportTicket | null>(null);
@@ -94,6 +94,12 @@ export default function SchoolSupportInbox({ onUnreadChange }: { onUnreadChange?
         window.addEventListener('focus', refresh);
         return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh); };
     }, []);
+
+    useEffect(() => {
+        if (!initialTicketId || activeId.current === initialTicketId) return;
+        activeId.current = initialTicketId;
+        void loadThread(initialTicketId);
+    }, [initialTicketId]);
 
     const openTicket = (ticket: SupportTicket) => {
         activeId.current = ticket.id;
