@@ -4,6 +4,7 @@ export const queryKeys = {
   preferences: (accountId: string) => [...queryKeys.account(accountId), 'user', 'preferences'] as const,
   conversations: (accountId: string) => [...queryKeys.account(accountId), 'conversations'] as const,
   conversation: (accountId: string, conversationId: number) => [...queryKeys.conversations(accountId), conversationId] as const,
+  socialMessages: (accountId: string) => [...queryKeys.account(accountId), 'messages'] as const,
   messages: (accountId: string, conversationId: number) => [...queryKeys.account(accountId), 'messages', conversationId] as const,
   unread: (accountId: string) => [...queryKeys.account(accountId), 'unread'] as const,
   supportTickets: (accountId: string) => [...queryKeys.account(accountId), 'support', 'tickets'] as const,
@@ -17,4 +18,12 @@ export const queryKeys = {
   adminSupportEscalationDelivery: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support-admin', 'delivery', ticketId] as const,
   notifications: (accountId: string) => [...queryKeys.account(accountId), 'notifications'] as const,
   homework: (accountId: string) => [...queryKeys.account(accountId), 'homework'] as const,
+};
+
+export const socialInvalidationKeys = {
+  reconnect: (accountId: string) => [queryKeys.conversations(accountId), queryKeys.socialMessages(accountId), queryKeys.unread(accountId)] as const,
+  messageCreated: (accountId: string, conversationId: number) => [queryKeys.conversations(accountId), queryKeys.conversation(accountId, conversationId), queryKeys.messages(accountId, conversationId), queryKeys.unread(accountId)] as const,
+  messageSent: (accountId: string) => [queryKeys.conversations(accountId), queryKeys.socialMessages(accountId)] as const,
+  conversationRead: (accountId: string, conversationId: number) => [queryKeys.conversations(accountId), queryKeys.conversation(accountId, conversationId), queryKeys.unread(accountId)] as const,
+  conversationChanged: (accountId: string, conversationId: number) => [queryKeys.conversations(accountId), queryKeys.conversation(accountId, conversationId)] as const,
 };

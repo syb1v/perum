@@ -1,4 +1,4 @@
-import { queryKeys } from '../query/queryKeys';
+import { socialInvalidationKeys } from '../query/queryKeys';
 
 export type RealtimeEvent =
   | { v: 1; type: 'connected'; occurred_at: string; data: Record<string, never> }
@@ -40,13 +40,10 @@ export function shouldConnectRealtime(state: RealtimeLifecycle) {
 }
 
 export function realtimeInvalidationKeys(accountId: string, event: RealtimeEvent) {
-  const conversations = queryKeys.conversations(accountId);
-  const unread = queryKeys.unread(accountId);
-  if (event.type === 'connected') return [conversations, [...queryKeys.account(accountId), 'messages'] as const, unread];
-  const conversation = queryKeys.conversation(accountId, event.data.conversation_id);
-  if (event.type === 'message.created') return [conversations, conversation, queryKeys.messages(accountId, event.data.conversation_id), unread];
-  if (event.type === 'conversation.read') return [conversations, conversation, unread];
-  return [conversations, conversation];
+  if (event.type === 'connected') return socialInvalidationKeys.reconnect(accountId);
+  if (event.type === 'message.created') return socialInvalidationKeys.messageCreated(accountId, event.data.conversation_id);
+  if (event.type === 'conversation.read') return socialInvalidationKeys.conversationRead(accountId, event.data.conversation_id);
+  return socialInvalidationKeys.conversationChanged(accountId, event.data.conversation_id);
 }
 
 export function realtimeUrl(apiBaseUrl: string, websocketPath: string, ticket: string) {

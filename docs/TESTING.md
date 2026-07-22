@@ -67,6 +67,14 @@ evidence с opaque participant label и nullable body, action receipt возвр
 новую optimistic `version`. `npm run contracts:check` фиксирует bindings трёх
 admin moderation endpoints, required fields и nullable integer inbox cursor.
 
+Mobile social query invalidation contract проверяется в
+`perum-mobile/src/query/queryKeys.test.ts` и `src/realtime/core.test.ts` общим
+mobile suite. Reconnect, `message.created`, conversation read/change и durable
+send/read success используют `socialInvalidationKeys`; все keys обязаны начинаться
+с exact account namespace и не затрагивать support, admin-support или Homework.
+Read-success plan обязан включать unread query, чтобы offline cursor replay не
+оставлял stale badge.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

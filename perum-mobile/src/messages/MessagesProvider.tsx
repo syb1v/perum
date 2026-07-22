@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AppState } from 'react-native';
 import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { useAuth } from '../auth/AuthProvider';
-import { queryKeys } from '../query/queryKeys';
+import { socialInvalidationKeys } from '../query/queryKeys';
 import { createMessageOutboxCore, type SendResult } from './outboxCore';
 import { sqliteMessageOutbox } from './sqliteOutbox';
 import type { Message, MessageMutation, SocialReadMutation } from './types';
@@ -56,8 +56,7 @@ export function MessagesProvider({ children }: PropsWithChildren) {
       canSend,
       onChange: refresh,
       onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversations(accountId) });
-        void queryClient.invalidateQueries({ queryKey: [...queryKeys.account(accountId), 'messages'] });
+        for (const queryKey of socialInvalidationKeys.messageSent(accountId)) void queryClient.invalidateQueries({ queryKey });
       },
     });
     coreRef.current = core;
@@ -89,8 +88,7 @@ export function MessagesProvider({ children }: PropsWithChildren) {
         }
       },
       onSuccess: (_, conversationId) => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversation(accountId, conversationId) });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.conversations(accountId) });
+        for (const queryKey of socialInvalidationKeys.conversationRead(accountId, conversationId)) void queryClient.invalidateQueries({ queryKey });
       },
     });
     readCoreRef.current = core;
