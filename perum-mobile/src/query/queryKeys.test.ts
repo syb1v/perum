@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { socialInvalidationKeys } from './queryKeys';
+import { adminSupportInvalidationKeys, socialInvalidationKeys, supportInvalidationKeys } from './queryKeys';
 
 test('social invalidation plans stay account scoped and exclude unrelated families', () => {
   const plans = [
@@ -19,4 +19,26 @@ test('social invalidation plans stay account scoped and exclude unrelated famili
     ['account', 'account-a', 'messages'],
   ]);
   assert.notDeepEqual(socialInvalidationKeys.reconnect('account-a'), socialInvalidationKeys.reconnect('account-b'));
+});
+
+test('requester and admin support plans stay in separate account-scoped families', () => {
+  const requester = [
+    supportInvalidationKeys.ticketCreated('account-a'),
+    supportInvalidationKeys.replySent('account-a', 'ticket-1'),
+    supportInvalidationKeys.ticketRead('account-a'),
+  ];
+  const admin = [
+    adminSupportInvalidationKeys.ticketChanged('account-a'),
+    adminSupportInvalidationKeys.replySent('account-a', 'ticket-1'),
+    adminSupportInvalidationKeys.ticketRead('account-a'),
+  ];
+  assert.ok(requester.flat().every(key => key[0] === 'account' && key[1] === 'account-a' && key[2] === 'support'));
+  assert.ok(admin.flat().every(key => key[0] === 'account' && key[1] === 'account-a' && key[2] === 'support-admin'));
+  assert.ok(requester.flat().every(key => !key.includes('unread')));
+  assert.ok(admin.flat().every(key => !key.includes('messages') || key.join(':') === 'account:account-a:support-admin:messages:ticket-1'));
+  assert.deepEqual(adminSupportInvalidationKeys.ticketRead('account-a'), [
+    ['account', 'account-a', 'support-admin', 'tickets'],
+    ['account', 'account-a', 'support-admin', 'unread'],
+  ]);
+  assert.notDeepEqual(supportInvalidationKeys.replySent('account-a', 'ticket-1'), supportInvalidationKeys.replySent('account-b', 'ticket-1'));
 });

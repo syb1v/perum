@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useRef, useState, type PropsWithChildren } from 'react';
 import { AppState } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
-import { queryKeys } from '../query/queryKeys';
+import { supportInvalidationKeys } from '../query/queryKeys';
 import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
 import { sqliteSupportOutbox } from './sqliteOutbox';
 import type { SupportCategory, SupportMessage, SupportMutation, SupportTicketCreateMutation, SupportTicketCreateOut } from './types';
@@ -59,8 +59,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
       canSend: () => enabledRef.current,
       onChange: refresh,
       onSuccess: (_, ticketId) => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.supportThread(accountId, ticketId) });
+        for (const queryKey of supportInvalidationKeys.replySent(accountId, ticketId)) void queryClient.invalidateQueries({ queryKey });
       },
     });
     coreRef.current = core;
@@ -90,8 +89,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
       send,
       canSend: () => readEnabledRef.current,
       onSuccess: (_, ticketId) => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.supportTicket(accountId, ticketId) });
+        for (const queryKey of supportInvalidationKeys.ticketRead(accountId)) void queryClient.invalidateQueries({ queryKey });
       },
     });
     readCoreRef.current = core;
@@ -122,7 +120,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
       send,
       canSend: () => creationEnabledRef.current,
       onChange: refresh,
-      onSuccess: () => void queryClient.invalidateQueries({ queryKey: queryKeys.supportTickets(accountId) }),
+      onSuccess: () => { for (const queryKey of supportInvalidationKeys.ticketCreated(accountId)) void queryClient.invalidateQueries({ queryKey }); },
     });
     creationCoreRef.current = core;
     const run = async () => { await core.run(accountId); await refresh(); };

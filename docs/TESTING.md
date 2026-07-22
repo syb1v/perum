@@ -75,6 +75,12 @@ send/read success используют `socialInvalidationKeys`; все keys о�
 Read-success plan обязан включать unread query, чтобы offline cursor replay не
 оставлял stale badge.
 
+Тот же `perum-mobile/src/query/queryKeys.test.ts` проверяет раздельные requester и
+admin support plans. Requester keys обязаны оставаться в `support` без admin unread;
+operator keys — в `support-admin`, action/conflict/reply/read должны обновлять
+admin unread, а thread допускается только для reply. Все plans account-scoped;
+используется TanStack prefix invalidation tickets family вместо дублирования detail key.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

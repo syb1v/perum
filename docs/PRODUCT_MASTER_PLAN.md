@@ -60,6 +60,12 @@ reconnect, realtime events и durable send/read success. Broad messages key бо
 поэтому badge не остаётся stale после offline cursor sync. Pure test гарантирует,
 что plans не пересекают другой account, support/admin-support или Homework cache.
 
+Mobile support query plans также разделены по requester/admin namespaces.
+Requester create/reply/read не затрагивают operator cache; admin action/conflict,
+reply/read обновляют ticket prefix и unread, thread — только reply. Redundant
+detail invalidations удалены, потому что TanStack prefix tickets уже покрывает
+detail rows; pure test фиксирует account и family isolation.
+
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
 может быть принят, освобождает active-pair slot для нового idempotency identity;
@@ -100,9 +106,9 @@ support/social read cursors, offline support ticket creation, Friends hardening,
 Native Friends UI и двухступенчатый controlled rollout находится в `main`; CI run
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
-social query plans и curated Friends/Homework/moderation OpenAPI contracts прошли
-Core/Tenant full pytest, mobile/shared/domain tests, contract gates, typecheck и
-web production build.
+social/support query plans и curated Friends/Homework/moderation OpenAPI contracts
+прошли Core/Tenant full pytest, mobile/shared/domain tests, contract gates,
+typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
@@ -700,7 +706,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter с single-flight refresh, shared exact support-role policy, generated Friends DTO, typed Homework/moderation contracts и account-scoped Mobile social query invalidation plans готовы; tests фиксируют role boundary, pagination, versioned receipts, privacy-minimized schemas и отсутствие cross-account/cache-family invalidation. Остаются остальные query families, telemetry/test-utils и дальнейшее расширение curated OpenAPI/contract tests |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter с single-flight refresh, shared exact support-role policy, generated Friends DTO, typed Homework/moderation contracts и account-scoped Mobile social/requester-support/admin-support query plans готовы; tests фиксируют role boundary, pagination, versioned receipts, privacy-minimized schemas и cross-account/cache-family isolation. Остаются остальные query families, telemetry/test-utils и дальнейшее расширение curated OpenAPI/contract tests |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, bounded telemetry и безопасный collector foundation зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |

@@ -215,6 +215,12 @@ Foundation завершён 2026-07-19: отдельный `support_admin` relea
 смешиваются; `admin_inbox` сообщения организации остаются видимы только школьным
 операторам. Attachments и push отсутствуют.
 
+Query invalidation plans унифицированы 2026-07-22 без смешения boundaries:
+requester create/reply/read остаются в `support`, operator action/conflict,
+reply/read — в `support-admin`; только admin plans обновляют admin unread, а thread
+обновляется только после reply. Tickets prefix покрывает detail, поэтому отдельные
+redundant detail invalidations удалены. Pure tests фиксируют account/family isolation.
+
 Conflict-safe management завершён 2026-07-19: Tenant возвращает текущий
 `assignee_id`, а Native изменяет status/category/priority/assignment только после
 authoritative versioned response. Повтор одного действия сохраняет

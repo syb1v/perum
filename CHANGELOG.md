@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Mobile requester/admin support cache invalidation переведён на раздельные account-scoped query plans. Requester operations не затрагивают operator cache, admin action/conflict/reply/read обновляют unread, thread инвалидируется только после reply, а redundant detail calls удалены в пользу TanStack tickets-prefix semantics; isolation закреплена pure tests.
 - Mobile social cache invalidation объединён в account-scoped query plans для reconnect, realtime events и durable send/read success. Ручной broad messages key удалён; offline read cursor replay теперь также обновляет unread count, а pure tests запрещают cross-account и support/Homework cache invalidation.
 - Tenant social moderation inbox, evidence detail и action receipt получили раздельные privacy-minimized Pydantic/OpenAPI schemas; Web удалил ручные case/evidence DTO и использует generated contracts. Contract gate фиксирует endpoint bindings, nullable cursor, evidence whitelist и optimistic version receipt, не расширяя доступ к содержимому сообщений.
 - Tenant Homework list и versioned state receipt получили typed Pydantic/OpenAPI responses; Mobile заменил ручные server DTO на generated schemas. Student decoder fail closed отбрасывает role-shaped rows с `student_state=null`, а contract gate фиксирует endpoint bindings и обязательные version/replay fields без claims о завершённом multi-device QA.

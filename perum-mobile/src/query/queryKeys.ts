@@ -27,3 +27,15 @@ export const socialInvalidationKeys = {
   conversationRead: (accountId: string, conversationId: number) => [queryKeys.conversations(accountId), queryKeys.conversation(accountId, conversationId), queryKeys.unread(accountId)] as const,
   conversationChanged: (accountId: string, conversationId: number) => [queryKeys.conversations(accountId), queryKeys.conversation(accountId, conversationId)] as const,
 };
+
+export const supportInvalidationKeys = {
+  ticketCreated: (accountId: string) => [queryKeys.supportTickets(accountId)] as const,
+  replySent: (accountId: string, ticketId: string) => [queryKeys.supportTickets(accountId), queryKeys.supportThread(accountId, ticketId)] as const,
+  ticketRead: (accountId: string) => [queryKeys.supportTickets(accountId)] as const,
+};
+
+export const adminSupportInvalidationKeys = {
+  ticketChanged: (accountId: string) => [queryKeys.adminSupportTickets(accountId), queryKeys.adminSupportUnread(accountId)] as const,
+  replySent: (accountId: string, ticketId: string) => [queryKeys.adminSupportTickets(accountId), queryKeys.adminSupportThread(accountId, ticketId), queryKeys.adminSupportUnread(accountId)] as const,
+  ticketRead: (accountId: string) => [queryKeys.adminSupportTickets(accountId), queryKeys.adminSupportUnread(accountId)] as const,
+};
