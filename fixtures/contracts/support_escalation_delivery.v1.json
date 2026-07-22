@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "fields": [
+    "oldest_pending_age_seconds",
+    "pending",
+    "retrying",
+    "sla_breached"
+  ],
+  "accepted": [
+    {
+      "metrics": { "pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0 },
+      "telemetry_status": "healthy"
+    },
+    {
+      "metrics": { "pending": 2, "retrying": 1, "sla_breached": 0, "oldest_pending_age_seconds": 90 },
+      "telemetry_status": "warning"
+    },
+    {
+      "metrics": { "pending": 0, "retrying": 1, "sla_breached": 1, "oldest_pending_age_seconds": 400 },
+      "telemetry_status": "critical"
+    }
+  ],
+  "rejected": [
+    {},
+    { "pending": -1, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0 },
+    { "pending": true, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0 },
+    { "pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0, "school_id": 1 }
+  ]
+}

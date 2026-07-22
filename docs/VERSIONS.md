@@ -248,3 +248,4 @@
 | 245 | 2026-07-22 | 19be330 | fix(contracts): типизированы moderation responses |
 | 246 | 2026-07-22 | bbf9b92 | refactor(mobile): унифицирована инвалидация social cache |
 | 247 | 2026-07-22 | aa77c73 | refactor(mobile): разделена инвалидация support cache |
+| 248 | 2026-07-22 | _______ | fix(telemetry): добавлен общий delivery contract fixture |

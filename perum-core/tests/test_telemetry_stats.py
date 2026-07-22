@@ -1,7 +1,9 @@
 """R3: телеметрия и статистика. Pure-логика агрегации (без БД) + регистрация
 эндпоинтов и их auth-гейты."""
 
+import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -10,6 +12,7 @@ from app.main import app
 from app.services.stats import HEARTBEAT_FRESH_S, is_online, rollup, school_stat, support_delivery
 
 client = TestClient(app)
+DELIVERY_FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures/contracts/support_escalation_delivery.v1.json").read_text())
 
 
 def _metric(**kw):
@@ -62,10 +65,11 @@ def test_school_stat_shape():
 
 def test_support_delivery_requires_fresh_strict_aggregate_and_rolls_up():
     now = datetime(2026, 6, 12, 12, 0, 0)
-    payload = {"support_escalation_delivery": {"pending": 2, "retrying": 1, "sla_breached": 0, "oldest_pending_age_seconds": 90}}
+    accepted = {case["telemetry_status"]: case["metrics"] for case in DELIVERY_FIXTURE["accepted"]}
+    payload = {"support_escalation_delivery": accepted["warning"]}
     result = support_delivery(_metric(last_heartbeat_at=now, payload=payload), now)
     assert result == {**payload["support_escalation_delivery"], "telemetry_status": "warning"}
-    critical = {"support_escalation_delivery": {"pending": 0, "retrying": 1, "sla_breached": 1, "oldest_pending_age_seconds": 400}}
+    critical = {"support_escalation_delivery": accepted["critical"]}
     agg, schools = rollup([
         (_school(1), _metric(last_heartbeat_at=now, payload=payload)),
         (_school(2), _metric(last_heartbeat_at=now, payload=critical)),
@@ -73,8 +77,8 @@ def test_support_delivery_requires_fresh_strict_aggregate_and_rolls_up():
     ], now)
     assert schools[1]["support_escalation_delivery"]["telemetry_status"] == "critical"
     assert agg["support_escalation_delivery"] == {"pending": 2, "retrying": 2, "sla_breached": 1, "oldest_pending_age_seconds": 400, "schools_reporting": 2, "schools_unknown": 1}
-    for invalid in ({}, {"support_escalation_delivery": {"pending": -1}}, {"support_escalation_delivery": {"pending": True}}):
-        assert support_delivery(_metric(last_heartbeat_at=now, payload=invalid), now) is None
+    for invalid in DELIVERY_FIXTURE["rejected"]:
+        assert support_delivery(_metric(last_heartbeat_at=now, payload={"support_escalation_delivery": invalid}), now) is None
 
 
 def test_endpoints_registered():

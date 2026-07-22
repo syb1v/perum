@@ -3,7 +3,9 @@
 балансы), пустую школу и отсутствие PII в снимке. aiosqlite — dev-зависимость."""
 
 import asyncio
+import json
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
@@ -21,6 +23,7 @@ EXPECTED_KEYS = {
     "users_total", "students", "teachers", "parents", "admins",
     "grades_total", "avg_grade", "active_24h", "balance_total", "social", "scanner", "support_escalation_delivery",
 }
+DELIVERY_FIXTURE = json.loads((Path(__file__).parents[3] / "fixtures/contracts/support_escalation_delivery.v1.json").read_text())
 
 
 async def _engine():
@@ -89,6 +92,8 @@ def test_collect_metrics_exact_values():
     }
     assert m["scanner"] == {"backlog": 0}
     assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
+    assert m["support_escalation_delivery"] in [case["metrics"] for case in DELIVERY_FIXTURE["accepted"]]
+    assert sorted(m["support_escalation_delivery"]) == DELIVERY_FIXTURE["fields"]
 
 
 async def _empty_school():

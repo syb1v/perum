@@ -81,6 +81,14 @@ operator keys — в `support-admin`, action/conflict/reply/read должны о
 admin unread, а thread допускается только для reply. Все plans account-scoped;
 используется TanStack prefix invalidation tickets family вместо дублирования detail key.
 
+Cross-component support delivery telemetry contract находится в
+`fixtures/contracts/support_escalation_delivery.v1.json`. Tenant
+`test_collect_metrics.py` проверяет exporter against accepted fixture и exact
+four-field allowlist; Core `test_telemetry_stats.py` прогоняет те же accepted и
+rejected examples через strict parser/status rollup. Extra fields, включая
+`school_id`, обязаны возвращать unknown (`None` внутри parser), а не игнорироваться.
+Fixture должен оставаться без school/user/host identifiers.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

@@ -244,6 +244,13 @@ labels. Prometheus может вычислять условия SLA/retry/unknow
 receivers и notification routing в репозитории не настроены и production alert
 delivery не заявляется.
 
+Cross-component telemetry fixture добавлен 2026-07-22:
+`fixtures/contracts/support_escalation_delivery.v1.json` задаёт exact четыре поля,
+healthy/warning/critical примеры и rejected malformed/extra-key payloads. Tenant
+exporter и Core parser используют один fixture в tests; Core теперь отклоняет
+extra identifiers вроде `school_id` и возвращает unknown. Fixture не содержит
+school/user/host identifiers и не меняет exact receipt semantics.
+
 1. Durable admin metadata/assignment mutations завершены 2026-07-21: одна
    account-scoped SQLite mutation на ticket, immutable `client_action_id` и
    `expected_version`, crash recovery, bounded retry, capability guard и terminal

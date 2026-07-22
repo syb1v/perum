@@ -28,7 +28,7 @@ def support_delivery(metric: SchoolMetric | None, now: datetime) -> dict | None:
         return None
     payload = metric.payload if isinstance(metric.payload, dict) else None
     raw = payload.get("support_escalation_delivery") if payload else None
-    if not isinstance(raw, dict):
+    if not isinstance(raw, dict) or set(raw) != set(_SUPPORT_KEYS):
         return None
     values = {}
     for key in _SUPPORT_KEYS:

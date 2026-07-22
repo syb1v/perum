@@ -66,6 +66,12 @@ reply/read обновляют ticket prefix и unread, thread — только r
 detail invalidations удалены, потому что TanStack prefix tickets уже покрывает
 detail rows; pure test фиксирует account и family isolation.
 
+Support escalation delivery telemetry получила первый cross-component test-utils
+contract: versioned privacy-safe fixture одновременно проверяет Tenant exporter и
+Core parser/status rollup. Exact allowlist содержит только четыре non-negative
+aggregate поля; extra identifiers, включая `school_id`, теперь fail closed дают
+unknown вместо молчаливого принятия. Fixture не содержит school/user/host data.
+
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
 может быть принят, освобождает active-pair slot для нового idempotency identity;
@@ -106,9 +112,9 @@ support/social read cursors, offline support ticket creation, Friends hardening,
 Native Friends UI и двухступенчатый controlled rollout находится в `main`; CI run
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
-social/support query plans и curated Friends/Homework/moderation OpenAPI contracts
-прошли Core/Tenant full pytest, mobile/shared/domain tests, contract gates,
-typecheck и web production build.
+social/support query plans, cross-component telemetry fixture и curated
+Friends/Homework/moderation OpenAPI contracts прошли Core/Tenant full pytest,
+mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
 закрывать Stage F без operator evidence или Homework hardening без concurrency и
@@ -706,7 +712,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter с single-flight refresh, shared exact support-role policy, generated Friends DTO, typed Homework/moderation contracts и account-scoped Mobile social/requester-support/admin-support query plans готовы; tests фиксируют role boundary, pagination, versioned receipts, privacy-minimized schemas и cross-account/cache-family isolation. Остаются остальные query families, telemetry/test-utils и дальнейшее расширение curated OpenAPI/contract tests |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends DTO, typed Homework/moderation contracts, Mobile social/support query plans и versioned cross-component support-delivery telemetry fixture готовы; tests фиксируют role/pagination/version/privacy, cache isolation и exact aggregate allowlist. Остаются остальные query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, bounded telemetry и безопасный collector foundation зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, preferences/Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |
@@ -714,7 +720,7 @@ Flow:
 | P1 | Friends | Частично | durable social cursor, hardening, Native Friends UI и двухступенчатый platform grant → org enable rollout foundation готовы; revoke сбрасывает org intent, discovery fail-closed учитывает desired state, convergence подтверждается generation heartbeat. Stale requests fail-closed переходят в `expired`; idempotency target mismatch даёт `409`, а PostgreSQL same/reverse-pair и identity contention возвращают authoritative winner/bounded conflict без duplicate pending/audit. Остаются production pilot evidence, attachments, push и дальнейший anti-abuse после утверждения policy/thresholds |
 | P1 | Media pipeline | Частично | PostgreSQL run `29691375244` подтвердил concurrency/migration. Candidate run `29700812844` подтвердил cold signatures, isolation, persistence/outage, production Tenant stale recovery и bounded 5-school fairness (`MAX_CONNECTIONS=2`, burst `6×1 MiB`, concurrent peers, exact resource inspect). Это candidate envelope, не production sizing. Exact digests остаются candidate. Остаются operator review, target-node inspect/load pilot и attachment UI; production attachments fail-closed |
 | P1 | School support | Частично | text-only tickets/messages/shared read, notifications, assignment, version-safe metadata, audit history, web requester/admin UI, native requester durable outboxes и offline ticket creation готовы. Organization reply атомарно создаёт tenant-scoped in-app notification только активным school admin/director, dedup-ится Core receipt и закрывается read cursor отдельно для каждого оператора. Web school admin/director notification bell открывает authoritative ticket по typed reference и shareable URL. Native school admin/director получил cached support и notification inboxes, clickable exact `admin_support_ticket` routing, отдельные durable account-scoped text-reply, read-cursor и metadata/assignment queues со stable identity, FIFO/retry, terminal local failure и без optimistic server-state updates, а также delivery/SLA card; Core platform/org dashboards показывают bounded aggregate status и unknown telemetry. Остаются attachments и push delivery/tap lifecycle |
-| P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe relay pull/ack готовы. Typed delivery endpoints, strict telemetry extraction, dashboards и unlabeled Prometheus gauges закрывают current-state monitoring; остаются exact receipts, terminal failure policy, Alertmanager/contact-point delivery и native org/platform parity |
+| P1 | Core support escalation | Частично | explicit redacted school request, durable tenant outbox, idempotent Core intake, org approval/rejection, platform visibility gate и privacy-safe relay pull/ack готовы. Typed delivery endpoints, dashboards и unlabeled Prometheus gauges закрывают current-state monitoring; Tenant exporter/Core parser теперь используют один versioned fixture, Core exact-key fail closed отклоняет дополнительные identifier fields. Остаются exact receipts, terminal failure policy, Alertmanager/contact-point delivery и native org/platform parity |
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Moderation inbox/detail/action receipt типизированы раздельными privacy-minimized Pydantic/OpenAPI schemas, Web использует generated types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
