@@ -6,6 +6,8 @@ export type SupportTicketCreate = components['schemas']['TicketCreate'];
 export type SupportTicketCreateOut = components['schemas']['TicketCreateOut'];
 export type SupportMessage = components['schemas']['app__modules__support__schemas__MessageOut'];
 export type SupportMessagePage = components['schemas']['app__modules__support__schemas__MessagePage'];
+export type SupportMessageCreate = components['schemas']['app__modules__support__schemas__MessageCreate'];
+export type SupportReadCreate = components['schemas']['app__modules__support__schemas__ReadCreate'];
 export type SupportCategory = SupportTicketCreate['category'];
 export type AdminSupportUnread = components['schemas']['AdminUnreadOut'];
 export type AdminSupportAssignee = components['schemas']['AssigneeOut'];
@@ -58,3 +60,15 @@ export type SupportTicketCreateMutation = {
   createdAt: number;
   serverTicketId: string | null;
 };
+
+export function supportMessageCreatePayload(mutation: SupportMutation): SupportMessageCreate {
+  return { client_message_id: mutation.clientMessageId, body: mutation.body };
+}
+
+export function supportReadPayload(mutation: SupportReadMutation): SupportReadCreate {
+  return { client_action_id: mutation.clientActionId, message_id: mutation.messageId };
+}
+
+export function supportTicketCreatePayload(mutation: SupportTicketCreateMutation): SupportTicketCreate {
+  return { client_ticket_id: mutation.clientTicketId, client_message_id: mutation.clientMessageId, category: mutation.category, subject: mutation.subject, body: mutation.body };
+}

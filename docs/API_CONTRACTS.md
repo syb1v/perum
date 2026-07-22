@@ -48,6 +48,11 @@ Social mutation requests являются curated contract: POST message при�
 Mobile durable outbox mapper обязан переносить server-facing stable client identity
 из локальной записи без генерации нового ID во время retry.
 
+Requester support mutation requests также curated: ticket creation использует
+`TicketCreate`, reply — support `MessageCreate`, read cursor — support `ReadCreate`.
+`client_action_id` в read schema намеренно optional для существующих Web consumers,
+но Mobile durable mapper обязан отправлять его при каждом replay.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

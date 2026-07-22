@@ -139,6 +139,16 @@ npm test --workspace perum-mobile
 (cd perum-tenant && python -m pytest tests/unit/test_social_messages.py tests/unit/test_social_moderation_retention.py -q)
 ```
 
+Requester support mutation gate проверяет ticket creation, reply и read request
+bindings. Mobile mapper test фиксирует stable ticket/message/read identities;
+Tenant suite дополнительно сохраняет compatibility Web reads без action ID:
+
+```bash
+npm run contracts:check
+npm test --workspace perum-mobile
+(cd perum-tenant && python -m pytest tests/unit/test_support.py -q)
+```
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

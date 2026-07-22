@@ -254,3 +254,4 @@
 | 251 | 2026-07-22 | a12b3f1 | fix(contracts): типизирован preferences response |
 | 252 | 2026-07-22 | 0c30c0c | fix(push): восстановлен registration status |
 | 253 | 2026-07-22 | 6a76ead | fix(contracts): типизированы social mutation payloads |
+| 254 | 2026-07-22 | _______ | fix(contracts): типизированы requester support payloads |

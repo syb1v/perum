@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { supportInvalidationKeys } from '../query/queryKeys';
 import { createSupportOutboxCore, type SupportSendResult } from './outboxCore';
 import { sqliteSupportOutbox } from './sqliteOutbox';
-import type { SupportCategory, SupportMessage, SupportMutation, SupportTicketCreateMutation, SupportTicketCreateOut } from './types';
+import { supportMessageCreatePayload, supportReadPayload, supportTicketCreatePayload, type SupportCategory, type SupportMessage, type SupportMutation, type SupportReadMutation, type SupportTicketCreateMutation, type SupportTicketCreateOut } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
 import { createSupportReadCursorOutboxCore, type SupportReadResult } from './readCursorOutboxCore';
 import { sqliteSupportReadCursorOutbox } from './sqliteReadCursorOutbox';
@@ -47,7 +47,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
     const refresh = async () => { const rows = await sqliteSupportOutbox.getByAccount(accountId); if (alive) setPending(rows); };
     const send = async (item: SupportMutation): Promise<SupportSendResult> => {
       try {
-        return { type: 'success', message: await apiClient.post<SupportMessage>(`/support/tickets/${item.ticketId}/messages`, { client_message_id: item.clientMessageId, body: item.body }) };
+        return { type: 'success', message: await apiClient.post<SupportMessage>(`/support/tickets/${item.ticketId}/messages`, supportMessageCreatePayload(item)) };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
         return { type: 'http', status: error.status, message: error.message };
@@ -75,9 +75,9 @@ export function SupportProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!account || !apiClient || !readEnabled) { readCoreRef.current = null; return; }
     const accountId = account.id;
-    const send = async (item: import('./types').SupportReadMutation): Promise<SupportReadResult> => {
+    const send = async (item: SupportReadMutation): Promise<SupportReadResult> => {
       try {
-        await apiClient.post(`/support/tickets/${item.ticketId}/read`, { client_action_id: item.clientActionId, message_id: item.messageId });
+        await apiClient.post(`/support/tickets/${item.ticketId}/read`, supportReadPayload(item));
         return { type: 'success' };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
@@ -109,7 +109,7 @@ export function SupportProvider({ children }: PropsWithChildren) {
     if (!creationEnabled) { creationCoreRef.current = null; void refresh(); return () => { alive = false; }; }
     const send = async (item: SupportTicketCreateMutation): Promise<SupportTicketCreateResult> => {
       try {
-        return { type: 'success', result: await apiClient.post<SupportTicketCreateOut>('/support/tickets', { client_ticket_id: item.clientTicketId, client_message_id: item.clientMessageId, category: item.category, subject: item.subject, body: item.body }) };
+        return { type: 'success', result: await apiClient.post<SupportTicketCreateOut>('/support/tickets', supportTicketCreatePayload(item)) };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
         return { type: 'http', status: error.status, message: error.message };

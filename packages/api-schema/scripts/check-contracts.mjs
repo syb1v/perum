@@ -177,6 +177,29 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the social mutation client contract`);
   }
 }
+for (const [path, schema] of [
+  ['/api/support/tickets', 'TicketCreate'],
+  ['/api/support/tickets/{ticket_id}/messages', 'app__modules__support__schemas__MessageCreate'],
+  ['/api/support/tickets/{ticket_id}/read', 'app__modules__support__schemas__ReadCreate'],
+]) {
+  const requestRef = tenantOpenapi.paths[path].post.requestBody.content['application/json'].schema.$ref;
+  if (requestRef !== `#/components/schemas/${schema}`) {
+    throw new Error(`POST ${path} must accept ${schema}`);
+  }
+}
+for (const [name, fields] of [
+  ['TicketCreate', ['client_ticket_id', 'client_message_id', 'category', 'subject', 'body']],
+  ['app__modules__support__schemas__MessageCreate', ['client_message_id', 'body']],
+  ['app__modules__support__schemas__ReadCreate', ['message_id']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the requester support mutation contract`);
+  }
+}
+if (!tenantOpenapi.components.schemas.app__modules__support__schemas__ReadCreate.properties?.client_action_id) {
+  throw new Error('Support ReadCreate must expose optional client_action_id for durable clients');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }
