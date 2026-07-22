@@ -250,4 +250,4 @@
 | 247 | 2026-07-22 | aa77c73 | refactor(mobile): разделена инвалидация support cache |
 | 248 | 2026-07-22 | 0bd29cc | fix(telemetry): добавлен общий delivery contract fixture |
 | 249 | 2026-07-22 | 2a050cf | fix(telemetry): добавлена очистка metrics payload |
-| 250 | 2026-07-22 | _______ | test(contracts): добавлен deployment snapshot fixture |
+| 250 | 2026-07-22 | ed8903d | test(contracts): добавлен deployment snapshot fixture |
