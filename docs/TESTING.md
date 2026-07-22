@@ -71,6 +71,12 @@ Focused suite фиксирует полный и пустой response, required
 `JournalWorkTypesOut`/`JournalWorkTypeOut` binding, а Web typecheck сохраняет один
 generated transport DTO во всех четырёх journal consumer-ах.
 
+Тот же journal contract suite проверяет nested teacher class-subject picker:
+пустые class/subject lists, required nullable `grade_level`/`short_name`, required
+non-null identifiers/names/category и запрет extra data на каждом уровне. Curated
+gate фиксирует оба item refs и nullability; Web typecheck/build покрывают журнал,
+аналитику, темы и структурно суженные picker props без casts.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

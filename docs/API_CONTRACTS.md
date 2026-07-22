@@ -75,6 +75,12 @@ Journal work types являются отдельным curated reference-data co
 обязательны и non-null; Web journal consumers используют generated response вместо
 локальных сокращённых shapes.
 
+Journal teacher picker также curated: GET `/api/journal/teacher/subjects`
+возвращает `JournalTeacherSubjectsOut` с nested `JournalTeacherClassOut` и
+`JournalTeacherSubjectOut`. Все keys required; `grade_level` и `short_name`
+nullable, class/subject arrays non-null. Этот DTO нельзя подменять `ClassInfo` или
+`Subject`, потому что их legacy domain fields не совпадают с wire projection.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и
