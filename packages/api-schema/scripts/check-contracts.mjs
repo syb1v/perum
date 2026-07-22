@@ -157,6 +157,26 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the push registration client contract`);
   }
 }
+for (const [path, schema] of [
+  ['/api/social/conversations/{conversation_id}/messages', 'app__modules__social__schemas__MessageCreate'],
+  ['/api/social/conversations/{conversation_id}/read', 'app__modules__social__schemas__ReadCreate'],
+  ['/api/social/reports', 'ReportCreate'],
+]) {
+  const requestRef = tenantOpenapi.paths[path].post.requestBody.content['application/json'].schema.$ref;
+  if (requestRef !== `#/components/schemas/${schema}`) {
+    throw new Error(`POST ${path} must accept ${schema}`);
+  }
+}
+for (const [name, fields] of [
+  ['app__modules__social__schemas__MessageCreate', ['client_message_id', 'body']],
+  ['app__modules__social__schemas__ReadCreate', ['message_id']],
+  ['ReportCreate', ['message_id', 'category', 'client_report_id']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the social mutation client contract`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

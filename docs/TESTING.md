@@ -129,6 +129,16 @@ npm test --workspace perum-mobile
 
 Эти проверки не заменяют physical-device delivery/tap/cold-start evidence.
 
+Social mutation contract gate проверяет request bindings для message send, read
+cursor и report. Mobile mapper test фиксирует перенос immutable outbox identities,
+а Tenant suites сохраняют idempotency, cursor и moderation semantics:
+
+```bash
+npm run contracts:check
+npm test --workspace perum-mobile
+(cd perum-tenant && python -m pytest tests/unit/test_social_messages.py tests/unit/test_social_moderation_retention.py -q)
+```
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

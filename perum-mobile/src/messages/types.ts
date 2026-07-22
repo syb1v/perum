@@ -4,6 +4,8 @@ export type Conversation = components['schemas']['ConversationOut'];
 export type ConversationPage = components['schemas']['ConversationPage'];
 export type Message = components['schemas']['app__modules__social__schemas__MessageOut'];
 export type MessagePage = components['schemas']['app__modules__social__schemas__MessagePage'];
+export type MessageCreate = components['schemas']['app__modules__social__schemas__MessageCreate'];
+export type MessageReadCreate = components['schemas']['app__modules__social__schemas__ReadCreate'];
 export type ReportCreate = components['schemas']['ReportCreate'];
 export type ReportOut = components['schemas']['ReportOut'];
 
@@ -36,3 +38,11 @@ export type SocialReadMutation = {
   error: string | null;
   createdAt: number;
 };
+
+export function messageCreatePayload(mutation: MessageMutation): MessageCreate {
+  return { client_message_id: mutation.clientMessageId, body: mutation.body };
+}
+
+export function messageReadPayload(mutation: SocialReadMutation): MessageReadCreate {
+  return { message_id: mutation.messageId, client_action_id: mutation.clientActionId };
+}

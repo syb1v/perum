@@ -43,6 +43,11 @@ receipt и DELETE revoke receipt имеют отдельные schemas, PUT пр
 authoritative признаком активной регистрации; `delivery_enabled` отдельно остаётся
 false до появления реального provider adapter и credentials.
 
+Social mutation requests являются curated contract: POST message принимает social
+`MessageCreate`, read cursor — social `ReadCreate`, report — `ReportCreate`.
+Mobile durable outbox mapper обязан переносить server-facing stable client identity
+из локальной записи без генерации нового ID во время retry.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

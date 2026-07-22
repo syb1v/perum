@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Mobile social send/read outboxes переведены на generated `MessageCreate`/`ReadCreate`, report сохраняет generated `ReportCreate`. Curated gate связывает три POST endpoints с request schemas и required identities, pure mapper test фиксирует перенос immutable `client_message_id`/`client_action_id` без изменения retry identity; groups/attachments/push scope не заявляется готовым.
 - Push registration GET/PUT/DELETE получили отдельные Pydantic/OpenAPI response schemas и generated Mobile aliases. Исправлено восстановление Native UI после перезапуска: active state определяется по nullable `registration`, а не по отсутствующему в Tenant response полю `registered`. Curated gate и pure test не смешивают registration receipt с `delivery_enabled=false`; provider delivery/credentials/tap lifecycle остаются pending.
 - Mobile preferences переведены с ручного network DTO на generated `PreferencesResponse`/`PreferencesPatch`. Tenant PATCH route теперь объявляет фактически возвращаемый response model вместо OpenAPI `unknown`; regenerated snapshot и curated gate фиксируют GET/PATCH response, PATCH request и required fields, не смешивая client-owned outbox state с API schema.
 - Tenant deployment snapshot sender и Core strict consumer связаны versioned `deployment_snapshot.v1.json`: fixture фиксирует exact fields, schema version, strict readiness booleans, social generation, timezone-aware observation и extra-field rejection. Это automated contract parity без claims о Mobile telemetry proof, rollback или Stage F pilot.

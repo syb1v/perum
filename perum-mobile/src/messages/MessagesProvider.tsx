@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { socialInvalidationKeys } from '../query/queryKeys';
 import { createMessageOutboxCore, type SendResult } from './outboxCore';
 import { sqliteMessageOutbox } from './sqliteOutbox';
-import type { Message, MessageMutation, SocialReadMutation } from './types';
+import { messageCreatePayload, messageReadPayload, type Message, type MessageMutation, type SocialReadMutation } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
 import { createSocialReadCursorOutboxCore, type SocialReadResult } from './readCursorOutboxCore';
 import { sqliteSocialReadCursorOutbox } from './sqliteReadCursorOutbox';
@@ -43,7 +43,7 @@ export function MessagesProvider({ children }: PropsWithChildren) {
     const send = async (item: MessageMutation): Promise<SendResult> => {
       if (!canSend()) return { type: 'transport' };
       try {
-        const message = await apiClient.post<Message>(`/social/conversations/${item.conversationId}/messages`, { client_message_id: item.clientMessageId, body: item.body });
+        const message = await apiClient.post<Message>(`/social/conversations/${item.conversationId}/messages`, messageCreatePayload(item));
         return { type: 'success', message };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
@@ -80,7 +80,7 @@ export function MessagesProvider({ children }: PropsWithChildren) {
       send: async (item: SocialReadMutation): Promise<SocialReadResult> => {
         if (!canSend()) return { type: 'transport' };
         try {
-          await apiClient.post(`/social/conversations/${item.conversationId}/read`, { message_id: item.messageId, client_action_id: item.clientActionId });
+          await apiClient.post(`/social/conversations/${item.conversationId}/read`, messageReadPayload(item));
           return { type: 'success' };
         } catch (error) {
           if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };
