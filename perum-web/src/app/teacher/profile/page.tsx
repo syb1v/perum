@@ -106,7 +106,7 @@ export default function TeacherProfile() {
                                 <div className={styles.activityInfo}>
                                     <div className={styles.activityTitle}>{item.title}</div>
                                     <div className={styles.activityMeta}>
-                                        {item.subject_name} • {item.class_name} • {formatDate(item.created_at)}
+                                        {item.subject_name || 'Предмет не указан'} • {item.class_name || 'Класс не указан'} • {item.created_at ? formatDate(item.created_at) : 'Дата не указана'}
                                     </div>
                                 </div>
                             </div>

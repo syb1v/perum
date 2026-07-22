@@ -12252,9 +12252,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Homework Api Teacher Homework Get"
+                  "$ref": "#/components/schemas/TeacherHomeworkListOut"
                 }
               }
             }
@@ -17346,6 +17344,84 @@
           "classes"
         ],
         "title": "TeacherClassesOut"
+      },
+      "TeacherHomeworkListOut": {
+        "properties": {
+          "homework": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherHomeworkOut"
+            },
+            "type": "array",
+            "title": "Homework"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "homework"
+        ],
+        "title": "TeacherHomeworkListOut"
+      },
+      "TeacherHomeworkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "created_at",
+          "class_name",
+          "subject_name"
+        ],
+        "title": "TeacherHomeworkOut"
       },
       "TeacherScheduleItemIn": {
         "properties": {

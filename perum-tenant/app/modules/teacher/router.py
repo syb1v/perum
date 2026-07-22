@@ -11,7 +11,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.teacher import service
-from app.modules.teacher.schemas import TeacherClassesOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut
 
 router = APIRouter()
 
@@ -81,7 +81,7 @@ async def works(
     return await service.teacher_works(db, await _school(user, db), user, class_id, subject_id, limit, offset)
 
 
-@router.get("/homework")
+@router.get("/homework", response_model=TeacherHomeworkListOut)
 async def homework(
     class_id: int | None = None,
     subject_id: int | None = None,

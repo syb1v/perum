@@ -1,20 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import api from '@/lib/apiClient';
 import client from '@/types/openapi';
+import type { components } from '@perum/api-schema/tenant';
 
-interface ActivityItem {
-    id: number;
-    title: string;
-    description: string;
-    created_at: string;
-    class_name?: string;
-    subject_name?: string;
-}
-
-interface HomeworkResponse {
-    homework: ActivityItem[];
-}
+type TeacherHomeworkList = components['schemas']['TeacherHomeworkListOut'];
 export function useTeacherProfile() {
     const { user } = useAuth();
     const { showError } = useToast();
@@ -33,12 +24,7 @@ export function useTeacherProfile() {
 
     const { data: homeworkData, isLoading: isLoadingHomework } = useQuery({
         queryKey: ['teacher', 'homework'],
-        queryFn: async () => {
-            const { data, error } = await client.GET('/api/teacher/homework', {});
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (error) throw new Error((error as any)?.detail || 'Ошибка загрузки ДЗ');
-            return data as unknown as HomeworkResponse;
-        },
+        queryFn: () => api.get<TeacherHomeworkList>('/teacher/homework'),
         enabled: !!user,
     });
 

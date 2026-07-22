@@ -5102,6 +5102,26 @@ export interface components {
             /** Classes */
             classes: components["schemas"]["TeacherClassOut"][];
         };
+        /** TeacherHomeworkListOut */
+        TeacherHomeworkListOut: {
+            /** Homework */
+            homework: components["schemas"]["TeacherHomeworkOut"][];
+        };
+        /** TeacherHomeworkOut */
+        TeacherHomeworkOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string;
+            /** Created At */
+            created_at: string | null;
+            /** Class Name */
+            class_name: string | null;
+            /** Subject Name */
+            subject_name: string | null;
+        };
         /** TeacherScheduleItemIn */
         TeacherScheduleItemIn: {
             /** Subject Id */
@@ -13183,9 +13203,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherHomeworkListOut"];
                 };
             };
             /** @description Validation Error */

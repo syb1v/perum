@@ -240,6 +240,33 @@ const teacherClassCreatedAt = tenantOpenapi.components.schemas.TeacherClassOut.p
 if (!teacherClassCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time') || !teacherClassCreatedAt.some(schema => schema.type === 'null')) {
   throw new Error('TeacherClassOut created_at must be a nullable date-time');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/homework', 'get') !== '#/components/schemas/TeacherHomeworkListOut') {
+  throw new Error('GET /api/teacher/homework must return TeacherHomeworkListOut');
+}
+for (const [name, fields] of [
+  ['TeacherHomeworkListOut', ['homework']],
+  ['TeacherHomeworkOut', ['id', 'title', 'description', 'created_at', 'class_name', 'subject_name']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the teacher homework client contract`);
+  }
+}
+const teacherHomeworkItemsRef = tenantOpenapi.components.schemas.TeacherHomeworkListOut.properties.homework.items?.$ref;
+if (teacherHomeworkItemsRef !== '#/components/schemas/TeacherHomeworkOut') {
+  throw new Error('TeacherHomeworkListOut homework must contain TeacherHomeworkOut items');
+}
+const teacherHomework = tenantOpenapi.components.schemas.TeacherHomeworkOut.properties;
+const teacherHomeworkCreatedAt = teacherHomework.created_at.anyOf ?? [];
+if (!teacherHomeworkCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time') || !teacherHomeworkCreatedAt.some(schema => schema.type === 'null')) {
+  throw new Error('TeacherHomeworkOut created_at must be a nullable date-time');
+}
+for (const field of ['class_name', 'subject_name']) {
+  const variants = teacherHomework[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'string') || !variants.some(schema => schema.type === 'null')) {
+    throw new Error(`TeacherHomeworkOut ${field} must be a nullable string`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }
