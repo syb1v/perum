@@ -63,6 +63,12 @@ Teacher classes read также является curated contract: GET `/api/tea
 required, а `created_at` остаётся nullable `date-time`; Web использует generated
 response и не должен поддерживать отдельную копию wire DTO.
 
+Teacher profile homework feed использует отдельный curated contract для GET
+`/api/teacher/homework`: `TeacherHomeworkListOut` содержит
+`TeacherHomeworkOut[]`. Это компактная projection, не `HomeworkListOut` от
+`/api/homework`; `created_at`, `class_name` и `subject_name` required nullable,
+тогда как `description` всегда нормализован в строку.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

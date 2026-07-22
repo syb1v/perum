@@ -53,6 +53,11 @@ Contract gate проверяет `TeacherClassesOut` binding, `TeacherClassOut` 
 required fields и nullable `date-time`; Web typecheck гарантирует использование
 generated response без ручного cast.
 
+Тот же focused suite проверяет teacher homework profile feed. Curated gate
+фиксирует `TeacherHomeworkListOut`/`TeacherHomeworkOut`, все required item fields,
+nullable `date-time` и nullable class/subject names. Web typecheck и build обязаны
+подтвердить явную обработку отсутствующих metadata без возврата к ручному DTO.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

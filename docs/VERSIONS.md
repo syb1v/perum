@@ -257,3 +257,4 @@
 | 254 | 2026-07-22 | f687e9b | fix(contracts): типизированы requester support payloads |
 | 255 | 2026-07-22 | 9405c91 | fix(contracts): типизированы admin support payloads |
 | 256 | 2026-07-22 | fe3abca | fix(contracts): типизирован список классов учителя |
+| 257 | 2026-07-22 | dfd4a71 | fix(contracts): типизирована лента заданий учителя |
