@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider';
 import { queryKeys } from '../query/queryKeys';
 import { createOutboxCore, type PatchResult } from './outboxCore';
 import { sqliteOutbox } from './sqliteOutbox';
-import type { Preferences, PreferencesMutation, PreferencesSnapshot } from './types';
+import type { Preferences, PreferencesMutation, PreferencesPatch, PreferencesSnapshot } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
 
 type Core = ReturnType<typeof createOutboxCore>;
@@ -36,7 +36,8 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
     const refresh = async () => { const next = await sqliteOutbox.getLatest(accountId); if (alive) setMutation(next); };
     const patch = async (item: PreferencesMutation): Promise<PatchResult> => {
       try {
-        const data = await apiClient.patch<Preferences>('/user/preferences', { push_preview_enabled: item.desired }, { headers: { 'Idempotency-Key': item.idempotencyKey, 'If-Match': item.baseEtag } });
+        const payload: PreferencesPatch = { push_preview_enabled: item.desired };
+        const data = await apiClient.patch<Preferences>('/user/preferences', payload, { headers: { 'Idempotency-Key': item.idempotencyKey, 'If-Match': item.baseEtag } });
         return { type: 'success', snapshot: preferencesSnapshot(data) };
       } catch (error) {
         if (!(error instanceof ApiClientError)) return { type: 'transport', message: error instanceof Error ? error.message : undefined };

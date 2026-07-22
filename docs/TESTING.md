@@ -105,6 +105,17 @@ version, integer-as-bool, negative generation, naive timestamp и extra field.
 Fixture synthetic: он не закрывает operator Mobile ledger export, deliberate
 rollback или Stage F pilot evidence.
 
+Preferences contract gate проверяет GET/PATCH `/api/user/preferences`, PATCH
+request `PreferencesPatch`, response `PreferencesResponse` и required поля обеих
+schemas. Mobile provider использует generated request/response aliases, а Tenant
+route suite сохраняет idempotency, ETag и conflict semantics:
+
+```bash
+npm run contracts:check
+npm run typecheck --workspace perum-mobile
+(cd perum-tenant && python -m pytest tests/unit/test_user_preferences.py -q)
+```
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

@@ -1,9 +1,7 @@
-export type Preferences = {
-  push_preview_enabled: boolean;
-  version: number;
-  created_at: string;
-  updated_at: string;
-};
+import type { components } from '@perum/api-schema/tenant';
+
+export type Preferences = components['schemas']['PreferencesResponse'];
+export type PreferencesPatch = components['schemas']['PreferencesPatch'];
 
 export type PreferencesSnapshot = { data: Preferences; etag: string };
 

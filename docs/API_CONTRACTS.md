@@ -32,6 +32,11 @@ request/response types. Anonymous mobile discovery и tenant descriptor имею
 дополнительный structural parity gate, описанный в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md).
 
+Mobile preferences являются curated contract: GET/PATCH
+`/api/user/preferences` обязаны возвращать `PreferencesResponse`, PATCH принимает
+`PreferencesPatch`, а их required fields проверяет `contracts:check`. Runtime
+outbox state остаётся локальным типом и не должен добавляться в OpenAPI schema.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

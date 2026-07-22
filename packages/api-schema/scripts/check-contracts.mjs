@@ -115,6 +115,24 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the social client contract`);
   }
 }
+for (const method of ['get', 'patch']) {
+  if (responseSchemaRef(tenantOpenapi, '/api/user/preferences', method) !== '#/components/schemas/PreferencesResponse') {
+    throw new Error(`${method.toUpperCase()} /api/user/preferences must return PreferencesResponse`);
+  }
+}
+const preferencesPatchRef = tenantOpenapi.paths['/api/user/preferences'].patch.requestBody.content['application/json'].schema.$ref;
+if (preferencesPatchRef !== '#/components/schemas/PreferencesPatch') {
+  throw new Error('PATCH /api/user/preferences must accept PreferencesPatch');
+}
+for (const [name, fields] of [
+  ['PreferencesResponse', ['push_preview_enabled', 'version', 'created_at', 'updated_at']],
+  ['PreferencesPatch', ['push_preview_enabled']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the preferences client contract`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

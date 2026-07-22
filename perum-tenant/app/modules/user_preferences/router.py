@@ -60,7 +60,7 @@ async def get_preferences(
     return preferences
 
 
-@router.patch("")
+@router.patch("", response_model=PreferencesResponse)
 async def patch_preferences(
     body: PreferencesPatch,
     user: User = Depends(get_current_user),
