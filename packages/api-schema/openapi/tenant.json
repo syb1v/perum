@@ -7922,9 +7922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Registration Api Push Registration Get"
+                  "$ref": "#/components/schemas/PushRegistrationStatusOut"
                 }
               }
             }
@@ -7977,9 +7975,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Put Registration Api Push Installations  Installation Id  Registration Put"
+                  "$ref": "#/components/schemas/PushRegistrationOut"
                 }
               }
             }
@@ -8036,9 +8032,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Registration Api Push Installations  Installation Id  Registration Delete"
+                  "$ref": "#/components/schemas/PushRegistrationRevokeOut"
                 }
               }
             }
@@ -15758,6 +15752,89 @@
           "updated_at"
         ],
         "title": "PreferencesResponse"
+      },
+      "PushRegistrationOut": {
+        "properties": {
+          "installation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Installation Id"
+          },
+          "state": {
+            "type": "string",
+            "const": "active",
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "installation_id",
+          "state"
+        ],
+        "title": "PushRegistrationOut"
+      },
+      "PushRegistrationRevokeOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "title": "Success"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "PushRegistrationRevokeOut"
+      },
+      "PushRegistrationStatusOut": {
+        "properties": {
+          "registration_supported": {
+            "type": "boolean",
+            "title": "Registration Supported"
+          },
+          "registration_available": {
+            "type": "boolean",
+            "title": "Registration Available"
+          },
+          "delivery_enabled": {
+            "type": "boolean",
+            "title": "Delivery Enabled"
+          },
+          "configured_providers": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "expo",
+                "fcm",
+                "apns",
+                "rustore",
+                "huawei"
+              ]
+            },
+            "type": "array",
+            "title": "Configured Providers"
+          },
+          "registration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PushRegistrationOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "registration_supported",
+          "registration_available",
+          "delivery_enabled",
+          "configured_providers",
+          "registration"
+        ],
+        "title": "PushRegistrationStatusOut"
       },
       "QuestPayload": {
         "properties": {

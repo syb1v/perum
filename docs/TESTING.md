@@ -116,6 +116,19 @@ npm run typecheck --workspace perum-mobile
 (cd perum-tenant && python -m pytest tests/unit/test_user_preferences.py -q)
 ```
 
+Push registration contract gate проверяет GET status, PUT registration и DELETE
+revoke response schemas, PUT request и required fields. Mobile pure test фиксирует
+восстановление UI state из nullable server registration receipt и отдельно
+подтверждает, что registration не доказывает delivery readiness:
+
+```bash
+npm run contracts:check
+npm test --workspace perum-mobile
+(cd perum-tenant && python -m pytest tests/unit/test_push.py -q)
+```
+
+Эти проверки не заменяют physical-device delivery/tap/cold-start evidence.
+
 Organization reply in-app notification routing проверяется тем же focused suite:
 
 ```bash

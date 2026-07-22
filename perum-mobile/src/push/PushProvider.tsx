@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import { Linking, Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { getInstallation } from './installation';
+import { hasActivePushRegistration, type PushRegistration, type PushRegistrationPut, type PushRegistrationStatus } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
 
 type PushState = { available: boolean; registered: boolean; busy: boolean; error: string | null; enable: () => Promise<void>; revoke: () => Promise<void> };
@@ -18,13 +19,14 @@ export function PushProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!apiClient || !enabled) return setState({ available: false, registered: false, busy: false, error: enabled ? null : 'Функция недоступна для этой школы' });
-    void apiClient.get<{ registration_available: boolean; registered: boolean }>('/push/registration').then((value) => setState((current) => ({ ...current, available: value.registration_available, registered: value.registered }))).catch(() => undefined);
+    void apiClient.get<PushRegistrationStatus>('/push/registration').then((value) => setState((current) => ({ ...current, available: value.registration_available, registered: hasActivePushRegistration(value) }))).catch(() => undefined);
   }, [account?.id, enabled]);
 
   async function register(token: string) {
     if (!apiClient || !account || !enabled) return;
     const installation = await getInstallation();
-    await apiClient.put(`/push/installations/${installation.id}/registration`, { installation_secret: installation.secret, provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS, app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null });
+    const payload: PushRegistrationPut = { installation_secret: installation.secret, provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS === 'ios' ? 'ios' : 'android', app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null };
+    await apiClient.put<PushRegistration>(`/push/installations/${installation.id}/registration`, payload);
     setState((current) => ({ ...current, registered: true, error: null }));
   }
 

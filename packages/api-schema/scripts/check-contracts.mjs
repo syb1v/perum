@@ -133,6 +133,30 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the preferences client contract`);
   }
 }
+for (const [path, method, schema] of [
+  ['/api/push/registration', 'get', 'PushRegistrationStatusOut'],
+  ['/api/push/installations/{installation_id}/registration', 'put', 'PushRegistrationOut'],
+  ['/api/push/installations/{installation_id}/registration', 'delete', 'PushRegistrationRevokeOut'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, method) !== `#/components/schemas/${schema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must return ${schema}`);
+  }
+}
+const pushRegistrationPutRef = tenantOpenapi.paths['/api/push/installations/{installation_id}/registration'].put.requestBody.content['application/json'].schema.$ref;
+if (pushRegistrationPutRef !== '#/components/schemas/RegistrationPut') {
+  throw new Error('PUT push registration must accept RegistrationPut');
+}
+for (const [name, fields] of [
+  ['PushRegistrationStatusOut', ['registration_supported', 'registration_available', 'delivery_enabled', 'configured_providers', 'registration']],
+  ['PushRegistrationOut', ['installation_id', 'state']],
+  ['PushRegistrationRevokeOut', ['success']],
+  ['RegistrationPut', ['installation_secret', 'provider', 'platform', 'environment', 'token', 'app_id']],
+]) {
+  const required = tenantOpenapi.components.schemas[name].required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the push registration client contract`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

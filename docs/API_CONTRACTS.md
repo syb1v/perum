@@ -37,6 +37,12 @@ Mobile preferences являются curated contract: GET/PATCH
 `PreferencesPatch`, а их required fields проверяет `contracts:check`. Runtime
 outbox state остаётся локальным типом и не должен добавляться в OpenAPI schema.
 
+Push registration также является curated contract: GET status, PUT registration
+receipt и DELETE revoke receipt имеют отдельные schemas, PUT принимает
+`RegistrationPut`. Nullable `PushRegistrationStatusOut.registration` является
+authoritative признаком активной регистрации; `delivery_enabled` отдельно остаётся
+false до появления реального provider adapter и credentials.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

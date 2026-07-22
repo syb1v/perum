@@ -1,6 +1,7 @@
 from typing import Literal
+from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StrictBool, model_validator
 
 
 class RegistrationPut(BaseModel):
@@ -20,3 +21,20 @@ class RegistrationPut(BaseModel):
         if self.provider == "apns" and self.platform != "ios" or self.provider in {"fcm", "rustore", "huawei"} and self.platform != "android":
             raise ValueError("provider is unavailable for platform")
         return self
+
+
+class PushRegistrationOut(BaseModel):
+    installation_id: UUID
+    state: Literal["active"]
+
+
+class PushRegistrationStatusOut(BaseModel):
+    registration_supported: StrictBool
+    registration_available: StrictBool
+    delivery_enabled: StrictBool
+    configured_providers: list[Literal["expo", "fcm", "apns", "rustore", "huawei"]]
+    registration: PushRegistrationOut | None
+
+
+class PushRegistrationRevokeOut(BaseModel):
+    success: Literal[True]

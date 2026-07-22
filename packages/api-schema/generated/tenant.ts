@@ -4552,6 +4552,39 @@ export interface components {
              */
             updated_at: string;
         };
+        /** PushRegistrationOut */
+        PushRegistrationOut: {
+            /**
+             * Installation Id
+             * Format: uuid
+             */
+            installation_id: string;
+            /**
+             * State
+             * @constant
+             */
+            state: "active";
+        };
+        /** PushRegistrationRevokeOut */
+        PushRegistrationRevokeOut: {
+            /**
+             * Success
+             * @constant
+             */
+            success: true;
+        };
+        /** PushRegistrationStatusOut */
+        PushRegistrationStatusOut: {
+            /** Registration Supported */
+            registration_supported: boolean;
+            /** Registration Available */
+            registration_available: boolean;
+            /** Delivery Enabled */
+            delivery_enabled: boolean;
+            /** Configured Providers */
+            configured_providers: ("expo" | "fcm" | "apns" | "rustore" | "huawei")[];
+            registration: components["schemas"]["PushRegistrationOut"] | null;
+        };
         /** QuestPayload */
         QuestPayload: {
             /** Title */
@@ -10485,9 +10518,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["PushRegistrationStatusOut"];
                 };
             };
         };
@@ -10513,9 +10544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["PushRegistrationOut"];
                 };
             };
             /** @description Validation Error */
@@ -10548,9 +10577,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["PushRegistrationRevokeOut"];
                 };
             };
             /** @description Validation Error */
