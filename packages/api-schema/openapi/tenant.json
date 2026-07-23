@@ -6819,9 +6819,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Add Grade Api Journal Grades Post"
+                  "$ref": "#/components/schemas/JournalGradeCreateOut"
                 }
               }
             }
@@ -14336,6 +14334,76 @@
           "amount"
         ],
         "title": "InvestRequest"
+      },
+      "JournalGradeCreateOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "grade_id": {
+            "type": "integer",
+            "title": "Grade Id"
+          },
+          "grade_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "new_balance": {
+            "type": "integer",
+            "title": "New Balance"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "attendance_mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attendance Mark"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "grade_id",
+          "grade_value",
+          "points",
+          "new_balance",
+          "color",
+          "attendance_mark",
+          "message"
+        ],
+        "title": "JournalGradeCreateOut"
       },
       "JournalGradeDetailOut": {
         "properties": {

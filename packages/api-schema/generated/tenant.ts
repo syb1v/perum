@@ -4101,6 +4101,25 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** JournalGradeCreateOut */
+        JournalGradeCreateOut: {
+            /** Success */
+            success: boolean;
+            /** Grade Id */
+            grade_id: number;
+            /** Grade Value */
+            grade_value: number | null;
+            /** Points */
+            points: number;
+            /** New Balance */
+            new_balance: number;
+            /** Color */
+            color: string | null;
+            /** Attendance Mark */
+            attendance_mark: string | null;
+            /** Message */
+            message: string;
+        };
         /** JournalGradeDetailOut */
         JournalGradeDetailOut: {
             /** Id */
@@ -10022,9 +10041,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalGradeCreateOut"];
                 };
             };
             /** @description Validation Error */

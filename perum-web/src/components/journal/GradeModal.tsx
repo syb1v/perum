@@ -12,6 +12,8 @@ type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
+type AddGradeRequest = components['schemas']['AddGradeRequest'];
+type JournalGradeCreate = components['schemas']['JournalGradeCreateOut'];
 
 interface SubjectOption {
     id: number;
@@ -96,7 +98,7 @@ export default function GradeModal({ student, subject, classId, date, lessonNumb
 
         setLoading(true);
         try {
-            await api.post('/journal/grades', {
+            const payload: AddGradeRequest = {
                 student_id: student.id,
                 subject_id: subject.id,
                 class_id: classId,
@@ -107,7 +109,8 @@ export default function GradeModal({ student, subject, classId, date, lessonNumb
                 lesson_date: date,
                 lesson_number: lessonNumber,
                 comment: comment || null
-            });
+            };
+            await api.post<JournalGradeCreate>('/journal/grades', payload);
             showSuccess(attendanceMark ? `Пометка «${attendanceMark}» выставлена` : 'Оценка выставлена');
             onSave();
             onClose();

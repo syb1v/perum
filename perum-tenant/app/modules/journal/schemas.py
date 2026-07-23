@@ -174,3 +174,16 @@ class JournalGradeUpdateOut(BaseModel):
     points_diff: int
     new_balance: int
     color: str | None
+
+
+class JournalGradeCreateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    grade_id: int
+    grade_value: int | None
+    points: int
+    new_balance: int
+    color: str | None
+    attendance_mark: str | None
+    message: str

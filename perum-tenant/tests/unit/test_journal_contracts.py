@@ -7,6 +7,7 @@ from app.modules.journal.schemas import (
     JournalTopicsOut,
     JournalWorkTypesOut,
     JournalGradeDetailOut,
+    JournalGradeCreateOut,
     JournalGradeUpdateOut,
     LessonOccurrenceUpdateOut,
     TopicCreate,
@@ -329,3 +330,54 @@ def test_journal_grade_update_receipt_rejects_missing_and_extra_fields() -> None
         JournalGradeUpdateOut.model_validate({**payload, "school_id": 1})
     with pytest.raises(ValidationError):
         JournalGradeUpdateOut.model_validate({**payload, "version": 0})
+
+
+def test_journal_grade_create_receipt_accepts_grade_and_attendance_results() -> None:
+    response = JournalGradeCreateOut.model_validate(
+        {
+            "success": True,
+            "grade_id": 123,
+            "grade_value": 5,
+            "points": 10,
+            "new_balance": 240,
+            "color": "#4CAF50",
+            "attendance_mark": None,
+            "message": "Grade created",
+        }
+    )
+    attendance = JournalGradeCreateOut.model_validate(
+        {
+            "success": True,
+            "grade_id": 124,
+            "grade_value": None,
+            "points": 0,
+            "new_balance": 240,
+            "color": None,
+            "attendance_mark": "УП",
+            "message": "Attendance mark created",
+        }
+    )
+
+    assert response.grade_id == 123
+    assert response.points == 10
+    assert attendance.grade_value is None
+    assert attendance.color is None
+
+
+def test_journal_grade_create_receipt_rejects_missing_and_extra_fields() -> None:
+    payload = {
+        "success": True,
+        "grade_id": 123,
+        "grade_value": 5,
+        "points": 10,
+        "new_balance": 240,
+        "color": "#4CAF50",
+        "attendance_mark": None,
+        "message": "Grade created",
+    }
+
+    for field in payload:
+        with pytest.raises(ValidationError):
+            JournalGradeCreateOut.model_validate({key: value for key, value in payload.items() if key != field})
+    with pytest.raises(ValidationError):
+        JournalGradeCreateOut.model_validate({**payload, "school_id": 1})

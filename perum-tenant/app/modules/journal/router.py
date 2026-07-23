@@ -16,6 +16,7 @@ from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
     JournalGradeDetailOut,
+    JournalGradeCreateOut,
     JournalGradeUpdateOut,
     JournalTeacherSubjectsOut,
     JournalTopicOut,
@@ -139,7 +140,7 @@ async def update_lesson_occurrence(
     )
 
 
-@router.post("/grades")
+@router.post("/grades", response_model=JournalGradeCreateOut)
 async def add_grade(
     payload: AddGradeRequest, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:

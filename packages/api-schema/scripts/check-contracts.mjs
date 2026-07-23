@@ -488,6 +488,48 @@ for (const field of ['points', 'points_diff', 'new_balance']) {
     throw new Error(`JournalGradeUpdateOut ${field} must be an integer`);
   }
 }
+const gradeCreatePath = '/api/journal/grades';
+const gradeCreateRequestRef = tenantOpenapi.paths[gradeCreatePath].post.requestBody.content['application/json'].schema.$ref;
+if (gradeCreateRequestRef !== '#/components/schemas/AddGradeRequest') {
+  throw new Error('POST grade must accept AddGradeRequest');
+}
+if (responseSchemaRef(tenantOpenapi, gradeCreatePath, 'post') !== '#/components/schemas/JournalGradeCreateOut') {
+  throw new Error('POST grade must return JournalGradeCreateOut');
+}
+const gradeCreate = tenantOpenapi.components.schemas.JournalGradeCreateOut;
+const gradeCreateFields = ['success', 'grade_id', 'grade_value', 'points', 'new_balance', 'color', 'attendance_mark', 'message'];
+if (JSON.stringify(Object.keys(gradeCreate.properties ?? {})) !== JSON.stringify(gradeCreateFields) || JSON.stringify(gradeCreate.required ?? []) !== JSON.stringify(gradeCreateFields)) {
+  throw new Error('JournalGradeCreateOut must require the exact authoritative receipt fields');
+}
+if (gradeCreate.additionalProperties !== false) {
+  throw new Error('JournalGradeCreateOut must reject additional properties');
+}
+for (const field of ['grade_value', 'color', 'attendance_mark']) {
+  const variants = gradeCreate.properties[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'null')) {
+    throw new Error(`JournalGradeCreateOut ${field} must be required nullable`);
+  }
+}
+for (const field of ['grade_id', 'points', 'new_balance']) {
+  if (gradeCreate.properties[field].type !== 'integer') {
+    throw new Error(`JournalGradeCreateOut ${field} must be an integer`);
+  }
+}
+const addGradeRequest = tenantOpenapi.components.schemas.AddGradeRequest;
+for (const field of ['student_id', 'subject_id', 'class_id']) {
+  if (!addGradeRequest.required?.includes(field)) {
+    throw new Error(`AddGradeRequest must require ${field}`);
+  }
+}
+for (const field of ['grade_value', 'work_type_id', 'grade_type', 'attendance_mark', 'topic_id', 'lesson_date', 'lesson_number', 'comment']) {
+  if (addGradeRequest.required?.includes(field)) {
+    throw new Error(`AddGradeRequest ${field} must remain optional`);
+  }
+  const variants = addGradeRequest.properties[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'null')) {
+    throw new Error(`AddGradeRequest ${field} must remain nullable`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }
