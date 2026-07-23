@@ -4199,6 +4199,29 @@ export interface components {
             /** Lesson Number */
             lesson_number?: number | null;
         };
+        /** LessonOccurrenceUpdateOut */
+        LessonOccurrenceUpdateOut: {
+            /** Success */
+            success: boolean;
+            /** Occurrence Id */
+            occurrence_id: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "cancelled" | "completed";
+            /**
+             * Lesson Date
+             * Format: date
+             */
+            lesson_date: string;
+            /** Lesson Number */
+            lesson_number: number;
+            /** Topic Id */
+            topic_id: number | null;
+            /** Version */
+            version: number;
+        };
         /** LessonTemplateUpdate */
         LessonTemplateUpdate: {
             /** Topic Id */
@@ -9898,9 +9921,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["LessonOccurrenceUpdateOut"];
                 };
             };
             /** @description Validation Error */

@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -112,3 +113,15 @@ class LessonOccurrenceUpdate(BaseModel):
     topic_id: int | None = None
     lesson_date: date | None = None
     lesson_number: int | None = Field(default=None, ge=1, le=8)
+
+
+class LessonOccurrenceUpdateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    occurrence_id: int
+    status: Literal["scheduled", "cancelled", "completed"]
+    lesson_date: date
+    lesson_number: int = Field(ge=1, le=8)
+    topic_id: int | None
+    version: int = Field(ge=1)

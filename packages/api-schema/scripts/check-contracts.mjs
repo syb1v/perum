@@ -394,6 +394,33 @@ for (const field of ['start_date', 'end_date']) {
     throw new Error(`ActivePeriodOut ${field} must be a date`);
   }
 }
+const occurrencePath = '/api/journal/lesson-occurrences/{occurrence_id}';
+const occurrenceRequestRef = tenantOpenapi.paths[occurrencePath].patch.requestBody.content['application/json'].schema.$ref;
+if (occurrenceRequestRef !== '#/components/schemas/LessonOccurrenceUpdate') {
+  throw new Error('PATCH lesson occurrence must accept LessonOccurrenceUpdate');
+}
+if (responseSchemaRef(tenantOpenapi, occurrencePath, 'patch') !== '#/components/schemas/LessonOccurrenceUpdateOut') {
+  throw new Error('PATCH lesson occurrence must return LessonOccurrenceUpdateOut');
+}
+const occurrenceReceipt = tenantOpenapi.components.schemas.LessonOccurrenceUpdateOut;
+const occurrenceFields = ['success', 'occurrence_id', 'status', 'lesson_date', 'lesson_number', 'topic_id', 'version'];
+if (JSON.stringify(Object.keys(occurrenceReceipt.properties ?? {})) !== JSON.stringify(occurrenceFields) || JSON.stringify(occurrenceReceipt.required ?? []) !== JSON.stringify(occurrenceFields)) {
+  throw new Error('LessonOccurrenceUpdateOut must require the exact authoritative receipt fields');
+}
+if (occurrenceReceipt.additionalProperties !== false) {
+  throw new Error('LessonOccurrenceUpdateOut must reject additional properties');
+}
+const occurrenceTopicVariants = occurrenceReceipt.properties.topic_id.anyOf ?? [];
+if (!occurrenceTopicVariants.some(schema => schema.type === 'integer') || !occurrenceTopicVariants.some(schema => schema.type === 'null')) {
+  throw new Error('LessonOccurrenceUpdateOut topic_id must be required nullable integer');
+}
+if (occurrenceReceipt.properties.lesson_date.type !== 'string' || occurrenceReceipt.properties.lesson_date.format !== 'date') {
+  throw new Error('LessonOccurrenceUpdateOut lesson_date must be a date');
+}
+const occurrenceStatuses = occurrenceReceipt.properties.status.enum ?? [];
+if (JSON.stringify(occurrenceStatuses) !== JSON.stringify(['scheduled', 'cancelled', 'completed'])) {
+  throw new Error('LessonOccurrenceUpdateOut status values differ from lifecycle policy');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

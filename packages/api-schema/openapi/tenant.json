@@ -6778,9 +6778,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Update Lesson Occurrence Api Journal Lesson Occurrences  Occurrence Id  Patch"
+                  "$ref": "#/components/schemas/LessonOccurrenceUpdateOut"
                 }
               }
             }
@@ -14661,6 +14659,66 @@
           "version"
         ],
         "title": "LessonOccurrenceUpdate"
+      },
+      "LessonOccurrenceUpdateOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "occurrence_id": {
+            "type": "integer",
+            "title": "Occurrence Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "lesson_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Lesson Date"
+          },
+          "lesson_number": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Lesson Number"
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "occurrence_id",
+          "status",
+          "lesson_date",
+          "lesson_number",
+          "topic_id",
+          "version"
+        ],
+        "title": "LessonOccurrenceUpdateOut"
       },
       "LessonTemplateUpdate": {
         "properties": {

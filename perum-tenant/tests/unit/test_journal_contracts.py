@@ -6,6 +6,7 @@ from app.modules.journal.schemas import (
     JournalTopicOut,
     JournalTopicsOut,
     JournalWorkTypesOut,
+    LessonOccurrenceUpdateOut,
     TopicCreate,
     TopicUpdate,
 )
@@ -135,3 +136,66 @@ def test_journal_topic_mutation_response_is_closed() -> None:
     assert response.order_num == 2
     with pytest.raises(ValidationError):
         JournalTopicOut.model_validate({"id": 1, "name": "Topic", "order_num": 2, "subject_id": 3})
+
+
+def test_lesson_occurrence_update_receipt_accepts_nullable_topic() -> None:
+    response = LessonOccurrenceUpdateOut.model_validate(
+        {
+            "success": True,
+            "occurrence_id": 17,
+            "status": "completed",
+            "lesson_date": "2026-07-23",
+            "lesson_number": 4,
+            "topic_id": None,
+            "version": 4,
+        }
+    )
+
+    assert response.lesson_date.isoformat() == "2026-07-23"
+    assert response.topic_id is None
+    assert response.version == 4
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("success", None),
+        ("occurrence_id", None),
+        ("status", "draft"),
+        ("lesson_date", None),
+        ("lesson_number", 9),
+        ("version", 0),
+    ],
+)
+def test_lesson_occurrence_update_receipt_rejects_invalid_fields(field: str, value: object) -> None:
+    payload = {
+        "success": True,
+        "occurrence_id": 17,
+        "status": "scheduled",
+        "lesson_date": "2026-07-23",
+        "lesson_number": 4,
+        "topic_id": 3,
+        "version": 4,
+    }
+    payload[field] = value
+
+    with pytest.raises(ValidationError):
+        LessonOccurrenceUpdateOut.model_validate(payload)
+
+
+def test_lesson_occurrence_update_receipt_rejects_missing_and_extra_fields() -> None:
+    payload = {
+        "success": True,
+        "occurrence_id": 17,
+        "status": "scheduled",
+        "lesson_date": "2026-07-23",
+        "lesson_number": 4,
+        "topic_id": None,
+        "version": 4,
+    }
+
+    for field in payload:
+        with pytest.raises(ValidationError):
+            LessonOccurrenceUpdateOut.model_validate({key: value for key, value in payload.items() if key != field})
+    with pytest.raises(ValidationError):
+        LessonOccurrenceUpdateOut.model_validate({**payload, "school_id": 1})

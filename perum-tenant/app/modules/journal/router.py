@@ -21,6 +21,7 @@ from app.modules.journal.schemas import (
     JournalWorkTypesOut,
     LessonTemplateUpdate,
     LessonOccurrenceUpdate,
+    LessonOccurrenceUpdateOut,
     TopicCreate,
     TopicUpdate,
     UpdateGradeRequest,
@@ -124,7 +125,7 @@ async def clear_lesson_template(
     )
 
 
-@router.patch("/lesson-occurrences/{occurrence_id}")
+@router.patch("/lesson-occurrences/{occurrence_id}", response_model=LessonOccurrenceUpdateOut)
 async def update_lesson_occurrence(
     occurrence_id: int,
     payload: LessonOccurrenceUpdate,

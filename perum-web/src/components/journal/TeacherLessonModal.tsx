@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/apiClient';
+import type { components } from '@perum/api-schema/tenant';
 import { useToast } from '@/context/ToastContext';
 import { JournalData, JournalStudent, Subject, LessonOccurrenceStatus } from '@/types';
 import GradeModal from './GradeModal';
 import HomeworkModal from './HomeworkModal';
 import ViewGradeModal from './ViewGradeModal';
 import styles from './TeacherLessonModal.module.css';
+
+type LessonOccurrenceUpdate = components['schemas']['LessonOccurrenceUpdate'];
+type LessonOccurrenceUpdateOut = components['schemas']['LessonOccurrenceUpdateOut'];
 
 interface HomeworkAttachmentInfo {
     id: number;
@@ -81,9 +85,10 @@ export default function TeacherLessonModal({
         if (nextStatus === 'cancelled' && !confirm('Отменить этот урок?')) return;
         setStatusLoading(true);
         try {
-            const result = await api.patch<{ version: number }>(`/journal/lesson-occurrences/${occurrenceId}`, { version, status: nextStatus });
+            const payload: LessonOccurrenceUpdate = { version, status: nextStatus };
+            const result = await api.patch<LessonOccurrenceUpdateOut>(`/journal/lesson-occurrences/${occurrenceId}`, payload);
             setVersion(result.version);
-            setStatus(nextStatus);
+            setStatus(result.status);
             showSuccess(nextStatus === 'cancelled' ? 'Урок отменён' : nextStatus === 'completed' ? 'Урок отмечен проведённым' : 'Урок восстановлен');
             onUpdate();
         } catch (err) {
