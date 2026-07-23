@@ -114,6 +114,12 @@ nullable `topic_id`, date/slot/version bounds и closed object. Existing service
 suite сохраняет optimistic-lock и transfer behavior; Web использует server status
 и version, но error DTO, cache и Mobile flow этим не покрываются.
 
+Journal grade detail проверяется тем же focused contract suite: полный и
+attendance-only nullable payload, nested subject/student, `date`/`date-time`,
+positive version, missing и extra fields. Curated gate фиксирует exact required
+surface, nullable branches и nested refs; Web typecheck подтверждает generated
+detail DTO и server `points`, но не grade mutations или общий journal grid.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

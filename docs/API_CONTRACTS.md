@@ -104,6 +104,12 @@ status, occurrence/date/lesson, required nullable `topic_id` и новую `vers
 status ограничен `scheduled`/`cancelled`/`completed`. Conflict/error schemas и
 optimistic-lock/transfer semantics остаются отдельной границей.
 
+Journal grade detail GET `/api/journal/grades/{grade_id}` возвращает закрытый
+`JournalGradeDetailOut`. Все keys required; grade/work-type/date/comment/attendance/
+color/created/subject/student/topic fields могут быть nullable согласно текущему
+wire payload. Nested subject/student имеют отдельные closed schemas. Поле награды
+называется `points`; legacy aliases и grade mutation receipts не входят в DTO.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и
