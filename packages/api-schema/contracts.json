@@ -38,6 +38,7 @@
     "/api/teacher/classes",
     "/api/teacher/homework",
     "/api/journal/grades",
+    "/api/journal/grades/{grade_id}",
     "/api/journal/lesson-occurrences/{occurrence_id}",
     "/api/journal/subjects/{subject_id}/topics",
     "/api/journal/teacher/subjects",

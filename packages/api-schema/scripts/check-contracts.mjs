@@ -421,6 +421,46 @@ const occurrenceStatuses = occurrenceReceipt.properties.status.enum ?? [];
 if (JSON.stringify(occurrenceStatuses) !== JSON.stringify(['scheduled', 'cancelled', 'completed'])) {
   throw new Error('LessonOccurrenceUpdateOut status values differ from lifecycle policy');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/journal/grades/{grade_id}', 'get') !== '#/components/schemas/JournalGradeDetailOut') {
+  throw new Error('GET /api/journal/grades/{grade_id} must return JournalGradeDetailOut');
+}
+const gradeDetail = tenantOpenapi.components.schemas.JournalGradeDetailOut;
+const gradeDetailFields = ['id', 'version', 'grade_value', 'points', 'grade_type', 'work_type_id', 'weight', 'lesson_date', 'comment', 'attendance_mark', 'color', 'created_at', 'subject', 'student', 'topic_id', 'topic_name'];
+if (JSON.stringify(Object.keys(gradeDetail.properties ?? {})) !== JSON.stringify(gradeDetailFields) || JSON.stringify(gradeDetail.required ?? []) !== JSON.stringify(gradeDetailFields)) {
+  throw new Error('JournalGradeDetailOut must require the exact detail fields');
+}
+if (gradeDetail.additionalProperties !== false || gradeDetail.properties.version.minimum !== 1) {
+  throw new Error('JournalGradeDetailOut must be closed with a positive version');
+}
+for (const field of ['grade_value', 'work_type_id', 'lesson_date', 'comment', 'attendance_mark', 'color', 'created_at', 'subject', 'student', 'topic_id', 'topic_name']) {
+  const variants = gradeDetail.properties[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'null')) {
+    throw new Error(`JournalGradeDetailOut ${field} must be required nullable`);
+  }
+}
+const gradeLessonDate = gradeDetail.properties.lesson_date.anyOf ?? [];
+if (!gradeLessonDate.some(schema => schema.type === 'string' && schema.format === 'date')) {
+  throw new Error('JournalGradeDetailOut lesson_date must contain a date variant');
+}
+const gradeCreatedAt = gradeDetail.properties.created_at.anyOf ?? [];
+if (!gradeCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time')) {
+  throw new Error('JournalGradeDetailOut created_at must contain a date-time variant');
+}
+for (const [field, schemaName] of [['subject', 'JournalGradeSubjectOut'], ['student', 'JournalGradeStudentOut']]) {
+  const variants = gradeDetail.properties[field].anyOf ?? [];
+  if (!variants.some(schema => schema.$ref === `#/components/schemas/${schemaName}`)) {
+    throw new Error(`JournalGradeDetailOut ${field} must reference ${schemaName}`);
+  }
+}
+for (const [name, fields] of [
+  ['JournalGradeSubjectOut', ['id', 'name', 'category']],
+  ['JournalGradeStudentOut', ['id', 'first_name', 'last_name']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (schema.additionalProperties !== false || fields.some(field => !schema.required?.includes(field))) {
+    throw new Error(`${name} must be closed with required detail fields`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -125,3 +125,40 @@ class LessonOccurrenceUpdateOut(BaseModel):
     lesson_number: int = Field(ge=1, le=8)
     topic_id: int | None
     version: int = Field(ge=1)
+
+
+class JournalGradeSubjectOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    category: str
+
+
+class JournalGradeStudentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    first_name: str | None
+    last_name: str | None
+
+
+class JournalGradeDetailOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    version: int = Field(ge=1)
+    grade_value: int | None
+    points: int
+    grade_type: str
+    work_type_id: int | None
+    weight: float
+    lesson_date: date | None
+    comment: str | None
+    attendance_mark: str | None
+    color: str | None
+    created_at: datetime | None
+    subject: JournalGradeSubjectOut | None
+    student: JournalGradeStudentOut | None
+    topic_id: int | None
+    topic_name: str | None

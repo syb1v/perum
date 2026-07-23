@@ -5,13 +5,13 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { Grade } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
+type JournalGradeDetail = components['schemas']['JournalGradeDetailOut'];
 
 interface ViewGradeModalProps {
     gradeId: number;
@@ -28,7 +28,7 @@ const ATTENDANCE_MARKS = [
 
 export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGradeModalProps) {
     const { showError, showSuccess } = useToast();
-    const [grade, setGrade] = useState<Grade | null>(null);
+    const [grade, setGrade] = useState<JournalGradeDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
@@ -52,13 +52,13 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
     }, []);
 
     useEffect(() => {
-        api.get<Grade>(`/journal/grades/${gradeId}`)
+        api.get<JournalGradeDetail>(`/journal/grades/${gradeId}`)
             .then(data => {
                 setGrade(data);
-                setEditValue(data.grade_value || data.value || null);
+                setEditValue(data.grade_value);
                 setEditAttendanceMark(data.attendance_mark || null);
                 setEditWorkTypeId(data.work_type_id || null);
-                setEditType(data.grade_type || data.type);
+                setEditType(data.grade_type);
                 setEditComment(data.comment || '');
                 setEditTopicId(data.topic_id ? String(data.topic_id) : null);
                 if (data.subject?.id) {
@@ -125,7 +125,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                         <div className={styles.gradeViewValue}>
                             {grade.attendance_mark
                                 ? (grade.attendance_mark === 'точка' ? '•' : grade.attendance_mark)
-                                : (grade.grade_value || grade.value)}
+                                : grade.grade_value}
                         </div>
                         {grade.attendance_mark && (
                             <div style={{ textAlign: 'center', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
@@ -136,9 +136,9 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                                     : grade.attendance_mark}
                             </div>
                         )}
-                        {!!grade.points_earned && (
-                            <div className={`${styles.gradeViewPoints} ${grade.points_earned < 0 ? styles.negative : ''}`}>
-                                {grade.points_earned > 0 ? '+' : ''}{grade.points_earned} ливок
+                        {!!grade.points && (
+                            <div className={`${styles.gradeViewPoints} ${grade.points < 0 ? styles.negative : ''}`}>
+                                {grade.points > 0 ? '+' : ''}{grade.points} ливок
                             </div>
                         )}
 
@@ -156,7 +156,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                             <div className={styles.gradeDetailRow}>
                                 <span className={styles.detailLabel}>Тип работы</span>
                                 <span className={styles.detailValue}>
-                                    {grade.grade_type || grade.type}
+                                    {grade.grade_type}
                                     {grade.weight ? ` (x${grade.weight})` : ''}
                                 </span>
                             </div>
@@ -164,7 +164,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                         <div className={styles.gradeDetailRow}>
                             <span className={styles.detailLabel}>Дата урока</span>
                             <span className={styles.detailValue}>
-                                {new Date(grade.lesson_date || grade.created_at).toLocaleDateString('ru-RU')}
+                                {grade.lesson_date || grade.created_at ? new Date(grade.lesson_date || grade.created_at || '').toLocaleDateString('ru-RU') : '—'}
                             </span>
                         </div>
                         {(grade.topic_name || grade.topic_id) && (

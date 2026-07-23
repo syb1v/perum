@@ -4101,6 +4101,57 @@ export interface components {
             /** Amount */
             amount: number;
         };
+        /** JournalGradeDetailOut */
+        JournalGradeDetailOut: {
+            /** Id */
+            id: number;
+            /** Version */
+            version: number;
+            /** Grade Value */
+            grade_value: number | null;
+            /** Points */
+            points: number;
+            /** Grade Type */
+            grade_type: string;
+            /** Work Type Id */
+            work_type_id: number | null;
+            /** Weight */
+            weight: number;
+            /** Lesson Date */
+            lesson_date: string | null;
+            /** Comment */
+            comment: string | null;
+            /** Attendance Mark */
+            attendance_mark: string | null;
+            /** Color */
+            color: string | null;
+            /** Created At */
+            created_at: string | null;
+            subject: components["schemas"]["JournalGradeSubjectOut"] | null;
+            student: components["schemas"]["JournalGradeStudentOut"] | null;
+            /** Topic Id */
+            topic_id: number | null;
+            /** Topic Name */
+            topic_name: string | null;
+        };
+        /** JournalGradeStudentOut */
+        JournalGradeStudentOut: {
+            /** Id */
+            id: number;
+            /** First Name */
+            first_name: string | null;
+            /** Last Name */
+            last_name: string | null;
+        };
+        /** JournalGradeSubjectOut */
+        JournalGradeSubjectOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+        };
         /** JournalTeacherClassOut */
         JournalTeacherClassOut: {
             /** Id */
@@ -9987,9 +10038,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalGradeDetailOut"];
                 };
             };
             /** @description Validation Error */

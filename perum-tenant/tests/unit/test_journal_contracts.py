@@ -6,6 +6,7 @@ from app.modules.journal.schemas import (
     JournalTopicOut,
     JournalTopicsOut,
     JournalWorkTypesOut,
+    JournalGradeDetailOut,
     LessonOccurrenceUpdateOut,
     TopicCreate,
     TopicUpdate,
@@ -199,3 +200,81 @@ def test_lesson_occurrence_update_receipt_rejects_missing_and_extra_fields() -> 
             LessonOccurrenceUpdateOut.model_validate({key: value for key, value in payload.items() if key != field})
     with pytest.raises(ValidationError):
         LessonOccurrenceUpdateOut.model_validate({**payload, "school_id": 1})
+
+
+def test_journal_grade_detail_contract_accepts_full_and_nullable_responses() -> None:
+    response = JournalGradeDetailOut.model_validate(
+        {
+            "id": 42,
+            "version": 3,
+            "grade_value": 5,
+            "points": 10,
+            "grade_type": "",
+            "work_type_id": 7,
+            "weight": 2.0,
+            "lesson_date": "2026-07-23",
+            "comment": "Good work",
+            "attendance_mark": None,
+            "color": "#4CAF50",
+            "created_at": "2026-07-23T10:15:00",
+            "subject": {"id": 11, "name": "Mathematics", "category": "normal"},
+            "student": {"id": 25, "first_name": "Ivan", "last_name": None},
+            "topic_id": 8,
+            "topic_name": "Quadratic equations",
+        }
+    )
+    nullable = JournalGradeDetailOut.model_validate(
+        {
+            "id": 43,
+            "version": 1,
+            "grade_value": None,
+            "points": 0,
+            "grade_type": "",
+            "work_type_id": None,
+            "weight": 1.0,
+            "lesson_date": None,
+            "comment": None,
+            "attendance_mark": "УП",
+            "color": None,
+            "created_at": None,
+            "subject": None,
+            "student": None,
+            "topic_id": None,
+            "topic_name": None,
+        }
+    )
+
+    assert response.lesson_date is not None and response.lesson_date.isoformat() == "2026-07-23"
+    assert response.created_at is not None and response.created_at.isoformat() == "2026-07-23T10:15:00"
+    assert nullable.grade_value is None
+
+
+def test_journal_grade_detail_contract_rejects_missing_and_extra_fields() -> None:
+    payload = {
+        "id": 42,
+        "version": 3,
+        "grade_value": 5,
+        "points": 10,
+        "grade_type": "",
+        "work_type_id": 7,
+        "weight": 2.0,
+        "lesson_date": "2026-07-23",
+        "comment": None,
+        "attendance_mark": None,
+        "color": "#4CAF50",
+        "created_at": "2026-07-23T10:15:00",
+        "subject": {"id": 11, "name": "Mathematics", "category": "normal"},
+        "student": {"id": 25, "first_name": "Ivan", "last_name": "Ivanov"},
+        "topic_id": None,
+        "topic_name": None,
+    }
+
+    for field in payload:
+        with pytest.raises(ValidationError):
+            JournalGradeDetailOut.model_validate({key: value for key, value in payload.items() if key != field})
+    with pytest.raises(ValidationError):
+        JournalGradeDetailOut.model_validate({**payload, "school_id": 1})
+    with pytest.raises(ValidationError):
+        JournalGradeDetailOut.model_validate({**payload, "version": 0})
+    with pytest.raises(ValidationError):
+        JournalGradeDetailOut.model_validate({**payload, "subject": {**payload["subject"], "school_id": 1}})

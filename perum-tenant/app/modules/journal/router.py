@@ -15,6 +15,7 @@ from app.modules.journal import service
 from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
+    JournalGradeDetailOut,
     JournalTeacherSubjectsOut,
     JournalTopicOut,
     JournalTopicsOut,
@@ -144,7 +145,7 @@ async def add_grade(
     return await service.add_grade(db, await _school(user, db), payload, user)
 
 
-@router.get("/grades/{grade_id}")
+@router.get("/grades/{grade_id}", response_model=JournalGradeDetailOut)
 async def get_grade(
     grade_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:

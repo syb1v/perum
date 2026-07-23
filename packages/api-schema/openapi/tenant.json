@@ -6873,9 +6873,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Get Grade Api Journal Grades  Grade Id  Get"
+                  "$ref": "#/components/schemas/JournalGradeDetailOut"
                 }
               }
             }
@@ -14340,6 +14338,235 @@
           "amount"
         ],
         "title": "InvestRequest"
+      },
+      "JournalGradeDetailOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "grade_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "grade_type": {
+            "type": "string",
+            "title": "Grade Type"
+          },
+          "work_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Type Id"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "lesson_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Date"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "attendance_mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attendance Mark"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JournalGradeSubjectOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "student": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JournalGradeStudentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "topic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "grade_value",
+          "points",
+          "grade_type",
+          "work_type_id",
+          "weight",
+          "lesson_date",
+          "comment",
+          "attendance_mark",
+          "color",
+          "created_at",
+          "subject",
+          "student",
+          "topic_id",
+          "topic_name"
+        ],
+        "title": "JournalGradeDetailOut"
+      },
+      "JournalGradeStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name"
+        ],
+        "title": "JournalGradeStudentOut"
+      },
+      "JournalGradeSubjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category"
+        ],
+        "title": "JournalGradeSubjectOut"
       },
       "JournalTeacherClassOut": {
         "properties": {
