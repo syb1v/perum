@@ -92,6 +92,12 @@ Journal topic create/update теперь также curated: POST принима
 возвращают `JournalTopicOut`. Текущие HTTP 200 и business errors сохранены;
 archive/restore receipts, versioning и idempotency не входят в этот contract.
 
+Active periods GET `/api/periods` возвращает curated `ActivePeriodsOut`:
+`current_period` является required nullable `ActivePeriodOut`, `periods` —
+required list той же projection. Item fields `id`, `name`, `period_type`,
+`start_date`, `end_date` required non-null; даты имеют OpenAPI `format: date`.
+Admin period CRUD и правила quarter/half-year этим DTO не определяются.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

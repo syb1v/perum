@@ -88,6 +88,19 @@ closed. Curated gate фиксирует POST/PUT request и response refs; Web t
 подтверждает generated payload/result на management page без claims об archive,
 restore, concurrency или offline replay.
 
+Active periods contract проверяется focused common suite:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_common_contracts.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Suite покрывает current/null/empty responses, ISO date parsing, missing/nullable и
+extra fields. Curated gate фиксирует `ActivePeriodsOut`/`ActivePeriodOut` refs,
+required nullable `current_period` и date formats; Web typecheck сохраняет generated
+analytics query DTO без проверки selection policy или admin CRUD.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 
