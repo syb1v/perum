@@ -5,11 +5,13 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { JournalStudent, Topic } from '@/types';
+import type { JournalStudent } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
+type JournalTopics = components['schemas']['JournalTopicsOut'];
+type JournalTopic = components['schemas']['JournalTopicOut'];
 
 interface SubjectOption {
     id: number;
@@ -44,7 +46,7 @@ export default function GradeModal({ student, subject, classId, date, lessonNumb
     const [gradeType, setGradeType] = useState(defaultWorkTypeId || 'ответ');
     const [topicId, setTopicId] = useState<string>(defaultTopicId || '');
     const [comment, setComment] = useState('');
-    const [topics, setTopics] = useState<Topic[]>([]);
+    const [topics, setTopics] = useState<JournalTopic[]>([]);
     const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -64,7 +66,7 @@ export default function GradeModal({ student, subject, classId, date, lessonNumb
 
     useEffect(() => {
         if (subject) {
-            api.get<{ topics: Topic[] }>(`/journal/subjects/${subject.id}/topics`)
+            api.get<JournalTopics>(`/journal/subjects/${subject.id}/topics`)
                 .then(data => setTopics(data.topics || []))
                 .catch(err => console.error('Failed to load topics', err));
         }

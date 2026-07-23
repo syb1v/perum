@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '@/components/ui/Modal';
 import api from '@/lib/apiClient';
-import type { Topic } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 import styles from '../../app/teacher/journal/page.module.css';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
+type JournalTopics = components['schemas']['JournalTopicsOut'];
+type JournalTopic = components['schemas']['JournalTopicOut'];
 
 interface SubjectOption {
     id: number;
@@ -32,7 +33,7 @@ export default function DayTemplateModal({
     hasTemplate, onLessonChange, onSave, onClear, onClose
 }: DayTemplateModalProps) {
     const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
-    const [topics, setTopics] = useState<Topic[]>([]);
+    const [topics, setTopics] = useState<JournalTopic[]>([]);
     const [workTypeId, setWorkTypeId] = useState(initialWorkTypeId || '');
     const [topicId, setTopicId] = useState(initialTopicId || '');
     const [saving, setSaving] = useState(false);
@@ -46,7 +47,7 @@ export default function DayTemplateModal({
         setOptionsError('');
         Promise.all([
             api.get<JournalWorkTypes>('/journal/work-types'),
-            api.get<{ topics: Topic[] }>(`/journal/subjects/${subject.id}/topics`),
+            api.get<JournalTopics>(`/journal/subjects/${subject.id}/topics`),
         ]).then(([data, topicData]) => {
                 if (data.work_types) {
                     setWorkTypes(data.work_types);

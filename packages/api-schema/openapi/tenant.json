@@ -6357,9 +6357,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Subject Topics Api Journal Subjects  Subject Id  Topics Get"
+                  "$ref": "#/components/schemas/JournalTopicsOut"
                 }
               }
             }
@@ -14378,6 +14376,47 @@
           "classes"
         ],
         "title": "JournalTeacherSubjectsOut"
+      },
+      "JournalTopicOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "order_num": {
+            "type": "integer",
+            "title": "Order Num"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "order_num"
+        ],
+        "title": "JournalTopicOut"
+      },
+      "JournalTopicsOut": {
+        "properties": {
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/JournalTopicOut"
+            },
+            "type": "array",
+            "title": "Topics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "topics"
+        ],
+        "title": "JournalTopicsOut"
       },
       "JournalWorkTypeOut": {
         "properties": {

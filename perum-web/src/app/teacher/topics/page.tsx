@@ -8,16 +8,17 @@ import styles from './page.module.css';
 import type { components } from '@perum/api-schema/tenant';
 
 type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
+type JournalTopics = components['schemas']['JournalTopicsOut'];
+type JournalTopic = components['schemas']['JournalTopicOut'];
 
 interface SubjectInfo {
     id: number;
     name: string;
 }
 
-interface Topic {
+interface TopicMutationResult {
     id: number;
     name: string;
-    description: string;
     order_num: number;
 }
 
@@ -27,7 +28,7 @@ export default function TopicsPage() {
 
     const [subjects, setSubjects] = useState<SubjectInfo[]>([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
-    const [topics, setTopics] = useState<Topic[]>([]);
+    const [topics, setTopics] = useState<JournalTopic[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [newTopicName, setNewTopicName] = useState('');
@@ -60,7 +61,7 @@ export default function TopicsPage() {
     useEffect(() => {
         if (!selectedSubjectId) return;
         setLoading(true);
-        api.get<{ topics: Topic[] }>(`/journal/subjects/${selectedSubjectId}/topics`)
+        api.get<JournalTopics>(`/journal/subjects/${selectedSubjectId}/topics`)
             .then((data) => {
                 setTopics(data.topics || []);
             })
@@ -74,7 +75,7 @@ export default function TopicsPage() {
 
         setIsAdding(true);
         try {
-            const res = await api.post<Topic>(`/journal/subjects/${selectedSubjectId}/topics`, { name: newTopicName });
+            const res = await api.post<TopicMutationResult>(`/journal/subjects/${selectedSubjectId}/topics`, { name: newTopicName });
             setTopics([...topics, res].sort((a, b) => a.order_num - b.order_num));
             setNewTopicName('');
             showToast('Тема добавлена', 'success');
@@ -101,7 +102,7 @@ export default function TopicsPage() {
     const handleSaveEdit = async () => {
         if (!editingTopicId || !editTopicName.trim()) return;
         try {
-            const res = await api.put<Topic>(`/journal/topics/${editingTopicId}`, { name: editTopicName });
+            const res = await api.put<TopicMutationResult>(`/journal/topics/${editingTopicId}`, { name: editTopicName });
             setTopics(topics.map(t => t.id === editingTopicId ? res : t));
             setEditingTopicId(null);
             showToast('Тема обновлена', 'success');

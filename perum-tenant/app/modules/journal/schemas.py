@@ -42,6 +42,20 @@ class JournalTeacherSubjectsOut(BaseModel):
     classes: list[JournalTeacherClassOut]
 
 
+class JournalTopicOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    order_num: int
+
+
+class JournalTopicsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topics: list[JournalTopicOut]
+
+
 class AddGradeRequest(BaseModel):
     student_id: int
     subject_id: int

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.modules.journal.schemas import JournalTeacherSubjectsOut, JournalWorkTypesOut
+from app.modules.journal.schemas import JournalTeacherSubjectsOut, JournalTopicsOut, JournalWorkTypesOut
 
 
 def test_journal_work_types_contract_accepts_items_and_empty_list() -> None:
@@ -82,3 +82,32 @@ def test_journal_teacher_subjects_contract_accepts_nested_nullable_picker() -> N
 def test_journal_teacher_subjects_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         JournalTeacherSubjectsOut.model_validate(payload)
+
+
+def test_journal_topics_read_contract_accepts_items_and_empty_list() -> None:
+    response = JournalTopicsOut.model_validate(
+        {"topics": [{"id": 1, "name": "Quadratic equations", "order_num": 4}]}
+    )
+    empty = JournalTopicsOut.model_validate({"topics": []})
+
+    assert response.topics[0].order_num == 4
+    assert empty.topics == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"topics": [], "school_id": 1},
+        {"topics": [{"id": 1, "name": "Topic", "order_num": 1, "subject_id": 2}]},
+        {"topics": [{"id": 1, "name": "Topic", "order_num": 1, "description": "Extra"}]},
+        {"topics": [{"name": "Topic", "order_num": 1}]},
+        {"topics": [{"id": 1, "order_num": 1}]},
+        {"topics": [{"id": 1, "name": "Topic"}]},
+        {"topics": [{"id": None, "name": "Topic", "order_num": 1}]},
+        {"topics": None},
+        {},
+    ],
+)
+def test_journal_topics_read_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        JournalTopicsOut.model_validate(payload)

@@ -16,6 +16,7 @@ from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
     JournalTeacherSubjectsOut,
+    JournalTopicsOut,
     JournalWorkTypesOut,
     LessonTemplateUpdate,
     LessonOccurrenceUpdate,
@@ -53,7 +54,7 @@ async def subjects(user: User = Depends(require_teacher), db: AsyncSession = Dep
     return {"subjects": await service.list_subjects(db, await _school(user, db))}
 
 
-@router.get("/subjects/{subject_id}/topics")
+@router.get("/subjects/{subject_id}/topics", response_model=JournalTopicsOut)
 async def subject_topics(
     subject_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)
 ) -> dict:

@@ -279,13 +279,7 @@ export interface Subject {
     exchange_coefficient?: number;
 }
 
-/* Grade and Topic types */
-export interface Topic {
-    id: number;
-    name: string;
-    subject_id: number;
-}
-
+/* Grade types */
 export interface Grade {
     id: number;
     version: number;

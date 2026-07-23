@@ -5,11 +5,13 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import Modal from '@/components/ui/Modal';
 import styles from '../../app/teacher/journal/page.module.css';
-import type { Grade, Topic } from '@/types';
+import type { Grade } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
+type JournalTopics = components['schemas']['JournalTopicsOut'];
+type JournalTopic = components['schemas']['JournalTopicOut'];
 
 interface ViewGradeModalProps {
     gradeId: number;
@@ -39,7 +41,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
     const [editComment, setEditComment] = useState('');
     const [editTopicId, setEditTopicId] = useState<string | null>(null);
     const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
-    const [topics, setTopics] = useState<Topic[]>([]);
+    const [topics, setTopics] = useState<JournalTopic[]>([]);
 
     useEffect(() => {
         api.get<JournalWorkTypes>('/journal/work-types')
@@ -60,7 +62,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                 setEditComment(data.comment || '');
                 setEditTopicId(data.topic_id ? String(data.topic_id) : null);
                 if (data.subject?.id) {
-                    api.get<{ topics: Topic[] }>(`/journal/subjects/${data.subject.id}/topics`)
+                    api.get<JournalTopics>(`/journal/subjects/${data.subject.id}/topics`)
                         .then(t => setTopics(t.topics || []))
                         .catch(err => console.error('Failed to load topics', err));
                 }

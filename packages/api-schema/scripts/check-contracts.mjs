@@ -317,6 +317,29 @@ for (const [schema, requiredType, label] of [
     throw new Error(`${label} must be required nullable`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/journal/subjects/{subject_id}/topics', 'get') !== '#/components/schemas/JournalTopicsOut') {
+  throw new Error('GET /api/journal/subjects/{subject_id}/topics must return JournalTopicsOut');
+}
+for (const [name, fields] of [
+  ['JournalTopicsOut', ['topics']],
+  ['JournalTopicOut', ['id', 'name', 'order_num']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  const required = schema.required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the journal topics read contract`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+  if (fields.some(field => schema.properties[field].nullable === true || schema.properties[field].anyOf?.some(variant => variant.type === 'null'))) {
+    throw new Error(`${name} fields must not be nullable`);
+  }
+}
+const journalTopicsItemsRef = tenantOpenapi.components.schemas.JournalTopicsOut.properties.topics.items?.$ref;
+if (journalTopicsItemsRef !== '#/components/schemas/JournalTopicOut') {
+  throw new Error('JournalTopicsOut topics must contain JournalTopicOut items');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

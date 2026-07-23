@@ -4103,6 +4103,20 @@ export interface components {
             /** Classes */
             classes: components["schemas"]["JournalTeacherClassOut"][];
         };
+        /** JournalTopicOut */
+        JournalTopicOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Order Num */
+            order_num: number;
+        };
+        /** JournalTopicsOut */
+        JournalTopicsOut: {
+            /** Topics */
+            topics: components["schemas"]["JournalTopicOut"][];
+        };
         /** JournalWorkTypeOut */
         JournalWorkTypeOut: {
             /** Id */
@@ -9614,9 +9628,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalTopicsOut"];
                 };
             };
             /** @description Validation Error */
