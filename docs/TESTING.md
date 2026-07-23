@@ -101,6 +101,19 @@ extra fields. Curated gate фиксирует `ActivePeriodsOut`/`ActivePeriodOu
 required nullable `current_period` и date formats; Web typecheck сохраняет generated
 analytics query DTO без проверки selection policy или admin CRUD.
 
+Lesson occurrence receipt проверяется journal contract и existing occurrence suites:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_journal_contracts.py tests/unit/test_lesson_occurrences.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Contract suite фиксирует exact seven-field receipt, lifecycle literals, required
+nullable `topic_id`, date/slot/version bounds и closed object. Existing service
+suite сохраняет optimistic-lock и transfer behavior; Web использует server status
+и version, но error DTO, cache и Mobile flow этим не покрываются.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

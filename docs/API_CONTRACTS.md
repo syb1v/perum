@@ -98,6 +98,12 @@ required list той же projection. Item fields `id`, `name`, `period_type`,
 `start_date`, `end_date` required non-null; даты имеют OpenAPI `format: date`.
 Admin period CRUD и правила quarter/half-year этим DTO не определяются.
 
+Lesson occurrence PATCH принимает существующий `LessonOccurrenceUpdate` и
+возвращает curated `LessonOccurrenceUpdateOut`. Receipt всегда содержит required
+status, occurrence/date/lesson, required nullable `topic_id` и новую `version`;
+status ограничен `scheduled`/`cancelled`/`completed`. Conflict/error schemas и
+optimistic-lock/transfer semantics остаются отдельной границей.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

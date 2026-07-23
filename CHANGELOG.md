@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-22
 
+- Tenant PATCH `/api/journal/lesson-occurrences/{occurrence_id}` получил закрытый `LessonOccurrenceUpdateOut` с authoritative status/date/slot/topic/version receipt. Web использует generated request/response и устанавливает server status вместо requested value; curated gate фиксирует exact fields, required nullable `topic_id`, lifecycle literals и date format без изменения optimistic-lock, transfer или conflict semantics.
 - Tenant `GET /api/periods` получил закрытые `ActivePeriodsOut`/`ActivePeriodOut` response schemas: `current_period` required nullable, periods/items required, даты имеют OpenAPI `format: date`. Teacher analytics удалил ручные period DTO и использует generated contract; selection quarter/half-year, class lookup и admin period CRUD не менялись.
 - Journal topics POST create и PUT update получили закрытые generated `TopicCreate`/`TopicUpdate` requests и общий `JournalTopicOut` response. Management page удалил локальный mutation result и использует generated payload/receipt; curated gate фиксирует четыре bindings. HTTP 200 и текущая бизнес-семантика сохранены, archive/restore/versioning/offline scope не заявляется готовым.
 - Tenant GET `/api/journal/subjects/{subject_id}/topics` получил закрытые `JournalTopicsOut`/`JournalTopicOut` read schemas. Четыре Web consumer-а используют generated DTO вместо двух расходящихся Topic shapes; удалён ложный общий `subject_id`, curated gate фиксирует required non-null `id`/`name`/`order_num`. POST/PUT/archive/restore намеренно остаются отдельной mutation boundary.
