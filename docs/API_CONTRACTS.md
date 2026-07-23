@@ -110,6 +110,11 @@ color/created/subject/student/topic fields могут быть nullable согл
 wire payload. Nested subject/student имеют отдельные closed schemas. Поле награды
 называется `points`; legacy aliases и grade mutation receipts не входят в DTO.
 
+Journal grade PUT на том же path принимает existing `UpdateGradeRequest` и
+возвращает closed `JournalGradeUpdateOut`: required version, nullable grade/color,
+authoritative points, applied `points_diff` и `new_balance`. Contract не превращает
+PUT в PATCH и не меняет optional request fields, optimistic lock или conflict body.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

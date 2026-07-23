@@ -120,6 +120,12 @@ positive version, missing и extra fields. Curated gate фиксирует exact
 surface, nullable branches и nested refs; Web typecheck подтверждает generated
 detail DTO и server `points`, но не grade mutations или общий journal grid.
 
+Grade update receipt в том же suite проверяет обычный и attendance-only result,
+required nullable grade/color, positive version, points/diff/balance и closed
+surface. Curated gate фиксирует PUT `UpdateGradeRequest` и
+`JournalGradeUpdateOut`; Web typecheck покрывает typed payload/receipt, но не
+conflict envelope, local receipt application, create/delete или offline flow.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 
