@@ -944,9 +944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Periods Api Periods Get"
+                  "$ref": "#/components/schemas/ActivePeriodsOut"
                 }
               }
             }
@@ -12558,6 +12556,70 @@
           "end_date"
         ],
         "title": "AcademicYearUpdate"
+      },
+      "ActivePeriodOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "period_type": {
+            "type": "string",
+            "title": "Period Type"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "period_type",
+          "start_date",
+          "end_date"
+        ],
+        "title": "ActivePeriodOut"
+      },
+      "ActivePeriodsOut": {
+        "properties": {
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActivePeriodOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/ActivePeriodOut"
+            },
+            "type": "array",
+            "title": "Periods"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "current_period",
+          "periods"
+        ],
+        "title": "ActivePeriodsOut"
       },
       "AddGradeRequest": {
         "properties": {

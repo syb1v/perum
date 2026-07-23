@@ -3535,6 +3535,31 @@ export interface components {
              */
             is_current: boolean;
         };
+        /** ActivePeriodOut */
+        ActivePeriodOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Period Type */
+            period_type: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+        };
+        /** ActivePeriodsOut */
+        ActivePeriodsOut: {
+            current_period: components["schemas"]["ActivePeriodOut"] | null;
+            /** Periods */
+            periods: components["schemas"]["ActivePeriodOut"][];
+        };
         /** AddGradeRequest */
         AddGradeRequest: {
             /** Student Id */
@@ -6136,9 +6161,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ActivePeriodsOut"];
                 };
             };
             /** @description Validation Error */

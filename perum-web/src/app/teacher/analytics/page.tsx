@@ -23,14 +23,8 @@ import type { components } from '@perum/api-schema/tenant';
 type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
 type JournalTeacherClass = components['schemas']['JournalTeacherClassOut'];
 type JournalTeacherSubject = components['schemas']['JournalTeacherSubjectOut'];
-
-interface SchoolPeriod {
-    id: number;
-    name: string;
-    period_type: string;
-    start_date: string;
-    end_date: string;
-}
+type ActivePeriods = components['schemas']['ActivePeriodsOut'];
+type ActivePeriod = components['schemas']['ActivePeriodOut'];
 
 export default function TeacherAnalytics() {
     const { showError, showSuccess } = useToast();
@@ -39,7 +33,7 @@ export default function TeacherAnalytics() {
     const [selectedClassId, setSelectedClassId] = useState<number>(0);
     const [selectedSubjectId, setSelectedSubjectId] = useState<number>(0);
     const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-    const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
+    const [periods, setPeriods] = useState<ActivePeriod[]>([]);
 
     // Data State
     const [teacherClasses, setTeacherClasses] = useState<JournalTeacherClass[]>([]);
@@ -122,7 +116,7 @@ export default function TeacherAnalytics() {
         setPeriods([]);
         setSelectedPeriod('');
         setDashboardData(null);
-        api.get<{ current_period: SchoolPeriod | null; periods: SchoolPeriod[] }>(`/periods?class_id=${selectedClassId}`, controller.signal)
+        api.get<ActivePeriods>(`/periods?class_id=${selectedClassId}`, controller.signal)
             .then((data) => {
                 const academicPeriods = data.periods.filter((period) =>
                     period.period_type === 'quarter' || period.period_type === 'half_year'

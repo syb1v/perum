@@ -364,6 +364,36 @@ for (const name of ['TopicCreate', 'TopicUpdate']) {
     throw new Error(`${name} name must be a non-null string`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/periods', 'get') !== '#/components/schemas/ActivePeriodsOut') {
+  throw new Error('GET /api/periods must return ActivePeriodsOut');
+}
+for (const [name, fields] of [
+  ['ActivePeriodsOut', ['current_period', 'periods']],
+  ['ActivePeriodOut', ['id', 'name', 'period_type', 'start_date', 'end_date']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  const required = schema.required ?? [];
+  if (fields.some(field => !required.includes(field))) {
+    throw new Error(`${name} required fields differ from the active periods client contract`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+const activePeriods = tenantOpenapi.components.schemas.ActivePeriodsOut.properties;
+if (activePeriods.periods.items?.$ref !== '#/components/schemas/ActivePeriodOut') {
+  throw new Error('ActivePeriodsOut periods must contain ActivePeriodOut items');
+}
+const currentPeriodVariants = activePeriods.current_period.anyOf ?? [];
+if (!currentPeriodVariants.some(schema => schema.$ref === '#/components/schemas/ActivePeriodOut') || !currentPeriodVariants.some(schema => schema.type === 'null')) {
+  throw new Error('ActivePeriodsOut current_period must be required nullable ActivePeriodOut');
+}
+const activePeriod = tenantOpenapi.components.schemas.ActivePeriodOut.properties;
+for (const field of ['start_date', 'end_date']) {
+  if (activePeriod[field].type !== 'string' || activePeriod[field].format !== 'date') {
+    throw new Error(`ActivePeriodOut ${field} must be a date`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

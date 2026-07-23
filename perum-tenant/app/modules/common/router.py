@@ -19,6 +19,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models import Subject, User
 from app.models.academic import Class
+from app.modules.common.schemas import ActivePeriodsOut
 from app.modules.journal.service import _list_periods
 from app.modules.market import service as market_service
 from app.modules.school_admin.service import resolve_school_id
@@ -47,7 +48,7 @@ async def subjects(user: User = Depends(get_current_user), db: AsyncSession = De
     }
 
 
-@router.get("/periods")
+@router.get("/periods", response_model=ActivePeriodsOut)
 async def periods(
     class_id: int | None = None,
     user: User = Depends(get_current_user),

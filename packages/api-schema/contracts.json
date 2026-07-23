@@ -9,6 +9,7 @@
     "/api/mobile/compatibility",
     "/api/mobile/capabilities",
     "/api/mobile/descriptor",
+    "/api/periods",
     "/api/push/registration",
     "/api/push/installations/{installation_id}/registration",
     "/api/media/upload-sessions",
