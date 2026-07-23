@@ -89,10 +89,14 @@ class FinalGradeRequest(BaseModel):
 
 
 class TopicCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 
 class TopicUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str
 
 

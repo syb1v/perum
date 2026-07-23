@@ -10,16 +10,12 @@ import type { components } from '@perum/api-schema/tenant';
 type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
 type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
+type TopicCreate = components['schemas']['TopicCreate'];
+type TopicUpdate = components['schemas']['TopicUpdate'];
 
 interface SubjectInfo {
     id: number;
     name: string;
-}
-
-interface TopicMutationResult {
-    id: number;
-    name: string;
-    order_num: number;
 }
 
 export default function TopicsPage() {
@@ -75,7 +71,8 @@ export default function TopicsPage() {
 
         setIsAdding(true);
         try {
-            const res = await api.post<TopicMutationResult>(`/journal/subjects/${selectedSubjectId}/topics`, { name: newTopicName });
+            const payload: TopicCreate = { name: newTopicName };
+            const res = await api.post<JournalTopic>(`/journal/subjects/${selectedSubjectId}/topics`, payload);
             setTopics([...topics, res].sort((a, b) => a.order_num - b.order_num));
             setNewTopicName('');
             showToast('Тема добавлена', 'success');
@@ -102,7 +99,8 @@ export default function TopicsPage() {
     const handleSaveEdit = async () => {
         if (!editingTopicId || !editTopicName.trim()) return;
         try {
-            const res = await api.put<TopicMutationResult>(`/journal/topics/${editingTopicId}`, { name: editTopicName });
+            const payload: TopicUpdate = { name: editTopicName };
+            const res = await api.put<JournalTopic>(`/journal/topics/${editingTopicId}`, payload);
             setTopics(topics.map(t => t.id === editingTopicId ? res : t));
             setEditingTopicId(null);
             showToast('Тема обновлена', 'success');

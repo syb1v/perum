@@ -39,6 +39,7 @@
     "/api/journal/grades",
     "/api/journal/subjects/{subject_id}/topics",
     "/api/journal/teacher/subjects",
+    "/api/journal/topics/{topic_id}",
     "/api/journal/work-types",
     "/api/homework",
     "/api/control-works",

@@ -6412,9 +6412,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Create Topic Api Journal Subjects  Subject Id  Topics Post"
+                  "$ref": "#/components/schemas/JournalTopicOut"
                 }
               }
             }
@@ -6471,9 +6469,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Update Topic Api Journal Topics  Topic Id  Put"
+                  "$ref": "#/components/schemas/JournalTopicOut"
                 }
               }
             }
@@ -17950,6 +17946,7 @@
             "title": "Name"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name"
@@ -17963,6 +17960,7 @@
             "title": "Name"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name"

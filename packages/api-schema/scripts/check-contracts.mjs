@@ -340,6 +340,30 @@ const journalTopicsItemsRef = tenantOpenapi.components.schemas.JournalTopicsOut.
 if (journalTopicsItemsRef !== '#/components/schemas/JournalTopicOut') {
   throw new Error('JournalTopicsOut topics must contain JournalTopicOut items');
 }
+for (const [path, method, requestSchema] of [
+  ['/api/journal/subjects/{subject_id}/topics', 'post', 'TopicCreate'],
+  ['/api/journal/topics/{topic_id}', 'put', 'TopicUpdate'],
+]) {
+  const requestRef = tenantOpenapi.paths[path][method].requestBody.content['application/json'].schema.$ref;
+  if (requestRef !== `#/components/schemas/${requestSchema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must accept ${requestSchema}`);
+  }
+  if (responseSchemaRef(tenantOpenapi, path, method) !== '#/components/schemas/JournalTopicOut') {
+    throw new Error(`${method.toUpperCase()} ${path} must return JournalTopicOut`);
+  }
+}
+for (const name of ['TopicCreate', 'TopicUpdate']) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(['name']) || JSON.stringify(schema.required ?? []) !== JSON.stringify(['name'])) {
+    throw new Error(`${name} must require only name`);
+  }
+  if (schema.properties.name.type !== 'string') {
+    throw new Error(`${name} name must be a non-null string`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

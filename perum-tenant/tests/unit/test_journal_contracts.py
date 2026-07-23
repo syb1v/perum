@@ -1,7 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from app.modules.journal.schemas import JournalTeacherSubjectsOut, JournalTopicsOut, JournalWorkTypesOut
+from app.modules.journal.schemas import (
+    JournalTeacherSubjectsOut,
+    JournalTopicOut,
+    JournalTopicsOut,
+    JournalWorkTypesOut,
+    TopicCreate,
+    TopicUpdate,
+)
 
 
 def test_journal_work_types_contract_accepts_items_and_empty_list() -> None:
@@ -111,3 +118,20 @@ def test_journal_topics_read_contract_accepts_items_and_empty_list() -> None:
 def test_journal_topics_read_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         JournalTopicsOut.model_validate(payload)
+
+
+@pytest.mark.parametrize("schema", [TopicCreate, TopicUpdate])
+def test_journal_topic_mutation_requests_accept_only_name(schema: type) -> None:
+    assert schema.model_validate({"name": "Quadratic equations"}).name == "Quadratic equations"
+
+    for payload in [{}, {"name": None}, {"name": "Topic", "order_num": 2}, {"name": "Topic", "subject_id": 1}]:
+        with pytest.raises(ValidationError):
+            schema.model_validate(payload)
+
+
+def test_journal_topic_mutation_response_is_closed() -> None:
+    response = JournalTopicOut.model_validate({"id": 1, "name": "Topic", "order_num": 2})
+
+    assert response.order_num == 2
+    with pytest.raises(ValidationError):
+        JournalTopicOut.model_validate({"id": 1, "name": "Topic", "order_num": 2, "subject_id": 3})

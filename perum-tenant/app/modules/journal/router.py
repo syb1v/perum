@@ -16,6 +16,7 @@ from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
     JournalTeacherSubjectsOut,
+    JournalTopicOut,
     JournalTopicsOut,
     JournalWorkTypesOut,
     LessonTemplateUpdate,
@@ -61,7 +62,7 @@ async def subject_topics(
     return {"topics": await service.list_topics(db, await _school(user, db), subject_id)}
 
 
-@router.post("/subjects/{subject_id}/topics")
+@router.post("/subjects/{subject_id}/topics", response_model=JournalTopicOut)
 async def create_topic(
     subject_id: int,
     payload: TopicCreate,
@@ -71,7 +72,7 @@ async def create_topic(
     return await service.create_topic(db, await _school(user, db), subject_id, payload.name, user)
 
 
-@router.put("/topics/{topic_id}")
+@router.put("/topics/{topic_id}", response_model=JournalTopicOut)
 async def update_topic(
     topic_id: int,
     payload: TopicUpdate,
