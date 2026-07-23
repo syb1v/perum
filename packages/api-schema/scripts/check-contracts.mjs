@@ -461,6 +461,33 @@ for (const [name, fields] of [
     throw new Error(`${name} must be closed with required detail fields`);
   }
 }
+const gradeUpdatePath = '/api/journal/grades/{grade_id}';
+const gradeUpdateRequestRef = tenantOpenapi.paths[gradeUpdatePath].put.requestBody.content['application/json'].schema.$ref;
+if (gradeUpdateRequestRef !== '#/components/schemas/UpdateGradeRequest') {
+  throw new Error('PUT grade must accept UpdateGradeRequest');
+}
+if (responseSchemaRef(tenantOpenapi, gradeUpdatePath, 'put') !== '#/components/schemas/JournalGradeUpdateOut') {
+  throw new Error('PUT grade must return JournalGradeUpdateOut');
+}
+const gradeUpdate = tenantOpenapi.components.schemas.JournalGradeUpdateOut;
+const gradeUpdateFields = ['success', 'version', 'grade_value', 'points', 'points_diff', 'new_balance', 'color'];
+if (JSON.stringify(Object.keys(gradeUpdate.properties ?? {})) !== JSON.stringify(gradeUpdateFields) || JSON.stringify(gradeUpdate.required ?? []) !== JSON.stringify(gradeUpdateFields)) {
+  throw new Error('JournalGradeUpdateOut must require the exact authoritative receipt fields');
+}
+if (gradeUpdate.additionalProperties !== false || gradeUpdate.properties.version.minimum !== 1) {
+  throw new Error('JournalGradeUpdateOut must be closed with a positive version');
+}
+for (const field of ['grade_value', 'color']) {
+  const variants = gradeUpdate.properties[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'null')) {
+    throw new Error(`JournalGradeUpdateOut ${field} must be required nullable`);
+  }
+}
+for (const field of ['points', 'points_diff', 'new_balance']) {
+  if (gradeUpdate.properties[field].type !== 'integer') {
+    throw new Error(`JournalGradeUpdateOut ${field} must be an integer`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

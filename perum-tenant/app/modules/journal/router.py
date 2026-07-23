@@ -16,6 +16,7 @@ from app.modules.journal.schemas import (
     AddGradeRequest,
     FinalGradeRequest,
     JournalGradeDetailOut,
+    JournalGradeUpdateOut,
     JournalTeacherSubjectsOut,
     JournalTopicOut,
     JournalTopicsOut,
@@ -152,7 +153,7 @@ async def get_grade(
     return await service.get_grade(db, await _school(user, db), grade_id, user)
 
 
-@router.put("/grades/{grade_id}")
+@router.put("/grades/{grade_id}", response_model=JournalGradeUpdateOut)
 async def update_grade(
     grade_id: int,
     payload: UpdateGradeRequest,

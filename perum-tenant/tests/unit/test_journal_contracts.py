@@ -7,6 +7,7 @@ from app.modules.journal.schemas import (
     JournalTopicsOut,
     JournalWorkTypesOut,
     JournalGradeDetailOut,
+    JournalGradeUpdateOut,
     LessonOccurrenceUpdateOut,
     TopicCreate,
     TopicUpdate,
@@ -278,3 +279,53 @@ def test_journal_grade_detail_contract_rejects_missing_and_extra_fields() -> Non
         JournalGradeDetailOut.model_validate({**payload, "version": 0})
     with pytest.raises(ValidationError):
         JournalGradeDetailOut.model_validate({**payload, "subject": {**payload["subject"], "school_id": 1}})
+
+
+def test_journal_grade_update_receipt_accepts_grade_and_attendance_results() -> None:
+    response = JournalGradeUpdateOut.model_validate(
+        {
+            "success": True,
+            "version": 4,
+            "grade_value": 5,
+            "points": 50,
+            "points_diff": 30,
+            "new_balance": 125,
+            "color": "#4CAF50",
+        }
+    )
+    attendance = JournalGradeUpdateOut.model_validate(
+        {
+            "success": True,
+            "version": 2,
+            "grade_value": None,
+            "points": 0,
+            "points_diff": -10,
+            "new_balance": 0,
+            "color": None,
+        }
+    )
+
+    assert response.version == 4
+    assert response.points_diff == 30
+    assert attendance.grade_value is None
+    assert attendance.color is None
+
+
+def test_journal_grade_update_receipt_rejects_missing_and_extra_fields() -> None:
+    payload = {
+        "success": True,
+        "version": 4,
+        "grade_value": 5,
+        "points": 50,
+        "points_diff": 30,
+        "new_balance": 125,
+        "color": "#4CAF50",
+    }
+
+    for field in payload:
+        with pytest.raises(ValidationError):
+            JournalGradeUpdateOut.model_validate({key: value for key, value in payload.items() if key != field})
+    with pytest.raises(ValidationError):
+        JournalGradeUpdateOut.model_validate({**payload, "school_id": 1})
+    with pytest.raises(ValidationError):
+        JournalGradeUpdateOut.model_validate({**payload, "version": 0})

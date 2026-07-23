@@ -6928,9 +6928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Update Grade Api Journal Grades  Grade Id  Put"
+                  "$ref": "#/components/schemas/JournalGradeUpdateOut"
                 }
               }
             }
@@ -14567,6 +14565,65 @@
           "category"
         ],
         "title": "JournalGradeSubjectOut"
+      },
+      "JournalGradeUpdateOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "grade_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "points_diff": {
+            "type": "integer",
+            "title": "Points Diff"
+          },
+          "new_balance": {
+            "type": "integer",
+            "title": "New Balance"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "version",
+          "grade_value",
+          "points",
+          "points_diff",
+          "new_balance",
+          "color"
+        ],
+        "title": "JournalGradeUpdateOut"
       },
       "JournalTeacherClassOut": {
         "properties": {

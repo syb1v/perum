@@ -4152,6 +4152,23 @@ export interface components {
             /** Category */
             category: string;
         };
+        /** JournalGradeUpdateOut */
+        JournalGradeUpdateOut: {
+            /** Success */
+            success: boolean;
+            /** Version */
+            version: number;
+            /** Grade Value */
+            grade_value: number | null;
+            /** Points */
+            points: number;
+            /** Points Diff */
+            points_diff: number;
+            /** New Balance */
+            new_balance: number;
+            /** Color */
+            color: string | null;
+        };
         /** JournalTeacherClassOut */
         JournalTeacherClassOut: {
             /** Id */
@@ -10073,9 +10090,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalGradeUpdateOut"];
                 };
             };
             /** @description Validation Error */

@@ -12,6 +12,8 @@ type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
 type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
 type JournalGradeDetail = components['schemas']['JournalGradeDetailOut'];
+type JournalGradeUpdate = components['schemas']['JournalGradeUpdateOut'];
+type UpdateGradeRequest = components['schemas']['UpdateGradeRequest'];
 
 interface ViewGradeModalProps {
     gradeId: number;
@@ -82,7 +84,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
             return;
         }
         try {
-            await api.put(`/journal/grades/${gradeId}`, {
+            const payload: UpdateGradeRequest = {
                 version: grade.version,
                 grade_value: editValue,
                 work_type_id: editAttendanceMark ? null : editWorkTypeId,
@@ -90,7 +92,8 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
                 attendance_mark: editAttendanceMark,
                 topic_id: editTopicId ? Number(editTopicId) : null,
                 comment: editComment
-            });
+            };
+            await api.put<JournalGradeUpdate>(`/journal/grades/${gradeId}`, payload);
             showSuccess('Оценка обновлена');
             onUpdate();
             onClose();

@@ -162,3 +162,15 @@ class JournalGradeDetailOut(BaseModel):
     student: JournalGradeStudentOut | None
     topic_id: int | None
     topic_name: str | None
+
+
+class JournalGradeUpdateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    version: int = Field(ge=1)
+    grade_value: int | None
+    points: int
+    points_diff: int
+    new_balance: int
+    color: str | None
