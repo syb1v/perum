@@ -187,6 +187,12 @@ version/grade/points/diff/balance/color receipt. Curated gate связывает
 response; current PUT optionality, lock/conflict, refresh lifecycle и calculations
 не менялись. Grade create/delete и общий grid остаются отдельными slices.
 
+Journal grade POST create теперь typed end-to-end: `GradeModal` формирует generated
+`AddGradeRequest`, а `JournalGradeCreateOut` фиксирует required grade identity,
+nullable grade/color/attendance, points/balance и message receipt. Request
+optionality/string date и server calculations/validation сохранены. Create version,
+delete receipt, grid, idempotency/offline остаются отдельными slices.
+
 Friends request lifecycle дополнительно hardened: просроченный `pending` теперь
 атомарно переходит в `expired` на create/list/action paths, не показывается и не
 может быть принят, освобождает active-pair slot для нового idempotency identity;
@@ -228,7 +234,7 @@ Native Friends UI и двухступенчатый controlled rollout нахо�
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
 social/support query plans, versioned telemetry/deployment fixtures/sanitizer и
-curated Friends/Homework/preferences/push/social/support-mutation/moderation/teacher-profile/journal-picker/topics/active-periods/occurrence/grade-detail-update OpenAPI contracts прошли Core/Tenant full
+curated Friends/Homework/preferences/push/social/support-mutation/moderation/teacher-profile/journal-picker/topics/active-periods/occurrence/grade-detail-create-update OpenAPI contracts прошли Core/Tenant full
 pytest, mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
@@ -827,7 +833,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation/teacher-profile/journal picker/work-types/topics/active-periods/occurrence/grade detail/update contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются grade create/delete, topic archive/restore и остальные teacher/journal/analytics/query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation/teacher-profile/journal picker/work-types/topics/active-periods/occurrence/grade detail/create/update contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются grade delete, topic archive/restore и остальные teacher/journal/analytics/query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, sanitized metrics persistence и cross-component deployment snapshot fixture зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; fixture не является Mobile telemetry evidence; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, generated preferences/push-registration DTO, Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы. Push registration status восстанавливается из server receipt; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push delivery/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |

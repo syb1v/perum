@@ -126,6 +126,12 @@ surface. Curated gate фиксирует PUT `UpdateGradeRequest` и
 `JournalGradeUpdateOut`; Web typecheck покрывает typed payload/receipt, но не
 conflict envelope, local receipt application, create/delete или offline flow.
 
+Grade create receipt contract tests покрывают grade и attendance-only result,
+required nullable grade/color/attendance, exact eight-field closed surface и
+missing/extra fields. Curated gate фиксирует POST `AddGradeRequest` optionality и
+`JournalGradeCreateOut`; Web typecheck подтверждает generated payload/receipt без
+claims о create version, delete, calculations, idempotency или offline replay.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

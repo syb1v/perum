@@ -115,6 +115,11 @@ Journal grade PUT на том же path принимает existing `UpdateGrade
 authoritative points, applied `points_diff` и `new_balance`. Contract не превращает
 PUT в PATCH и не меняет optional request fields, optimistic lock или conflict body.
 
+Journal grade POST `/api/journal/grades` принимает existing `AddGradeRequest` и
+возвращает closed `JournalGradeCreateOut`: required grade ID, required nullable
+grade/color/attendance, points, new balance и message. Optional nullable request
+fields и string `lesson_date` сохранены; receipt не добавляет version/idempotency.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и
