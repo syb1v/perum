@@ -79,8 +79,14 @@ gate фиксирует оба item refs и nullability; Web typecheck/build п�
 
 Topics read contract в том же suite проверяет полный и пустой GET envelope,
 required non-null `id`/`name`/`order_num`, missing/null поля и rejection ложных
-`subject_id`/`description`/extra data. Curated gate относится только к GET binding;
-Web typecheck покрывает четыре read consumer-а, но не доказывает typed mutations.
+`subject_id`/`description`/extra data. GET binding проверяется отдельно от
+mutation bindings; четыре read consumer-а используют один generated DTO.
+
+Topics create/update contract tests проверяют, что `TopicCreate`/`TopicUpdate`
+принимают только required non-null `name`, а общий `JournalTopicOut` остаётся
+closed. Curated gate фиксирует POST/PUT request и response refs; Web typecheck
+подтверждает generated payload/result на management page без claims об archive,
+restore, concurrency или offline replay.
 
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:

@@ -84,8 +84,13 @@ nullable, class/subject arrays non-null. Этот DTO нельзя подмен�
 Journal topics GET является отдельным curated read contract:
 `/api/journal/subjects/{subject_id}/topics` возвращает `JournalTopicsOut` с
 `JournalTopicOut[]`; `id`, `name`, `order_num` required non-null, extra fields
-запрещены. POST/PUT topic responses, archive и restore не считаются typed до
-отдельных response bindings, даже если create/update wire shape сейчас совпадает.
+запрещены. Read DTO не включает subject/archive metadata и не доказывает
+archive/restore semantics.
+
+Journal topic create/update теперь также curated: POST принимает закрытый
+`TopicCreate`, PUT — закрытый `TopicUpdate`, оба требуют только non-null `name` и
+возвращают `JournalTopicOut`. Текущие HTTP 200 и business errors сохранены;
+archive/restore receipts, versioning и idempotency не входят в этот contract.
 
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
