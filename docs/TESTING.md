@@ -77,6 +77,11 @@ non-null identifiers/names/category и запрет extra data на каждом
 gate фиксирует оба item refs и nullability; Web typecheck/build покрывают журнал,
 аналитику, темы и структурно суженные picker props без casts.
 
+Topics read contract в том же suite проверяет полный и пустой GET envelope,
+required non-null `id`/`name`/`order_num`, missing/null поля и rejection ложных
+`subject_id`/`description`/extra data. Curated gate относится только к GET binding;
+Web typecheck покрывает четыре read consumer-а, но не доказывает typed mutations.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

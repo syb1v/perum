@@ -81,6 +81,12 @@ Journal teacher picker также curated: GET `/api/journal/teacher/subjects`
 nullable, class/subject arrays non-null. Этот DTO нельзя подменять `ClassInfo` или
 `Subject`, потому что их legacy domain fields не совпадают с wire projection.
 
+Journal topics GET является отдельным curated read contract:
+`/api/journal/subjects/{subject_id}/topics` возвращает `JournalTopicsOut` с
+`JournalTopicOut[]`; `id`, `name`, `order_num` required non-null, extra fields
+запрещены. POST/PUT topic responses, archive и restore не считаются typed до
+отдельных response bindings, даже если create/update wire shape сейчас совпадает.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и
