@@ -190,6 +190,12 @@ Operator flow для Mobile теперь унифицирован в `perum-mobi
 или против другого Expo project, но не заменяет remote EAS environment, signing и
 store/provider credentials.
 
+Первый iOS preview invocation обнаружил EAS CLI crash на export-compliance prompt и
+пустой remote preview environment. Canonical Expo SDK 57 поле
+`ios.config.usesNonExemptEncryption=false` теперь исключает prompt, а non-secret
+public runtime values закреплены в EAS profiles. Signing credentials и завершённый
+signed build всё ещё требуют отдельного operator evidence.
+
 Tenant Discovery automated readiness усилена deterministic rollback success/failure
 matrix и fail-closed pilot collector: anonymous discovery не получает bearer,
 redirect/media-type/size/schema/school mismatch отклоняются, synthetic evidence

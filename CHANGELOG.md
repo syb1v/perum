@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-24
 
+- Исправлен первый iOS EAS preview build: export-compliance declaration перенесена в canonical Expo SDK 57 поле `ios.config.usesNonExemptEncryption`, устраняя падение EAS CLI после prompt. Public runtime variables добавлены непосредственно в preview/production profiles, поэтому пустой remote EAS environment больше не ломает строгий config на builder.
 - В `perum-mobile/mobile.sh` добавлен единый operator entrypoint для Expo Go, EAS preview/production builds, live project status и preflight. Preview/production profiles используют явные EAS environments; production build защищён обязательным подтверждением, credentials и tokens в repository не сохраняются.
 - Expo/EAS project initialization завершена: Mobile slug выровнен с remote project `@sybiv/perum`, project linkage подтверждён, а native IDs `app.perum.mobile` сохранены. Config/typecheck и 107 Mobile tests прошли; signing/provider credentials и signed preview build evidence остаются внешними blockers.
 - Consumer-driven P0 Shared Contracts закрыт: student/parent academics, quests, main journal aggregate, final/template receipts, import contracts и teacher residuals переведены на closed generated schemas; 96 curated paths имеют explicit shape gates, live Web consumers больше не используют manual wire DTO/response `any`/unknown arrays/raw JSON casts.
