@@ -5311,6 +5311,28 @@ export interface components {
              */
             class_ids: number[];
         };
+        /** TeacherAnalyticsTopicOut */
+        TeacherAnalyticsTopicOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Avg */
+            avg: number;
+            /** Bad Count */
+            bad_count: number;
+            /** Total Count */
+            total_count: number;
+            /** Bad Ratio */
+            bad_ratio: string;
+        };
+        /** TeacherAnalyticsTopicsOut */
+        TeacherAnalyticsTopicsOut: {
+            /** Class Avg */
+            class_avg: number;
+            /** Topics */
+            topics: components["schemas"]["TeacherAnalyticsTopicOut"][];
+        };
         /** TeacherClassOut */
         TeacherClassOut: {
             /** Id */
@@ -12574,9 +12596,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherAnalyticsTopicsOut"];
                 };
             };
             /** @description Validation Error */

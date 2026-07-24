@@ -10912,9 +10912,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Teacher Topics Api Teacher Analytics Topics Get"
+                  "$ref": "#/components/schemas/TeacherAnalyticsTopicsOut"
                 }
               }
             }
@@ -17986,6 +17984,67 @@
           "context_id"
         ],
         "title": "SyncAssignmentsRequest"
+      },
+      "TeacherAnalyticsTopicOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "bad_count": {
+            "type": "integer",
+            "title": "Bad Count"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "bad_ratio": {
+            "type": "string",
+            "title": "Bad Ratio"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "avg",
+          "bad_count",
+          "total_count",
+          "bad_ratio"
+        ],
+        "title": "TeacherAnalyticsTopicOut"
+      },
+      "TeacherAnalyticsTopicsOut": {
+        "properties": {
+          "class_avg": {
+            "type": "number",
+            "title": "Class Avg"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherAnalyticsTopicOut"
+            },
+            "type": "array",
+            "title": "Topics"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_avg",
+          "topics"
+        ],
+        "title": "TeacherAnalyticsTopicsOut"
       },
       "TeacherClassOut": {
         "properties": {

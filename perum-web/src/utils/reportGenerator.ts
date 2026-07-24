@@ -1,4 +1,8 @@
-import { AnalyticsDashboardResponse, AnalyticsTopicsResponse, TopicStats } from '@/types';
+import { AnalyticsDashboardResponse } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
+
+type AnalyticsTopicsResponse = components['schemas']['TeacherAnalyticsTopicsOut'];
+type TopicStats = components['schemas']['TeacherAnalyticsTopicOut'];
 
 interface ReportStudent {
     id: number;

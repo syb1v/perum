@@ -267,6 +267,24 @@ for (const field of ['class_name', 'subject_name']) {
     throw new Error(`TeacherHomeworkOut ${field} must be a nullable string`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/topics', 'get') !== '#/components/schemas/TeacherAnalyticsTopicsOut') {
+  throw new Error('GET /api/teacher/analytics/topics must return TeacherAnalyticsTopicsOut');
+}
+for (const [name, fields] of [
+  ['TeacherAnalyticsTopicsOut', ['class_avg', 'topics']],
+  ['TeacherAnalyticsTopicOut', ['id', 'name', 'avg', 'bad_count', 'total_count', 'bad_ratio']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher analytics topics fields`);
+  }
+  if (schema.additionalProperties !== false || fields.some(field => schema.properties[field].anyOf?.some(variant => variant.type === 'null'))) {
+    throw new Error(`${name} must be closed with non-null fields`);
+  }
+}
+if (tenantOpenapi.components.schemas.TeacherAnalyticsTopicsOut.properties.topics.items?.$ref !== '#/components/schemas/TeacherAnalyticsTopicOut') {
+  throw new Error('TeacherAnalyticsTopicsOut topics must contain TeacherAnalyticsTopicOut items');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
   throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
 }

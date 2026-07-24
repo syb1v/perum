@@ -6,7 +6,6 @@ import api from '@/lib/apiClient';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import {
     AnalyticsDashboardResponse,
-    AnalyticsTopicsResponse,
 } from '@/types';
 import AnalyticsFilters from '@/components/analytics/AnalyticsFilters';
 import KPICards from '@/components/analytics/KPICards';
@@ -25,6 +24,7 @@ type JournalTeacherClass = components['schemas']['JournalTeacherClassOut'];
 type JournalTeacherSubject = components['schemas']['JournalTeacherSubjectOut'];
 type ActivePeriods = components['schemas']['ActivePeriodsOut'];
 type ActivePeriod = components['schemas']['ActivePeriodOut'];
+type AnalyticsTopicsResponse = components['schemas']['TeacherAnalyticsTopicsOut'];
 
 export default function TeacherAnalytics() {
     const { showError, showSuccess } = useToast();

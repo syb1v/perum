@@ -678,19 +678,6 @@ export interface AnalyticsWorksResponse {
     students?: { id: number; name: string; avg: number }[]; // Problem students
 }
 
-export interface TopicStats {
-    id?: number;
-    name: string;
-    avg: number;
-    bad_ratio: string;
-}
-
-export interface AnalyticsTopicsResponse {
-    class_avg: number;
-    topics: TopicStats[];
-}
-
-
 /* Admin types */
 export interface AdminUser {
     id: number;
