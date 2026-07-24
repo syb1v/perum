@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from app.schemas.public import TenantDiscoveryResponse
+
 MAX_RESPONSE_BYTES = 512 * 1024
 TIMEOUT_SECONDS = 10
 REASON_METRICS = ("perum_mobile_descriptor_release_total", "perum_mobile_descriptor_deployment_total")
@@ -23,13 +25,9 @@ class EvidenceError(Exception):
     pass
 
 
-class NoCrossOriginRedirect(urllib.request.HTTPRedirectHandler):
+class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        current = urllib.parse.urlsplit(req.full_url)
-        target = urllib.parse.urlsplit(newurl)
-        if current.scheme != target.scheme or current.netloc != target.netloc:
-            raise EvidenceError("cross-origin redirect refused")
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        raise EvidenceError("redirect refused")
 
 
 class HttpClient:
@@ -37,12 +35,25 @@ class HttpClient:
         parsed = urllib.parse.urlsplit(base_url)
         if parsed.scheme != "https" and not (parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1", "::1"}):
             raise EvidenceError("HTTPS required except localhost")
-        if parsed.username or parsed.password or parsed.query or parsed.fragment:
+        if not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment or parsed.path not in {"", "/"}:
             raise EvidenceError("invalid base URL")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, "", "", ""))
         self.token = token
         self.metrics_token = metrics_token
-        self.opener = urllib.request.build_opener(NoCrossOriginRedirect())
+        self.opener = urllib.request.build_opener(NoRedirect())
+
+    @staticmethod
+    def _read(response: Any, *, metrics: bool) -> Any:
+        content_type = response.headers.get_content_type()
+        if metrics:
+            if content_type not in {"text/plain", "application/openmetrics-text"}:
+                raise EvidenceError("unexpected metrics content type")
+        elif content_type != "application/json":
+            raise EvidenceError("unexpected JSON content type")
+        data = response.read(MAX_RESPONSE_BYTES + 1)
+        if len(data) > MAX_RESPONSE_BYTES:
+            raise EvidenceError("response too large")
+        return data.decode("utf-8") if metrics else json.loads(data)
 
     def get(self, path: str, metrics: bool = False) -> tuple[int, Any]:
         headers = {"Accept": "text/plain" if metrics else "application/json"}
@@ -52,10 +63,7 @@ class HttpClient:
         request = urllib.request.Request(f"{self.base_url}{path}", headers=headers, method="GET")
         try:
             response = self.opener.open(request, timeout=TIMEOUT_SECONDS)
-            data = response.read(MAX_RESPONSE_BYTES + 1)
-            if len(data) > MAX_RESPONSE_BYTES:
-                raise EvidenceError("response too large")
-            return response.status, data.decode("utf-8") if metrics else json.loads(data)
+            return response.status, self._read(response, metrics=metrics)
         except (urllib.error.URLError, urllib.error.HTTPError, socket.timeout, UnicodeDecodeError, json.JSONDecodeError, EvidenceError):
             return 0, None
 
@@ -65,15 +73,12 @@ class HttpClient:
         request = urllib.request.Request(
             f"{self.base_url}{path}",
             data=json.dumps(payload).encode(),
-            headers={"Accept": "application/json", "Content-Type": "application/json", "Authorization": f"Bearer {self.token}"},
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
             method="POST",
         )
         try:
             response = self.opener.open(request, timeout=TIMEOUT_SECONDS)
-            data = response.read(MAX_RESPONSE_BYTES + 1)
-            if len(data) > MAX_RESPONSE_BYTES:
-                raise EvidenceError("response too large")
-            return response.status, json.loads(data)
+            return response.status, self._read(response, metrics=False)
         except (urllib.error.URLError, urllib.error.HTTPError, socket.timeout, UnicodeDecodeError, json.JSONDecodeError, EvidenceError):
             return 0, None
 
@@ -101,10 +106,17 @@ class EvidenceCollector:
         metrics_status, metrics = self._get("/metrics", metrics=True)
         metrics_ready = metrics_status == 200 and isinstance(metrics, str) and all(name in metrics for name in REASON_METRICS)
         diagnostic_ready = diagnostic_status == 200 and isinstance(diagnostic, dict)
+        descriptor_valid = False
+        if discovery_status == 200:
+            try:
+                validated_descriptor = TenantDiscoveryResponse.model_validate(descriptor)
+                descriptor_valid = validated_descriptor.school_id == self.school_public_id
+            except (TypeError, ValueError):
+                pass
         checks = {
             "control_health": health_status == 200 and health == {"status": "ok"},
             "school_scope": diagnostic_status == 200,
-            "stable_id_discovery": discovery_status == 200 and isinstance(descriptor, dict),
+            "stable_id_discovery": descriptor_valid,
             "release_status": release_status == 200 and isinstance(release, dict),
             "descriptor_diagnostic": diagnostic_ready,
             "descriptor_metrics_baseline": metrics_ready,

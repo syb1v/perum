@@ -572,6 +572,7 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
             await db.commit()
             raise ProvisioningError(f"update and rollback failed: {exc}; rollback: {rb}") from exc
         school.status = "active"
+        school.release_tag = from_image
         history.status = "rolled_back"
         history.error_message = str(exc)
         history.completed_at = datetime.utcnow()
