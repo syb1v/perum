@@ -58,6 +58,12 @@ generated response без ручного cast.
 nullable `date-time` и nullable class/subject names. Web typecheck и build обязаны
 подтвердить явную обработку отсутствующих metadata без возврата к ручному DTO.
 
+Teacher works contract в том же suite покрывает homework/control items, empty page,
+required nullable names/description/date strings, exact type literals и invalid/
+extra-field rejection. Curated gate фиксирует response/item refs, nullable surface
+и pagination boolean; Web typecheck/build подтверждают generated JSON cast, но не
+raw-fetch/auth/error, ordering или infinite-scroll behavior.
+
 Journal work types contract проверяется отдельно:
 
 ```bash

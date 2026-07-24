@@ -69,6 +69,12 @@ Teacher profile homework feed использует отдельный curated co
 `/api/homework`; `created_at`, `class_name` и `subject_name` required nullable,
 тогда как `description` всегда нормализован в строку.
 
+Teacher works GET `/api/teacher/works` возвращает closed `TeacherWorksOut` с
+required `works` и `has_more`. `TeacherWorkOut` требует composite string ID,
+literal `homework|control`, class/subject IDs, title и required nullable names,
+description, due/created date strings. Contract не меняет raw-fetch/auth/error,
+filters, ordering, offset pagination или infinite-scroll merge.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`
