@@ -1,5 +1,7 @@
 /* ===== TypeScript types for ПЭРУМ ===== */
 
+import type { components } from '@perum/api-schema/tenant';
+
 export type UserRole = 'student' | 'teacher' | 'admin' | 'school_admin' | 'org_admin' | 'director' | 'parent';
 
 // ==========================================
@@ -630,39 +632,11 @@ export interface LessonOccurrenceInfo {
 }
 
 /* Analytics types */
-export interface KPIStats {
-    avg_grade: number;
-    total_grades: number;
-    bad_grades: number;
-    bad_ratio: string;
-    problem_topics_count: number;
-}
-
-export interface DynamicsPoint {
-    date: string;
-    avg: number;
-}
-
-export interface ProblemTopic {
-    id?: number;
-    name: string;
-    avg: number;
-    bad_ratio: string;
-}
-
-export interface AttentionStudent {
-    id: number;
-    name: string;
-    avg: number;
-    twos: number;
-}
-
-export interface AnalyticsDashboardResponse {
-    kpi: KPIStats;
-    dynamics: DynamicsPoint[];
-    problem_topics: ProblemTopic[];
-    attention_students: AttentionStudent[];
-}
+export type KPIStats = components['schemas']['TeacherAnalyticsKpiOut'];
+export type DynamicsPoint = components['schemas']['TeacherAnalyticsDynamicsOut'];
+export type ProblemTopic = components['schemas']['TeacherAnalyticsTopicOut'];
+export type AttentionStudent = components['schemas']['TeacherAnalyticsAttentionStudentOut'];
+export type AnalyticsDashboardResponse = components['schemas']['TeacherAnalyticsDashboardOut'];
 
 export interface WorkAnalysis {
     id: number;

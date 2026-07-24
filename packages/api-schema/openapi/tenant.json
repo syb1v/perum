@@ -10831,9 +10831,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Teacher Dashboard Api Teacher Analytics Dashboard Get"
+                  "$ref": "#/components/schemas/TeacherAnalyticsDashboardOut"
                 }
               }
             }
@@ -17984,6 +17982,158 @@
           "context_id"
         ],
         "title": "SyncAssignmentsRequest"
+      },
+      "TeacherAnalyticsAttentionStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "twos": {
+            "type": "integer",
+            "title": "Twos"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "avg",
+          "twos"
+        ],
+        "title": "TeacherAnalyticsAttentionStudentOut"
+      },
+      "TeacherAnalyticsDashboardOut": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "period": {
+            "$ref": "#/components/schemas/TeacherAnalyticsPeriodOut"
+          },
+          "kpi": {
+            "$ref": "#/components/schemas/TeacherAnalyticsKpiOut"
+          },
+          "dynamics": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherAnalyticsDynamicsOut"
+            },
+            "type": "array",
+            "title": "Dynamics"
+          },
+          "problem_topics": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherAnalyticsTopicOut"
+            },
+            "type": "array",
+            "title": "Problem Topics"
+          },
+          "attention_students": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherAnalyticsAttentionStudentOut"
+            },
+            "type": "array",
+            "title": "Attention Students"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_id",
+          "class_name",
+          "period",
+          "kpi",
+          "dynamics",
+          "problem_topics",
+          "attention_students"
+        ],
+        "title": "TeacherAnalyticsDashboardOut"
+      },
+      "TeacherAnalyticsDynamicsOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "avg"
+        ],
+        "title": "TeacherAnalyticsDynamicsOut"
+      },
+      "TeacherAnalyticsKpiOut": {
+        "properties": {
+          "avg_grade": {
+            "type": "number",
+            "title": "Avg Grade"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          },
+          "bad_grades": {
+            "type": "integer",
+            "title": "Bad Grades"
+          },
+          "bad_ratio": {
+            "type": "string",
+            "title": "Bad Ratio"
+          },
+          "problem_topics_count": {
+            "type": "integer",
+            "title": "Problem Topics Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "avg_grade",
+          "total_grades",
+          "bad_grades",
+          "bad_ratio",
+          "problem_topics_count"
+        ],
+        "title": "TeacherAnalyticsKpiOut"
+      },
+      "TeacherAnalyticsPeriodOut": {
+        "properties": {
+          "start": {
+            "type": "string",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "title": "End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "TeacherAnalyticsPeriodOut"
       },
       "TeacherAnalyticsTopicOut": {
         "properties": {

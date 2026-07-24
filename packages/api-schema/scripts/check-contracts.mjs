@@ -285,6 +285,42 @@ for (const [name, fields] of [
 if (tenantOpenapi.components.schemas.TeacherAnalyticsTopicsOut.properties.topics.items?.$ref !== '#/components/schemas/TeacherAnalyticsTopicOut') {
   throw new Error('TeacherAnalyticsTopicsOut topics must contain TeacherAnalyticsTopicOut items');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/dashboard', 'get') !== '#/components/schemas/TeacherAnalyticsDashboardOut') {
+  throw new Error('GET /api/teacher/analytics/dashboard must return TeacherAnalyticsDashboardOut');
+}
+for (const [name, fields] of [
+  ['TeacherAnalyticsDashboardOut', ['class_id', 'class_name', 'period', 'kpi', 'dynamics', 'problem_topics', 'attention_students']],
+  ['TeacherAnalyticsPeriodOut', ['start', 'end']],
+  ['TeacherAnalyticsKpiOut', ['avg_grade', 'total_grades', 'bad_grades', 'bad_ratio', 'problem_topics_count']],
+  ['TeacherAnalyticsDynamicsOut', ['date', 'avg']],
+  ['TeacherAnalyticsAttentionStudentOut', ['id', 'name', 'avg', 'twos']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher analytics dashboard fields`);
+  }
+  if (schema.additionalProperties !== false || fields.some(field => schema.properties[field].anyOf?.some(variant => variant.type === 'null'))) {
+    throw new Error(`${name} must be closed with non-null fields`);
+  }
+}
+const teacherAnalyticsDashboard = tenantOpenapi.components.schemas.TeacherAnalyticsDashboardOut.properties;
+for (const [field, expectedRef] of [
+  ['period', '#/components/schemas/TeacherAnalyticsPeriodOut'],
+  ['kpi', '#/components/schemas/TeacherAnalyticsKpiOut'],
+]) {
+  if (teacherAnalyticsDashboard[field].$ref !== expectedRef) {
+    throw new Error(`TeacherAnalyticsDashboardOut ${field} ref differs from the client contract`);
+  }
+}
+for (const [field, expectedRef] of [
+  ['dynamics', '#/components/schemas/TeacherAnalyticsDynamicsOut'],
+  ['problem_topics', '#/components/schemas/TeacherAnalyticsTopicOut'],
+  ['attention_students', '#/components/schemas/TeacherAnalyticsAttentionStudentOut'],
+]) {
+  if (teacherAnalyticsDashboard[field].items?.$ref !== expectedRef) {
+    throw new Error(`TeacherAnalyticsDashboardOut ${field} item ref differs from the client contract`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
   throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
 }

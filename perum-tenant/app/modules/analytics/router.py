@@ -16,7 +16,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user, require_admin, require_teacher
 from app.models import User
 from app.modules.analytics import service
-from app.modules.analytics.schemas import TeacherAnalyticsTopicsOut
+from app.modules.analytics.schemas import TeacherAnalyticsDashboardOut, TeacherAnalyticsTopicsOut
 from app.modules.school_admin.service import resolve_school_id
 
 teacher_router = APIRouter()
@@ -25,7 +25,7 @@ admin_router = APIRouter()
 
 # ---- Teacher analytics ---------------------------------------------------
 
-@teacher_router.get("/dashboard")
+@teacher_router.get("/dashboard", response_model=TeacherAnalyticsDashboardOut)
 async def teacher_dashboard(
     class_id: int,
     subject_id: int | None = None,

@@ -5311,6 +5311,59 @@ export interface components {
              */
             class_ids: number[];
         };
+        /** TeacherAnalyticsAttentionStudentOut */
+        TeacherAnalyticsAttentionStudentOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Avg */
+            avg: number;
+            /** Twos */
+            twos: number;
+        };
+        /** TeacherAnalyticsDashboardOut */
+        TeacherAnalyticsDashboardOut: {
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string;
+            period: components["schemas"]["TeacherAnalyticsPeriodOut"];
+            kpi: components["schemas"]["TeacherAnalyticsKpiOut"];
+            /** Dynamics */
+            dynamics: components["schemas"]["TeacherAnalyticsDynamicsOut"][];
+            /** Problem Topics */
+            problem_topics: components["schemas"]["TeacherAnalyticsTopicOut"][];
+            /** Attention Students */
+            attention_students: components["schemas"]["TeacherAnalyticsAttentionStudentOut"][];
+        };
+        /** TeacherAnalyticsDynamicsOut */
+        TeacherAnalyticsDynamicsOut: {
+            /** Date */
+            date: string;
+            /** Avg */
+            avg: number;
+        };
+        /** TeacherAnalyticsKpiOut */
+        TeacherAnalyticsKpiOut: {
+            /** Avg Grade */
+            avg_grade: number;
+            /** Total Grades */
+            total_grades: number;
+            /** Bad Grades */
+            bad_grades: number;
+            /** Bad Ratio */
+            bad_ratio: string;
+            /** Problem Topics Count */
+            problem_topics_count: number;
+        };
+        /** TeacherAnalyticsPeriodOut */
+        TeacherAnalyticsPeriodOut: {
+            /** Start */
+            start: string;
+            /** End */
+            end: string;
+        };
         /** TeacherAnalyticsTopicOut */
         TeacherAnalyticsTopicOut: {
             /** Id */
@@ -12561,9 +12614,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherAnalyticsDashboardOut"];
                 };
             };
             /** @description Validation Error */
