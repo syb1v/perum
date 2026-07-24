@@ -120,6 +120,11 @@ Journal grade POST `/api/journal/grades` принимает existing `AddGradeRe
 grade/color/attendance, points, new balance и message. Optional nullable request
 fields и string `lesson_date` сохранены; receipt не добавляет version/idempotency.
 
+Journal grade DELETE `/api/journal/grades/{grade_id}` не принимает request body,
+требует integer query `version` и возвращает closed `JournalGradeDeleteOut` с
+required non-null `success` и `message`. DTO не описывает refund/transaction data;
+optimistic-lock conflict и локальный refresh lifecycle остаются отдельной границей.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

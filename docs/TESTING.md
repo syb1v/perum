@@ -132,6 +132,13 @@ missing/extra fields. Curated gate фиксирует POST `AddGradeRequest` opt
 `JournalGradeCreateOut`; Web typecheck подтверждает generated payload/receipt без
 claims о create version, delete, calculations, idempotency или offline replay.
 
+Grade delete receipt проверяется тем же focused contract suite: required non-null
+boolean `success`, string `message`, missing/null/extra-field rejection. Curated
+gate фиксирует DELETE `JournalGradeDeleteOut`, отсутствие request body и required
+integer query `version`; Web typecheck подтверждает generated response. Tenant
+unit suite, shared suites и production Web build сохраняют текущую delete/refund и
+refresh behavior, но не доказывают multi-device conflict или offline semantics.
+
 Homework read и versioned state receipt проверяются focused backend suite и
 contract gate:
 

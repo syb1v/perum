@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-24
+
+- Tenant DELETE `/api/journal/grades/{grade_id}` получил закрытый `JournalGradeDeleteOut` с required success/message receipt. `ViewGradeModal` принимает generated response, а curated gate фиксирует response binding, отсутствие request body и required integer query `version` без изменения optimistic delete, refund/transaction calculations, conflict semantics, toast/refresh lifecycle или offline flow.
+
 ## [Unreleased] — 2026-07-22
 
 - Tenant POST `/api/journal/grades` получил закрытый `JournalGradeCreateOut` с grade identity, required nullable grade/color/attendance, points/new balance/message receipt. `GradeModal` формирует generated `AddGradeRequest` и принимает generated response; curated gate сохраняет optional nullable request fields и string lesson date без изменения validation/calculations, добавления version, idempotency или offline semantics.
