@@ -77,6 +77,19 @@ Curated gate фиксирует response и nested refs, nullable class branch �
 `active`; Web typecheck/build подтверждают generated GET DTO, но не bulk-balance
 request/receipt, selection или refresh behavior.
 
+Parent analytics family проверяется focused suites:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_parent_analytics_contracts.py tests/unit/test_parent_academics.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Tests покрывают children/summary/quarter-half-year analytics/transactions,
+empty/nullable branches и closed-field rejection. Gate фиксирует shared refs для
+student и parent aliases, date-time/nullability/literals/map values; Web build
+подтверждает generated DTO без claims о diary/grades/finals или request lifecycle.
+
 Journal work types contract проверяется отдельно:
 
 ```bash

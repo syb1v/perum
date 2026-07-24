@@ -88,6 +88,13 @@ Class/student/stats имеют отдельные closed schemas; student names 
 enrollment status фиксирован literal `active`. Contract не распространяется на
 POST bulk-balance, selection или refresh lifecycle.
 
+Parent analytics read family включает GET children, child grades summary, period
+analytics и transactions. `ParentChildrenOut`/`ParentTransactionsOut` закрывают
+parent-owned projections; parent и student summary/analytics routes используют
+одни `GradesSummaryOut`/`GradesAnalyticsOut`. Period dates имеют `date-time`, map
+averages nullable, current period required nullable. Family не включает parent
+diary/grades/finals, mutations или UI request lifecycle.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`

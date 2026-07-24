@@ -157,6 +157,13 @@ class projection, student roster и aggregate stats. Homeroom page удалил 
 network DTO; nullable names, active enrollment literal и nested refs защищены
 curated gate. Bulk-balance mutation, selection UX и refresh lifecycle не менялись.
 
+Parent analytics read family теперь typed как единая boundary: initial children,
+grades summary, period analytics и transactions используют closed generated DTO.
+Student-owned summary/analytics schemas переиспользуются parent aliases, поэтому
+две role routes не могут расходиться; no-class analytics нормализован required
+`current_period=null`. Parent page удалил ручные DTO. Diary/grades/finals,
+Promise.all/Abort/rendering и любые mutations не менялись.
+
 Journal work types reference contract теперь также закрыт end-to-end:
 `JournalWorkTypesOut`/`JournalWorkTypeOut` фиксируют required non-null
 `success`, `id`, `name` и `weight`, а четыре Web journal consumer-а используют
@@ -289,7 +296,7 @@ Native Friends UI и двухступенчатый controlled rollout нахо�
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
 social/support query plans, versioned telemetry/deployment fixtures/sanitizer и
-curated Friends/Homework/preferences/push/social/support-mutation/moderation/teacher-profile-works-diary-homeroom/journal-picker/topics-lifecycle/active-periods/analytics-topics-dashboard-problem-students/occurrence/grade-detail/create/update/delete OpenAPI contracts прошли Core/Tenant full
+curated Friends/Homework/preferences/push/social/support-mutation/moderation/teacher-profile-works-diary-homeroom/journal-picker/topics-lifecycle/active-periods/analytics-topics-dashboard-problem-students/parent-analytics/occurrence/grade-detail/create/update/delete OpenAPI contracts прошли Core/Tenant full
 pytest, mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
 [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
@@ -888,7 +895,7 @@ Flow:
 
 | Приоритет | Направление | Статус | Что осталось |
 |---:|---|---|---|
-| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation/teacher-profile/works/diary/homeroom/journal picker/work-types/topics lifecycle/active-periods/analytics topics/dashboard/problem-students/occurrence/grade detail/create/update/delete contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются неиспользуемый analytics works и остальные teacher/journal/query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
+| P0 | Shared contracts | Частично | tenant-scoped mobile auth adapter, shared support-role policy, generated Friends/preferences/push/social/requester/admin-support mutation DTO, typed Homework/moderation/teacher-profile/works/diary/homeroom/journal picker/work-types/topics lifecycle/active-periods/analytics topics/dashboard/problem-students/parent analytics/occurrence/grade detail/create/update/delete contracts, Mobile social/support query plans и versioned support-delivery/school-metrics/deployment-snapshot fixtures готовы; Core ingest sanitizer сохраняет только exact aggregates. Остаются parent diary/grades/finals, student diary/grades/finals, journal aggregate, неиспользуемый analytics works и остальные live query families, дальнейшие telemetry/test-utils и curated OpenAPI contracts |
 | P0 | Tenant discovery | Частично | готовы public UUID, indexed host/UUID/org-domain discovery, release manifest, authenticated deployment snapshot, Core/Tenant schema parity, atomic Mobile descriptor persistence, API/SemVer preflight, account-scoped capability gating и 24-часовой grace. Request-time traffic lease закрывает старые account/revision/route clients при resume, switch и release transition; automated lifecycle tests, named CI gate, scoped diagnostics, sanitized metrics persistence и cross-component deployment snapshot fixture зелёные. Остаются deliberate rollback, operator Mobile ledger export и реальный one-school pilot Stage F; fixture не является Mobile telemetry evidence; детали в `DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md` |
 | P0 | React Native foundation | Частично | Expo/EAS app, Router, SecureStore, tenant discovery/login, auth bootstrap, role routing, tenant/account switcher, persisted read cache, generated preferences/push-registration DTO, Homework/messages, durable social/support read cursors и offline support ticket creation SQLite outbox, CI gates и manual EAS preview workflow готовы. Push registration status восстанавливается из server receipt; остаются расширение offline mutation coverage, одноразовая Expo project/credentials initialization и push delivery/deep links |
 | P0 | Юридические ADR | Отложено | требуется профильный владелец: minors/social/parent policy, retention, offline conflicts, ЮKassa/fiscalization, OS/store matrix; зависимые billing, parent observer policy и store rollout не начинать |

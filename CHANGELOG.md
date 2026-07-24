@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-24
 
+- Parent analytics read family типизирована end-to-end: children, grades summary, period analytics и transactions получили closed generated schemas; parent summary/analytics aliases используют те же DTO, что student owner routes. No-class analytics теперь всегда возвращает `current_period=null`; Web удалил ручные DTO без изменения diary/grades/finals, Promise.all/Abort/rendering или mutations.
 - Tenant GET `/api/teacher/my-class` получил закрытый `TeacherHomeroomOut` с assigned/unassigned branches, nullable class, student roster и aggregate stats. Homeroom page удалил ручные network DTO; curated gate фиксирует nested refs, nullable names и active enrollment literal без изменения bulk-balance mutation, selection или refresh lifecycle.
 - Tenant GET `/api/teacher/diary` получил закрытый nested `TeacherDiaryOut` с week/day map, lesson/homework/attachment/control-work projections и occurrence status/version metadata. Dashboard widget и journal schedule удалили расходящиеся ручные DTO и stale `group_name`; required nullable producer fields закреплены gate без изменения navigation, modal, cache или occurrence lifecycle.
 - Tenant GET `/api/teacher/works` получил закрытые `TeacherWorksOut`/`TeacherWorkOut` с exact homework/control literals, pagination receipt и required nullable names/description/date strings. Active works tab удалил расходящийся ручной DTO и типизирует существующий raw-fetch JSON без изменения auth/error, filters, ordering, offset pagination, infinite-scroll merge или details UI.
