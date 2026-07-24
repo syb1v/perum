@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-24
 
+- Tenant topic archive/restore endpoints получили отдельные закрытые `JournalTopicArchiveOut`/`JournalTopicRestoreOut` с exact `detail="ok"` и literal archived state. Restore path добавлен в curated manifest, Web archive использует generated receipt; soft-archive lifecycle, повторные операции, parent-subject conflict, versioning/idempotency и restore UI не менялись.
 - Tenant DELETE `/api/journal/grades/{grade_id}` получил закрытый `JournalGradeDeleteOut` с required success/message receipt. `ViewGradeModal` принимает generated response, а curated gate фиксирует response binding, отсутствие request body и required integer query `version` без изменения optimistic delete, refund/transaction calculations, conflict semantics, toast/refresh lifecycle или offline flow.
 
 ## [Unreleased] — 2026-07-22

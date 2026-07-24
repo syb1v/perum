@@ -88,6 +88,13 @@ closed. Curated gate фиксирует POST/PUT request и response refs; Web t
 подтверждает generated payload/result на management page без claims об archive,
 restore, concurrency или offline replay.
 
+Topic archive/restore receipts проверяются focused journal contract и academic
+archiving suites: exact `detail="ok"`, противоположные literal `is_archived`,
+missing/wrong/extra-field rejection, soft archive, parent-subject `409` и restore
+visibility. Curated gate защищает оба response refs, отсутствие request body и
+restore path presence; Web typecheck покрывает generated archive response, но не
+restore UI, versioning, idempotency или offline flow.
+
 Active periods contract проверяется focused common suite:
 
 ```bash

@@ -92,6 +92,13 @@ Journal topic create/update теперь также curated: POST принима
 возвращают `JournalTopicOut`. Текущие HTTP 200 и business errors сохранены;
 archive/restore receipts, versioning и idempotency не входят в этот contract.
 
+Journal topic DELETE `/api/journal/topics/{topic_id}` возвращает closed
+`JournalTopicArchiveOut` с literals `detail="ok"`, `is_archived=true`; POST
+`/api/journal/topics/{topic_id}/restore` возвращает отдельный closed
+`JournalTopicRestoreOut` с `detail="ok"`, `is_archived=false`. Оба endpoint не
+принимают body. Contracts не добавляют version/idempotency и не меняют повторные
+операции, assignment checks или `409` при архивном родительском предмете.
+
 Active periods GET `/api/periods` возвращает curated `ActivePeriodsOut`:
 `current_period` является required nullable `ActivePeriodOut`, `periods` —
 required list той же projection. Item fields `id`, `name`, `period_type`,
