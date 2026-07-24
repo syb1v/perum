@@ -112,6 +112,13 @@ Teacher analytics topics GET `/api/teacher/analytics/topics` возвращае�
 `subject_id`/`period` сохранены; dashboard/problem-students/works responses и
 report rendering не входят в этот contract.
 
+Teacher analytics dashboard GET `/api/teacher/analytics/dashboard` возвращает
+closed `TeacherAnalyticsDashboardOut`: required class ID/name, period start/end,
+closed KPI, dynamics, shared problem-topic items и attention students. Все nested
+fields required non-null, arrays могут быть пустыми. Contract сохраняет existing
+query parameters и не определяет polling/abort, chart/report rendering либо
+problem-students/works responses.
+
 Lesson occurrence PATCH принимает существующий `LessonOccurrenceUpdate` и
 возвращает curated `LessonOccurrenceUpdateOut`. Receipt всегда содержит required
 status, occurrence/date/lesson, required nullable `topic_id` и новую `version`;

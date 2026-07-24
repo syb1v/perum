@@ -121,6 +121,13 @@ missing/null/extra rejection. Curated gate фиксирует response/item refs
 schemas; Web typecheck/build подтверждают generated DTO в page/report generator,
 но не dashboard/problem-students/works, query semantics или report rendering.
 
+Тот же analytics contract suite покрывает dashboard: class/period/KPI, populated
+и empty nested lists, missing/null/extra rejection на envelope и nested schemas.
+Curated gate фиксирует dashboard response ref и exact refs period/KPI/dynamics/
+problem topics/attention students; Web typecheck/build подтверждают generated
+aliases во всех analytics components без claims о polling, charts, report output
+или problem-students/works endpoints.
+
 Lesson occurrence receipt проверяется journal contract и existing occurrence suites:
 
 ```bash
