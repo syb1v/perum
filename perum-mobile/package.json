@@ -40,7 +40,10 @@
     "validate:config": "expo config --type public",
     "preflight": "npm run typecheck && npm test && npm run validate:config",
     "export:android": "expo export --platform android --output-dir .expo/export/android",
-    "export:ios": "expo export --platform ios --output-dir .expo/export/ios"
+    "export:ios": "expo export --platform ios --output-dir .expo/export/ios",
+    "go": "./mobile.sh go",
+    "build:preview": "./mobile.sh preview",
+    "build:production": "./mobile.sh production"
   },
   "private": true
 }

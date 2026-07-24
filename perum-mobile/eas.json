@@ -7,6 +7,6 @@
       "channel": "preview",
       "environment": "preview"
     },
-    "production": {}
+    "production": { "environment": "production" }
   }
 }
