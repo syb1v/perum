@@ -58,7 +58,18 @@ def _as_date(value):
 async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: int = 0) -> dict:
     cls = await _student_class(db, school_id, user.id)
     if cls is None:
-        return {"class_id": None, "class_name": None, "diary": {}}
+        today = datetime.now().date()
+        week_start = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)
+        return {
+            "class_id": None,
+            "class_name": None,
+            "week_start": week_start.isoformat(),
+            "week_end": (week_start + timedelta(days=6)).isoformat(),
+            "week_offset": week_offset,
+            "current_period": None,
+            "week_periods": [],
+            "diary": {},
+        }
 
     today = datetime.now().date()
     week_start = today - timedelta(days=today.weekday()) + timedelta(weeks=week_offset)

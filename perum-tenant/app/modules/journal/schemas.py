@@ -208,3 +208,130 @@ class JournalGradeDeleteOut(BaseModel):
 
     success: bool
     message: str
+
+
+class JournalGridSubjectOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    category: str
+
+
+class JournalGridGradeOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    grade_value: int | None
+    points: int
+    grade_type: str
+    work_type_id: int | None
+    weight: float
+    attendance_mark: str | None
+    lesson_date: date | None
+    comment: str | None
+    color: str | None
+    topic_id: int | None
+    topic_name: str | None
+
+
+class JournalGridStudentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    first_name: str | None
+    last_name: str | None
+    patronymic: str | None
+    grades: list[JournalGridGradeOut]
+    average: float | None
+
+
+class JournalPeriodOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    period_type: str
+    target_grades: str | None
+    academic_year_id: int
+    start_date: date | None
+    end_date: date | None
+
+
+class JournalFinalGradeOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    student_id: int
+    subject_id: int
+    period_id: int | None
+    grade_value: int
+    grade_type: str
+    comment: str | None
+
+
+class JournalControlWorkOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    class_id: int
+    subject_id: int
+    work_type: str
+    title: str | None
+    work_date: datetime
+
+
+class JournalHolidayPeriodOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    start_date: date
+    end_date: date
+
+
+class JournalLessonTemplateOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    occurrence_id: int | None
+    lesson_date: date
+    lesson_number: int | None
+    topic_id: int | None
+    work_type_id: int | None
+
+
+class JournalOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    subject: JournalGridSubjectOut
+    students: list[JournalGridStudentOut]
+    dates: list[date]
+    schedule_slots: dict[str, list[int]]
+    current_period: JournalPeriodOut | None
+    available_periods: list[JournalPeriodOut]
+    final_grades: list[JournalFinalGradeOut]
+    control_works: list[JournalControlWorkOut]
+    can_set_final_grade: bool
+    holiday_periods: list[JournalHolidayPeriodOut]
+    readonly: bool
+    subgroup_name: str | None
+    lesson_templates: dict[str, JournalLessonTemplateOut]
+
+
+class JournalFinalGradeSetOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: Literal[True]
+    final_grade_id: int
+
+
+class JournalMutationSuccessOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: Literal[True]
+
+
+class JournalLessonTemplateSetOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: Literal[True]
+    updated_grades: int

@@ -4,32 +4,14 @@ import type { components } from '@perum/api-schema/tenant';
 
 type JournalWorkTypes = components['schemas']['JournalWorkTypesOut'];
 type JournalWorkType = components['schemas']['JournalWorkTypeOut'];
+type ParsingPreviewResponse = components['schemas']['ParsingPreviewResponse'];
+type ImportExecutionResponse = components['schemas']['ImportExecutionResponse'];
 
 interface Props {
     classId: number;
     subjectId: number;
     onClose: () => void;
     onSuccess: () => void;
-}
-
-interface ParsedGradeRaw {
-    student_name: string;
-    date: string;
-    acronym: string;
-    grade_value: number | null;
-    attendance_mark: string | null;
-    original_cell_text: string;
-}
-
-interface ParsingPreviewResponse {
-    subject_raw_name: string | null;
-    class_raw_name: string | null;
-    unique_acronyms: string[];
-    unique_dates: string[];
-    student_names: string[];
-    preview_grades: ParsedGradeRaw[];
-    total_grades_found: number;
-    validation_errors: string[];
 }
 
 export default function ImportJournalModal({ classId, subjectId, onClose, onSuccess }: Props) {
@@ -46,7 +28,7 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
     const [workTypes, setWorkTypes] = useState<JournalWorkType[]>([]);
     
     // Step 3 Data
-    const [execResult, setExecResult] = useState<any>(null);
+    const [execResult, setExecResult] = useState<ImportExecutionResponse | null>(null);
 
     // Debug infinite scroll
     const [debugPage, setDebugPage] = useState(1);
@@ -103,8 +85,8 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
             setMapping(emptyMap);
 
             setStep(2);
-        } catch (err: any) {
-            setError(err.message || 'Ошибка парсинга файла. Убедитесь, что это корректный PDF.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ошибка парсинга файла. Убедитесь, что это корректный PDF.');
         } finally {
             setLoading(false);
         }
@@ -120,12 +102,12 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
             formData.append('file', file);
             formData.append('mapping', JSON.stringify(mapping));
             
-            const res = await api.postFormData<any>(`/journal/import/execute/${classId}/${subjectId}`, formData);
+            const res = await api.postFormData<ImportExecutionResponse>(`/journal/import/execute/${classId}/${subjectId}`, formData);
             
             setExecResult(res);
             setStep(3);
-        } catch (err: any) {
-            setError(err.message || 'Ошибка во время импорта оценок.');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'Ошибка во время импорта оценок.');
         } finally {
             setLoading(false);
         }
@@ -327,7 +309,7 @@ export default function ImportJournalModal({ classId, subjectId, onClose, onSucc
                         {execResult.logs && execResult.logs.length > 0 && (
                             <div style={{ textAlign: 'left', background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '8px', maxHeight: '150px', overflowY: 'auto', marginBottom: '24px', fontSize: '0.85rem' }}>
                                 <h4 style={{ fontWeight: 600, marginBottom: '8px' }}>Логи и предупреждения:</h4>
-                                {execResult.logs.map((log: any, i: number) => (
+                                {execResult.logs.map((log, i) => (
                                     <div key={i} style={{ color: log.level === 'error' ? '#dc2626' : log.level === 'warning' ? '#ca8a04' : 'var(--text-secondary)', padding: '2px 0' }}>
                                         <b>[{log.student_name} {log.date}]</b> {log.message}
                                     </div>

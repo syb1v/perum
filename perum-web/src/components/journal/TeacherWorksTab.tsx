@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './TeacherWorksTab.module.css';
 import journalStyles from '../../app/teacher/journal/page.module.css';
 import type { components } from '@perum/api-schema/tenant';
+import api from '@/lib/apiClient';
 
 interface PickerOption {
     id: number;
@@ -64,10 +65,7 @@ export default function TeacherWorksTab({ classes, subjects }: TeacherWorksTabPr
 
                 const queryString = params.toString() ? `?${params.toString()}` : '';
 
-                const res = await fetch(`/api/teacher/works${queryString}`);
-                if (!res.ok) throw new Error('Ошибка загрузки работ');
-
-                const data = await res.json() as TeacherWorks;
+                const data = await api.get<TeacherWorks>(`/teacher/works${queryString}`);
 
                 setWorks(prev => page === 0 ? data.works : [...prev, ...data.works]);
                 setHasMore(data.has_more);

@@ -15,7 +15,13 @@ from app.models import User
 from app.modules.parent import service
 from app.modules.parent.schemas import ParentChildrenOut, ParentTransactionsOut
 from app.modules.school_admin.service import resolve_school_id
-from app.modules.student.schemas import GradesAnalyticsOut, GradesSummaryOut
+from app.modules.student.schemas import (
+    GradesAnalyticsOut,
+    GradesSummaryOut,
+    StudentDiaryOut,
+    StudentFinalGradesOut,
+    StudentGradesOut,
+)
 
 router = APIRouter()
 
@@ -25,7 +31,7 @@ async def children(user: User = Depends(require_parent), db: AsyncSession = Depe
     return await service.list_children(db, await resolve_school_id(user, db), user)
 
 
-@router.get("/children/{student_id}/grades")
+@router.get("/children/{student_id}/grades", response_model=StudentGradesOut)
 async def child_grades(
     student_id: int,
     subject_id: int | None = None,
@@ -35,7 +41,7 @@ async def child_grades(
     return await service.child_grades(db, await resolve_school_id(user, db), user, student_id, subject_id)
 
 
-@router.get("/children/{student_id}/diary")
+@router.get("/children/{student_id}/diary", response_model=StudentDiaryOut)
 async def child_diary(
     student_id: int,
     week_offset: int = 0,
@@ -59,7 +65,7 @@ async def child_grades_analytics(
     return await service.child_grades_analytics(db, await resolve_school_id(user, db), user, student_id)
 
 
-@router.get("/children/{student_id}/grades/finals")
+@router.get("/children/{student_id}/grades/finals", response_model=StudentFinalGradesOut)
 async def child_grades_finals(
     student_id: int, user: User = Depends(require_parent), db: AsyncSession = Depends(get_db)
 ) -> dict:

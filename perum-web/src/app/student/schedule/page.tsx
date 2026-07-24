@@ -160,7 +160,7 @@ export default function StudentSchedule() {
                                                                                  {lesson.status === 'cancelled' ? 'Отменён' : 'Завершён'}
                                                                              </span>
                                                                          )}
-                                                                         {lesson.grades?.map((g, gi) => <span key={gi} className={styles.gradeMini} style={{ backgroundColor: g.color }}>{g.value}</span>)}
+                                                                          {lesson.grades?.map((g, gi) => <span key={gi} className={styles.gradeMini} style={{ backgroundColor: g.color ?? undefined }}>{g.value}</span>)}
                                                                         {lesson.homework?.length > 0 && <span className={styles.hwIndicator}>ДЗ</span>}
                                                                     </div>
                                                                 </div>

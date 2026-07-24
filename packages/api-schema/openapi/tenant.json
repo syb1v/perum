@@ -6634,9 +6634,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Set Lesson Template Api Journal  Class Id   Subject Id  Lesson Templates  Lesson Date  Put"
+                  "$ref": "#/components/schemas/JournalLessonTemplateSetOut"
                 }
               }
             }
@@ -6715,9 +6713,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Clear Lesson Template Api Journal  Class Id   Subject Id  Lesson Templates  Lesson Date  Delete"
+                  "$ref": "#/components/schemas/JournalMutationSuccessOut"
                 }
               }
             }
@@ -7042,9 +7038,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Set Final Grade Api Journal Grades Final  Class Id   Subject Id  Post"
+                  "$ref": "#/components/schemas/JournalFinalGradeSetOut"
                 }
               }
             }
@@ -7091,9 +7085,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Final Grade Api Journal Grades Final  Final Grade Id  Delete"
+                  "$ref": "#/components/schemas/JournalMutationSuccessOut"
                 }
               }
             }
@@ -7297,9 +7289,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Journal Api Journal  Class Id   Subject Id  Get"
+                  "$ref": "#/components/schemas/JournalOut"
                 }
               }
             }
@@ -7347,9 +7337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Diary Api Student Diary Get"
+                  "$ref": "#/components/schemas/StudentDiaryOut"
                 }
               }
             }
@@ -7403,9 +7391,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Grades Api Student Grades Get"
+                  "$ref": "#/components/schemas/StudentGradesOut"
                 }
               }
             }
@@ -7488,9 +7474,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Grades Finals Api Student Grades Finals Get"
+                  "$ref": "#/components/schemas/StudentFinalGradesOut"
                 }
               }
             }
@@ -7516,7 +7500,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {},
+                  "items": {
+                    "$ref": "#/components/schemas/StudentQuestOut"
+                  },
                   "type": "array",
                   "title": "Response Quests Api Student Quests Get"
                 }
@@ -7602,9 +7588,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Grades Api Parent Children  Student Id  Grades Get"
+                  "$ref": "#/components/schemas/StudentGradesOut"
                 }
               }
             }
@@ -7661,9 +7645,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Diary Api Parent Children  Student Id  Diary Get"
+                  "$ref": "#/components/schemas/StudentDiaryOut"
                 }
               }
             }
@@ -7804,9 +7786,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Grades Finals Api Parent Children  Student Id  Grades Finals Get"
+                  "$ref": "#/components/schemas/StudentFinalGradesOut"
                 }
               }
             }
@@ -12035,9 +12015,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Bulk Balance Api Teacher My Class Bulk Balance Post"
+                  "$ref": "#/components/schemas/TeacherBulkBalanceOut"
                 }
               }
             }
@@ -14428,6 +14406,7 @@
             "title": "Logs"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "added_count",
@@ -14452,9 +14431,15 @@
           },
           "level": {
             "type": "string",
+            "enum": [
+              "info",
+              "warning",
+              "error"
+            ],
             "title": "Level"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "student_name",
@@ -14481,6 +14466,131 @@
           "amount"
         ],
         "title": "InvestRequest"
+      },
+      "JournalControlWorkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "work_type": {
+            "type": "string",
+            "title": "Work Type"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "work_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Work Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "class_id",
+          "subject_id",
+          "work_type",
+          "title",
+          "work_date"
+        ],
+        "title": "JournalControlWorkOut"
+      },
+      "JournalFinalGradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "student_id": {
+            "type": "integer",
+            "title": "Student Id"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "period_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Id"
+          },
+          "grade_value": {
+            "type": "integer",
+            "title": "Grade Value"
+          },
+          "grade_type": {
+            "type": "string",
+            "title": "Grade Type"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "student_id",
+          "subject_id",
+          "period_id",
+          "grade_value",
+          "grade_type",
+          "comment"
+        ],
+        "title": "JournalFinalGradeOut"
+      },
+      "JournalFinalGradeSetOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "title": "Success"
+          },
+          "final_grade_id": {
+            "type": "integer",
+            "title": "Final Grade Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "final_grade_id"
+        ],
+        "title": "JournalFinalGradeSetOut"
       },
       "JournalGradeCreateOut": {
         "properties": {
@@ -14858,6 +14968,531 @@
           "color"
         ],
         "title": "JournalGradeUpdateOut"
+      },
+      "JournalGridGradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "grade_value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "grade_type": {
+            "type": "string",
+            "title": "Grade Type"
+          },
+          "work_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Type Id"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "attendance_mark": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attendance Mark"
+          },
+          "lesson_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Date"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "topic_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "grade_value",
+          "points",
+          "grade_type",
+          "work_type_id",
+          "weight",
+          "attendance_mark",
+          "lesson_date",
+          "comment",
+          "color",
+          "topic_id",
+          "topic_name"
+        ],
+        "title": "JournalGridGradeOut"
+      },
+      "JournalGridStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "patronymic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patronymic"
+          },
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/JournalGridGradeOut"
+            },
+            "type": "array",
+            "title": "Grades"
+          },
+          "average": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "patronymic",
+          "grades",
+          "average"
+        ],
+        "title": "JournalGridStudentOut"
+      },
+      "JournalGridSubjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "category"
+        ],
+        "title": "JournalGridSubjectOut"
+      },
+      "JournalHolidayPeriodOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "JournalHolidayPeriodOut"
+      },
+      "JournalLessonTemplateOut": {
+        "properties": {
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "lesson_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Lesson Date"
+          },
+          "lesson_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lesson Number"
+          },
+          "topic_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic Id"
+          },
+          "work_type_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Type Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "occurrence_id",
+          "lesson_date",
+          "lesson_number",
+          "topic_id",
+          "work_type_id"
+        ],
+        "title": "JournalLessonTemplateOut"
+      },
+      "JournalLessonTemplateSetOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "title": "Success"
+          },
+          "updated_grades": {
+            "type": "integer",
+            "title": "Updated Grades"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "updated_grades"
+        ],
+        "title": "JournalLessonTemplateSetOut"
+      },
+      "JournalMutationSuccessOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "title": "Success"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success"
+        ],
+        "title": "JournalMutationSuccessOut"
+      },
+      "JournalOut": {
+        "properties": {
+          "subject": {
+            "$ref": "#/components/schemas/JournalGridSubjectOut"
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/JournalGridStudentOut"
+            },
+            "type": "array",
+            "title": "Students"
+          },
+          "dates": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Dates"
+          },
+          "schedule_slots": {
+            "additionalProperties": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Schedule Slots"
+          },
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JournalPeriodOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available_periods": {
+            "items": {
+              "$ref": "#/components/schemas/JournalPeriodOut"
+            },
+            "type": "array",
+            "title": "Available Periods"
+          },
+          "final_grades": {
+            "items": {
+              "$ref": "#/components/schemas/JournalFinalGradeOut"
+            },
+            "type": "array",
+            "title": "Final Grades"
+          },
+          "control_works": {
+            "items": {
+              "$ref": "#/components/schemas/JournalControlWorkOut"
+            },
+            "type": "array",
+            "title": "Control Works"
+          },
+          "can_set_final_grade": {
+            "type": "boolean",
+            "title": "Can Set Final Grade"
+          },
+          "holiday_periods": {
+            "items": {
+              "$ref": "#/components/schemas/JournalHolidayPeriodOut"
+            },
+            "type": "array",
+            "title": "Holiday Periods"
+          },
+          "readonly": {
+            "type": "boolean",
+            "title": "Readonly"
+          },
+          "subgroup_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subgroup Name"
+          },
+          "lesson_templates": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JournalLessonTemplateOut"
+            },
+            "type": "object",
+            "title": "Lesson Templates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject",
+          "students",
+          "dates",
+          "schedule_slots",
+          "current_period",
+          "available_periods",
+          "final_grades",
+          "control_works",
+          "can_set_final_grade",
+          "holiday_periods",
+          "readonly",
+          "subgroup_name",
+          "lesson_templates"
+        ],
+        "title": "JournalOut"
+      },
+      "JournalPeriodOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "period_type": {
+            "type": "string",
+            "title": "Period Type"
+          },
+          "target_grades": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Grades"
+          },
+          "academic_year_id": {
+            "type": "integer",
+            "title": "Academic Year Id"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "period_type",
+          "target_grades",
+          "academic_year_id",
+          "start_date",
+          "end_date"
+        ],
+        "title": "JournalPeriodOut"
       },
       "JournalTeacherClassOut": {
         "properties": {
@@ -16653,6 +17288,7 @@
             "title": "Original Cell Text"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "student_name",
@@ -16723,10 +17359,10 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Validation Errors",
-            "default": []
+            "title": "Validation Errors"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "unique_acronyms",
@@ -18107,6 +18743,750 @@
         "type": "object",
         "title": "ShopItemPayload"
       },
+      "StudentDiaryControlWorkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "work_type": {
+            "type": "string",
+            "title": "Work Type"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "work_type",
+          "title"
+        ],
+        "title": "StudentDiaryControlWorkOut"
+      },
+      "StudentDiaryDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "day_name": {
+            "type": "string",
+            "title": "Day Name"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDiaryLessonOut"
+            },
+            "type": "array",
+            "title": "Lessons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "day_name",
+          "is_today",
+          "lessons"
+        ],
+        "title": "StudentDiaryDayOut"
+      },
+      "StudentDiaryGradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "value",
+          "points",
+          "weight",
+          "type",
+          "comment",
+          "color",
+          "topic"
+        ],
+        "title": "StudentDiaryGradeOut"
+      },
+      "StudentDiaryHomeworkAttachmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "url_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Link"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "url_link"
+        ],
+        "title": "StudentDiaryHomeworkAttachmentOut"
+      },
+      "StudentDiaryHomeworkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "deadline_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline At"
+          },
+          "is_overdue": {
+            "type": "boolean",
+            "title": "Is Overdue"
+          },
+          "student_state": {
+            "$ref": "#/components/schemas/StudentDiaryHomeworkStateOut"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDiaryHomeworkAttachmentOut"
+            },
+            "type": "array",
+            "title": "Attachments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "due_date",
+          "deadline_at",
+          "is_overdue",
+          "student_state",
+          "attachments"
+        ],
+        "title": "StudentDiaryHomeworkOut"
+      },
+      "StudentDiaryHomeworkStateOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "completed_at"
+        ],
+        "title": "StudentDiaryHomeworkStateOut"
+      },
+      "StudentDiaryLessonOut": {
+        "properties": {
+          "lesson_number": {
+            "type": "integer",
+            "title": "Lesson Number"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "teacher_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Name"
+          },
+          "start_time": {
+            "type": "string",
+            "title": "Start Time"
+          },
+          "end_time": {
+            "type": "string",
+            "title": "End Time"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDiaryGradeOut"
+            },
+            "type": "array",
+            "title": "Grades"
+          },
+          "homework": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDiaryHomeworkOut"
+            },
+            "type": "array",
+            "title": "Homework"
+          },
+          "control_work": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudentDiaryControlWorkOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "group_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesson_number",
+          "subject_id",
+          "subject_name",
+          "teacher_name",
+          "start_time",
+          "end_time",
+          "room",
+          "grades",
+          "homework",
+          "control_work",
+          "occurrence_id",
+          "status"
+        ],
+        "title": "StudentDiaryLessonOut"
+      },
+      "StudentDiaryOut": {
+        "properties": {
+          "class_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "week_offset": {
+            "type": "integer",
+            "title": "Week Offset"
+          },
+          "current_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StudentDiaryPeriodOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "week_periods": {
+            "items": {
+              "$ref": "#/components/schemas/StudentDiaryPeriodOut"
+            },
+            "type": "array",
+            "title": "Week Periods"
+          },
+          "diary": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/StudentDiaryDayOut"
+            },
+            "type": "object",
+            "title": "Diary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_id",
+          "class_name",
+          "week_start",
+          "week_end",
+          "week_offset",
+          "current_period",
+          "week_periods",
+          "diary"
+        ],
+        "title": "StudentDiaryOut"
+      },
+      "StudentDiaryPeriodOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "period_type": {
+            "type": "string",
+            "title": "Period Type"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "period_type",
+          "start_date",
+          "end_date"
+        ],
+        "title": "StudentDiaryPeriodOut"
+      },
+      "StudentFinalGradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "period_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Id"
+          },
+          "period_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Name"
+          },
+          "grade_value": {
+            "type": "integer",
+            "title": "Grade Value"
+          },
+          "grade_type": {
+            "type": "string",
+            "title": "Grade Type"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "subject_id",
+          "subject_name",
+          "period_id",
+          "period_name",
+          "grade_value",
+          "grade_type",
+          "comment",
+          "color"
+        ],
+        "title": "StudentFinalGradeOut"
+      },
+      "StudentFinalGradesOut": {
+        "properties": {
+          "final_grades": {
+            "items": {
+              "$ref": "#/components/schemas/StudentFinalGradeOut"
+            },
+            "type": "array",
+            "title": "Final Grades"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "final_grades"
+        ],
+        "title": "StudentFinalGradesOut"
+      },
+      "StudentGradeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "value",
+          "points",
+          "weight",
+          "date",
+          "type",
+          "comment",
+          "subject_id",
+          "subject_name",
+          "color",
+          "topic"
+        ],
+        "title": "StudentGradeOut"
+      },
+      "StudentGradesOut": {
+        "properties": {
+          "grades": {
+            "items": {
+              "$ref": "#/components/schemas/StudentGradeOut"
+            },
+            "type": "array",
+            "title": "Grades"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "grades"
+        ],
+        "title": "StudentGradesOut"
+      },
       "StudentPage": {
         "properties": {
           "items": {
@@ -18169,6 +19549,80 @@
           "class_name"
         ],
         "title": "StudentProfile"
+      },
+      "StudentQuestOut": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "quest_id": {
+            "type": "integer",
+            "title": "Quest Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reward": {
+            "type": "integer",
+            "title": "Reward"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "target": {
+            "type": "integer",
+            "title": "Target"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "available",
+              "completed",
+              "ready"
+            ],
+            "title": "Status"
+          },
+          "reward_claimed": {
+            "type": "boolean",
+            "title": "Reward Claimed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "quest_id",
+          "title",
+          "description",
+          "reward",
+          "progress",
+          "target",
+          "status",
+          "reward_claimed"
+        ],
+        "title": "StudentQuestOut"
       },
       "SubjectCreate": {
         "properties": {
@@ -18609,6 +20063,20 @@
           "topics"
         ],
         "title": "TeacherAnalyticsTopicsOut"
+      },
+      "TeacherBulkBalanceOut": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "TeacherBulkBalanceOut"
       },
       "TeacherClassOut": {
         "properties": {

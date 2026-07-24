@@ -15,7 +15,14 @@ from app.models import User
 from app.modules.quests import service as quests_service
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.student import service
-from app.modules.student.schemas import GradesAnalyticsOut, GradesSummaryOut
+from app.modules.student.schemas import (
+    GradesAnalyticsOut,
+    GradesSummaryOut,
+    StudentDiaryOut,
+    StudentFinalGradesOut,
+    StudentGradesOut,
+    StudentQuestOut,
+)
 
 router = APIRouter()
 
@@ -24,7 +31,7 @@ async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
 
 
-@router.get("/diary")
+@router.get("/diary", response_model=StudentDiaryOut)
 async def diary(
     week_offset: int = 0,
     user: User = Depends(require_student),
@@ -33,7 +40,7 @@ async def diary(
     return await service.get_diary(db, await _school(user, db), user, week_offset)
 
 
-@router.get("/grades")
+@router.get("/grades", response_model=StudentGradesOut)
 async def grades(
     subject_id: int | None = None,
     user: User = Depends(require_student),
@@ -56,13 +63,13 @@ async def grades_analytics(
     return await service.get_analytics(db, await _school(user, db), user)
 
 
-@router.get("/grades/finals")
+@router.get("/grades/finals", response_model=StudentFinalGradesOut)
 async def grades_finals(
     user: User = Depends(require_student), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await service.get_finals(db, await _school(user, db), user)
 
 
-@router.get("/quests")
+@router.get("/quests", response_model=list[StudentQuestOut])
 async def quests(user: User = Depends(require_student), db: AsyncSession = Depends(get_db)) -> list:
     return await quests_service.get_student_quests(db, await _school(user, db), user)

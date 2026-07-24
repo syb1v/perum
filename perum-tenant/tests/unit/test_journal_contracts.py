@@ -13,6 +13,10 @@ from app.modules.journal.schemas import (
     JournalGradeDeleteOut,
     JournalGradeUpdateOut,
     LessonOccurrenceUpdateOut,
+    JournalFinalGradeSetOut,
+    JournalLessonTemplateSetOut,
+    JournalMutationSuccessOut,
+    JournalOut,
     TopicCreate,
     TopicUpdate,
 )
@@ -420,3 +424,41 @@ def test_journal_grade_delete_receipt_is_closed() -> None:
     ]:
         with pytest.raises(ValidationError):
             JournalGradeDeleteOut.model_validate(payload)
+
+
+def test_journal_grid_contract_accepts_exact_empty_aggregate() -> None:
+    response = JournalOut.model_validate(
+        {
+            "subject": {"id": 1, "name": "Math", "category": "normal"},
+            "students": [],
+            "dates": [],
+            "schedule_slots": {},
+            "current_period": None,
+            "available_periods": [],
+            "final_grades": [],
+            "control_works": [],
+            "can_set_final_grade": False,
+            "holiday_periods": [],
+            "readonly": True,
+            "subgroup_name": None,
+            "lesson_templates": {},
+        }
+    )
+
+    assert response.readonly is True
+    with pytest.raises(ValidationError):
+        JournalOut.model_validate({**response.model_dump(), "class_name": "7A"})
+
+
+def test_journal_mutation_receipts_are_closed() -> None:
+    assert JournalFinalGradeSetOut.model_validate({"success": True, "final_grade_id": 3}).final_grade_id == 3
+    assert JournalLessonTemplateSetOut.model_validate({"success": True, "updated_grades": 2}).updated_grades == 2
+    assert JournalMutationSuccessOut.model_validate({"success": True}).success is True
+
+    for schema, payload in [
+        (JournalFinalGradeSetOut, {"success": True, "final_grade_id": 3, "student_id": 4}),
+        (JournalLessonTemplateSetOut, {"success": True}),
+        (JournalMutationSuccessOut, {"success": True, "message": "ok"}),
+    ]:
+        with pytest.raises(ValidationError):
+            schema.model_validate(payload)

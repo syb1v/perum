@@ -4157,8 +4157,11 @@ export interface components {
             date: string;
             /** Message */
             message: string;
-            /** Level */
-            level: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "info" | "warning" | "error";
         };
         /** InvestRequest */
         InvestRequest: {
@@ -4166,6 +4169,51 @@ export interface components {
             subject_id: number;
             /** Amount */
             amount: number;
+        };
+        /** JournalControlWorkOut */
+        JournalControlWorkOut: {
+            /** Id */
+            id: number;
+            /** Class Id */
+            class_id: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Work Type */
+            work_type: string;
+            /** Title */
+            title: string | null;
+            /**
+             * Work Date
+             * Format: date-time
+             */
+            work_date: string;
+        };
+        /** JournalFinalGradeOut */
+        JournalFinalGradeOut: {
+            /** Id */
+            id: number;
+            /** Student Id */
+            student_id: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Period Id */
+            period_id: number | null;
+            /** Grade Value */
+            grade_value: number;
+            /** Grade Type */
+            grade_type: string;
+            /** Comment */
+            comment: string | null;
+        };
+        /** JournalFinalGradeSetOut */
+        JournalFinalGradeSetOut: {
+            /**
+             * Success
+             * @constant
+             */
+            success: true;
+            /** Final Grade Id */
+            final_grade_id: number;
         };
         /** JournalGradeCreateOut */
         JournalGradeCreateOut: {
@@ -4260,6 +4308,154 @@ export interface components {
             new_balance: number;
             /** Color */
             color: string | null;
+        };
+        /** JournalGridGradeOut */
+        JournalGridGradeOut: {
+            /** Id */
+            id: number;
+            /** Grade Value */
+            grade_value: number | null;
+            /** Points */
+            points: number;
+            /** Grade Type */
+            grade_type: string;
+            /** Work Type Id */
+            work_type_id: number | null;
+            /** Weight */
+            weight: number;
+            /** Attendance Mark */
+            attendance_mark: string | null;
+            /** Lesson Date */
+            lesson_date: string | null;
+            /** Comment */
+            comment: string | null;
+            /** Color */
+            color: string | null;
+            /** Topic Id */
+            topic_id: number | null;
+            /** Topic Name */
+            topic_name: string | null;
+        };
+        /** JournalGridStudentOut */
+        JournalGridStudentOut: {
+            /** Id */
+            id: number;
+            /** First Name */
+            first_name: string | null;
+            /** Last Name */
+            last_name: string | null;
+            /** Patronymic */
+            patronymic: string | null;
+            /** Grades */
+            grades: components["schemas"]["JournalGridGradeOut"][];
+            /** Average */
+            average: number | null;
+        };
+        /** JournalGridSubjectOut */
+        JournalGridSubjectOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+        };
+        /** JournalHolidayPeriodOut */
+        JournalHolidayPeriodOut: {
+            /** Name */
+            name: string;
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date
+             */
+            end_date: string;
+        };
+        /** JournalLessonTemplateOut */
+        JournalLessonTemplateOut: {
+            /** Occurrence Id */
+            occurrence_id: number | null;
+            /**
+             * Lesson Date
+             * Format: date
+             */
+            lesson_date: string;
+            /** Lesson Number */
+            lesson_number: number | null;
+            /** Topic Id */
+            topic_id: number | null;
+            /** Work Type Id */
+            work_type_id: number | null;
+        };
+        /** JournalLessonTemplateSetOut */
+        JournalLessonTemplateSetOut: {
+            /**
+             * Success
+             * @constant
+             */
+            success: true;
+            /** Updated Grades */
+            updated_grades: number;
+        };
+        /** JournalMutationSuccessOut */
+        JournalMutationSuccessOut: {
+            /**
+             * Success
+             * @constant
+             */
+            success: true;
+        };
+        /** JournalOut */
+        JournalOut: {
+            subject: components["schemas"]["JournalGridSubjectOut"];
+            /** Students */
+            students: components["schemas"]["JournalGridStudentOut"][];
+            /** Dates */
+            dates: string[];
+            /** Schedule Slots */
+            schedule_slots: {
+                [key: string]: number[];
+            };
+            current_period: components["schemas"]["JournalPeriodOut"] | null;
+            /** Available Periods */
+            available_periods: components["schemas"]["JournalPeriodOut"][];
+            /** Final Grades */
+            final_grades: components["schemas"]["JournalFinalGradeOut"][];
+            /** Control Works */
+            control_works: components["schemas"]["JournalControlWorkOut"][];
+            /** Can Set Final Grade */
+            can_set_final_grade: boolean;
+            /** Holiday Periods */
+            holiday_periods: components["schemas"]["JournalHolidayPeriodOut"][];
+            /** Readonly */
+            readonly: boolean;
+            /** Subgroup Name */
+            subgroup_name: string | null;
+            /** Lesson Templates */
+            lesson_templates: {
+                [key: string]: components["schemas"]["JournalLessonTemplateOut"];
+            };
+        };
+        /** JournalPeriodOut */
+        JournalPeriodOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Period Type */
+            period_type: string;
+            /** Target Grades */
+            target_grades: string | null;
+            /** Academic Year Id */
+            academic_year_id: number;
+            /** Start Date */
+            start_date: string | null;
+            /** End Date */
+            end_date: string | null;
         };
         /** JournalTeacherClassOut */
         JournalTeacherClassOut: {
@@ -4866,11 +5062,8 @@ export interface components {
             preview_grades: components["schemas"]["ParsedGradeRaw"][];
             /** Total Grades Found */
             total_grades_found: number;
-            /**
-             * Validation Errors
-             * @default []
-             */
-            validation_errors: string[];
+            /** Validation Errors */
+            validation_errors?: string[];
         };
         /** PreferencesPatch */
         PreferencesPatch: {
@@ -5319,6 +5512,219 @@ export interface components {
             /** Upgrade Bundle Id */
             upgrade_bundle_id?: number | null;
         };
+        /** StudentDiaryControlWorkOut */
+        StudentDiaryControlWorkOut: {
+            /** Id */
+            id: number;
+            /** Work Type */
+            work_type: string;
+            /** Title */
+            title: string | null;
+        };
+        /** StudentDiaryDayOut */
+        StudentDiaryDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Day Name */
+            day_name: string;
+            /** Is Today */
+            is_today: boolean;
+            /** Lessons */
+            lessons: components["schemas"]["StudentDiaryLessonOut"][];
+        };
+        /** StudentDiaryGradeOut */
+        StudentDiaryGradeOut: {
+            /** Id */
+            id: number;
+            /** Value */
+            value: number | null;
+            /** Points */
+            points: number;
+            /** Weight */
+            weight: number;
+            /** Type */
+            type: string;
+            /** Comment */
+            comment: string | null;
+            /** Color */
+            color: string | null;
+            /** Topic */
+            topic: string | null;
+        };
+        /** StudentDiaryHomeworkAttachmentOut */
+        StudentDiaryHomeworkAttachmentOut: {
+            /** Id */
+            id: number;
+            /** Filename */
+            filename: string | null;
+            /** Url Link */
+            url_link: string | null;
+        };
+        /** StudentDiaryHomeworkOut */
+        StudentDiaryHomeworkOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** Deadline At */
+            deadline_at: string | null;
+            /** Is Overdue */
+            is_overdue: boolean;
+            student_state: components["schemas"]["StudentDiaryHomeworkStateOut"];
+            /** Attachments */
+            attachments: components["schemas"]["StudentDiaryHomeworkAttachmentOut"][];
+        };
+        /** StudentDiaryHomeworkStateOut */
+        StudentDiaryHomeworkStateOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "in_progress" | "completed";
+            /** Version */
+            version: number;
+            /** Completed At */
+            completed_at: string | null;
+        };
+        /** StudentDiaryLessonOut */
+        StudentDiaryLessonOut: {
+            /** Lesson Number */
+            lesson_number: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Teacher Name */
+            teacher_name: string | null;
+            /** Start Time */
+            start_time: string;
+            /** End Time */
+            end_time: string;
+            /** Room */
+            room: string | null;
+            /** Grades */
+            grades: components["schemas"]["StudentDiaryGradeOut"][];
+            /** Homework */
+            homework: components["schemas"]["StudentDiaryHomeworkOut"][];
+            control_work: components["schemas"]["StudentDiaryControlWorkOut"] | null;
+            /** Occurrence Id */
+            occurrence_id: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "cancelled" | "completed";
+            /** Group Name */
+            group_name?: string | null;
+        };
+        /** StudentDiaryOut */
+        StudentDiaryOut: {
+            /** Class Id */
+            class_id: number | null;
+            /** Class Name */
+            class_name: string | null;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /** Week Offset */
+            week_offset: number;
+            current_period: components["schemas"]["StudentDiaryPeriodOut"] | null;
+            /** Week Periods */
+            week_periods: components["schemas"]["StudentDiaryPeriodOut"][];
+            /** Diary */
+            diary: {
+                [key: string]: components["schemas"]["StudentDiaryDayOut"];
+            };
+        };
+        /** StudentDiaryPeriodOut */
+        StudentDiaryPeriodOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Period Type */
+            period_type: string;
+            /**
+             * Start Date
+             * Format: date-time
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date-time
+             */
+            end_date: string;
+        };
+        /** StudentFinalGradeOut */
+        StudentFinalGradeOut: {
+            /** Id */
+            id: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Period Id */
+            period_id: number | null;
+            /** Period Name */
+            period_name: string | null;
+            /** Grade Value */
+            grade_value: number;
+            /** Grade Type */
+            grade_type: string;
+            /** Comment */
+            comment: string | null;
+            /** Color */
+            color: string | null;
+        };
+        /** StudentFinalGradesOut */
+        StudentFinalGradesOut: {
+            /** Final Grades */
+            final_grades: components["schemas"]["StudentFinalGradeOut"][];
+        };
+        /** StudentGradeOut */
+        StudentGradeOut: {
+            /** Id */
+            id: number;
+            /** Value */
+            value: number | null;
+            /** Points */
+            points: number;
+            /** Weight */
+            weight: number;
+            /** Date */
+            date: string | null;
+            /** Type */
+            type: string;
+            /** Comment */
+            comment: string | null;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Color */
+            color: string | null;
+            /** Topic */
+            topic: string | null;
+        };
+        /** StudentGradesOut */
+        StudentGradesOut: {
+            /** Grades */
+            grades: components["schemas"]["StudentGradeOut"][];
+        };
         /** StudentPage */
         StudentPage: {
             /** Items */
@@ -5336,6 +5742,30 @@ export interface components {
             avatar: string | null;
             /** Class Name */
             class_name: string;
+        };
+        /** StudentQuestOut */
+        StudentQuestOut: {
+            /** Id */
+            id: number | null;
+            /** Quest Id */
+            quest_id: number;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Reward */
+            reward: number;
+            /** Progress */
+            progress: number;
+            /** Target */
+            target: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "available" | "completed" | "ready";
+            /** Reward Claimed */
+            reward_claimed: boolean;
         };
         /** SubjectCreate */
         SubjectCreate: {
@@ -5528,6 +5958,11 @@ export interface components {
             class_avg: number;
             /** Topics */
             topics: components["schemas"]["TeacherAnalyticsTopicOut"][];
+        };
+        /** TeacherBulkBalanceOut */
+        TeacherBulkBalanceOut: {
+            /** Message */
+            message: string;
         };
         /** TeacherClassOut */
         TeacherClassOut: {
@@ -10366,9 +10801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalLessonTemplateSetOut"];
                 };
             };
             /** @description Validation Error */
@@ -10403,9 +10836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalMutationSuccessOut"];
                 };
             };
             /** @description Validation Error */
@@ -10608,9 +11039,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalFinalGradeSetOut"];
                 };
             };
             /** @description Validation Error */
@@ -10641,9 +11070,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalMutationSuccessOut"];
                 };
             };
             /** @description Validation Error */
@@ -10749,9 +11176,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalOut"];
                 };
             };
             /** @description Validation Error */
@@ -10782,9 +11207,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentDiaryOut"];
                 };
             };
             /** @description Validation Error */
@@ -10815,9 +11238,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentGradesOut"];
                 };
             };
             /** @description Validation Error */
@@ -10886,9 +11307,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentFinalGradesOut"];
                 };
             };
         };
@@ -10908,7 +11327,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown[];
+                    "application/json": components["schemas"]["StudentQuestOut"][];
                 };
             };
         };
@@ -10952,9 +11371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentGradesOut"];
                 };
             };
             /** @description Validation Error */
@@ -10987,9 +11404,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentDiaryOut"];
                 };
             };
             /** @description Validation Error */
@@ -11082,9 +11497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["StudentFinalGradesOut"];
                 };
             };
             /** @description Validation Error */
@@ -13713,9 +14126,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherBulkBalanceOut"];
                 };
             };
             /** @description Validation Error */

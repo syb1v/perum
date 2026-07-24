@@ -160,3 +160,9 @@ class TeacherHomeroomOut(BaseModel):
     class_: TeacherHomeroomClassOut | None = Field(alias="class", serialization_alias="class")
     students: list[TeacherHomeroomStudentOut]
     stats: TeacherHomeroomStatsOut
+
+
+class TeacherBulkBalanceOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str

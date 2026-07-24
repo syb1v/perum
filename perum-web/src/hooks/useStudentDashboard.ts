@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/apiClient';
-import type { Quest, Subject, LeaderboardEntry, LeaderboardResponse } from '@/types';
+import type { Subject, LeaderboardEntry, LeaderboardResponse } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
 export type MainTab = 'main' | 'news';
 export type QuestTab = 'active' | 'available' | 'completed';
+type Quest = components['schemas']['StudentQuestOut'];
 
 export function useStudentDashboard() {
     const { user, refreshUser } = useAuth();

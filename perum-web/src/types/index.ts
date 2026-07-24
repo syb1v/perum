@@ -564,13 +564,7 @@ export interface ControlWork {
     work_date: string;
 }
 
-export interface JournalStudent {
-    id: number;
-    first_name: string;
-    last_name: string;
-    average: number;
-    grades: Grade[];
-}
+export type JournalStudent = components['schemas']['JournalGridStudentOut'];
 
 export interface PeriodInfo {
     id: number;
@@ -588,28 +582,7 @@ export interface HolidayPeriod {
     end_date: string;
 }
 
-export interface JournalData {
-    students: JournalStudent[];
-    dates?: string[];
-    schedule_slots?: Record<string, number[]>;
-    subject: Subject;
-    class_name: string;
-    current_period?: PeriodInfo | null;
-    available_periods?: PeriodInfo[];
-    final_grades?: FinalGrade[];
-    control_works?: ControlWork[];
-    can_set_final_grade?: boolean;
-    holiday_periods?: HolidayPeriod[];
-    readonly?: boolean;
-    subgroup_name?: string | null;
-    lesson_templates?: Record<string, {
-        occurrence_id: number | null;
-        lesson_date: string;
-        lesson_number: number | null;
-        topic_id: number | null;
-        work_type_id: number | null;
-    }>;
-}
+export type JournalData = components['schemas']['JournalOut'];
 
 export type LessonOccurrenceStatus = 'scheduled' | 'cancelled' | 'completed';
 

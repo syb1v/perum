@@ -233,7 +233,7 @@ export default function TeacherGradesTab({
                 )}
             </JournalControls>
 
-            {journal?.current_period && (
+            {journal?.current_period?.start_date && journal.current_period.end_date && (
                 <div style={{
                     backgroundColor: 'var(--bg-tertiary)',
                     padding: '12px 16px',
@@ -346,7 +346,7 @@ export default function TeacherGradesTab({
                                         gradesByDate[d].push(g);
                                     });
 
-                                    const avg = student.average;
+                                    const avg = student.average ?? 0;
                                     const avgClass =
                                         avg >= 4.5 ? styles.avgExcellent :
                                             avg >= 3.5 ? styles.avgGood :
@@ -388,12 +388,12 @@ export default function TeacherGradesTab({
                                                                 key={g.id}
                                                                 className={`${styles.gradeValue} ${g.attendance_mark
                                                                     ? styles.attendanceMark
-                                                                    : (styles['grade' + (g.grade_value || g.value)] || '')
+                                                                    : (styles['grade' + g.grade_value] || '')
                                                                     }`}
                                                                 style={{
                                                                     backgroundColor: g.attendance_mark
                                                                         ? (g.attendance_mark === 'НП' || g.attendance_mark === 'точка' ? '#fee2e2' : g.attendance_mark === 'УП' ? '#dcfce7' : '#dbeafe')
-                                                                        : (!styles['grade' + (g.grade_value || g.value)] ? (g.color || '#ccc') : undefined),
+                                                                        : (!styles['grade' + g.grade_value] ? (g.color || '#ccc') : undefined),
                                                                     color: g.attendance_mark
                                                                         ? (g.attendance_mark === 'НП' || g.attendance_mark === 'точка' ? '#dc2626' : g.attendance_mark === 'УП' ? '#16a34a' : '#2563eb')
                                                                         : undefined,
@@ -410,7 +410,7 @@ export default function TeacherGradesTab({
                                                                     }
                                                                 }}
                                                             >
-                                                                {g.attendance_mark === 'точка' ? '•' : (g.attendance_mark || g.grade_value || g.value)}
+                                                                {g.attendance_mark === 'точка' ? '•' : (g.attendance_mark || g.grade_value)}
                                                             </span>
                                                         ))}
                                                         {!isHoliday && !journal?.readonly && (

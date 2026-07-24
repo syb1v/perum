@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/apiClient';
-import type { DiaryResponse, FinalGrade, GradesResponse } from '@/types';
 import type { components } from '@perum/api-schema/tenant';
 import styles from './parent.module.css';
 
@@ -12,12 +11,15 @@ type Child = components['schemas']['ParentChildOut'];
 type Analytics = components['schemas']['GradesAnalyticsOut'];
 type GradesSummary = components['schemas']['GradesSummaryOut'];
 type ParentTransactions = components['schemas']['ParentTransactionsOut'];
+type DiaryResponse = components['schemas']['StudentDiaryOut'];
+type GradesResponse = components['schemas']['StudentGradesOut'];
+type FinalGradesResponse = components['schemas']['StudentFinalGradesOut'];
 
 type Tab = 'diary' | 'grades' | 'finals' | 'analytics';
 type ChildData = {
     diary?: DiaryResponse;
     grades?: GradesResponse;
-    finals?: { final_grades: (FinalGrade & { subject_name: string; period_name: string | null })[] };
+    finals?: FinalGradesResponse;
     analytics?: Analytics;
     summary?: GradesSummary;
     transactions?: ParentTransactions;

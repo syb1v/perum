@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import styles from '../../app/teacher/journal/page.module.css';
 import api from '@/lib/apiClient';
-import type { JournalStudent, PeriodInfo } from '@/types';
+import type { JournalStudent } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
+
+type PeriodInfo = components['schemas']['JournalPeriodOut'];
 
 interface SubjectOption {
     id: number;
@@ -96,7 +99,7 @@ export default function FinalGradeModal({
 
                 <div className={styles.studentInfo}>
                     <div className={styles.studentAvatar}>
-                        {student.first_name[0]}{student.last_name[0]}
+                        {student.first_name?.[0]}{student.last_name?.[0]}
                     </div>
                     <div>
                         <div className={styles.studentName}>{student.last_name} {student.first_name}</div>

@@ -307,7 +307,7 @@ export default function TeacherLessonModal({
                                                         }}
                                                         onClick={() => !readonlyGrades && setViewGradeId(g.id)}
                                                     >
-                                                        {g.attendance_mark === 'точка' ? '•' : (g.attendance_mark || g.grade_value || g.value)}
+                                                        {g.attendance_mark === 'точка' ? '•' : (g.attendance_mark || g.grade_value)}
                                                         {g.weight && g.weight !== 1.0 && !g.attendance_mark && (
                                                             <span style={{ fontSize: '0.65rem', marginLeft: '2px', opacity: 0.8 }}>
                                                                 (x{g.weight})

@@ -11,7 +11,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.teacher import service
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherDiaryOut, TeacherHomeroomOut, TeacherHomeworkListOut, TeacherWorksOut
+from app.modules.teacher.schemas import TeacherBulkBalanceOut, TeacherClassesOut, TeacherDiaryOut, TeacherHomeroomOut, TeacherHomeworkListOut, TeacherWorksOut
 
 router = APIRouter()
 
@@ -57,7 +57,7 @@ class BulkBalancePayload(BaseModel):
     comment: str | None = Field(default=None, max_length=255)
 
 
-@router.post("/my-class/bulk-balance")
+@router.post("/my-class/bulk-balance", response_model=TeacherBulkBalanceOut)
 async def bulk_balance(
     payload: BulkBalancePayload,
     user: User = Depends(require_teacher),

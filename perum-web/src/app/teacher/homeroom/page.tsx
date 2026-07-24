@@ -58,7 +58,7 @@ export default function HomeroomPage() {
         if (selected.size === 0 || amount === 0) return;
         setBulkLoading(true);
         try {
-            const res = await api.post<{ message: string }>('/teacher/my-class/bulk-balance', {
+            const res = await api.post<components['schemas']['TeacherBulkBalanceOut']>('/teacher/my-class/bulk-balance', {
                 student_ids: Array.from(selected),
                 amount,
                 comment: comment || undefined

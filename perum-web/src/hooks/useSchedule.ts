@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
-import type { DiaryResponse, DiaryLesson, GradesResponse, Subject, Work, PeriodInfo } from '@/types';
+import type { Subject, Work } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
+
+type DiaryResponse = components['schemas']['StudentDiaryOut'];
+type DiaryLesson = components['schemas']['StudentDiaryLessonOut'];
+type GradesResponse = components['schemas']['StudentGradesOut'];
+type FinalGrade = components['schemas']['StudentFinalGradeOut'];
+export type AnalyticsResponse = components['schemas']['GradesAnalyticsOut'];
+type PeriodInfo = components['schemas']['StudentDiaryPeriodOut'];
 
 export type ViewType = 'schedule' | 'grades' | 'works';
 export type WorkFilter = 'all' | 'pending' | 'completed' | 'overdue';
@@ -12,35 +20,15 @@ export interface FlatLesson extends DiaryLesson {
 
 export interface GradeRow {
     id: number;
-    date: string;
+    date: string | null;
     subject_name: string;
     subject_id: number;
     type: string;
-    value: number;
-    color: string;
+    value: number | null;
+    color: string | null;
     points: number;
     weight?: number;
     topic?: string | null;
-}
-
-export interface AnalyticsPeriod {
-    id: number;
-    name: string;
-    start_date: string;
-    end_date: string;
-}
-
-export interface AnalyticsSubject {
-    subject_id: number;
-    subject_name: string;
-    periods: Record<string, number | null>;
-    year_average: number | null;
-}
-
-export interface AnalyticsResponse {
-    period_type: string;
-    periods: AnalyticsPeriod[];
-    subjects: AnalyticsSubject[];
 }
 
 export const DAY_NAMES = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -65,7 +53,7 @@ export function useSchedule() {
 
     // Grades state
     const [gradesData, setGradesData] = useState<GradeRow[]>([]);
-    const [finalGrades, setFinalGrades] = useState<unknown[]>([]);
+    const [finalGrades, setFinalGrades] = useState<FinalGrade[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
 
     // Works state
@@ -135,9 +123,9 @@ export function useSchedule() {
                             works.push({
                                 id: hw.id,
                                 title: hw.title,
-                                description: hw.description,
+                                description: hw.description ?? undefined,
                                 subject: lesson.subject_name || 'Предмет',
-                                due_date: hw.due_date,
+                                due_date: hw.due_date ?? undefined,
                                 status,
                             });
                         });
@@ -159,7 +147,7 @@ export function useSchedule() {
                 api.get<AnalyticsResponse>('/student/grades/analytics'),
                 api.get<GradesResponse>('/student/grades'),
                 api.get<{ subjects: Subject[] }>('/subjects'),
-                api.get<{ final_grades: unknown[] }>('/student/grades/finals')
+                api.get<components['schemas']['StudentFinalGradesOut']>('/student/grades/finals')
             ]);
             setAnalyticsData(analyticsRes);
             setGradesData(gradesRes.grades || []);

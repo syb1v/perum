@@ -19,6 +19,10 @@ from app.modules.journal.schemas import (
     JournalGradeCreateOut,
     JournalGradeDeleteOut,
     JournalGradeUpdateOut,
+    JournalFinalGradeSetOut,
+    JournalLessonTemplateSetOut,
+    JournalMutationSuccessOut,
+    JournalOut,
     JournalTeacherSubjectsOut,
     JournalTopicArchiveOut,
     JournalTopicOut,
@@ -103,7 +107,7 @@ async def restore_topic(topic_id: int, user: User = Depends(require_teacher), db
     return await service.restore_topic(db, await _school(user, db), topic_id, user)
 
 
-@router.put("/{class_id}/{subject_id}/lesson-templates/{lesson_date}")
+@router.put("/{class_id}/{subject_id}/lesson-templates/{lesson_date}", response_model=JournalLessonTemplateSetOut)
 async def set_lesson_template(
     class_id: int,
     subject_id: int,
@@ -117,7 +121,7 @@ async def set_lesson_template(
     )
 
 
-@router.delete("/{class_id}/{subject_id}/lesson-templates/{lesson_date}")
+@router.delete("/{class_id}/{subject_id}/lesson-templates/{lesson_date}", response_model=JournalMutationSuccessOut)
 async def clear_lesson_template(
     class_id: int,
     subject_id: int,
@@ -177,7 +181,7 @@ async def delete_grade(
     return await service.delete_grade(db, await _school(user, db), grade_id, version, user)
 
 
-@router.post("/grades/final/{class_id}/{subject_id}")
+@router.post("/grades/final/{class_id}/{subject_id}", response_model=JournalFinalGradeSetOut)
 async def set_final_grade(
     class_id: int,
     subject_id: int,
@@ -190,7 +194,7 @@ async def set_final_grade(
     )
 
 
-@router.delete("/grades/final/{final_grade_id}")
+@router.delete("/grades/final/{final_grade_id}", response_model=JournalMutationSuccessOut)
 async def delete_final_grade(
     final_grade_id: int,
     user: User = Depends(require_teacher),
@@ -261,7 +265,7 @@ async def import_execute(
 
 
 # Catch-all two-segment route — must stay LAST so /grades, /subjects, etc. match first.
-@router.get("/{class_id}/{subject_id}")
+@router.get("/{class_id}/{subject_id}", response_model=JournalOut)
 async def journal(
     class_id: int,
     subject_id: int,

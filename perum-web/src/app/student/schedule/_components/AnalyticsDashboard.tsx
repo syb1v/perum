@@ -41,6 +41,7 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
     const allDatesSet = new Set<string>();
     
     gradesData.forEach(g => {
+        if (g.date === null || g.value === null) return;
         if (!subjectMap[g.subject_id]) {
             subjectMap[g.subject_id] = { name: g.subject_name, gradesByDate: {}, avg: 0 };
         }
@@ -55,7 +56,7 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
     Object.values(subjectMap).forEach(s => {
         const allGrades = Object.values(s.gradesByDate).flat();
         if (allGrades.length > 0) {
-            const totalWeightedSum = allGrades.reduce((sum, g) => sum + g.value * (g.weight || 1), 0);
+            const totalWeightedSum = allGrades.reduce((sum, g) => sum + (g.value ?? 0) * (g.weight || 1), 0);
             const totalWeight = allGrades.reduce((sum, g) => sum + (g.weight || 1), 0);
             s.avg = parseFloat((totalWeightedSum / totalWeight).toFixed(2));
         }
@@ -67,9 +68,10 @@ export default function AnalyticsDashboard({ gradesData, analyticsData }: Analyt
 
     const sortedDates = Array.from(allDatesSet).sort().reverse();
 
-    const globalAvgNum = gradesData.length > 0 ? (
-        gradesData.reduce((s, g) => s + g.value * (g.weight || 1), 0) /
-        gradesData.reduce((s, g) => s + (g.weight || 1), 0)
+    const numericGrades = gradesData.filter((g): g is GradeRow & { value: number } => g.value !== null);
+    const globalAvgNum = numericGrades.length > 0 ? (
+        numericGrades.reduce((s, g) => s + g.value * (g.weight || 1), 0) /
+        numericGrades.reduce((s, g) => s + (g.weight || 1), 0)
     ) : null;
     const globalAvg = globalAvgNum !== null ? globalAvgNum.toFixed(2) : '—';
 

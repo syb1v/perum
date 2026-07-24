@@ -45,6 +45,41 @@ function assertClosedObject(name, schema) {
   return properties;
 }
 
+function assertExactClosedObject(name, fields, required = fields) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields)) {
+    throw new Error(`${name} properties differ from the live contract`);
+  }
+  if (JSON.stringify(schema.required ?? []) !== JSON.stringify(required)) {
+    throw new Error(`${name} required fields differ from the live contract`);
+  }
+  return schema.properties;
+}
+
+function assertNullableVariant(name, schema, type) {
+  const variants = schema.anyOf ?? [];
+  if (!variants.some(variant => variant.type === type) || !variants.some(variant => variant.type === 'null')) {
+    throw new Error(`${name} must be required nullable ${type}`);
+  }
+}
+
+function assertNullableRef(name, schema, ref) {
+  const variants = schema.anyOf ?? [];
+  if (!variants.some(variant => variant.$ref === `#/components/schemas/${ref}`) || !variants.some(variant => variant.type === 'null')) {
+    throw new Error(`${name} must be required nullable ${ref}`);
+  }
+}
+
+function assertItemRef(schemaName, field, itemSchemaName) {
+  const schema = tenantOpenapi.components.schemas[schemaName].properties[field];
+  if (schema.items?.$ref !== `#/components/schemas/${itemSchemaName}`) {
+    throw new Error(`${schemaName} ${field} items must reference ${itemSchemaName}`);
+  }
+}
+
 const tenantDescriptor = responseSchema(tenantOpenapi, '/api/mobile/descriptor', 'get');
 const coreDescriptor = responseSchema(coreOpenapi, '/api/public/tenant-discovery', 'post');
 const tenantDescriptorProperties = assertClosedObject('Tenant descriptor', tenantDescriptor);
@@ -105,7 +140,7 @@ const cursorVariants = studentPage.properties.next_cursor.anyOf ?? [];
 if (!cursorVariants.some(schema => schema.type === 'integer') || !cursorVariants.some(schema => schema.type === 'null')) {
   throw new Error('StudentPage next_cursor must be a nullable integer');
 }
-for (const [name, fields] of [
+for (const [name, fields, required] of [
   ['StudentProfile', ['id', 'name', 'avatar', 'class_name']],
   ['FriendRequestOut', ['id', 'status', 'student', 'created_at', 'expires_at']],
   ['BlockOut', ['id', 'student', 'reason_code', 'created_at']],
@@ -869,5 +904,178 @@ const moderationCursor = tenantOpenapi.components.schemas.ModerationCasePageOut.
 if (!moderationCursor.some(schema => schema.type === 'integer') || !moderationCursor.some(schema => schema.type === 'null')) {
   throw new Error('ModerationCasePageOut next_cursor must be a nullable integer');
 }
+
+for (const [path, schemaName] of [
+  ['/api/student/diary', 'StudentDiaryOut'],
+  ['/api/parent/children/{student_id}/diary', 'StudentDiaryOut'],
+  ['/api/student/grades', 'StudentGradesOut'],
+  ['/api/parent/children/{student_id}/grades', 'StudentGradesOut'],
+  ['/api/student/grades/finals', 'StudentFinalGradesOut'],
+  ['/api/parent/children/{student_id}/grades/finals', 'StudentFinalGradesOut'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, 'get') !== `#/components/schemas/${schemaName}`) {
+    throw new Error(`GET ${path} must return ${schemaName}`);
+  }
+}
+
+const studentQuestsResponse = tenantOpenapi.paths['/api/student/quests'].get.responses['200'].content['application/json'].schema;
+if (studentQuestsResponse.type !== 'array' || studentQuestsResponse.items?.$ref !== '#/components/schemas/StudentQuestOut') {
+  throw new Error('GET /api/student/quests must return StudentQuestOut[]');
+}
+
+for (const [name, fields, required] of [
+  ['StudentDiaryOut', ['class_id', 'class_name', 'week_start', 'week_end', 'week_offset', 'current_period', 'week_periods', 'diary']],
+  ['StudentDiaryPeriodOut', ['id', 'name', 'period_type', 'start_date', 'end_date']],
+  ['StudentDiaryDayOut', ['date', 'day_name', 'is_today', 'lessons']],
+  ['StudentDiaryLessonOut', ['lesson_number', 'subject_id', 'subject_name', 'teacher_name', 'start_time', 'end_time', 'room', 'grades', 'homework', 'control_work', 'occurrence_id', 'status', 'group_name'], ['lesson_number', 'subject_id', 'subject_name', 'teacher_name', 'start_time', 'end_time', 'room', 'grades', 'homework', 'control_work', 'occurrence_id', 'status']],
+  ['StudentDiaryGradeOut', ['id', 'value', 'points', 'weight', 'type', 'comment', 'color', 'topic']],
+  ['StudentDiaryHomeworkOut', ['id', 'title', 'description', 'due_date', 'deadline_at', 'is_overdue', 'student_state', 'attachments']],
+  ['StudentDiaryHomeworkStateOut', ['status', 'version', 'completed_at']],
+  ['StudentDiaryHomeworkAttachmentOut', ['id', 'filename', 'url_link']],
+  ['StudentDiaryControlWorkOut', ['id', 'work_type', 'title']],
+  ['StudentGradesOut', ['grades']],
+  ['StudentGradeOut', ['id', 'value', 'points', 'weight', 'date', 'type', 'comment', 'subject_id', 'subject_name', 'color', 'topic']],
+  ['StudentFinalGradesOut', ['final_grades']],
+  ['StudentFinalGradeOut', ['id', 'subject_id', 'subject_name', 'period_id', 'period_name', 'grade_value', 'grade_type', 'comment', 'color']],
+  ['StudentQuestOut', ['id', 'quest_id', 'title', 'description', 'reward', 'progress', 'target', 'status', 'reward_claimed']],
+]) {
+  assertExactClosedObject(name, fields, required);
+}
+
+const studentDiary = tenantOpenapi.components.schemas.StudentDiaryOut.properties;
+assertNullableVariant('StudentDiaryOut class_id', studentDiary.class_id, 'integer');
+assertNullableVariant('StudentDiaryOut class_name', studentDiary.class_name, 'string');
+assertNullableRef('StudentDiaryOut current_period', studentDiary.current_period, 'StudentDiaryPeriodOut');
+assertItemRef('StudentDiaryOut', 'week_periods', 'StudentDiaryPeriodOut');
+if (studentDiary.diary.additionalProperties?.$ref !== '#/components/schemas/StudentDiaryDayOut') {
+  throw new Error('StudentDiaryOut diary values must reference StudentDiaryDayOut');
+}
+assertItemRef('StudentDiaryDayOut', 'lessons', 'StudentDiaryLessonOut');
+assertItemRef('StudentDiaryLessonOut', 'grades', 'StudentDiaryGradeOut');
+assertItemRef('StudentDiaryLessonOut', 'homework', 'StudentDiaryHomeworkOut');
+assertItemRef('StudentDiaryHomeworkOut', 'attachments', 'StudentDiaryHomeworkAttachmentOut');
+if (tenantOpenapi.components.schemas.StudentDiaryHomeworkOut.properties.student_state.$ref !== '#/components/schemas/StudentDiaryHomeworkStateOut') {
+  throw new Error('StudentDiaryHomeworkOut student_state must reference StudentDiaryHomeworkStateOut');
+}
+assertNullableRef('StudentDiaryLessonOut control_work', tenantOpenapi.components.schemas.StudentDiaryLessonOut.properties.control_work, 'StudentDiaryControlWorkOut');
+for (const [schemaName, fields] of [
+  ['StudentDiaryLessonOut', [['subject_name', 'string'], ['teacher_name', 'string'], ['room', 'string'], ['occurrence_id', 'integer'], ['group_name', 'string']]],
+  ['StudentDiaryGradeOut', [['value', 'integer'], ['comment', 'string'], ['color', 'string'], ['topic', 'string']]],
+  ['StudentDiaryHomeworkOut', [['description', 'string'], ['due_date', 'string'], ['deadline_at', 'string']]],
+  ['StudentDiaryHomeworkStateOut', [['completed_at', 'string']]],
+  ['StudentDiaryHomeworkAttachmentOut', [['filename', 'string'], ['url_link', 'string']]],
+  ['StudentDiaryControlWorkOut', [['title', 'string']]],
+  ['StudentGradeOut', [['value', 'integer'], ['date', 'string'], ['comment', 'string'], ['color', 'string'], ['topic', 'string']]],
+  ['StudentFinalGradeOut', [['period_id', 'integer'], ['period_name', 'string'], ['comment', 'string'], ['color', 'string']]],
+  ['StudentQuestOut', [['id', 'integer'], ['description', 'string']]],
+]) {
+  const properties = tenantOpenapi.components.schemas[schemaName].properties;
+  for (const [field, type] of fields) assertNullableVariant(`${schemaName} ${field}`, properties[field], type);
+}
+for (const [schemaName, field, itemName] of [
+  ['StudentGradesOut', 'grades', 'StudentGradeOut'],
+  ['StudentFinalGradesOut', 'final_grades', 'StudentFinalGradeOut'],
+]) assertItemRef(schemaName, field, itemName);
+if (JSON.stringify(tenantOpenapi.components.schemas.StudentDiaryLessonOut.properties.status.enum) !== JSON.stringify(['scheduled', 'cancelled', 'completed'])) {
+  throw new Error('StudentDiaryLessonOut status literals differ from the live contract');
+}
+if (JSON.stringify(tenantOpenapi.components.schemas.StudentDiaryHomeworkStateOut.properties.status.enum) !== JSON.stringify(['not_started', 'in_progress', 'completed'])) {
+  throw new Error('StudentDiaryHomeworkStateOut status literals differ from the live contract');
+}
+if (JSON.stringify(tenantOpenapi.components.schemas.StudentQuestOut.properties.status.enum) !== JSON.stringify(['active', 'available', 'completed', 'ready'])) {
+  throw new Error('StudentQuestOut status literals differ from the live contract');
+}
+
+if (responseSchemaRef(tenantOpenapi, '/api/journal/{class_id}/{subject_id}', 'get') !== '#/components/schemas/JournalOut') {
+  throw new Error('GET /api/journal/{class_id}/{subject_id} must return JournalOut');
+}
+for (const [name, fields] of [
+  ['JournalOut', ['subject', 'students', 'dates', 'schedule_slots', 'current_period', 'available_periods', 'final_grades', 'control_works', 'can_set_final_grade', 'holiday_periods', 'readonly', 'subgroup_name', 'lesson_templates']],
+  ['JournalGridSubjectOut', ['id', 'name', 'category']],
+  ['JournalGridStudentOut', ['id', 'first_name', 'last_name', 'patronymic', 'grades', 'average']],
+  ['JournalGridGradeOut', ['id', 'grade_value', 'points', 'grade_type', 'work_type_id', 'weight', 'attendance_mark', 'lesson_date', 'comment', 'color', 'topic_id', 'topic_name']],
+  ['JournalPeriodOut', ['id', 'name', 'period_type', 'target_grades', 'academic_year_id', 'start_date', 'end_date']],
+  ['JournalFinalGradeOut', ['id', 'student_id', 'subject_id', 'period_id', 'grade_value', 'grade_type', 'comment']],
+  ['JournalControlWorkOut', ['id', 'class_id', 'subject_id', 'work_type', 'title', 'work_date']],
+  ['JournalHolidayPeriodOut', ['name', 'start_date', 'end_date']],
+  ['JournalLessonTemplateOut', ['occurrence_id', 'lesson_date', 'lesson_number', 'topic_id', 'work_type_id']],
+]) assertExactClosedObject(name, fields);
+
+const journal = tenantOpenapi.components.schemas.JournalOut.properties;
+if (journal.subject.$ref !== '#/components/schemas/JournalGridSubjectOut') throw new Error('JournalOut subject must reference JournalGridSubjectOut');
+for (const [field, itemName] of [
+  ['students', 'JournalGridStudentOut'],
+  ['available_periods', 'JournalPeriodOut'],
+  ['final_grades', 'JournalFinalGradeOut'],
+  ['control_works', 'JournalControlWorkOut'],
+  ['holiday_periods', 'JournalHolidayPeriodOut'],
+]) assertItemRef('JournalOut', field, itemName);
+assertNullableRef('JournalOut current_period', journal.current_period, 'JournalPeriodOut');
+assertNullableVariant('JournalOut subgroup_name', journal.subgroup_name, 'string');
+if (journal.schedule_slots.additionalProperties?.items?.type !== 'integer') throw new Error('JournalOut schedule_slots values must be integer arrays');
+if (journal.lesson_templates.additionalProperties?.$ref !== '#/components/schemas/JournalLessonTemplateOut') throw new Error('JournalOut lesson_templates values must reference JournalLessonTemplateOut');
+assertItemRef('JournalGridStudentOut', 'grades', 'JournalGridGradeOut');
+for (const [schemaName, fields] of [
+  ['JournalGridStudentOut', [['first_name', 'string'], ['last_name', 'string'], ['patronymic', 'string'], ['average', 'number']]],
+  ['JournalGridGradeOut', [['grade_value', 'integer'], ['work_type_id', 'integer'], ['attendance_mark', 'string'], ['lesson_date', 'string'], ['comment', 'string'], ['color', 'string'], ['topic_id', 'integer'], ['topic_name', 'string']]],
+  ['JournalPeriodOut', [['target_grades', 'string'], ['start_date', 'string'], ['end_date', 'string']]],
+  ['JournalFinalGradeOut', [['period_id', 'integer'], ['comment', 'string']]],
+  ['JournalControlWorkOut', [['title', 'string']]],
+  ['JournalLessonTemplateOut', [['occurrence_id', 'integer'], ['lesson_number', 'integer'], ['topic_id', 'integer'], ['work_type_id', 'integer']]],
+]) {
+  const properties = tenantOpenapi.components.schemas[schemaName].properties;
+  for (const [field, type] of fields) assertNullableVariant(`${schemaName} ${field}`, properties[field], type);
+}
+
+for (const [path, method, schemaName] of [
+  ['/api/journal/grades/final/{class_id}/{subject_id}', 'post', 'JournalFinalGradeSetOut'],
+  ['/api/journal/grades/final/{final_grade_id}', 'delete', 'JournalMutationSuccessOut'],
+  ['/api/journal/{class_id}/{subject_id}/lesson-templates/{lesson_date}', 'put', 'JournalLessonTemplateSetOut'],
+  ['/api/journal/{class_id}/{subject_id}/lesson-templates/{lesson_date}', 'delete', 'JournalMutationSuccessOut'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, method) !== `#/components/schemas/${schemaName}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must return ${schemaName}`);
+  }
+}
+for (const [name, fields] of [
+  ['JournalFinalGradeSetOut', ['success', 'final_grade_id']],
+  ['JournalMutationSuccessOut', ['success']],
+  ['JournalLessonTemplateSetOut', ['success', 'updated_grades']],
+]) {
+  const properties = assertExactClosedObject(name, fields);
+  if (properties.success.const !== true) throw new Error(`${name} success must remain literal true`);
+}
+
+for (const [path, schemaName] of [
+  ['/api/journal/import/analyze/{class_id}/{subject_id}', 'ParsingPreviewResponse'],
+  ['/api/journal/import/execute/{class_id}/{subject_id}', 'ImportExecutionResponse'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, 'post') !== `#/components/schemas/${schemaName}`) {
+    throw new Error(`POST ${path} must return ${schemaName}`);
+  }
+}
+for (const [name, fields, required] of [
+  ['ParsingPreviewResponse', ['subject_raw_name', 'class_raw_name', 'unique_acronyms', 'unique_dates', 'student_names', 'preview_grades', 'total_grades_found', 'validation_errors'], ['unique_acronyms', 'unique_dates', 'student_names', 'preview_grades', 'total_grades_found']],
+  ['ParsedGradeRaw', ['student_name', 'date', 'acronym', 'grade_value', 'attendance_mark', 'original_cell_text'], ['student_name', 'date', 'acronym', 'original_cell_text']],
+  ['ImportExecutionResponse', ['added_count', 'skipped_count', 'replaced_count', 'logs'], ['added_count', 'skipped_count', 'logs']],
+  ['ImportLog', ['student_name', 'date', 'message', 'level']],
+]) assertExactClosedObject(name, fields, required ?? fields);
+const importPreview = tenantOpenapi.components.schemas.ParsingPreviewResponse.properties;
+assertNullableVariant('ParsingPreviewResponse subject_raw_name', importPreview.subject_raw_name, 'string');
+assertNullableVariant('ParsingPreviewResponse class_raw_name', importPreview.class_raw_name, 'string');
+assertItemRef('ParsingPreviewResponse', 'preview_grades', 'ParsedGradeRaw');
+const parsedGrade = tenantOpenapi.components.schemas.ParsedGradeRaw.properties;
+assertNullableVariant('ParsedGradeRaw grade_value', parsedGrade.grade_value, 'integer');
+assertNullableVariant('ParsedGradeRaw attendance_mark', parsedGrade.attendance_mark, 'string');
+assertItemRef('ImportExecutionResponse', 'logs', 'ImportLog');
+if (JSON.stringify(tenantOpenapi.components.schemas.ImportLog.properties.level.enum) !== JSON.stringify(['info', 'warning', 'error'])) {
+  throw new Error('ImportLog level literals differ from the live contract');
+}
+
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/my-class/bulk-balance', 'post') !== '#/components/schemas/TeacherBulkBalanceOut') {
+  throw new Error('POST /api/teacher/my-class/bulk-balance must return TeacherBulkBalanceOut');
+}
+const bulkBalance = assertExactClosedObject('TeacherBulkBalanceOut', ['message']);
+if (bulkBalance.message.type !== 'string') throw new Error('TeacherBulkBalanceOut message must be a non-null string');
 
 console.log(`OpenAPI contract and mobile descriptor parity passed: ${manifest.tenant.length + manifest.core.length} paths`);
