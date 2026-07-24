@@ -62,3 +62,23 @@ class TeacherAnalyticsDashboardOut(BaseModel):
     dynamics: list[TeacherAnalyticsDynamicsOut]
     problem_topics: list[TeacherAnalyticsTopicOut]
     attention_students: list[TeacherAnalyticsAttentionStudentOut]
+
+
+class TeacherAnalyticsProblemStudentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    avg: float
+    total_grades: int
+    twos: int
+    threes: int
+    is_problem: bool
+    issues: list[str]
+
+
+class TeacherAnalyticsProblemStudentsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    students: list[TeacherAnalyticsProblemStudentOut]
+    problem_count: int

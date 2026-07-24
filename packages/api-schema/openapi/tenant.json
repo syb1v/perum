@@ -11070,9 +11070,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Teacher Problem Students Api Teacher Analytics Students Problem Get"
+                  "$ref": "#/components/schemas/TeacherAnalyticsProblemStudentsOut"
                 }
               }
             }
@@ -18134,6 +18132,80 @@
           "end"
         ],
         "title": "TeacherAnalyticsPeriodOut"
+      },
+      "TeacherAnalyticsProblemStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          },
+          "twos": {
+            "type": "integer",
+            "title": "Twos"
+          },
+          "threes": {
+            "type": "integer",
+            "title": "Threes"
+          },
+          "is_problem": {
+            "type": "boolean",
+            "title": "Is Problem"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "avg",
+          "total_grades",
+          "twos",
+          "threes",
+          "is_problem",
+          "issues"
+        ],
+        "title": "TeacherAnalyticsProblemStudentOut"
+      },
+      "TeacherAnalyticsProblemStudentsOut": {
+        "properties": {
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherAnalyticsProblemStudentOut"
+            },
+            "type": "array",
+            "title": "Students"
+          },
+          "problem_count": {
+            "type": "integer",
+            "title": "Problem Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "students",
+          "problem_count"
+        ],
+        "title": "TeacherAnalyticsProblemStudentsOut"
       },
       "TeacherAnalyticsTopicOut": {
         "properties": {

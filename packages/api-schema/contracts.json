@@ -39,6 +39,7 @@
     "/api/teacher/homework",
     "/api/teacher/analytics/topics",
     "/api/teacher/analytics/dashboard",
+    "/api/teacher/analytics/students/problem",
     "/api/journal/grades",
     "/api/journal/grades/{grade_id}",
     "/api/journal/lesson-occurrences/{occurrence_id}",

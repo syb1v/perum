@@ -25,6 +25,7 @@ type JournalTeacherSubject = components['schemas']['JournalTeacherSubjectOut'];
 type ActivePeriods = components['schemas']['ActivePeriodsOut'];
 type ActivePeriod = components['schemas']['ActivePeriodOut'];
 type AnalyticsTopicsResponse = components['schemas']['TeacherAnalyticsTopicsOut'];
+type AnalyticsProblemStudentsResponse = components['schemas']['TeacherAnalyticsProblemStudentsOut'];
 
 export default function TeacherAnalytics() {
     const { showError, showSuccess } = useToast();
@@ -197,8 +198,7 @@ export default function TeacherAnalytics() {
             const [dash, tops, studs] = await Promise.all([
                 api.get<AnalyticsDashboardResponse>(`/teacher/analytics/dashboard?${params}`),
                 api.get<AnalyticsTopicsResponse>(`/teacher/analytics/topics?${params}`),
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                api.get<{ students: any[] }>(`/teacher/analytics/students/problem?${params}`) // Using loose type for students list here
+                api.get<AnalyticsProblemStudentsResponse>(`/teacher/analytics/students/problem?${params}`)
             ]);
 
             // Map students to expected type for report

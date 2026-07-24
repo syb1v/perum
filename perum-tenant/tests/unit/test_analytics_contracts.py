@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from app.modules.analytics.schemas import TeacherAnalyticsDashboardOut, TeacherAnalyticsTopicsOut
+from app.modules.analytics.schemas import (
+    TeacherAnalyticsDashboardOut,
+    TeacherAnalyticsProblemStudentsOut,
+    TeacherAnalyticsTopicsOut,
+)
 
 
 def _dashboard_payload() -> dict:
@@ -58,6 +62,74 @@ def test_teacher_analytics_dashboard_contract_accepts_full_and_empty_collections
 def test_teacher_analytics_dashboard_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         TeacherAnalyticsDashboardOut.model_validate(payload)
+
+
+def test_teacher_analytics_problem_students_contract_accepts_full_and_empty_responses() -> None:
+    response = TeacherAnalyticsProblemStudentsOut.model_validate(
+        {
+            "students": [
+                {
+                    "id": 12,
+                    "name": "Student Name",
+                    "avg": 3.1,
+                    "total_grades": 10,
+                    "twos": 3,
+                    "threes": 2,
+                    "is_problem": True,
+                    "issues": ["Low average"],
+                }
+            ],
+            "problem_count": 1,
+        }
+    )
+    empty = TeacherAnalyticsProblemStudentsOut.model_validate({"students": [], "problem_count": 0})
+
+    assert response.students[0].issues == ["Low average"]
+    assert empty.students == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"problem_count": 0},
+        {"students": [], "problem_count": None},
+        {"students": None, "problem_count": 0},
+        {"students": [], "problem_count": 0, "school_id": 1},
+        {
+            "students": [
+                {
+                    "id": 1,
+                    "name": "Student",
+                    "avg": 3.0,
+                    "total_grades": 2,
+                    "twos": 1,
+                    "threes": 1,
+                    "is_problem": True,
+                }
+            ],
+            "problem_count": 1,
+        },
+        {
+            "students": [
+                {
+                    "id": 1,
+                    "name": "Student",
+                    "avg": 3.0,
+                    "total_grades": 2,
+                    "twos": 1,
+                    "threes": 1,
+                    "is_problem": True,
+                    "issues": [],
+                    "student_login": "hidden",
+                }
+            ],
+            "problem_count": 1,
+        },
+    ],
+)
+def test_teacher_analytics_problem_students_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        TeacherAnalyticsProblemStudentsOut.model_validate(payload)
 
 
 def test_teacher_analytics_topics_contract_accepts_full_and_empty_responses() -> None:

@@ -5364,6 +5364,32 @@ export interface components {
             /** End */
             end: string;
         };
+        /** TeacherAnalyticsProblemStudentOut */
+        TeacherAnalyticsProblemStudentOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Avg */
+            avg: number;
+            /** Total Grades */
+            total_grades: number;
+            /** Twos */
+            twos: number;
+            /** Threes */
+            threes: number;
+            /** Is Problem */
+            is_problem: boolean;
+            /** Issues */
+            issues: string[];
+        };
+        /** TeacherAnalyticsProblemStudentsOut */
+        TeacherAnalyticsProblemStudentsOut: {
+            /** Students */
+            students: components["schemas"]["TeacherAnalyticsProblemStudentOut"][];
+            /** Problem Count */
+            problem_count: number;
+        };
         /** TeacherAnalyticsTopicOut */
         TeacherAnalyticsTopicOut: {
             /** Id */
@@ -12715,9 +12741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherAnalyticsProblemStudentsOut"];
                 };
             };
             /** @description Validation Error */

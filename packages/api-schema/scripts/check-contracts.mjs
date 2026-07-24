@@ -321,6 +321,28 @@ for (const [field, expectedRef] of [
     throw new Error(`TeacherAnalyticsDashboardOut ${field} item ref differs from the client contract`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/students/problem', 'get') !== '#/components/schemas/TeacherAnalyticsProblemStudentsOut') {
+  throw new Error('GET /api/teacher/analytics/students/problem must return TeacherAnalyticsProblemStudentsOut');
+}
+for (const [name, fields] of [
+  ['TeacherAnalyticsProblemStudentsOut', ['students', 'problem_count']],
+  ['TeacherAnalyticsProblemStudentOut', ['id', 'name', 'avg', 'total_grades', 'twos', 'threes', 'is_problem', 'issues']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher analytics problem-students fields`);
+  }
+  if (schema.additionalProperties !== false || fields.some(field => schema.properties[field].anyOf?.some(variant => variant.type === 'null'))) {
+    throw new Error(`${name} must be closed with non-null fields`);
+  }
+}
+const teacherAnalyticsProblemStudents = tenantOpenapi.components.schemas.TeacherAnalyticsProblemStudentsOut.properties.students;
+if (teacherAnalyticsProblemStudents.items?.$ref !== '#/components/schemas/TeacherAnalyticsProblemStudentOut') {
+  throw new Error('TeacherAnalyticsProblemStudentsOut students must contain TeacherAnalyticsProblemStudentOut items');
+}
+if (tenantOpenapi.components.schemas.TeacherAnalyticsProblemStudentOut.properties.issues.items?.type !== 'string') {
+  throw new Error('TeacherAnalyticsProblemStudentOut issues must contain strings');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
   throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
 }
