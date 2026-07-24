@@ -34,3 +34,17 @@ test('adapter failures never escape', async () => {
   await cache.persist('a', 1);
   await cache.remove('a');
 });
+
+test('remove invalidates writes queued by a logged-out generation', async () => {
+  const adapter = memoryAdapter();
+  let release: (() => void) | undefined;
+  const original = adapter.setItem;
+  adapter.setItem = async (key, value) => { await new Promise<void>((resolve) => { release = resolve; }); await original(key, value); };
+  const cache = createPersistenceCore(adapter, { version: 1, maxAge: 1000 });
+  const write = cache.persist('account', { private: true });
+  await Promise.resolve();
+  const remove = cache.remove('account');
+  release?.();
+  await Promise.all([write, remove]);
+  assert.equal(await cache.restore('account'), null);
+});

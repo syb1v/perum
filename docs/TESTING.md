@@ -17,6 +17,21 @@ npm run export:android --workspace perum-mobile
 npm run export:ios --workspace perum-mobile
 ```
 
+Mobile release-like config проверяется одной командой без credentials:
+
+```bash
+EXPO_PUBLIC_BUILD_ENV=preview \
+EXPO_PUBLIC_CORE_API_URL=https://core.example.invalid/api \
+EXPO_PUBLIC_LINK_HOST=links.example.invalid \
+EXPO_PUBLIC_PROJECT_ID=123e4567-e89b-42d3-a456-426614174000 \
+npm run preflight --workspace perum-mobile
+```
+
+Pure suites фиксируют strict config parsing, configured universal-link host,
+consume-once intent coordination, typed bounded push tap payload и logout-race
+cache invalidation. Export подтверждает bundle/config generation, но не доказывает
+native association, push delivery или cold/warm tap на физическом устройстве.
+
 Native support admin reply durability проверяется общим mobile suite в
 `perum-mobile/src/support/adminReplyOutbox.test.ts`: admin-only endpoint, immutable
 message identity/body, capability pause, bounded retry, FIFO per ticket и account

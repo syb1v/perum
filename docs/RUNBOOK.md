@@ -85,3 +85,9 @@ Core production validation требует непустые `SECRET_KEY`, `ENCRYP
 `PLATFORM_ADMIN_PASSWORD`, `AGENT_TOKEN` и разрешённый `CORS_ORIGINS`; сверяйте
 полный набор с `perum-core/app/core/config.py`, даже если remote nodes ещё не
 используются. Example env не заменяет startup validation.
+
+Mobile runtime config не должен содержать credentials. `EXPO_PUBLIC_CORE_API_URL`
+обязан быть HTTPS URL без userinfo/query/fragment, `EXPO_PUBLIC_LINK_HOST` —
+lowercase DNS hostname, `EXPO_PUBLIC_BUILD_ENV` — `development`, `preview` или
+`production`, а `EXPO_PUBLIC_PROJECT_ID` — public EAS UUID. APNs/FCM/EAS tokens,
+signing material и provider keys остаются только в approved secret stores.

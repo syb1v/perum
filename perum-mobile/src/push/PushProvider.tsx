@@ -2,11 +2,16 @@ import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { getInstallation } from './installation';
-import { hasActivePushRegistration, type PushRegistration, type PushRegistrationPut, type PushRegistrationStatus } from './types';
+import { hasActivePushRegistration, parsePushTap, type PushRegistration, type PushRegistrationPut, type PushRegistrationStatus } from './types';
 import { useCapabilities } from '../auth/CapabilityProvider';
+import { runtimeConfig } from '../config/runtime';
+import { submitNavigationIntent } from '../links/intentCoordinator';
+import { acquirePushToken, type PushTokenProvider } from './providerCore';
+
+const expoPushTokenProvider: PushTokenProvider = { getToken: async (projectId) => (await Notifications.getExpoPushTokenAsync({ projectId })).data };
 
 type PushState = { available: boolean; registered: boolean; busy: boolean; error: string | null; enable: () => Promise<void>; revoke: () => Promise<void> };
 const PushContext = createContext<PushState | null>(null);
@@ -25,7 +30,7 @@ export function PushProvider({ children }: PropsWithChildren) {
   async function register(token: string) {
     if (!apiClient || !account || !enabled) return;
     const installation = await getInstallation();
-    const payload: PushRegistrationPut = { installation_secret: installation.secret, provider: 'expo', environment: __DEV__ ? 'development' : 'production', token, platform: Platform.OS === 'ios' ? 'ios' : 'android', app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null };
+    const payload: PushRegistrationPut = { installation_secret: installation.secret, provider: 'expo', environment: runtimeConfig.buildEnvironment === 'production' ? 'production' : 'development', token, platform: Platform.OS === 'ios' ? 'ios' : 'android', app_id: 'app.perum.mobile', app_version: Constants.expoConfig?.version ?? null, device_name: Constants.deviceName ?? null };
     await apiClient.put<PushRegistration>(`/push/installations/${installation.id}/registration`, payload);
     setState((current) => ({ ...current, registered: true, error: null }));
   }
@@ -38,9 +43,9 @@ export function PushProvider({ children }: PropsWithChildren) {
       if (Platform.OS === 'android') await Notifications.setNotificationChannelAsync('default', { name: 'PERUM', importance: Notifications.AndroidImportance.DEFAULT });
       const permission = await Notifications.requestPermissionsAsync();
       if (!permission.granted) throw new Error('Разрешение на уведомления не предоставлено');
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+      const projectId = runtimeConfig.projectId;
       if (!projectId) throw new Error('Expo project ещё не настроен');
-      await register((await Notifications.getExpoPushTokenAsync({ projectId })).data);
+      await register(await acquirePushToken(expoPushTokenProvider, projectId));
     } catch (error) { setState((current) => ({ ...current, error: error instanceof Error ? error.message : 'Не удалось включить уведомления' })); }
     finally { setState((current) => ({ ...current, busy: false })); }
   }
@@ -53,13 +58,16 @@ export function PushProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     const tokenSubscription = Notifications.addPushTokenListener(() => {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-      if (projectId) void Notifications.getExpoPushTokenAsync({ projectId }).then((token) => register(token.data)).catch(() => undefined);
+      const projectId = runtimeConfig.projectId;
+      if (projectId) void acquirePushToken(expoPushTokenProvider, projectId).then(register).catch(() => undefined);
     });
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url;
-      if (typeof url === 'string') void Linking.openURL(url).catch(() => undefined);
-    });
+    const consumeResponse = (response: Notifications.NotificationResponse | null) => {
+      if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+      const tap = parsePushTap(response.notification.request.content.data, response.notification.request.identifier);
+      if (tap) submitNavigationIntent(tap.url, `push:${tap.id}`);
+    };
+    void Notifications.getLastNotificationResponseAsync().then(consumeResponse).catch(() => undefined);
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(consumeResponse);
     return () => { tokenSubscription.remove(); responseSubscription.remove(); };
   }, [account?.id, enabled]);
 

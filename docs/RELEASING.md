@@ -75,5 +75,14 @@ descriptor manifest и pilot school.
 optional `DEPLOY_SSH_PORT`. Server-side matching secrets находятся в secret
 manager/production env. Mobile preview workflow имеет отдельные EAS settings.
 
+`.github/workflows/eas-preview.yml` использует pinned EAS CLI `21.2.0` и до
+project lookup/build запускает mobile preflight. Environment `mobile-preview`
+должен содержать public variables `EXPO_PROJECT_ID`,
+`EXPO_PUBLIC_CORE_API_URL`, `EXPO_PUBLIC_LINK_HOST` и secret `EXPO_TOKEN`.
+Workflow отображает project ID в `EXPO_PUBLIC_PROJECT_ID`; это build identifier,
+не credential. Preview/production config fail closed без явных Core URL, link host
+и project ID. Смена host требует нового native build и синхронной проверки iOS
+associated domains, Android asset links и link DNS.
+
 Тарифные продуктовые требования и rollout roadmap находятся только в
 [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).

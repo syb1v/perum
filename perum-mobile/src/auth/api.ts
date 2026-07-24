@@ -1,8 +1,9 @@
 import { createApiClient, createTenantApiClient, type ApiClient, type TenantSessionProvider } from '@perum/api-client';
 import type { Discovery, LoginRequest, LoginResponse, TenantAccount, TenantUser } from './types';
 import { leaseApiClient } from './trafficCore';
+import { runtimeConfig } from '../config/runtime';
 
-const coreApiUrl = (process.env.EXPO_PUBLIC_CORE_API_URL || 'https://admin.perum.app/api').replace(/\/$/, '');
+const coreApiUrl = runtimeConfig.coreApiUrl;
 const accessTokens = new Map<string, string>();
 
 function normalizeApiUrl(url: string) {

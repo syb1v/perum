@@ -1,9 +1,9 @@
 export type LinkTarget = { schoolPublicId: string; target: 'home' | 'messages' | 'support' };
 
-export function parsePerumLink(value: string): LinkTarget | null {
+export function parsePerumLink(value: string, linkHost: string): LinkTarget | null {
   try {
     const url = new URL(value);
-    const allowed = url.protocol === 'perum:' || (url.protocol === 'https:' && url.hostname === 'link.perum.app');
+    const allowed = url.protocol === 'perum:' || (url.protocol === 'https:' && url.hostname === linkHost);
     if (!allowed || url.username || url.password || url.search || url.hash) return null;
     const parts = url.pathname.split('/').filter(Boolean);
     if (url.protocol === 'perum:' && url.hostname === 's') parts.unshift('s');

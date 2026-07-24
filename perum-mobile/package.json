@@ -38,6 +38,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
     "validate:config": "expo config --type public",
+    "preflight": "npm run typecheck && npm test && npm run validate:config",
     "export:android": "expo export --platform android --output-dir .expo/export/android",
     "export:ios": "expo export --platform ios --output-dir .expo/export/ios"
   },
