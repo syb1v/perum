@@ -279,3 +279,4 @@
 | 276 | 2026-07-24 | 8c45d62 | fix(contracts): закрыты live shared boundaries |
 | 277 | 2026-07-24 | 4a1b856 | test(discovery): усилена готовность Stage F |
 | 278 | 2026-07-24 | 104ea80 | feat(mobile): завершён автономный foundation |
+| 279 | 2026-07-24 | 61f7c39 | fix(mobile): связан Expo EAS project |

@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-24
 
+- Expo/EAS project initialization завершена: Mobile slug выровнен с remote project `@sybiv/perum`, project linkage подтверждён, а native IDs `app.perum.mobile` сохранены. Config/typecheck и 107 Mobile tests прошли; signing/provider credentials и signed preview build evidence остаются внешними blockers.
 - Consumer-driven P0 Shared Contracts закрыт: student/parent academics, quests, main journal aggregate, final/template receipts, import contracts и teacher residuals переведены на closed generated schemas; 96 curated paths имеют explicit shape gates, live Web consumers больше не используют manual wire DTO/response `any`/unknown arrays/raw JSON casts.
 - Tenant Discovery automated readiness усилена deterministic rollback success/failure evidence и fail-closed pilot collector: anonymous discovery больше не получает bearer, redirects/media type/size/schema/school mismatch отклоняются, synthetic output навсегда остаётся NO-GO. Реальный Stage F pilot и operator Mobile export не заявлены готовыми.
 - React Native code foundation получил strict shared runtime config, configured-host deep links, consume-once cold/warm link и push-tap lifecycle, typed push provider boundary, cache allowlist/throttle/logout fencing, root startup/offline/error shell и pinned EAS preflight. Mobile suite расширена до 107 tests; credentials/provider/device evidence остаются внешними blockers.

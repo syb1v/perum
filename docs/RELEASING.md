@@ -79,6 +79,8 @@ manager/production env. Mobile preview workflow имеет отдельные EA
 project lookup/build запускает mobile preflight. Environment `mobile-preview`
 должен содержать public variables `EXPO_PROJECT_ID`,
 `EXPO_PUBLIC_CORE_API_URL`, `EXPO_PUBLIC_LINK_HOST` и secret `EXPO_TOKEN`.
+Expo project identity — `@sybiv/perum`; checked-in slug — `perum`, при этом iOS
+bundle ID и Android application ID остаются `app.perum.mobile`.
 Workflow отображает project ID в `EXPO_PUBLIC_PROJECT_ID`; это build identifier,
 не credential. Preview/production config fail closed без явных Core URL, link host
 и project ID. Смена host требует нового native build и синхронной проверки iOS
