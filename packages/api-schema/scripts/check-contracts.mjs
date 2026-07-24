@@ -454,6 +454,79 @@ if (teacherAnalyticsProblemStudents.items?.$ref !== '#/components/schemas/Teache
 if (tenantOpenapi.components.schemas.TeacherAnalyticsProblemStudentOut.properties.issues.items?.type !== 'string') {
   throw new Error('TeacherAnalyticsProblemStudentOut issues must contain strings');
 }
+for (const [path, responseSchema] of [
+  ['/api/parent/children', 'ParentChildrenOut'],
+  ['/api/parent/children/{student_id}/transactions', 'ParentTransactionsOut'],
+  ['/api/parent/children/{student_id}/grades/summary', 'GradesSummaryOut'],
+  ['/api/student/grades/summary', 'GradesSummaryOut'],
+  ['/api/parent/children/{student_id}/grades/analytics', 'GradesAnalyticsOut'],
+  ['/api/student/grades/analytics', 'GradesAnalyticsOut'],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, 'get') !== `#/components/schemas/${responseSchema}`) {
+    throw new Error(`GET ${path} must return ${responseSchema}`);
+  }
+}
+for (const [name, fields] of [
+  ['ParentChildrenOut', ['children']],
+  ['ParentChildOut', ['id', 'first_name', 'last_name', 'patronymic', 'balance', 'class_name', 'class_id', 'average', 'total_grades', 'enrollment_status']],
+  ['GradesSummaryOut', ['subjects', 'total_points', 'total_grades']],
+  ['GradeSummarySubjectOut', ['subject_id', 'subject_name', 'average', 'count', 'points']],
+  ['GradesAnalyticsOut', ['period_type', 'current_period', 'periods', 'subjects']],
+  ['GradeAnalyticsPeriodOut', ['id', 'name', 'start_date', 'end_date']],
+  ['GradeAnalyticsSubjectOut', ['subject_id', 'subject_name', 'periods', 'year_average']],
+  ['ParentTransactionsOut', ['transactions']],
+  ['ParentTransactionOut', ['id', 'amount', 'balance_after', 'type', 'reason', 'created_at']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact parent analytics fields`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+for (const [schemaName, field, itemRef] of [
+  ['ParentChildrenOut', 'children', 'ParentChildOut'],
+  ['GradesSummaryOut', 'subjects', 'GradeSummarySubjectOut'],
+  ['GradesAnalyticsOut', 'periods', 'GradeAnalyticsPeriodOut'],
+  ['GradesAnalyticsOut', 'subjects', 'GradeAnalyticsSubjectOut'],
+  ['ParentTransactionsOut', 'transactions', 'ParentTransactionOut'],
+]) {
+  if (tenantOpenapi.components.schemas[schemaName].properties[field].items?.$ref !== `#/components/schemas/${itemRef}`) {
+    throw new Error(`${schemaName} ${field} item ref differs from the client contract`);
+  }
+}
+const parentChild = tenantOpenapi.components.schemas.ParentChildOut.properties;
+for (const field of ['first_name', 'last_name', 'patronymic', 'class_name', 'class_id']) {
+  if (!(parentChild[field].anyOf ?? []).some(schema => schema.type === 'null')) {
+    throw new Error(`ParentChildOut ${field} must be required nullable`);
+  }
+}
+if (parentChild.enrollment_status.const !== 'active') {
+  throw new Error('ParentChildOut enrollment_status must remain active');
+}
+const gradesAnalytics = tenantOpenapi.components.schemas.GradesAnalyticsOut.properties;
+if (JSON.stringify(gradesAnalytics.period_type.enum) !== JSON.stringify(['quarter', 'half_year']) || !(gradesAnalytics.current_period.anyOf ?? []).some(schema => schema.type === 'null')) {
+  throw new Error('GradesAnalyticsOut period type/current period differ from the shared contract');
+}
+for (const field of ['start_date', 'end_date']) {
+  const schema = tenantOpenapi.components.schemas.GradeAnalyticsPeriodOut.properties[field];
+  if (schema.type !== 'string' || schema.format !== 'date-time') {
+    throw new Error(`GradeAnalyticsPeriodOut ${field} must be date-time`);
+  }
+}
+const analyticsPeriodValues = tenantOpenapi.components.schemas.GradeAnalyticsSubjectOut.properties.periods.additionalProperties?.anyOf ?? [];
+if (!analyticsPeriodValues.some(schema => schema.type === 'number') || !analyticsPeriodValues.some(schema => schema.type === 'null')) {
+  throw new Error('GradeAnalyticsSubjectOut periods values must be nullable numbers');
+}
+const parentTransaction = tenantOpenapi.components.schemas.ParentTransactionOut.properties;
+if (!(parentTransaction.reason.anyOf ?? []).some(schema => schema.type === 'null')) {
+  throw new Error('ParentTransactionOut reason must be required nullable');
+}
+const transactionCreatedAt = parentTransaction.created_at.anyOf ?? [];
+if (!transactionCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time') || !transactionCreatedAt.some(schema => schema.type === 'null')) {
+  throw new Error('ParentTransactionOut created_at must be nullable date-time');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
   throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
 }

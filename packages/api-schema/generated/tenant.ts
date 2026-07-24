@@ -3939,6 +3939,72 @@ export interface components {
              */
             expires_at: string;
         };
+        /** GradeAnalyticsPeriodOut */
+        GradeAnalyticsPeriodOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Start Date
+             * Format: date-time
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date-time
+             */
+            end_date: string;
+        };
+        /** GradeAnalyticsSubjectOut */
+        GradeAnalyticsSubjectOut: {
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Periods */
+            periods: {
+                [key: string]: number | null;
+            };
+            /** Year Average */
+            year_average: number;
+        };
+        /** GradeSummarySubjectOut */
+        GradeSummarySubjectOut: {
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string;
+            /** Average */
+            average: number;
+            /** Count */
+            count: number;
+            /** Points */
+            points: number;
+        };
+        /** GradesAnalyticsOut */
+        GradesAnalyticsOut: {
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "quarter" | "half_year";
+            /** Current Period */
+            current_period: number | null;
+            /** Periods */
+            periods: components["schemas"]["GradeAnalyticsPeriodOut"][];
+            /** Subjects */
+            subjects: components["schemas"]["GradeAnalyticsSubjectOut"][];
+        };
+        /** GradesSummaryOut */
+        GradesSummaryOut: {
+            /** Subjects */
+            subjects: components["schemas"]["GradeSummarySubjectOut"][];
+            /** Total Points */
+            total_points: number;
+            /** Total Grades */
+            total_grades: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -4717,6 +4783,57 @@ export interface components {
             occurrences_to_create: number;
             /** Rows To Link */
             rows_to_link: number;
+        };
+        /** ParentChildOut */
+        ParentChildOut: {
+            /** Id */
+            id: number;
+            /** First Name */
+            first_name: string | null;
+            /** Last Name */
+            last_name: string | null;
+            /** Patronymic */
+            patronymic: string | null;
+            /** Balance */
+            balance: number;
+            /** Class Name */
+            class_name: string | null;
+            /** Class Id */
+            class_id: number | null;
+            /** Average */
+            average: number;
+            /** Total Grades */
+            total_grades: number;
+            /**
+             * Enrollment Status
+             * @constant
+             */
+            enrollment_status: "active";
+        };
+        /** ParentChildrenOut */
+        ParentChildrenOut: {
+            /** Children */
+            children: components["schemas"]["ParentChildOut"][];
+        };
+        /** ParentTransactionOut */
+        ParentTransactionOut: {
+            /** Id */
+            id: number;
+            /** Amount */
+            amount: number;
+            /** Balance After */
+            balance_after: number;
+            /** Type */
+            type: string;
+            /** Reason */
+            reason: string | null;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** ParentTransactionsOut */
+        ParentTransactionsOut: {
+            /** Transactions */
+            transactions: components["schemas"]["ParentTransactionOut"][];
         };
         /** ParsedGradeRaw */
         ParsedGradeRaw: {
@@ -10729,9 +10846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GradesSummaryOut"];
                 };
             };
         };
@@ -10751,9 +10866,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GradesAnalyticsOut"];
                 };
             };
         };
@@ -10815,9 +10928,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ParentChildrenOut"];
                 };
             };
         };
@@ -10909,9 +11020,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GradesSummaryOut"];
                 };
             };
             /** @description Validation Error */
@@ -10942,9 +11051,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GradesAnalyticsOut"];
                 };
             };
             /** @description Validation Error */
@@ -11008,9 +11115,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ParentTransactionsOut"];
                 };
             };
             /** @description Validation Error */

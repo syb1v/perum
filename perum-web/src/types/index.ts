@@ -321,18 +321,6 @@ export interface WorkType {
     is_active: boolean;
 }
 
-export interface GradesSummary {
-    subjects: Array<{
-        subject_id: number;
-        subject_name: string;
-        average: number;
-        count: number;
-        points: number;
-    }>;
-    total_points: number;
-    total_grades: number;
-}
-
 /* Diary types (for schedule page) */
 export interface DiaryGrade {
     value: number;

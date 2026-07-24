@@ -7436,9 +7436,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Grades Summary Api Student Grades Summary Get"
+                  "$ref": "#/components/schemas/GradesSummaryOut"
                 }
               }
             }
@@ -7464,9 +7462,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Grades Analytics Api Student Grades Analytics Get"
+                  "$ref": "#/components/schemas/GradesAnalyticsOut"
                 }
               }
             }
@@ -7548,9 +7544,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Children Api Parent Children Get"
+                  "$ref": "#/components/schemas/ParentChildrenOut"
                 }
               }
             }
@@ -7716,9 +7710,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Grades Summary Api Parent Children  Student Id  Grades Summary Get"
+                  "$ref": "#/components/schemas/GradesSummaryOut"
                 }
               }
             }
@@ -7765,9 +7757,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Grades Analytics Api Parent Children  Student Id  Grades Analytics Get"
+                  "$ref": "#/components/schemas/GradesAnalyticsOut"
                 }
               }
             }
@@ -7863,9 +7853,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Child Transactions Api Parent Children  Student Id  Transactions Get"
+                  "$ref": "#/components/schemas/ParentTransactionsOut"
                 }
               }
             }
@@ -13708,6 +13696,183 @@
         ],
         "title": "FriendRequestOut"
       },
+      "GradeAnalyticsPeriodOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date"
+        ],
+        "title": "GradeAnalyticsPeriodOut"
+      },
+      "GradeAnalyticsSubjectOut": {
+        "properties": {
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "periods": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Periods"
+          },
+          "year_average": {
+            "type": "number",
+            "title": "Year Average"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "subject_name",
+          "periods",
+          "year_average"
+        ],
+        "title": "GradeAnalyticsSubjectOut"
+      },
+      "GradeSummarySubjectOut": {
+        "properties": {
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "type": "string",
+            "title": "Subject Name"
+          },
+          "average": {
+            "type": "number",
+            "title": "Average"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "points": {
+            "type": "integer",
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject_id",
+          "subject_name",
+          "average",
+          "count",
+          "points"
+        ],
+        "title": "GradeSummarySubjectOut"
+      },
+      "GradesAnalyticsOut": {
+        "properties": {
+          "period_type": {
+            "type": "string",
+            "enum": [
+              "quarter",
+              "half_year"
+            ],
+            "title": "Period Type"
+          },
+          "current_period": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Period"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/GradeAnalyticsPeriodOut"
+            },
+            "type": "array",
+            "title": "Periods"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/GradeAnalyticsSubjectOut"
+            },
+            "type": "array",
+            "title": "Subjects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "period_type",
+          "current_period",
+          "periods",
+          "subjects"
+        ],
+        "title": "GradesAnalyticsOut"
+      },
+      "GradesSummaryOut": {
+        "properties": {
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/GradeSummarySubjectOut"
+            },
+            "type": "array",
+            "title": "Subjects"
+          },
+          "total_points": {
+            "type": "integer",
+            "title": "Total Points"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subjects",
+          "total_points",
+          "total_grades"
+        ],
+        "title": "GradesSummaryOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -16263,6 +16428,189 @@
           "rows_to_link"
         ],
         "title": "OccurrenceBackfillSummary"
+      },
+      "ParentChildOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "patronymic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patronymic"
+          },
+          "balance": {
+            "type": "integer",
+            "title": "Balance"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "class_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Id"
+          },
+          "average": {
+            "type": "number",
+            "title": "Average"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          },
+          "enrollment_status": {
+            "type": "string",
+            "const": "active",
+            "title": "Enrollment Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "patronymic",
+          "balance",
+          "class_name",
+          "class_id",
+          "average",
+          "total_grades",
+          "enrollment_status"
+        ],
+        "title": "ParentChildOut"
+      },
+      "ParentChildrenOut": {
+        "properties": {
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/ParentChildOut"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "children"
+        ],
+        "title": "ParentChildrenOut"
+      },
+      "ParentTransactionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "balance_after": {
+            "type": "integer",
+            "title": "Balance After"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "amount",
+          "balance_after",
+          "type",
+          "reason",
+          "created_at"
+        ],
+        "title": "ParentTransactionOut"
+      },
+      "ParentTransactionsOut": {
+        "properties": {
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/ParentTransactionOut"
+            },
+            "type": "array",
+            "title": "Transactions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transactions"
+        ],
+        "title": "ParentTransactionsOut"
       },
       "ParsedGradeRaw": {
         "properties": {

@@ -15,6 +15,7 @@ from app.models import User
 from app.modules.quests import service as quests_service
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.student import service
+from app.modules.student.schemas import GradesAnalyticsOut, GradesSummaryOut
 
 router = APIRouter()
 
@@ -41,14 +42,14 @@ async def grades(
     return await service.get_grades(db, await _school(user, db), user, subject_id)
 
 
-@router.get("/grades/summary")
+@router.get("/grades/summary", response_model=GradesSummaryOut)
 async def grades_summary(
     user: User = Depends(require_student), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await service.get_summary(db, await _school(user, db), user)
 
 
-@router.get("/grades/analytics")
+@router.get("/grades/analytics", response_model=GradesAnalyticsOut)
 async def grades_analytics(
     user: User = Depends(require_student), db: AsyncSession = Depends(get_db)
 ) -> dict:

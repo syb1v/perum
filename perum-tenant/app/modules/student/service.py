@@ -421,7 +421,7 @@ async def get_summary(db: AsyncSession, school_id: int, user: User) -> dict:
 async def get_analytics(db: AsyncSession, school_id: int, user: User) -> dict:
     cls = await _student_class(db, school_id, user.id)
     if cls is None:
-        return {"period_type": "quarter", "periods": [], "subjects": []}
+        return {"period_type": "quarter", "current_period": None, "periods": [], "subjects": []}
 
     period_type = "half_year" if (cls.grade_level or 1) >= 10 else "quarter"
     periods = [p for p in await _list_periods(db, school_id) if p.period_type == period_type]

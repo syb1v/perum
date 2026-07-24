@@ -3,34 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/apiClient';
-import type { DiaryResponse, FinalGrade, GradesResponse, GradesSummary } from '@/types';
+import type { DiaryResponse, FinalGrade, GradesResponse } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
 import styles from './parent.module.css';
 
-interface Child {
-    id: number;
-    first_name: string | null;
-    last_name: string | null;
-    patronymic: string | null;
-    balance: number;
-    class_name: string | null;
-    average: number;
-    total_grades: number;
-}
-
-interface Transaction {
-    id: number;
-    amount: number;
-    balance_after: number;
-    type: string;
-    reason: string | null;
-    created_at: string | null;
-}
-
-interface Analytics {
-    current_period: number | null;
-    periods: { id: number; name: string }[];
-    subjects: { subject_id: number; subject_name: string; periods: Record<string, number | null>; year_average: number | null }[];
-}
+type ParentChildren = components['schemas']['ParentChildrenOut'];
+type Child = components['schemas']['ParentChildOut'];
+type Analytics = components['schemas']['GradesAnalyticsOut'];
+type GradesSummary = components['schemas']['GradesSummaryOut'];
+type ParentTransactions = components['schemas']['ParentTransactionsOut'];
 
 type Tab = 'diary' | 'grades' | 'finals' | 'analytics';
 type ChildData = {
@@ -39,7 +20,7 @@ type ChildData = {
     finals?: { final_grades: (FinalGrade & { subject_name: string; period_name: string | null })[] };
     analytics?: Analytics;
     summary?: GradesSummary;
-    transactions?: { transactions: Transaction[] };
+    transactions?: ParentTransactions;
 };
 
 const tabs: { id: Tab; label: string }[] = [
@@ -67,7 +48,7 @@ export default function ParentDashboard() {
         const controller = new AbortController();
         setLoading(true);
         setError(null);
-        api.get<{ children: Child[] }>('/parent/children', controller.signal)
+        api.get<ParentChildren>('/parent/children', controller.signal)
             .then(response => {
                 setChildren(response.children);
                 setSelectedChild(current => response.children.some(child => child.id === current) ? current : response.children[0]?.id ?? null);
@@ -95,7 +76,7 @@ export default function ParentDashboard() {
         else request = Promise.all([
             api.get<Analytics>(`${base}/grades/analytics`, controller.signal),
             api.get<GradesSummary>(`${base}/grades/summary`, controller.signal),
-            api.get<{ transactions: Transaction[] }>(`${base}/transactions`, controller.signal),
+            api.get<ParentTransactions>(`${base}/transactions`, controller.signal),
         ]).then(([analytics, summary, transactions]) => ({ analytics, summary, transactions }));
         request.then(setData).catch(reason => {
             if (reason instanceof Error && reason.name !== 'AbortError') setError(reason.message);
