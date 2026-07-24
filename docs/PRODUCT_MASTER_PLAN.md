@@ -184,6 +184,12 @@ Expo project initialization завершена: tracked slug выровнен с
 `app.perum.mobile`. Signing/provider credentials, remote EAS environment и signed
 preview builds по-прежнему не считаются готовыми без отдельного evidence.
 
+Operator flow для Mobile теперь унифицирован в `perum-mobile/mobile.sh`: Expo Go
+запускается tunnel-командой, EAS preview/production builds проходят config/typecheck/
+107-test preflight и live project check. Это уменьшает риск запуска не из той папки
+или против другого Expo project, но не заменяет remote EAS environment, signing и
+store/provider credentials.
+
 Tenant Discovery automated readiness усилена deterministic rollback success/failure
 matrix и fail-closed pilot collector: anonymous discovery не получает bearer,
 redirect/media-type/size/schema/school mismatch отклоняются, synthetic evidence
