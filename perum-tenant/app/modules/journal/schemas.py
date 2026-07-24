@@ -57,6 +57,20 @@ class JournalTopicsOut(BaseModel):
     topics: list[JournalTopicOut]
 
 
+class JournalTopicArchiveOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    detail: Literal["ok"]
+    is_archived: Literal[True]
+
+
+class JournalTopicRestoreOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    detail: Literal["ok"]
+    is_archived: Literal[False]
+
+
 class AddGradeRequest(BaseModel):
     student_id: int
     subject_id: int

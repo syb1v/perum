@@ -4222,6 +4222,19 @@ export interface components {
             /** Classes */
             classes: components["schemas"]["JournalTeacherClassOut"][];
         };
+        /** JournalTopicArchiveOut */
+        JournalTopicArchiveOut: {
+            /**
+             * Detail
+             * @constant
+             */
+            detail: "ok";
+            /**
+             * Is Archived
+             * @constant
+             */
+            is_archived: true;
+        };
         /** JournalTopicOut */
         JournalTopicOut: {
             /** Id */
@@ -4230,6 +4243,19 @@ export interface components {
             name: string;
             /** Order Num */
             order_num: number;
+        };
+        /** JournalTopicRestoreOut */
+        JournalTopicRestoreOut: {
+            /**
+             * Detail
+             * @constant
+             */
+            detail: "ok";
+            /**
+             * Is Archived
+             * @constant
+             */
+            is_archived: false;
         };
         /** JournalTopicsOut */
         JournalTopicsOut: {
@@ -9869,9 +9895,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalTopicArchiveOut"];
                 };
             };
             /** @description Validation Error */
@@ -9902,9 +9926,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalTopicRestoreOut"];
                 };
             };
             /** @description Validation Error */

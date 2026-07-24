@@ -364,6 +364,25 @@ for (const name of ['TopicCreate', 'TopicUpdate']) {
     throw new Error(`${name} name must be a non-null string`);
   }
 }
+for (const [path, method, responseSchema, archivedValue] of [
+  ['/api/journal/topics/{topic_id}', 'delete', 'JournalTopicArchiveOut', true],
+  ['/api/journal/topics/{topic_id}/restore', 'post', 'JournalTopicRestoreOut', false],
+]) {
+  if (responseSchemaRef(tenantOpenapi, path, method) !== `#/components/schemas/${responseSchema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must return ${responseSchema}`);
+  }
+  const schema = tenantOpenapi.components.schemas[responseSchema];
+  const fields = ['detail', 'is_archived'];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${responseSchema} must require the exact lifecycle receipt fields`);
+  }
+  if (schema.additionalProperties !== false || schema.properties.detail.const !== 'ok' || schema.properties.is_archived.const !== archivedValue) {
+    throw new Error(`${responseSchema} must be a closed exact lifecycle receipt`);
+  }
+  if (tenantOpenapi.paths[path][method].requestBody !== undefined) {
+    throw new Error(`${method.toUpperCase()} ${path} must not accept a request body`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/periods', 'get') !== '#/components/schemas/ActivePeriodsOut') {
   throw new Error('GET /api/periods must return ActivePeriodsOut');
 }

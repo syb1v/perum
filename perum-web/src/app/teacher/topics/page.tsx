@@ -10,6 +10,7 @@ import type { components } from '@perum/api-schema/tenant';
 type JournalTeacherSubjects = components['schemas']['JournalTeacherSubjectsOut'];
 type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
+type JournalTopicArchive = components['schemas']['JournalTopicArchiveOut'];
 type TopicCreate = components['schemas']['TopicCreate'];
 type TopicUpdate = components['schemas']['TopicUpdate'];
 
@@ -87,7 +88,7 @@ export default function TopicsPage() {
     const handleDeleteTopic = async (topicId: number) => {
         if (!confirm('Вы действительно хотите удалить эту тему?')) return;
         try {
-            await api.del(`/journal/topics/${topicId}`);
+            await api.del<JournalTopicArchive>(`/journal/topics/${topicId}`);
             setTopics(topics.filter(t => t.id !== topicId));
             showToast('Тема удалена', 'success');
         } catch (err: unknown) {

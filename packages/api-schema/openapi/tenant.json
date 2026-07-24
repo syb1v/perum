@@ -6512,9 +6512,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Topic Api Journal Topics  Topic Id  Delete"
+                  "$ref": "#/components/schemas/JournalTopicArchiveOut"
                 }
               }
             }
@@ -6561,9 +6559,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Restore Topic Api Journal Topics  Topic Id  Restore Post"
+                  "$ref": "#/components/schemas/JournalTopicRestoreOut"
                 }
               }
             }
@@ -14802,6 +14798,27 @@
         ],
         "title": "JournalTeacherSubjectsOut"
       },
+      "JournalTopicArchiveOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "const": "ok",
+            "title": "Detail"
+          },
+          "is_archived": {
+            "type": "boolean",
+            "const": true,
+            "title": "Is Archived"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail",
+          "is_archived"
+        ],
+        "title": "JournalTopicArchiveOut"
+      },
       "JournalTopicOut": {
         "properties": {
           "id": {
@@ -14825,6 +14842,27 @@
           "order_num"
         ],
         "title": "JournalTopicOut"
+      },
+      "JournalTopicRestoreOut": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "const": "ok",
+            "title": "Detail"
+          },
+          "is_archived": {
+            "type": "boolean",
+            "const": false,
+            "title": "Is Archived"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "detail",
+          "is_archived"
+        ],
+        "title": "JournalTopicRestoreOut"
       },
       "JournalTopicsOut": {
         "properties": {

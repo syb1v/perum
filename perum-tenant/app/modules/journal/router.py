@@ -20,7 +20,9 @@ from app.modules.journal.schemas import (
     JournalGradeDeleteOut,
     JournalGradeUpdateOut,
     JournalTeacherSubjectsOut,
+    JournalTopicArchiveOut,
     JournalTopicOut,
+    JournalTopicRestoreOut,
     JournalTopicsOut,
     JournalWorkTypesOut,
     LessonTemplateUpdate,
@@ -87,7 +89,7 @@ async def update_topic(
     return await service.update_topic(db, await _school(user, db), topic_id, payload.name, user)
 
 
-@router.delete("/topics/{topic_id}")
+@router.delete("/topics/{topic_id}", response_model=JournalTopicArchiveOut)
 async def delete_topic(
     topic_id: int,
     user: User = Depends(require_teacher),
@@ -96,7 +98,7 @@ async def delete_topic(
     return await service.delete_topic(db, await _school(user, db), topic_id, user)
 
 
-@router.post("/topics/{topic_id}/restore")
+@router.post("/topics/{topic_id}/restore", response_model=JournalTopicRestoreOut)
 async def restore_topic(topic_id: int, user: User = Depends(require_teacher), db: AsyncSession = Depends(get_db)) -> dict:
     return await service.restore_topic(db, await _school(user, db), topic_id, user)
 

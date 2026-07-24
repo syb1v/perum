@@ -3,7 +3,9 @@ from pydantic import ValidationError
 
 from app.modules.journal.schemas import (
     JournalTeacherSubjectsOut,
+    JournalTopicArchiveOut,
     JournalTopicOut,
+    JournalTopicRestoreOut,
     JournalTopicsOut,
     JournalWorkTypesOut,
     JournalGradeDetailOut,
@@ -123,6 +125,26 @@ def test_journal_topics_read_contract_accepts_items_and_empty_list() -> None:
 def test_journal_topics_read_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         JournalTopicsOut.model_validate(payload)
+
+
+@pytest.mark.parametrize(
+    ("schema", "is_archived"),
+    [(JournalTopicArchiveOut, True), (JournalTopicRestoreOut, False)],
+)
+def test_journal_topic_lifecycle_receipts_are_closed(schema: type, is_archived: bool) -> None:
+    response = schema.model_validate({"detail": "ok", "is_archived": is_archived})
+
+    assert response.detail == "ok"
+    assert response.is_archived is is_archived
+    for payload in [
+        {"detail": "ok"},
+        {"is_archived": is_archived},
+        {"detail": "done", "is_archived": is_archived},
+        {"detail": "ok", "is_archived": not is_archived},
+        {"detail": "ok", "is_archived": is_archived, "topic_id": 1},
+    ]:
+        with pytest.raises(ValidationError):
+            schema.model_validate(payload)
 
 
 @pytest.mark.parametrize("schema", [TopicCreate, TopicUpdate])
