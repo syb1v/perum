@@ -178,6 +178,13 @@ Journal grade DELETE `/api/journal/grades/{grade_id}` не принимает re
 required non-null `success` и `message`. DTO не описывает refund/transaction data;
 optimistic-lock conflict и локальный refresh lifecycle остаются отдельной границей.
 
+Consumer-driven P0 surface дополнительно закрывает общими schemas student/parent
+diary, grades и finals aliases, student quests, основной journal aggregate,
+final-grade и lesson-template receipts, journal import preview/execute и teacher
+bulk-balance. Empty branches имеют тот же required shape, nullable producer fields
+явны, а все live Web consumers используют generated DTO. Curated manifest содержит
+96 paths; internal/unconsumed routes добавляются только при появлении tracked client.
+
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в
 `perum-core/tests/test_release_manifest.py`; этот test запускается отдельным CI и

@@ -181,6 +181,19 @@ response/item refs и string item type для `issues`; Web typecheck/build га
 отсутствие `any[]` в report request, но не проверяют thresholds/sorting или
 отображение `issues` в старом столбце `reason`.
 
+Финальный consumer-driven Shared Contracts gate включает 96 live paths. Focused
+student academic, journal и import suites проверяют shared parent aliases,
+shape-complete no-class diary, nullable grades/finals, quests literals, journal
+aggregate и mutation/import receipts. `contracts:check` фиксирует exact response
+refs/closed fields/nullability/item refs для каждой новой boundary; Web typecheck и
+build запрещают возврат manual wire DTO, response `any` и raw JSON casts.
+
+Tenant Discovery automated readiness дополнительно проверяется полными Core tests:
+rollback success/failure сохраняет release identity/status/history, а pilot evidence
+collector fail closed отклоняет redirects, invalid media type, oversized/malformed
+discovery и school mismatch. Эти tests не заменяют Mobile operator export, hosted
+CI актуального pilot commit или signed one-school Stage F evidence.
+
 Lesson occurrence receipt проверяется journal contract и existing occurrence suites:
 
 ```bash
