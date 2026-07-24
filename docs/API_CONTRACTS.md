@@ -82,6 +82,12 @@ control work и occurrence ID/status/version; homework attachments и nullable
 metadata имеют отдельные closed schemas. Contract не определяет week navigation,
 modal behavior, cache или occurrence lifecycle.
 
+Teacher homeroom GET `/api/teacher/my-class` возвращает closed
+`TeacherHomeroomOut`: required `has_class`, nullable `class`, student list и stats.
+Class/student/stats имеют отдельные closed schemas; student names required nullable,
+enrollment status фиксирован literal `active`. Contract не распространяется на
+POST bulk-balance, selection или refresh lifecycle.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`

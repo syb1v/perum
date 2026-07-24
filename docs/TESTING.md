@@ -71,6 +71,12 @@ homework/control refs, status literals, required nullable fields и date formats
 Web typecheck/build подтверждают generated DTO в dashboard и journal schedule без
 claims о navigation, modal, cache или occurrence lifecycle behavior.
 
+Teacher homeroom contract в том же suite покрывает assigned/unassigned states,
+nullable class/student names, stats и rejection missing/extra/invalid enrollment.
+Curated gate фиксирует response и nested refs, nullable class branch и literal
+`active`; Web typecheck/build подтверждают generated GET DTO, но не bulk-balance
+request/receipt, selection или refresh behavior.
+
 Journal work types contract проверяется отдельно:
 
 ```bash
