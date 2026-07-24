@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut, TeacherWorksOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherDiaryOut, TeacherHomeworkListOut, TeacherWorksOut
 
 
 def test_teacher_classes_contract_accepts_nullable_created_at() -> None:
@@ -174,3 +174,87 @@ def test_teacher_works_contract_accepts_nullable_fields_and_empty_page() -> None
 def test_teacher_works_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         TeacherWorksOut.model_validate(payload)
+
+
+def _teacher_diary_payload() -> dict:
+    return {
+        "teacher_id": 1,
+        "teacher_name": "Teacher Name",
+        "week_start": "2026-07-20",
+        "week_end": "2026-07-25",
+        "week_offset": 0,
+        "diary": {
+            "0": {
+                "date": "2026-07-20",
+                "day_name": "Monday",
+                "is_today": False,
+                "lessons": [
+                    {
+                        "lesson_number": 1,
+                        "subject_id": 2,
+                        "subject_name": None,
+                        "class_id": 3,
+                        "class_name": None,
+                        "room": None,
+                        "start_time": None,
+                        "end_time": None,
+                        "homework": [
+                            {
+                                "id": 4,
+                                "title": "Homework",
+                                "description": None,
+                                "due_date": None,
+                                "attachments": [{"id": 5, "filename": None, "url_link": None}],
+                            }
+                        ],
+                        "control_work": None,
+                        "occurrence_id": None,
+                        "status": "scheduled",
+                        "version": None,
+                    }
+                ],
+            }
+        },
+    }
+
+
+def test_teacher_diary_contract_accepts_nested_nullable_schedule() -> None:
+    response = TeacherDiaryOut.model_validate(_teacher_diary_payload())
+
+    lesson = response.diary["0"].lessons[0]
+    assert lesson.subject_name is None
+    assert lesson.homework[0].attachments[0].filename is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {key: value for key, value in _teacher_diary_payload().items() if key != "diary"},
+        {**_teacher_diary_payload(), "school_id": 1},
+        {
+            **_teacher_diary_payload(),
+            "diary": {"0": {**_teacher_diary_payload()["diary"]["0"], "school_id": 1}},
+        },
+        {
+            **_teacher_diary_payload(),
+            "diary": {
+                "0": {
+                    **_teacher_diary_payload()["diary"]["0"],
+                    "lessons": [{**_teacher_diary_payload()["diary"]["0"]["lessons"][0], "status": "moved"}],
+                }
+            },
+        },
+        {
+            **_teacher_diary_payload(),
+            "diary": {
+                "0": {
+                    **_teacher_diary_payload()["diary"]["0"],
+                    "lessons": [{**_teacher_diary_payload()["diary"]["0"]["lessons"][0], "group_name": "A"}],
+                }
+            },
+        },
+    ],
+)
+def test_teacher_diary_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        TeacherDiaryOut.model_validate(payload)

@@ -3,54 +3,10 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import styles from './TeacherScheduleTab.module.css';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import type { LessonOccurrenceStatus } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
 
-// Types for the Teacher Diary Response
-interface HomeworkInfo {
-    id: number;
-    title: string;
-    description: string;
-    attachments?: { id: number; filename?: string; url_link?: string; }[];
-}
-
-interface ControlWorkInfo {
-    id: number;
-    work_type: string;
-    title: string;
-}
-
-interface TeacherLesson {
-    lesson_number: number;
-    subject_id: number;
-    subject_name: string;
-    class_id: number;
-    class_name: string;
-    room: string | null;
-    group_name?: string;
-    start_time?: string;
-    end_time?: string;
-    homework: HomeworkInfo[];
-    control_work: ControlWorkInfo | null;
-    occurrence_id: number | null;
-    status: LessonOccurrenceStatus;
-    version: number | null;
-}
-
-interface TeacherDiaryDay {
-    date: string;
-    day_name: string;
-    is_today: boolean;
-    lessons: TeacherLesson[];
-}
-
-interface TeacherDiaryResponse {
-    teacher_id: number;
-    teacher_name: string;
-    week_start: string;
-    week_end: string;
-    week_offset: number;
-    diary: Record<string, TeacherDiaryDay>;
-}
+type TeacherLesson = components['schemas']['TeacherDiaryLessonOut'];
+type TeacherDiaryResponse = components['schemas']['TeacherDiaryOut'];
 
 interface TeacherScheduleTabProps {
     onLessonSelect: (lesson: TeacherLesson, date: string) => void;
@@ -266,11 +222,6 @@ export default function TeacherScheduleTab({ onLessonSelect, refreshTrigger = 0 
                                                                             {lesson.room && (
                                                                                 <span className={styles.roomBadge}>
                                                                                     Каб. {lesson.room}
-                                                                                </span>
-                                                                            )}
-                                                                            {lesson.group_name && (
-                                                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: '#7c3aed', backgroundColor: 'rgba(124,58,237,0.1)', padding: '1px 6px', borderRadius: '4px', marginLeft: '4px' }}>
-                                                                                    👥 {lesson.group_name}
                                                                                 </span>
                                                                             )}
                                                                         </div>

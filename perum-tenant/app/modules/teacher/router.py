@@ -11,7 +11,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.teacher import service
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut, TeacherWorksOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherDiaryOut, TeacherHomeworkListOut, TeacherWorksOut
 
 router = APIRouter()
 
@@ -37,7 +37,7 @@ async def subjects(user: User = Depends(require_teacher), db: AsyncSession = Dep
     return {"subjects": await service.teacher_subjects(db, await _school(user, db), user)}
 
 
-@router.get("/diary")
+@router.get("/diary", response_model=TeacherDiaryOut)
 async def diary(
     week_offset: int = 0,
     user: User = Depends(require_teacher),

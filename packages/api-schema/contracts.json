@@ -36,6 +36,7 @@
     "/api/student/diary",
     "/api/student/grades",
     "/api/teacher/classes",
+    "/api/teacher/diary",
     "/api/teacher/homework",
     "/api/teacher/works",
     "/api/teacher/analytics/topics",

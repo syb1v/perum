@@ -11980,9 +11980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Diary Api Teacher Diary Get"
+                  "$ref": "#/components/schemas/TeacherDiaryOut"
                 }
               }
             }
@@ -18319,6 +18317,334 @@
           "classes"
         ],
         "title": "TeacherClassesOut"
+      },
+      "TeacherDiaryControlWorkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "work_type": {
+            "type": "string",
+            "title": "Work Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "work_type",
+          "title"
+        ],
+        "title": "TeacherDiaryControlWorkOut"
+      },
+      "TeacherDiaryDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "day_name": {
+            "type": "string",
+            "title": "Day Name"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today"
+          },
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherDiaryLessonOut"
+            },
+            "type": "array",
+            "title": "Lessons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "day_name",
+          "is_today",
+          "lessons"
+        ],
+        "title": "TeacherDiaryDayOut"
+      },
+      "TeacherDiaryHomeworkAttachmentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "url_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url Link"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "filename",
+          "url_link"
+        ],
+        "title": "TeacherDiaryHomeworkAttachmentOut"
+      },
+      "TeacherDiaryHomeworkOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherDiaryHomeworkAttachmentOut"
+            },
+            "type": "array",
+            "title": "Attachments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "description",
+          "due_date",
+          "attachments"
+        ],
+        "title": "TeacherDiaryHomeworkOut"
+      },
+      "TeacherDiaryLessonOut": {
+        "properties": {
+          "lesson_number": {
+            "type": "integer",
+            "title": "Lesson Number"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "homework": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherDiaryHomeworkOut"
+            },
+            "type": "array",
+            "title": "Homework"
+          },
+          "control_work": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeacherDiaryControlWorkOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "occurrence_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "completed"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesson_number",
+          "subject_id",
+          "subject_name",
+          "class_id",
+          "class_name",
+          "room",
+          "start_time",
+          "end_time",
+          "homework",
+          "control_work",
+          "occurrence_id",
+          "status",
+          "version"
+        ],
+        "title": "TeacherDiaryLessonOut"
+      },
+      "TeacherDiaryOut": {
+        "properties": {
+          "teacher_id": {
+            "type": "integer",
+            "title": "Teacher Id"
+          },
+          "teacher_name": {
+            "type": "string",
+            "title": "Teacher Name"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "week_offset": {
+            "type": "integer",
+            "title": "Week Offset"
+          },
+          "diary": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TeacherDiaryDayOut"
+            },
+            "type": "object",
+            "title": "Diary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "teacher_id",
+          "teacher_name",
+          "week_start",
+          "week_end",
+          "week_offset",
+          "diary"
+        ],
+        "title": "TeacherDiaryOut"
       },
       "TeacherHomeworkListOut": {
         "properties": {

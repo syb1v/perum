@@ -295,6 +295,55 @@ for (const field of ['class_name', 'subject_name', 'description', 'due_date', 'c
     throw new Error(`TeacherWorkOut ${field} must be a nullable string`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/diary', 'get') !== '#/components/schemas/TeacherDiaryOut') {
+  throw new Error('GET /api/teacher/diary must return TeacherDiaryOut');
+}
+for (const [name, fields] of [
+  ['TeacherDiaryOut', ['teacher_id', 'teacher_name', 'week_start', 'week_end', 'week_offset', 'diary']],
+  ['TeacherDiaryDayOut', ['date', 'day_name', 'is_today', 'lessons']],
+  ['TeacherDiaryLessonOut', ['lesson_number', 'subject_id', 'subject_name', 'class_id', 'class_name', 'room', 'start_time', 'end_time', 'homework', 'control_work', 'occurrence_id', 'status', 'version']],
+  ['TeacherDiaryHomeworkOut', ['id', 'title', 'description', 'due_date', 'attachments']],
+  ['TeacherDiaryHomeworkAttachmentOut', ['id', 'filename', 'url_link']],
+  ['TeacherDiaryControlWorkOut', ['id', 'work_type', 'title']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher diary fields`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+const teacherDiary = tenantOpenapi.components.schemas.TeacherDiaryOut.properties;
+if (teacherDiary.diary.additionalProperties?.$ref !== '#/components/schemas/TeacherDiaryDayOut') {
+  throw new Error('TeacherDiaryOut diary values must be TeacherDiaryDayOut');
+}
+const teacherDiaryDay = tenantOpenapi.components.schemas.TeacherDiaryDayOut.properties;
+if (teacherDiaryDay.lessons.items?.$ref !== '#/components/schemas/TeacherDiaryLessonOut') {
+  throw new Error('TeacherDiaryDayOut lessons must contain TeacherDiaryLessonOut items');
+}
+const teacherDiaryLesson = tenantOpenapi.components.schemas.TeacherDiaryLessonOut.properties;
+if (JSON.stringify(teacherDiaryLesson.status.enum) !== JSON.stringify(['scheduled', 'cancelled', 'completed'])) {
+  throw new Error('TeacherDiaryLessonOut status literals differ from the service contract');
+}
+if (teacherDiaryLesson.homework.items?.$ref !== '#/components/schemas/TeacherDiaryHomeworkOut') {
+  throw new Error('TeacherDiaryLessonOut homework must contain TeacherDiaryHomeworkOut items');
+}
+const teacherDiaryHomework = tenantOpenapi.components.schemas.TeacherDiaryHomeworkOut.properties;
+if (teacherDiaryHomework.attachments.items?.$ref !== '#/components/schemas/TeacherDiaryHomeworkAttachmentOut') {
+  throw new Error('TeacherDiaryHomeworkOut attachments must contain TeacherDiaryHomeworkAttachmentOut items');
+}
+for (const [schema, fields] of [
+  [teacherDiaryLesson, ['subject_name', 'class_name', 'room', 'start_time', 'end_time', 'control_work', 'occurrence_id', 'version']],
+  [teacherDiaryHomework, ['description', 'due_date']],
+  [tenantOpenapi.components.schemas.TeacherDiaryHomeworkAttachmentOut.properties, ['filename', 'url_link']],
+]) {
+  for (const field of fields) {
+    if (!(schema[field].anyOf ?? []).some(variant => variant.type === 'null')) {
+      throw new Error(`Teacher diary ${field} must be required nullable`);
+    }
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/topics', 'get') !== '#/components/schemas/TeacherAnalyticsTopicsOut') {
   throw new Error('GET /api/teacher/analytics/topics must return TeacherAnalyticsTopicsOut');
 }

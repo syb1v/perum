@@ -5428,6 +5428,105 @@ export interface components {
             /** Classes */
             classes: components["schemas"]["TeacherClassOut"][];
         };
+        /** TeacherDiaryControlWorkOut */
+        TeacherDiaryControlWorkOut: {
+            /** Id */
+            id: number;
+            /** Work Type */
+            work_type: string;
+            /** Title */
+            title: string;
+        };
+        /** TeacherDiaryDayOut */
+        TeacherDiaryDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Day Name */
+            day_name: string;
+            /** Is Today */
+            is_today: boolean;
+            /** Lessons */
+            lessons: components["schemas"]["TeacherDiaryLessonOut"][];
+        };
+        /** TeacherDiaryHomeworkAttachmentOut */
+        TeacherDiaryHomeworkAttachmentOut: {
+            /** Id */
+            id: number;
+            /** Filename */
+            filename: string | null;
+            /** Url Link */
+            url_link: string | null;
+        };
+        /** TeacherDiaryHomeworkOut */
+        TeacherDiaryHomeworkOut: {
+            /** Id */
+            id: number;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** Attachments */
+            attachments: components["schemas"]["TeacherDiaryHomeworkAttachmentOut"][];
+        };
+        /** TeacherDiaryLessonOut */
+        TeacherDiaryLessonOut: {
+            /** Lesson Number */
+            lesson_number: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string | null;
+            /** Room */
+            room: string | null;
+            /** Start Time */
+            start_time: string | null;
+            /** End Time */
+            end_time: string | null;
+            /** Homework */
+            homework: components["schemas"]["TeacherDiaryHomeworkOut"][];
+            control_work: components["schemas"]["TeacherDiaryControlWorkOut"] | null;
+            /** Occurrence Id */
+            occurrence_id: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "cancelled" | "completed";
+            /** Version */
+            version: number | null;
+        };
+        /** TeacherDiaryOut */
+        TeacherDiaryOut: {
+            /** Teacher Id */
+            teacher_id: number;
+            /** Teacher Name */
+            teacher_name: string;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /**
+             * Week End
+             * Format: date
+             */
+            week_end: string;
+            /** Week Offset */
+            week_offset: number;
+            /** Diary */
+            diary: {
+                [key: string]: components["schemas"]["TeacherDiaryDayOut"];
+            };
+        };
         /** TeacherHomeworkListOut */
         TeacherHomeworkListOut: {
             /** Homework */
@@ -13403,9 +13502,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherDiaryOut"];
                 };
             };
             /** @description Validation Error */

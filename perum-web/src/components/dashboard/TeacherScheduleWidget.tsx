@@ -5,48 +5,11 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/apiClient';
 import Modal from '@/components/ui/Modal';
 import styles from './TeacherScheduleWidget.module.css';
+import type { components } from '@perum/api-schema/tenant';
 
-/* ────── Types ────── */
-interface HomeworkItem {
-    id: number;
-    title: string;
-    description?: string;
-}
-
-interface ControlWorkItem {
-    id: number;
-    work_type: string;
-    title?: string;
-}
-
-interface DiaryLesson {
-    lesson_number: number;
-    subject_id: number;
-    subject_name: string;
-    class_id: number;
-    class_name: string;
-    room?: string;
-    start_time?: string;
-    end_time?: string;
-    homework: HomeworkItem[];
-    control_work?: ControlWorkItem | null;
-}
-
-interface DiaryDay {
-    date: string;
-    day_name: string;
-    is_today: boolean;
-    lessons: DiaryLesson[];
-}
-
-interface DiaryResponse {
-    teacher_id: number;
-    teacher_name: string;
-    week_start: string;
-    week_end: string;
-    week_offset: number;
-    diary: { [day: number]: DiaryDay };
-}
+type DiaryLesson = components['schemas']['TeacherDiaryLessonOut'];
+type DiaryDay = components['schemas']['TeacherDiaryDayOut'];
+type DiaryResponse = components['schemas']['TeacherDiaryOut'];
 
 const DAY_NAMES = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
@@ -56,7 +19,7 @@ interface TeacherScheduleWidgetProps {
 }
 
 export default function TeacherScheduleWidget({ className = '' }: TeacherScheduleWidgetProps) {
-    const [diary, setDiary] = useState<{ [day: number]: DiaryDay } | null>(null);
+    const [diary, setDiary] = useState<Record<string, DiaryDay> | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [dayOffset, setDayOffset] = useState(0);
