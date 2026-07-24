@@ -128,6 +128,12 @@ problem topics/attention students; Web typecheck/build подтверждают 
 aliases во всех analytics components без claims о polling, charts, report output
 или problem-students/works endpoints.
 
+Problem-students contract в том же suite покрывает full/empty envelope, required
+counts/boolean/string issues и missing/null/extra rejection. Curated gate фиксирует
+response/item refs и string item type для `issues`; Web typecheck/build гарантируют
+отсутствие `any[]` в report request, но не проверяют thresholds/sorting или
+отображение `issues` в старом столбце `reason`.
+
 Lesson occurrence receipt проверяется journal contract и existing occurrence suites:
 
 ```bash

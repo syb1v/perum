@@ -119,6 +119,12 @@ fields required non-null, arrays могут быть пустыми. Contract с
 query parameters и не определяет polling/abort, chart/report rendering либо
 problem-students/works responses.
 
+Teacher analytics problem-students GET `/api/teacher/analytics/students/problem`
+возвращает closed `TeacherAnalyticsProblemStudentsOut`: required students list и
+`problem_count`. Closed item требует ID/name/average, total/twos/threes counts,
+boolean `is_problem` и string `issues[]`; пустой список допустим. Contract не
+определяет thresholds/sorting и не меняет report `reason` rendering.
+
 Lesson occurrence PATCH принимает существующий `LessonOccurrenceUpdate` и
 возвращает curated `LessonOccurrenceUpdateOut`. Receipt всегда содержит required
 status, occurrence/date/lesson, required nullable `topic_id` и новую `version`;
