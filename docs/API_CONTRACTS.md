@@ -105,6 +105,13 @@ required list той же projection. Item fields `id`, `name`, `period_type`,
 `start_date`, `end_date` required non-null; даты имеют OpenAPI `format: date`.
 Admin period CRUD и правила quarter/half-year этим DTO не определяются.
 
+Teacher analytics topics GET `/api/teacher/analytics/topics` возвращает closed
+`TeacherAnalyticsTopicsOut`: required non-null `class_avg` и список closed
+`TeacherAnalyticsTopicOut`. Каждый item требует `id`, `name`, `avg`, `bad_count`,
+`total_count`, `bad_ratio`; пустой список допустим. Query `class_id`, optional
+`subject_id`/`period` сохранены; dashboard/problem-students/works responses и
+report rendering не входят в этот contract.
+
 Lesson occurrence PATCH принимает существующий `LessonOccurrenceUpdate` и
 возвращает curated `LessonOccurrenceUpdateOut`. Receipt всегда содержит required
 status, occurrence/date/lesson, required nullable `topic_id` и новую `version`;

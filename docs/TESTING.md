@@ -108,6 +108,19 @@ extra fields. Curated gate фиксирует `ActivePeriodsOut`/`ActivePeriodOu
 required nullable `current_period` и date formats; Web typecheck сохраняет generated
 analytics query DTO без проверки selection policy или admin CRUD.
 
+Teacher analytics topics contract имеет отдельный focused suite:
+
+```bash
+(cd perum-tenant && python -m pytest tests/unit/test_analytics_contracts.py tests/unit/test_analytics_period.py -q)
+npm run contracts:check
+npm run typecheck:web
+```
+
+Suite покрывает полный/пустой envelope, exact required non-null topic fields,
+missing/null/extra rejection. Curated gate фиксирует response/item refs и closed
+schemas; Web typecheck/build подтверждают generated DTO в page/report generator,
+но не dashboard/problem-students/works, query semantics или report rendering.
+
 Lesson occurrence receipt проверяется journal contract и existing occurrence suites:
 
 ```bash
