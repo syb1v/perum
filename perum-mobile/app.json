@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "PERUM",
-    "slug": "perum-mobile",
+    "slug": "perum",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,6 +31,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "eebb39ca-480d-400b-b723-7258d6e880b6"
+      }
+    },
+    "owner": "sybiv"
   }
 }
