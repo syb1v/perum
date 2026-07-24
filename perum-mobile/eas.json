@@ -5,8 +5,22 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_BUILD_ENV": "preview",
+        "EXPO_PUBLIC_CORE_API_URL": "https://admin.perum.app/api",
+        "EXPO_PUBLIC_LINK_HOST": "link.perum.app",
+        "EXPO_PUBLIC_PROJECT_ID": "eebb39ca-480d-400b-b723-7258d6e880b6"
+      }
     },
-    "production": { "environment": "production" }
+    "production": {
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_BUILD_ENV": "production",
+        "EXPO_PUBLIC_CORE_API_URL": "https://admin.perum.app/api",
+        "EXPO_PUBLIC_LINK_HOST": "link.perum.app",
+        "EXPO_PUBLIC_PROJECT_ID": "eebb39ca-480d-400b-b723-7258d6e880b6"
+      }
+    }
   }
 }
