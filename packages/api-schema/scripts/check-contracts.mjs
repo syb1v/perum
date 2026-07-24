@@ -530,6 +530,25 @@ for (const field of ['grade_value', 'work_type_id', 'grade_type', 'attendance_ma
     throw new Error(`AddGradeRequest ${field} must remain nullable`);
   }
 }
+const gradeDeletePath = '/api/journal/grades/{grade_id}';
+if (responseSchemaRef(tenantOpenapi, gradeDeletePath, 'delete') !== '#/components/schemas/JournalGradeDeleteOut') {
+  throw new Error('DELETE grade must return JournalGradeDeleteOut');
+}
+const gradeDelete = tenantOpenapi.components.schemas.JournalGradeDeleteOut;
+const gradeDeleteFields = ['success', 'message'];
+if (JSON.stringify(Object.keys(gradeDelete.properties ?? {})) !== JSON.stringify(gradeDeleteFields) || JSON.stringify(gradeDelete.required ?? []) !== JSON.stringify(gradeDeleteFields)) {
+  throw new Error('JournalGradeDeleteOut must require the exact receipt fields');
+}
+if (gradeDelete.additionalProperties !== false || gradeDelete.properties.success.type !== 'boolean' || gradeDelete.properties.message.type !== 'string') {
+  throw new Error('JournalGradeDeleteOut must be a closed boolean/string receipt');
+}
+if (tenantOpenapi.paths[gradeDeletePath].delete.requestBody !== undefined) {
+  throw new Error('DELETE grade must not accept a request body');
+}
+const gradeDeleteVersion = tenantOpenapi.paths[gradeDeletePath].delete.parameters.find(parameter => parameter.name === 'version' && parameter.in === 'query');
+if (!gradeDeleteVersion?.required || gradeDeleteVersion.schema?.type !== 'integer') {
+  throw new Error('DELETE grade must require integer version query parameter');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/homework', 'get') !== '#/components/schemas/HomeworkListOut') {
   throw new Error('/api/homework must return HomeworkListOut');
 }

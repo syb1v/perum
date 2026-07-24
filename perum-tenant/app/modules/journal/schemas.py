@@ -187,3 +187,10 @@ class JournalGradeCreateOut(BaseModel):
     color: str | None
     attendance_mark: str | None
     message: str
+
+
+class JournalGradeDeleteOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    success: bool
+    message: str

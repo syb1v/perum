@@ -6980,9 +6980,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Delete Grade Api Journal Grades  Grade Id  Delete"
+                  "$ref": "#/components/schemas/JournalGradeDeleteOut"
                 }
               }
             }
@@ -14404,6 +14402,25 @@
           "message"
         ],
         "title": "JournalGradeCreateOut"
+      },
+      "JournalGradeDeleteOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "JournalGradeDeleteOut"
       },
       "JournalGradeDetailOut": {
         "properties": {

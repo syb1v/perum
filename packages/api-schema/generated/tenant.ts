@@ -4120,6 +4120,13 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** JournalGradeDeleteOut */
+        JournalGradeDeleteOut: {
+            /** Success */
+            success: boolean;
+            /** Message */
+            message: string;
+        };
         /** JournalGradeDetailOut */
         JournalGradeDetailOut: {
             /** Id */
@@ -10140,9 +10147,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["JournalGradeDeleteOut"];
                 };
             };
             /** @description Validation Error */

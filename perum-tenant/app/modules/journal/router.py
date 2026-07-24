@@ -17,6 +17,7 @@ from app.modules.journal.schemas import (
     FinalGradeRequest,
     JournalGradeDetailOut,
     JournalGradeCreateOut,
+    JournalGradeDeleteOut,
     JournalGradeUpdateOut,
     JournalTeacherSubjectsOut,
     JournalTopicOut,
@@ -164,7 +165,7 @@ async def update_grade(
     return await service.update_grade(db, await _school(user, db), grade_id, payload, user)
 
 
-@router.delete("/grades/{grade_id}")
+@router.delete("/grades/{grade_id}", response_model=JournalGradeDeleteOut)
 async def delete_grade(
     grade_id: int,
     version: int,

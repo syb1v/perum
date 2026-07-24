@@ -13,6 +13,7 @@ type JournalTopics = components['schemas']['JournalTopicsOut'];
 type JournalTopic = components['schemas']['JournalTopicOut'];
 type JournalGradeDetail = components['schemas']['JournalGradeDetailOut'];
 type JournalGradeUpdate = components['schemas']['JournalGradeUpdateOut'];
+type JournalGradeDelete = components['schemas']['JournalGradeDeleteOut'];
 type UpdateGradeRequest = components['schemas']['UpdateGradeRequest'];
 
 interface ViewGradeModalProps {
@@ -105,7 +106,7 @@ export default function ViewGradeModal({ gradeId, onClose, onUpdate }: ViewGrade
 
     const handleDelete = async () => {
         try {
-            await api.del(`/journal/grades/${gradeId}?version=${grade.version}`);
+            await api.del<JournalGradeDelete>(`/journal/grades/${gradeId}?version=${grade.version}`);
             showSuccess('Оценка удалена');
             onUpdate();
             onClose();

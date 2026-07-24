@@ -8,6 +8,7 @@ from app.modules.journal.schemas import (
     JournalWorkTypesOut,
     JournalGradeDetailOut,
     JournalGradeCreateOut,
+    JournalGradeDeleteOut,
     JournalGradeUpdateOut,
     LessonOccurrenceUpdateOut,
     TopicCreate,
@@ -381,3 +382,19 @@ def test_journal_grade_create_receipt_rejects_missing_and_extra_fields() -> None
             JournalGradeCreateOut.model_validate({key: value for key, value in payload.items() if key != field})
     with pytest.raises(ValidationError):
         JournalGradeCreateOut.model_validate({**payload, "school_id": 1})
+
+
+def test_journal_grade_delete_receipt_is_closed() -> None:
+    response = JournalGradeDeleteOut.model_validate({"success": True, "message": "Grade deleted"})
+
+    assert response.success is True
+    assert response.message == "Grade deleted"
+    for payload in [
+        {"success": True},
+        {"message": "Grade deleted"},
+        {"success": None, "message": "Grade deleted"},
+        {"success": True, "message": None},
+        {"success": True, "message": "Grade deleted", "school_id": 1},
+    ]:
+        with pytest.raises(ValidationError):
+            JournalGradeDeleteOut.model_validate(payload)
