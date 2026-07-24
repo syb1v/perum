@@ -5470,6 +5470,39 @@ export interface components {
             /** Class Id */
             class_id: number;
         };
+        /** TeacherWorkOut */
+        TeacherWorkOut: {
+            /** Id */
+            id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "homework" | "control";
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string | null;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Title */
+            title: string;
+            /** Description */
+            description: string | null;
+            /** Due Date */
+            due_date: string | null;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** TeacherWorksOut */
+        TeacherWorksOut: {
+            /** Works */
+            works: components["schemas"]["TeacherWorkOut"][];
+            /** Has More */
+            has_more: boolean;
+        };
         /** TicketCreate */
         TicketCreate: {
             /** Client Ticket Id */
@@ -13463,9 +13496,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherWorksOut"];
                 };
             };
             /** @description Validation Error */

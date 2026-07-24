@@ -1,24 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './TeacherWorksTab.module.css';
 import journalStyles from '../../app/teacher/journal/page.module.css';
+import type { components } from '@perum/api-schema/tenant';
 
 interface PickerOption {
     id: number;
     name: string;
 }
 
-interface WorkItem {
-    id: string; // Composite ID like 'hw_1' or 'cw_2'
-    type: 'homework' | 'control' | 'independent';
-    class_id: number;
-    class_name: string;
-    subject_id: number;
-    subject_name: string;
-    title: string;
-    description?: string;
-    due_date: string;
-    created_at: string;
-}
+type WorkItem = components['schemas']['TeacherWorkOut'];
+type TeacherWorks = components['schemas']['TeacherWorksOut'];
 
 
 interface TeacherWorksTabProps {
@@ -76,7 +67,7 @@ export default function TeacherWorksTab({ classes, subjects }: TeacherWorksTabPr
                 const res = await fetch(`/api/teacher/works${queryString}`);
                 if (!res.ok) throw new Error('Ошибка загрузки работ');
 
-                const data = await res.json();
+                const data = await res.json() as TeacherWorks;
 
                 setWorks(prev => page === 0 ? data.works : [...prev, ...data.works]);
                 setHasMore(data.has_more);

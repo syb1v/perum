@@ -267,6 +267,34 @@ for (const field of ['class_name', 'subject_name']) {
     throw new Error(`TeacherHomeworkOut ${field} must be a nullable string`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/works', 'get') !== '#/components/schemas/TeacherWorksOut') {
+  throw new Error('GET /api/teacher/works must return TeacherWorksOut');
+}
+for (const [name, fields] of [
+  ['TeacherWorksOut', ['works', 'has_more']],
+  ['TeacherWorkOut', ['id', 'type', 'class_id', 'class_name', 'subject_id', 'subject_name', 'title', 'description', 'due_date', 'created_at']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher works fields`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+if (tenantOpenapi.components.schemas.TeacherWorksOut.properties.works.items?.$ref !== '#/components/schemas/TeacherWorkOut') {
+  throw new Error('TeacherWorksOut works must contain TeacherWorkOut items');
+}
+const teacherWork = tenantOpenapi.components.schemas.TeacherWorkOut.properties;
+if (JSON.stringify(teacherWork.type.enum) !== JSON.stringify(['homework', 'control'])) {
+  throw new Error('TeacherWorkOut type literals differ from the service contract');
+}
+for (const field of ['class_name', 'subject_name', 'description', 'due_date', 'created_at']) {
+  const variants = teacherWork[field].anyOf ?? [];
+  if (!variants.some(schema => schema.type === 'string') || !variants.some(schema => schema.type === 'null')) {
+    throw new Error(`TeacherWorkOut ${field} must be a nullable string`);
+  }
+}
 if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/topics', 'get') !== '#/components/schemas/TeacherAnalyticsTopicsOut') {
   throw new Error('GET /api/teacher/analytics/topics must return TeacherAnalyticsTopicsOut');
 }

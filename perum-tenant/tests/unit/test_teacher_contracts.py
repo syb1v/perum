@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut, TeacherWorksOut
 
 
 def test_teacher_classes_contract_accepts_nullable_created_at() -> None:
@@ -88,3 +88,89 @@ def test_teacher_homework_contract_accepts_required_nullable_fields() -> None:
 def test_teacher_homework_contract_rejects_extra_fields(payload: dict) -> None:
     with pytest.raises(ValidationError):
         TeacherHomeworkListOut.model_validate(payload)
+
+
+def test_teacher_works_contract_accepts_nullable_fields_and_empty_page() -> None:
+    response = TeacherWorksOut.model_validate(
+        {
+            "works": [
+                {
+                    "id": "hw_1",
+                    "type": "homework",
+                    "class_id": 1,
+                    "class_name": "7A",
+                    "subject_id": 2,
+                    "subject_name": "Mathematics",
+                    "title": "Exercises",
+                    "description": "Complete in writing",
+                    "due_date": "2026-07-25T12:00:00",
+                    "created_at": "2026-07-24T12:00:00",
+                },
+                {
+                    "id": "cw_2",
+                    "type": "control",
+                    "class_id": 3,
+                    "class_name": None,
+                    "subject_id": 4,
+                    "subject_name": None,
+                    "title": "Test",
+                    "description": None,
+                    "due_date": "2026-07-26",
+                    "created_at": None,
+                },
+            ],
+            "has_more": False,
+        }
+    )
+    empty = TeacherWorksOut.model_validate({"works": [], "has_more": False})
+
+    assert response.works[1].class_name is None
+    assert response.works[1].description is None
+    assert empty.works == []
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"has_more": False},
+        {"works": [], "has_more": None},
+        {"works": None, "has_more": False},
+        {"works": [], "has_more": False, "school_id": 1},
+        {
+            "works": [
+                {
+                    "id": "hw_1",
+                    "type": "independent",
+                    "class_id": 1,
+                    "class_name": None,
+                    "subject_id": 2,
+                    "subject_name": None,
+                    "title": "Work",
+                    "description": None,
+                    "due_date": None,
+                    "created_at": None,
+                }
+            ],
+            "has_more": False,
+        },
+        {
+            "works": [
+                {
+                    "id": "hw_1",
+                    "type": "homework",
+                    "class_id": 1,
+                    "class_name": None,
+                    "subject_id": 2,
+                    "subject_name": None,
+                    "title": "Work",
+                    "description": None,
+                    "due_date": None,
+                }
+            ],
+            "has_more": False,
+        },
+    ],
+)
+def test_teacher_works_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        TeacherWorksOut.model_validate(payload)

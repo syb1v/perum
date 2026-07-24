@@ -11,7 +11,7 @@ from app.core.deps import require_teacher
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.teacher import service
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherHomeworkListOut, TeacherWorksOut
 
 router = APIRouter()
 
@@ -69,7 +69,7 @@ async def bulk_balance(
     )
 
 
-@router.get("/works")
+@router.get("/works", response_model=TeacherWorksOut)
 async def works(
     class_id: int | None = None,
     subject_id: int | None = None,

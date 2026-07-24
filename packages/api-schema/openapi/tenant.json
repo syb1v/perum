@@ -12148,9 +12148,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Works Api Teacher Works Get"
+                  "$ref": "#/components/schemas/TeacherWorksOut"
                 }
               }
             }
@@ -18461,6 +18459,126 @@
           "class_id"
         ],
         "title": "TeacherSubjectAssign"
+      },
+      "TeacherWorkOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "homework",
+              "control"
+            ],
+            "title": "Type"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "class_id",
+          "class_name",
+          "subject_id",
+          "subject_name",
+          "title",
+          "description",
+          "due_date",
+          "created_at"
+        ],
+        "title": "TeacherWorkOut"
+      },
+      "TeacherWorksOut": {
+        "properties": {
+          "works": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherWorkOut"
+            },
+            "type": "array",
+            "title": "Works"
+          },
+          "has_more": {
+            "type": "boolean",
+            "title": "Has More"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "works",
+          "has_more"
+        ],
+        "title": "TeacherWorksOut"
       },
       "TicketCreate": {
         "properties": {
