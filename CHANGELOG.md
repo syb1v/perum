@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-24
 
+- Tenant GET `/api/teacher/diary` получил закрытый nested `TeacherDiaryOut` с week/day map, lesson/homework/attachment/control-work projections и occurrence status/version metadata. Dashboard widget и journal schedule удалили расходящиеся ручные DTO и stale `group_name`; required nullable producer fields закреплены gate без изменения navigation, modal, cache или occurrence lifecycle.
 - Tenant GET `/api/teacher/works` получил закрытые `TeacherWorksOut`/`TeacherWorkOut` с exact homework/control literals, pagination receipt и required nullable names/description/date strings. Active works tab удалил расходящийся ручной DTO и типизирует существующий raw-fetch JSON без изменения auth/error, filters, ordering, offset pagination, infinite-scroll merge или details UI.
 - Tenant GET `/api/teacher/analytics/students/problem` получил закрытые `TeacherAnalyticsProblemStudentsOut`/`TeacherAnalyticsProblemStudentOut` с required student aggregates, problem flag и string issues. Report request удалил `any[]` в пользу generated response; thresholds, sorting, query semantics и старое `reason` rendering не менялись.
 - Tenant GET `/api/teacher/analytics/dashboard` получил закрытый nested `TeacherAnalyticsDashboardOut` с required class/period/KPI/dynamics/problem-topics/attention-students projections. Web analytics types теперь aliases generated schemas; curated gate фиксирует exact nested refs без изменения polling/abort/query semantics, charts, report rendering или problem-students/works endpoints.

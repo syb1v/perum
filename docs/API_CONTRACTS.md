@@ -75,6 +75,13 @@ literal `homework|control`, class/subject IDs, title и required nullable names,
 description, due/created date strings. Contract не меняет raw-fetch/auth/error,
 filters, ordering, offset pagination или infinite-scroll merge.
 
+Teacher diary GET `/api/teacher/diary` возвращает closed `TeacherDiaryOut` с
+required teacher/week fields и string-keyed map `TeacherDiaryDayOut`. Nested lesson
+всегда содержит class/subject, required nullable names/room/bell times, homework,
+control work и occurrence ID/status/version; homework attachments и nullable
+metadata имеют отдельные closed schemas. Contract не определяет week navigation,
+modal behavior, cache или occurrence lifecycle.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`

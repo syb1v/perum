@@ -64,6 +64,13 @@ extra-field rejection. Curated gate фиксирует response/item refs, nulla
 и pagination boolean; Web typecheck/build подтверждают generated JSON cast, но не
 raw-fetch/auth/error, ordering или infinite-scroll behavior.
 
+Teacher diary contract в focused teacher suite покрывает nested nullable schedule,
+homework attachment metadata, required occurrence state и rejection missing/extra/
+unknown status/stale `group_name`. Curated gate фиксирует response/day/lesson/
+homework/control refs, status literals, required nullable fields и date formats;
+Web typecheck/build подтверждают generated DTO в dashboard и journal schedule без
+claims о navigation, modal, cache или occurrence lifecycle behavior.
+
 Journal work types contract проверяется отдельно:
 
 ```bash
