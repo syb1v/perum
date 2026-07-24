@@ -5527,6 +5527,59 @@ export interface components {
                 [key: string]: components["schemas"]["TeacherDiaryDayOut"];
             };
         };
+        /** TeacherHomeroomClassOut */
+        TeacherHomeroomClassOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Grade Level */
+            grade_level: number | null;
+            /** Is Profile */
+            is_profile: number;
+        };
+        /** TeacherHomeroomOut */
+        TeacherHomeroomOut: {
+            /** Has Class */
+            has_class: boolean;
+            class: components["schemas"]["TeacherHomeroomClassOut"] | null;
+            /** Students */
+            students: components["schemas"]["TeacherHomeroomStudentOut"][];
+            stats: components["schemas"]["TeacherHomeroomStatsOut"];
+        };
+        /** TeacherHomeroomStatsOut */
+        TeacherHomeroomStatsOut: {
+            /** Student Count */
+            student_count: number;
+            /** Avg Balance */
+            avg_balance: number;
+            /** Total Grades */
+            total_grades: number;
+            /** Avg Grade */
+            avg_grade: number;
+        };
+        /** TeacherHomeroomStudentOut */
+        TeacherHomeroomStudentOut: {
+            /** Id */
+            id: number;
+            /** Login */
+            login: string;
+            /** First Name */
+            first_name: string | null;
+            /** Last Name */
+            last_name: string | null;
+            /** Patronymic */
+            patronymic: string | null;
+            /** Balance */
+            balance: number;
+            /** Is Online */
+            is_online: boolean;
+            /**
+             * Enrollment Status
+             * @constant
+             */
+            enrollment_status: "active";
+        };
         /** TeacherHomeworkListOut */
         TeacherHomeworkListOut: {
             /** Homework */
@@ -13531,9 +13584,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TeacherHomeroomOut"];
                 };
             };
         };

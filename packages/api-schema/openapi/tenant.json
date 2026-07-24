@@ -12011,9 +12011,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response My Class Api Teacher My Class Get"
+                  "$ref": "#/components/schemas/TeacherHomeroomOut"
                 }
               }
             }
@@ -18645,6 +18643,179 @@
           "diary"
         ],
         "title": "TeacherDiaryOut"
+      },
+      "TeacherHomeroomClassOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "grade_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Level"
+          },
+          "is_profile": {
+            "type": "integer",
+            "title": "Is Profile"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "grade_level",
+          "is_profile"
+        ],
+        "title": "TeacherHomeroomClassOut"
+      },
+      "TeacherHomeroomOut": {
+        "properties": {
+          "has_class": {
+            "type": "boolean",
+            "title": "Has Class"
+          },
+          "class": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TeacherHomeroomClassOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "students": {
+            "items": {
+              "$ref": "#/components/schemas/TeacherHomeroomStudentOut"
+            },
+            "type": "array",
+            "title": "Students"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/TeacherHomeroomStatsOut"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "has_class",
+          "class",
+          "students",
+          "stats"
+        ],
+        "title": "TeacherHomeroomOut"
+      },
+      "TeacherHomeroomStatsOut": {
+        "properties": {
+          "student_count": {
+            "type": "integer",
+            "title": "Student Count"
+          },
+          "avg_balance": {
+            "type": "number",
+            "title": "Avg Balance"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          },
+          "avg_grade": {
+            "type": "number",
+            "title": "Avg Grade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "student_count",
+          "avg_balance",
+          "total_grades",
+          "avg_grade"
+        ],
+        "title": "TeacherHomeroomStatsOut"
+      },
+      "TeacherHomeroomStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "login": {
+            "type": "string",
+            "title": "Login"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "patronymic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patronymic"
+          },
+          "balance": {
+            "type": "integer",
+            "title": "Balance"
+          },
+          "is_online": {
+            "type": "boolean",
+            "title": "Is Online"
+          },
+          "enrollment_status": {
+            "type": "string",
+            "const": "active",
+            "title": "Enrollment Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "login",
+          "first_name",
+          "last_name",
+          "patronymic",
+          "balance",
+          "is_online",
+          "enrollment_status"
+        ],
+        "title": "TeacherHomeroomStudentOut"
       },
       "TeacherHomeworkListOut": {
         "properties": {

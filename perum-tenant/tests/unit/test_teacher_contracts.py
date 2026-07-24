@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from app.modules.teacher.schemas import TeacherClassesOut, TeacherDiaryOut, TeacherHomeworkListOut, TeacherWorksOut
+from app.modules.teacher.schemas import TeacherClassesOut, TeacherDiaryOut, TeacherHomeroomOut, TeacherHomeworkListOut, TeacherWorksOut
 
 
 def test_teacher_classes_contract_accepts_nullable_created_at() -> None:
@@ -258,3 +258,78 @@ def test_teacher_diary_contract_accepts_nested_nullable_schedule() -> None:
 def test_teacher_diary_contract_rejects_invalid_shapes(payload: dict) -> None:
     with pytest.raises(ValidationError):
         TeacherDiaryOut.model_validate(payload)
+
+
+def test_teacher_homeroom_contract_accepts_assigned_and_unassigned_states() -> None:
+    unassigned = TeacherHomeroomOut.model_validate(
+        {
+            "has_class": False,
+            "class": None,
+            "students": [],
+            "stats": {"student_count": 0, "avg_balance": 0, "total_grades": 0, "avg_grade": 0},
+        }
+    )
+    assigned = TeacherHomeroomOut.model_validate(
+        {
+            "has_class": True,
+            "class": {"id": 1, "name": "7A", "grade_level": None, "is_profile": 0},
+            "students": [
+                {
+                    "id": 2,
+                    "login": "student",
+                    "first_name": None,
+                    "last_name": None,
+                    "patronymic": None,
+                    "balance": 10,
+                    "is_online": False,
+                    "enrollment_status": "active",
+                }
+            ],
+            "stats": {"student_count": 1, "avg_balance": 10.0, "total_grades": 2, "avg_grade": 4.5},
+        }
+    )
+
+    assert unassigned.class_ is None
+    assert assigned.class_.grade_level is None
+    assert assigned.students[0].first_name is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"has_class": False, "class": None, "students": []},
+        {
+            "has_class": False,
+            "class": None,
+            "students": [],
+            "stats": {"student_count": 0, "avg_balance": 0, "total_grades": 0, "avg_grade": 0},
+            "school_id": 1,
+        },
+        {
+            "has_class": True,
+            "class": {"id": 1, "name": "7A", "grade_level": None, "is_profile": 0, "school_id": 1},
+            "students": [],
+            "stats": {"student_count": 0, "avg_balance": 0, "total_grades": 0, "avg_grade": 0},
+        },
+        {
+            "has_class": True,
+            "class": {"id": 1, "name": "7A", "grade_level": 7, "is_profile": 0},
+            "students": [
+                {
+                    "id": 2,
+                    "login": "student",
+                    "first_name": None,
+                    "last_name": None,
+                    "patronymic": None,
+                    "balance": 0,
+                    "is_online": False,
+                    "enrollment_status": "inactive",
+                }
+            ],
+            "stats": {"student_count": 1, "avg_balance": 0, "total_grades": 0, "avg_grade": 0},
+        },
+    ],
+)
+def test_teacher_homeroom_contract_rejects_invalid_shapes(payload: dict) -> None:
+    with pytest.raises(ValidationError):
+        TeacherHomeroomOut.model_validate(payload)

@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TeacherClassOut(BaseModel):
@@ -120,3 +120,43 @@ class TeacherDiaryOut(BaseModel):
     week_end: date
     week_offset: int
     diary: dict[str, TeacherDiaryDayOut]
+
+
+class TeacherHomeroomClassOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    grade_level: int | None
+    is_profile: int
+
+
+class TeacherHomeroomStudentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    login: str
+    first_name: str | None
+    last_name: str | None
+    patronymic: str | None
+    balance: int
+    is_online: bool
+    enrollment_status: Literal["active"]
+
+
+class TeacherHomeroomStatsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    student_count: int
+    avg_balance: float
+    total_grades: int
+    avg_grade: float
+
+
+class TeacherHomeroomOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    has_class: bool
+    class_: TeacherHomeroomClassOut | None = Field(alias="class", serialization_alias="class")
+    students: list[TeacherHomeroomStudentOut]
+    stats: TeacherHomeroomStatsOut

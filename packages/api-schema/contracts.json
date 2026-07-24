@@ -38,6 +38,7 @@
     "/api/teacher/classes",
     "/api/teacher/diary",
     "/api/teacher/homework",
+    "/api/teacher/my-class",
     "/api/teacher/works",
     "/api/teacher/analytics/topics",
     "/api/teacher/analytics/dashboard",

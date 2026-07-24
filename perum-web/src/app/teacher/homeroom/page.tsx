@@ -6,38 +6,9 @@ import api from '@/lib/apiClient';
 import { useToast } from '@/context/ToastContext';
 import styles from '../page.module.css';
 import { CoinIcon } from '@/components/ui/CoinIcon';
+import type { components } from '@perum/api-schema/tenant';
 
-interface Student {
-    id: number;
-    login: string;
-    first_name: string | null;
-    last_name: string | null;
-    patronymic: string | null;
-    balance: number;
-    is_online: boolean;
-    enrollment_status: string;
-}
-
-interface ClassStats {
-    student_count: number;
-    avg_balance: number;
-    total_grades: number;
-    avg_grade: number;
-}
-
-interface ClassInfo {
-    id: number;
-    name: string;
-    grade_level: number | null;
-    is_profile: number;
-}
-
-interface MyClassData {
-    has_class: boolean;
-    class: ClassInfo | null;
-    students: Student[];
-    stats: ClassStats;
-}
+type MyClassData = components['schemas']['TeacherHomeroomOut'];
 
 export default function HomeroomPage() {
     const { token } = useAuth();

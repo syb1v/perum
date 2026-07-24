@@ -344,6 +344,40 @@ for (const [schema, fields] of [
     }
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/teacher/my-class', 'get') !== '#/components/schemas/TeacherHomeroomOut') {
+  throw new Error('GET /api/teacher/my-class must return TeacherHomeroomOut');
+}
+for (const [name, fields] of [
+  ['TeacherHomeroomOut', ['has_class', 'class', 'students', 'stats']],
+  ['TeacherHomeroomClassOut', ['id', 'name', 'grade_level', 'is_profile']],
+  ['TeacherHomeroomStudentOut', ['id', 'login', 'first_name', 'last_name', 'patronymic', 'balance', 'is_online', 'enrollment_status']],
+  ['TeacherHomeroomStatsOut', ['student_count', 'avg_balance', 'total_grades', 'avg_grade']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields)) {
+    throw new Error(`${name} must require the exact teacher homeroom fields`);
+  }
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+const teacherHomeroom = tenantOpenapi.components.schemas.TeacherHomeroomOut.properties;
+const teacherHomeroomClass = teacherHomeroom.class.anyOf ?? [];
+if (!teacherHomeroomClass.some(schema => schema.$ref === '#/components/schemas/TeacherHomeroomClassOut') || !teacherHomeroomClass.some(schema => schema.type === 'null')) {
+  throw new Error('TeacherHomeroomOut class must be required nullable TeacherHomeroomClassOut');
+}
+if (teacherHomeroom.students.items?.$ref !== '#/components/schemas/TeacherHomeroomStudentOut' || teacherHomeroom.stats.$ref !== '#/components/schemas/TeacherHomeroomStatsOut') {
+  throw new Error('TeacherHomeroomOut nested refs differ from the client contract');
+}
+const teacherHomeroomStudent = tenantOpenapi.components.schemas.TeacherHomeroomStudentOut.properties;
+for (const field of ['first_name', 'last_name', 'patronymic']) {
+  if (!(teacherHomeroomStudent[field].anyOf ?? []).some(schema => schema.type === 'null')) {
+    throw new Error(`TeacherHomeroomStudentOut ${field} must be required nullable`);
+  }
+}
+if (JSON.stringify(teacherHomeroomStudent.enrollment_status.const) !== JSON.stringify('active')) {
+  throw new Error('TeacherHomeroomStudentOut enrollment_status must remain active');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/topics', 'get') !== '#/components/schemas/TeacherAnalyticsTopicsOut') {
   throw new Error('GET /api/teacher/analytics/topics must return TeacherAnalyticsTopicsOut');
 }
