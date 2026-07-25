@@ -239,6 +239,11 @@ search/friends pages, friend requests и blocks используют общий 
 generated gate фиксирует producer shape. Chat/moderation/settings policy, production
 pilot, attachments, push и anti-abuse thresholds этим slice не менялись.
 
+Friend request response теперь также фиксирует exact lifecycle literals
+`pending|accepted|rejected|cancelled|expired`; unknown status fail closed в generated
+clients и regression gate. Existing transitions, PostgreSQL contention semantics и
+rollout policy не менялись.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
