@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-25
+
+- Core organization support escalation boundary закрыта end-to-end: pending/detail/approve/reject/relay получили отдельные closed response schemas, active Web widget использует generated Core DTO, а curated contract gate проверяет exact bindings и required fields для 97 paths. Approval, relay idempotency, authorization и UX не менялись.
+
 ## [Unreleased] — 2026-07-24
 
 - EAS Update настроен для Mobile preview channel: добавлен SDK 57-compatible `expo-updates`, project update URL и `appVersion` runtime policy. Channel/branch `preview` создан на `@sybiv/perum`; первый signed iOS build дошёл до ожидаемого внешнего blocker по Apple credentials/internal provisioning.

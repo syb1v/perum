@@ -171,6 +171,12 @@ curated paths имеют drift gate; live Web consumers больше не дер
 `unknown[]`, response `any` или raw JSON casts. Internal/unconsumed routes не входят
 в acceptance criterion до появления tracked consumer.
 
+Follow-up audit закрыл пропущенную active Core boundary organization support
+escalation: pending/detail/approve/reject/relay теперь имеют отдельные closed schemas,
+Web widget использует generated Core DTO, а curated gate фиксирует exact bindings и
+required fields. Curated manifest расширен до 97 paths; approval/version/idempotency,
+authorization и UI semantics не менялись.
+
 React Native code foundation также закрыт на repository-controlled уровне: strict
 runtime config объединяет Expo/auth/link/push, initial/warm link и cold/warm push tap
 идут через consume-once coordinator, cache получил allowlist/throttle/logout fencing,
