@@ -4716,6 +4716,8 @@ export interface components {
             offline_preferences: boolean;
             /** Student Academics */
             student_academics: boolean;
+            /** Parent Academics */
+            parent_academics: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

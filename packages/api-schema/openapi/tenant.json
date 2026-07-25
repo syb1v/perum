@@ -16245,6 +16245,10 @@
             "type": "boolean",
             "title": "Student Academics"
           },
+          "parent_academics": {
+            "type": "boolean",
+            "title": "Parent Academics"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16286,6 +16290,7 @@
           "support_attachments",
           "offline_preferences",
           "student_academics",
+          "parent_academics",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

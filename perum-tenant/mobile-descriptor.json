@@ -19,6 +19,7 @@
     "support_attachments": false,
     "offline_preferences": true,
     "student_academics": true,
+    "parent_academics": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,
