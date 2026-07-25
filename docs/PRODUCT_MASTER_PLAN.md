@@ -265,6 +265,13 @@ exact parser, а account-scoped persisted queries показывают weekly di
 finals с loading/error/empty/offline states. Android/iOS static exports, typecheck и
 108 Mobile tests прошли; mutations, analytics и physical-device evidence не входят.
 
+Mobile Parent parity получил read-only academics vertical: atomic
+`parent_academics` capability проходит Tenant/Core/Mobile descriptor boundary,
+выбор ребёнка сохраняется при refetch и fail-safe переключается при удалённой связи,
+а child-scoped cache показывает diary/grades/finals с loading/error/empty/offline
+states. Android/iOS exports и 109 Mobile tests прошли; analytics/transactions/push и
+physical-device evidence остаются вне slice.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

@@ -297,3 +297,4 @@
 | 294 | 2026-07-25 | ee3d308 | fix(contracts): закрыты moderation schemas |
 | 295 | 2026-07-25 | 58a0562 | fix(contracts): закрыты social settings DTO |
 | 296 | 2026-07-25 | 045de58 | feat(mobile): добавлена успеваемость ученика |
+| 297 | 2026-07-25 | 6ea31a7 | feat(mobile): добавлена успеваемость родителя |
