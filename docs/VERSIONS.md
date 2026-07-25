@@ -287,4 +287,4 @@
 | 284 | 2026-07-25 | 4b38835 | feat(mobile): добавлена эскалация поддержки |
 | 285 | 2026-07-25 | 70eedb1 | fix(support): закрыты internal RPC receipts |
 | 286 | 2026-07-25 | be590af | fix(support): ограничены escalation retries |
-| 287 | 2026-07-25 | _______ | docs(plan): синхронизирован support roadmap |
+| 287 | 2026-07-25 | 30e21e3 | docs(plan): синхронизирован support roadmap |
