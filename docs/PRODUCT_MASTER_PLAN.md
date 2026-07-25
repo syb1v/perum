@@ -265,6 +265,13 @@ exact parser, а account-scoped persisted queries показывают weekly di
 finals с loading/error/empty/offline states. Android/iOS static exports, typecheck и
 108 Mobile tests прошли; mutations, analytics и physical-device evidence не входят.
 
+Mobile Student parity расширен read-only grade analytics: atomic
+`student_analytics` capability проходит Tenant/Core/Mobile descriptor boundary,
+independent account-scoped persisted queries используют generated `GradesSummaryOut`
+и `GradesAnalyticsOut` для subject averages, points и nullable period dynamics.
+Loading/error/empty/offline states, Android/iOS exports и 122 Mobile tests готовы;
+transactions/economy, charts/exports, drill-down и mutations не включены.
+
 Mobile Parent parity получил read-only academics vertical: atomic
 `parent_academics` capability проходит Tenant/Core/Mobile descriptor boundary,
 выбор ребёнка сохраняется при refetch и fail-safe переключается при удалённой связи,
@@ -1063,7 +1070,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Mobile send/read/report payloads и moderation inbox/detail/action receipt используют curated generated schemas; Web использует generated moderation types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester и read-only diary/grades/finals готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation foundation. Остаются student analytics/transactions и прочие функции, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, остальные school admin/director и org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals и grade analytics готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation foundation. Остаются student transactions/economy и прочие функции, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, остальные school admin/director и org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке
