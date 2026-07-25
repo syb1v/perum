@@ -214,6 +214,13 @@ versions/cursors и `ok=true`. Malformed 2xx больше не может пом
 создать частичный message или продвинуть cursor; curated manifest расширен до 100
 paths. Terminal retry/dead-letter policy остаётся отдельным scope.
 
+Terminal escalation delivery policy теперь закрыта на repository уровне: permanent
+4xx немедленно переходят в `dead_letter`, retryable transport/5xx/408/425/429 имеют
+лимит 8 попыток, а school operator видит authoritative `failed` и может явно вернуть
+тот же privacy-safe payload/correlation identity в очередь. Recovery создаёт audit
+event; migration и 101-й curated path фиксируют lifecycle. Hosted deployment evidence
+остаётся отдельным внешним шагом.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

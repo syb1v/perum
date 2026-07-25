@@ -286,3 +286,4 @@
 | 283 | 2026-07-25 | c4dab25 | fix(contracts): типизированы Core support escalations |
 | 284 | 2026-07-25 | 4b38835 | feat(mobile): добавлена эскалация поддержки |
 | 285 | 2026-07-25 | 70eedb1 | fix(support): закрыты internal RPC receipts |
+| 286 | 2026-07-25 | be590af | fix(support): ограничены escalation retries |
