@@ -30,6 +30,7 @@ def _manifest() -> dict:
             "offline_preferences": True,
             "student_academics": True,
             "parent_academics": True,
+            "parent_analytics": True,
             "teacher_diary": True,
             "teacher_homeroom": True,
             "teacher_works": True,

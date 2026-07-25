@@ -4718,6 +4718,8 @@ export interface components {
             student_academics: boolean;
             /** Parent Academics */
             parent_academics: boolean;
+            /** Parent Analytics */
+            parent_analytics: boolean;
             /** Teacher Diary */
             teacher_diary: boolean;
             /** Teacher Homeroom */

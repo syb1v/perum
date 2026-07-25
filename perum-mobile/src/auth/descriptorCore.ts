@@ -20,7 +20,7 @@ export const capabilityNames = [
   'refresh_sessions', 'session_management', 'push_registration', 'push_delivery',
   'social_friends', 'social_messages', 'social_realtime', 'social_attachments',
   'support_requester', 'support_admin', 'support_attachments', 'offline_preferences',
-  'student_academics', 'parent_academics', 'teacher_diary', 'teacher_homeroom', 'teacher_works', 'teacher_analytics', 'offline_homework_state', 'offline_social_messages', 'offline_support_messages',
+  'student_academics', 'parent_academics', 'parent_analytics', 'teacher_diary', 'teacher_homeroom', 'teacher_works', 'teacher_analytics', 'offline_homework_state', 'offline_social_messages', 'offline_support_messages',
   'offline_read_cursors', 'offline_social_read_cursors', 'offline_support_ticket_creation',
 ] as const satisfies readonly (keyof TenantCapabilities)[];
 

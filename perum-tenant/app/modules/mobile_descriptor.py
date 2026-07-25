@@ -59,6 +59,7 @@ class MobileCapabilities(BaseModel):
     offline_preferences: StrictBool
     student_academics: StrictBool
     parent_academics: StrictBool
+    parent_analytics: StrictBool
     teacher_diary: StrictBool
     teacher_homeroom: StrictBool
     teacher_works: StrictBool

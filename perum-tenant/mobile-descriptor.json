@@ -20,6 +20,7 @@
     "offline_preferences": true,
     "student_academics": true,
     "parent_academics": true,
+    "parent_analytics": true,
     "teacher_diary": true,
     "teacher_homeroom": true,
     "teacher_works": true,

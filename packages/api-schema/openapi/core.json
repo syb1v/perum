@@ -8658,6 +8658,10 @@
             "type": "boolean",
             "title": "Parent Academics"
           },
+          "parent_analytics": {
+            "type": "boolean",
+            "title": "Parent Analytics"
+          },
           "teacher_diary": {
             "type": "boolean",
             "title": "Teacher Diary"
@@ -8716,6 +8720,7 @@
           "offline_preferences",
           "student_academics",
           "parent_academics",
+          "parent_analytics",
           "teacher_diary",
           "teacher_homeroom",
           "teacher_works",
@@ -10454,6 +10459,10 @@
             "type": "boolean",
             "title": "Parent Academics"
           },
+          "parent_analytics": {
+            "type": "boolean",
+            "title": "Parent Analytics"
+          },
           "teacher_diary": {
             "type": "boolean",
             "title": "Teacher Diary"
@@ -10512,6 +10521,7 @@
           "offline_preferences",
           "student_academics",
           "parent_academics",
+          "parent_analytics",
           "teacher_diary",
           "teacher_homeroom",
           "teacher_works",
