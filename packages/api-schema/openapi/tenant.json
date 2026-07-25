@@ -16369,6 +16369,7 @@
             "title": "Expected Version"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "action",
@@ -16386,6 +16387,10 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "dismissed",
+              "actioned"
+            ],
             "title": "Status"
           },
           "version": {
@@ -16398,6 +16403,7 @@
             "title": "Updated At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -16415,6 +16421,11 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "open",
+              "dismissed",
+              "actioned"
+            ],
             "title": "Status"
           },
           "version": {
@@ -16453,6 +16464,7 @@
             "title": "Other Participant"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -16487,6 +16499,7 @@
             "title": "Next Cursor"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "items",
@@ -16502,6 +16515,11 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "open",
+              "dismissed",
+              "actioned"
+            ],
             "title": "Status"
           },
           "version": {
@@ -16519,6 +16537,7 @@
             "title": "Updated At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -16557,6 +16576,7 @@
             "title": "Created At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "message_id",

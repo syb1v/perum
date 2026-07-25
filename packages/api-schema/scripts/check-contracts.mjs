@@ -964,6 +964,14 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the moderation client contract`);
   }
 }
+for (const name of ['ModerationActionCreate', 'ModerationCaseSummaryOut', 'ModerationCasePageOut', 'ModerationEvidenceOut', 'ModerationCaseDetailOut', 'ModerationActionOut']) {
+  if (tenantOpenapi.components.schemas[name].additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
+if (JSON.stringify(tenantOpenapi.components.schemas.ModerationCaseSummaryOut.properties.status.enum) !== JSON.stringify(['open', 'dismissed', 'actioned'])) {
+  throw new Error('Moderation case status literals differ from the lifecycle contract');
+}
 const moderationCursor = tenantOpenapi.components.schemas.ModerationCasePageOut.properties.next_cursor.anyOf ?? [];
 if (!moderationCursor.some(schema => schema.type === 'integer') || !moderationCursor.some(schema => schema.type === 'null')) {
   throw new Error('ModerationCasePageOut next_cursor must be a nullable integer');

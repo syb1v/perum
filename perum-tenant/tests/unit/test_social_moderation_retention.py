@@ -1,5 +1,5 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -11,6 +11,13 @@ from app.models.social import ConversationMember, EvidenceHold, Message, Moderat
 from app.modules.social import moderation, retention, service
 from app.modules.social.schemas import ModerationActionCreate, ModerationActionOut, ModerationCaseDetailOut, ModerationCasePageOut, ReportCreate
 from tests.unit.test_social_messages import seed
+
+
+def test_moderation_receipt_rejects_unknown_state_and_fields():
+    with pytest.raises(ValueError):
+        ModerationActionOut(id=1, status="unknown", version=2, updated_at=datetime.now())
+    with pytest.raises(ValueError):
+        ModerationActionOut(id=1, status="dismissed", version=2, updated_at=datetime.now(), leaked=True)
 
 
 def test_report_case_action_lock_replay_and_tombstone():

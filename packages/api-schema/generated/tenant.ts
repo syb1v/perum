@@ -4764,8 +4764,11 @@ export interface components {
         ModerationActionOut: {
             /** Id */
             id: number;
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "dismissed" | "actioned";
             /** Version */
             version: number;
             /**
@@ -4778,8 +4781,11 @@ export interface components {
         ModerationCaseDetailOut: {
             /** Id */
             id: number;
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "dismissed" | "actioned";
             /** Version */
             version: number;
             /** Category */
@@ -4807,8 +4813,11 @@ export interface components {
         ModerationCaseSummaryOut: {
             /** Id */
             id: number;
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "dismissed" | "actioned";
             /** Version */
             version: number;
             /**

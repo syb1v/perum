@@ -12,6 +12,10 @@ class ChatContract(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ModerationContract(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
 class SettingsOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     social_enabled: bool
@@ -155,36 +159,36 @@ class ReportOut(ChatContract):
     created_at: datetime
 
 
-class ModerationActionCreate(BaseModel):
+class ModerationActionCreate(ModerationContract):
     action: Literal["dismiss", "hide_reported_message", "lock_conversation", "unlock_conversation"]
     reason: str = Field(min_length=1, max_length=1000)
     client_action_id: str = Field(min_length=1, max_length=64)
     expected_version: int = Field(ge=1)
 
 
-class ModerationCaseSummaryOut(BaseModel):
+class ModerationCaseSummaryOut(ModerationContract):
     id: int
-    status: str
+    status: Literal["open", "dismissed", "actioned"]
     version: int
     created_at: datetime
     updated_at: datetime
 
 
-class ModerationCasePageOut(BaseModel):
+class ModerationCasePageOut(ModerationContract):
     items: list[ModerationCaseSummaryOut]
     next_cursor: int | None
 
 
-class ModerationEvidenceOut(BaseModel):
+class ModerationEvidenceOut(ModerationContract):
     message_id: int
     sender: Literal["reported"]
     body: str | None
     created_at: datetime
 
 
-class ModerationCaseDetailOut(BaseModel):
+class ModerationCaseDetailOut(ModerationContract):
     id: int
-    status: str
+    status: Literal["open", "dismissed", "actioned"]
     version: int
     category: str
     comment: str | None
@@ -193,8 +197,8 @@ class ModerationCaseDetailOut(BaseModel):
     other_participant: str
 
 
-class ModerationActionOut(BaseModel):
+class ModerationActionOut(ModerationContract):
     id: int
-    status: str
+    status: Literal["dismissed", "actioned"]
     version: int
     updated_at: datetime
