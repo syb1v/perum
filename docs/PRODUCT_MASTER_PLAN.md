@@ -228,6 +228,12 @@ telemetry. Prometheus и local-null Alertmanager wiring, а также incident 
 валидированы. Approved external receiver и test firing/resolved delivery evidence
 остаются обязательными operator blockers и не заявляются готовыми.
 
+P1 homework state receipt boundary дополнительно hardened: request/state nested
+schemas закрыты от unknown fields, generated gate фиксирует authoritative
+`HomeworkStateOut`, а focused regression сохраняет прежние status/version/replay и
+conflict semantics. Multi-device concurrency QA по-прежнему отложен до отдельного
+concurrency environment и preview window.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
