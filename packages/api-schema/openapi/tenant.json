@@ -14270,6 +14270,7 @@
             "title": "Replayed"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "status",
@@ -14299,6 +14300,7 @@
             "title": "Status"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "client_action_id",
@@ -14335,6 +14337,7 @@
             "title": "Completed At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "status",
