@@ -31,6 +31,7 @@
     "/api/admin/support/tickets/{ticket_id}/assign",
     "/api/admin/support/tickets/{ticket_id}/events",
     "/api/admin/support/tickets/{ticket_id}/escalate",
+    "/api/admin/support/tickets/{ticket_id}/escalation-delivery/retry",
     "/api/admin/support/assignees",
     "/api/admin/support/unread-count",
     "/api/student/diary",

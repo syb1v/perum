@@ -123,7 +123,7 @@ class EventPage(BaseModel):
 
 
 class EscalationDeliveryOut(BaseModel):
-    state: Literal["pending", "retrying", "delivered"]
+    state: Literal["pending", "retrying", "delivered", "failed"]
     attempts: int
     created_at: datetime
     updated_at: datetime

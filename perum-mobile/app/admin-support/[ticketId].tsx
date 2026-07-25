@@ -25,6 +25,7 @@ export default function AdminSupportThreadScreen() {
   const network = useNetInfo();
   const [reply, setReply] = useState('');
   const [escalationSummary, setEscalationSummary] = useState('');
+  const [retryingEscalation, setRetryingEscalation] = useState(false);
   const { pending: pendingActions, pendingReplies, pendingReads, enqueue: enqueueAction, enqueueReply, markRead, retryReply, retryRead, discard: discardAction } = useAdminActionSync();
   const enabled = has('support_admin');
   const eligible = canUseAdminSupport(account?.user.role, enabled);
@@ -67,12 +68,22 @@ export default function AdminSupportThreadScreen() {
     setEscalationSummary('');
     await enqueueAction(ticketId, detail.data.version, { kind: 'escalation', redactedSummary });
   };
+  const retryEscalation = async () => {
+    if (delivery.data?.state !== 'failed') return;
+    setRetryingEscalation(true);
+    try {
+      await apiClient.post(`/admin/support/tickets/${ticketId}/escalation-delivery/retry`, {});
+      await Promise.all([delivery.refetch(), detail.refetch()]);
+    } finally {
+      setRetryingEscalation(false);
+    }
+  };
   const controls = <Value extends string,>(label: string, options: readonly (readonly [Value, string])[], current: string, select: (value: Value) => void) => <View style={styles.controlGroup}><Text style={styles.controlLabel}>{label}</Text><View style={styles.chips}>{options.map(([value, title]) => <Pressable key={value} disabled={Boolean(pendingAction) || value === current} style={[styles.chip, value === current && styles.chipActive]} onPress={() => select(value)}><Text style={[styles.chipText, value === current && styles.chipTextActive]}>{title}</Text></Pressable>)}</View></View>;
   return <Screen><KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.back}>Назад</Text></Pressable><Text numberOfLines={2} style={styles.title}>{detail.data?.subject ?? 'Обращение'}</Text><Text style={styles.status}>{detail.data?.status ?? 'Загрузка'}</Text></View>
     {network.isConnected === false ? <Text style={styles.offline}>Офлайн: ответы и изменения обработки сохраняются в очередь до подключения.</Text> : null}
     {pendingRead ? <Pressable disabled={pendingRead.state !== 'failed_permanent'} onPress={() => void retryRead(pendingRead.id)}><Text style={pendingRead.state === 'failed_permanent' ? styles.error : styles.saving}>{pendingRead.state === 'failed_permanent' ? 'Не удалось синхронизировать прочтение. Повторить.' : 'Прочтение сохранено на устройстве и ожидает подтверждения сервера.'}</Text></Pressable> : null}
-    {delivery.data ? <View style={[styles.deliveryCard, delivery.data.sla_breached && styles.deliveryLate]}><Text style={styles.controlsTitle}>Доставка эскалации</Text><Text style={styles.deliveryState}>{escalationDeliveryLabel(delivery.data.state)}</Text><Text style={styles.deliveryMeta}>Попыток: {delivery.data.attempts}</Text>{delivery.data.pending_age_seconds !== null ? <Text style={styles.deliveryMeta}>В очереди: {delivery.data.pending_age_seconds} сек.</Text> : null}{delivery.data.delivery_latency_seconds !== null ? <Text style={styles.deliveryMeta}>Доставлено за {delivery.data.delivery_latency_seconds} сек.</Text> : null}<Text style={[styles.deliveryMeta, delivery.data.sla_breached && styles.deliveryLateText]}>{delivery.data.sla_breached ? 'SLA превышен' : `SLA: ${delivery.data.sla_seconds} сек.`}</Text></View> : null}
+    {delivery.data ? <View style={[styles.deliveryCard, delivery.data.sla_breached && styles.deliveryLate]}><Text style={styles.controlsTitle}>Доставка эскалации</Text><Text style={styles.deliveryState}>{escalationDeliveryLabel(delivery.data.state)}</Text><Text style={styles.deliveryMeta}>Попыток: {delivery.data.attempts}</Text>{delivery.data.pending_age_seconds !== null ? <Text style={styles.deliveryMeta}>В очереди: {delivery.data.pending_age_seconds} сек.</Text> : null}{delivery.data.delivery_latency_seconds !== null ? <Text style={styles.deliveryMeta}>Доставлено за {delivery.data.delivery_latency_seconds} сек.</Text> : null}<Text style={[styles.deliveryMeta, delivery.data.sla_breached && styles.deliveryLateText]}>{delivery.data.sla_breached ? 'SLA превышен' : `SLA: ${delivery.data.sla_seconds} сек.`}</Text>{delivery.data.state === 'failed' ? <Pressable disabled={retryingEscalation} onPress={() => void retryEscalation()}><Text style={styles.more}>{retryingEscalation ? 'Возврат в очередь…' : 'Повторить доставку'}</Text></Pressable> : null}</View> : null}
     {detail.data ? <View style={styles.controls}>
       <Text style={styles.controlsTitle}>Обработка обращения</Text>
       {controls('Статус', statuses, detail.data.status, value => void applyAction({ kind: 'metadata', field: 'status', value }))}

@@ -55,4 +55,5 @@ test('delivery labels expose only truthful persisted states', () => {
   assert.equal(escalationDeliveryLabel('pending'), 'Ожидает отправки');
   assert.equal(escalationDeliveryLabel('retrying'), 'Повторная отправка');
   assert.equal(escalationDeliveryLabel('delivered'), 'Доставлено в PERUM');
+  assert.equal(escalationDeliveryLabel('failed'), 'Требуется ручной повтор');
 });

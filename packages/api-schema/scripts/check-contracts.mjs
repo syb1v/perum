@@ -288,6 +288,9 @@ for (const [path, method, schema] of [
     throw new Error(`${method.toUpperCase()} ${path} must accept ${schema}`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/admin/support/tickets/{ticket_id}/escalation-delivery/retry', 'post') !== '#/components/schemas/EscalationDeliveryOut') {
+  throw new Error('POST escalation-delivery/retry must return EscalationDeliveryOut');
+}
 for (const [name, fields] of [
   ['TicketPatch', ['client_action_id', 'expected_version']],
   ['AssignCreate', ['client_action_id', 'expected_version']],

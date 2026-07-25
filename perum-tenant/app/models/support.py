@@ -100,7 +100,7 @@ class SupportEvent(Base):
 class SupportEscalationOutbox(Base):
     __tablename__ = "support_escalation_outbox"
     __table_args__ = (
-        CheckConstraint("status IN ('pending', 'processing', 'delivered', 'error')", name="ck_support_escalation_outbox_status"),
+        CheckConstraint("status IN ('pending', 'processing', 'delivered', 'error', 'dead_letter')", name="ck_support_escalation_outbox_status"),
         UniqueConstraint("ticket_id", name="uq_support_escalation_outbox_ticket"),
         Index("ix_support_escalation_outbox_due", "status", "next_attempt_at"),
     )

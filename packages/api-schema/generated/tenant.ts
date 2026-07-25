@@ -1098,6 +1098,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/support/tickets/{ticket_id}/escalation-delivery/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Retry Escalation Delivery */
+        post: operations["admin_retry_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/support/tickets/{ticket_id}/messages": {
         parameters: {
             query?: never;
@@ -3847,7 +3864,7 @@ export interface components {
              * State
              * @enum {string}
              */
-            state: "pending" | "retrying" | "delivered";
+            state: "pending" | "retrying" | "delivered" | "failed";
             /** Attempts */
             attempts: number;
             /**
@@ -9271,6 +9288,37 @@ export interface operations {
         };
     };
     admin_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EscalationDeliveryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_retry_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_retry_post: {
         parameters: {
             query?: never;
             header?: never;

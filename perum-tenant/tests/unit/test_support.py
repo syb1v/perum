@@ -22,6 +22,7 @@ from app.models import (
 )
 from app.modules.support.router import admin_router, router
 from app.modules.support.schemas import CoreEscalationAckReceipt, CoreEscalationIntakeReceipt, CoreEscalationOutboundReceipt
+from app.modules.support.escalation import delivery_is_terminal
 
 
 def test_core_escalation_receipts_fail_closed():
@@ -46,6 +47,16 @@ def test_core_escalation_receipts_fail_closed():
         except ValueError:
             continue
         raise AssertionError("malformed Core escalation receipt was accepted")
+
+
+def test_escalation_delivery_terminal_policy_is_bounded():
+    request = httpx.Request("POST", "http://core/internal/support/escalations")
+    for status, terminal in [(400, True), (409, True), (408, False), (425, False), (429, False), (500, False)]:
+        response = httpx.Response(status, request=request)
+        error = httpx.HTTPStatusError("failed", request=request, response=response)
+        assert delivery_is_terminal(error, 1) is terminal
+    assert delivery_is_terminal(httpx.ConnectError("offline", request=request), 7) is False
+    assert delivery_is_terminal(httpx.ConnectError("offline", request=request), 8) is True
 
 
 async def setup_app():
@@ -580,7 +591,7 @@ def test_support_escalation_outbox_retry_redaction_pull_dedupe_and_status(monkey
                 if request.url.path.endswith("/outbound/ack"):
                     calls["ack"] += 1
                     return httpx.Response(200, json={"ok": True, "cursor": 11})
-                return httpx.Response(200, json={"approval_status": "approved", "status": "open", "version": 1, "messages": [{"id": 11, "public_id": "x", "sender_type": "org_school_relay", "body": "Organization answer", "created_at": "2026-07-15T12:00:00"}], "cursor": 11})
+                return httpx.Response(200, json={"approval_status": "approved", "status": "open", "version": 1, "messages": [{"id": 11, "public_id": "00000000-0000-4000-8000-000000000011", "client_message_id": None, "sender_type": "org_school_relay", "body": "Organization answer", "created_at": "2026-07-15T12:00:00"}], "cursor": 11})
 
             async with AsyncClient(transport=httpx.MockTransport(handler), base_url="http://core") as core_client:
                 await escalation.deliver_outbox(core_client)

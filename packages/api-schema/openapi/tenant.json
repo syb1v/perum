@@ -4214,6 +4214,53 @@
         }
       }
     },
+    "/api/admin/support/tickets/{ticket_id}/escalation-delivery/retry": {
+      "post": {
+        "tags": [
+          "support-admin"
+        ],
+        "summary": "Admin Retry Escalation Delivery",
+        "operationId": "admin_retry_escalation_delivery_api_admin_support_tickets__ticket_id__escalation_delivery_retry_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EscalationDeliveryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/support/tickets/{ticket_id}/messages": {
       "get": {
         "tags": [
@@ -13407,7 +13454,8 @@
             "enum": [
               "pending",
               "retrying",
-              "delivered"
+              "delivered",
+              "failed"
             ],
             "title": "State"
           },

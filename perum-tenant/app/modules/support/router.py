@@ -83,6 +83,11 @@ async def admin_escalation_delivery(ticket_id: str, user: User = Depends(require
     return await service.escalation_delivery(db, user, ticket_id)
 
 
+@admin_router.post("/tickets/{ticket_id}/escalation-delivery/retry", response_model=EscalationDeliveryOut)
+async def admin_retry_escalation_delivery(ticket_id: str, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
+    return await service.retry_escalation_delivery(db, user, ticket_id)
+
+
 @admin_router.get("/tickets/{ticket_id}/messages", response_model=MessagePage)
 async def admin_thread(ticket_id: str, before: str | None = None, limit: int = Query(50, ge=1, le=100), user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)):
     return await service.messages(db, user, ticket_id, True, before, limit)

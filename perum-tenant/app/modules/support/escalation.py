@@ -14,6 +14,12 @@ from app.models import Notification, SupportEscalationOutbox, SupportEscalationR
 from app.modules.support.schemas import CoreEscalationAckReceipt, CoreEscalationIntakeReceipt, CoreEscalationOutboundReceipt
 
 logger = logging.getLogger("perum.tenant.support.escalation")
+MAX_DELIVERY_ATTEMPTS = 8
+
+
+def delivery_is_terminal(error: Exception, attempts: int) -> bool:
+    permanent_http = isinstance(error, httpx.HTTPStatusError) and 400 <= error.response.status_code < 500 and error.response.status_code not in {408, 425, 429}
+    return permanent_http or attempts >= MAX_DELIVERY_ATTEMPTS
 
 
 def _headers() -> dict[str, str]:
@@ -44,11 +50,11 @@ async def deliver_outbox(client: httpx.AsyncClient) -> None:
                 ticket.escalation_status = {"pending": "pending_org_approval", "approved": "approved", "rejected": "rejected"}[result.approval_status]
                 db.add(SupportEvent(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, action="escalation_delivered", metadata_json={"status": ticket.escalation_status}, created_at=utc_now()))
             except (httpx.HTTPError, KeyError, ValueError) as exc:
-                row.status = "error"
                 row.attempts += 1
                 row.last_error = str(exc)[:2000]
                 row.updated_at = utc_now()
-                row.next_attempt_at = row.updated_at + timedelta(seconds=min(300, 2 ** min(row.attempts, 8)))
+                row.status = "dead_letter" if delivery_is_terminal(exc, row.attempts) else "error"
+                row.next_attempt_at = row.updated_at if row.status == "dead_letter" else row.updated_at + timedelta(seconds=min(300, 2 ** min(row.attempts, 8)))
                 ticket.escalation_status = "delivery_error"
             await db.commit()
 

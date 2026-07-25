@@ -91,7 +91,7 @@ async def escalation_delivery(db: AsyncSession, user: User, public_id: str) -> E
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Доставка эскалации не найдена")
     now = utc_now()
-    state = "delivered" if row.status == "delivered" else "retrying" if row.status == "error" or row.attempts > 0 else "pending"
+    state = "delivered" if row.status == "delivered" else "failed" if row.status == "dead_letter" else "retrying" if row.status == "error" or row.attempts > 0 else "pending"
     pending_age = max(0, int((now - row.created_at).total_seconds())) if state != "delivered" else None
     latency = max(0, int((row.delivered_at - row.created_at).total_seconds())) if row.delivered_at is not None else None
     sla = get_settings().SUPPORT_ESCALATION_DELIVERY_SLA_S
@@ -100,13 +100,32 @@ async def escalation_delivery(db: AsyncSession, user: User, public_id: str) -> E
         attempts=row.attempts,
         created_at=row.created_at,
         updated_at=row.updated_at,
-        next_attempt_at=row.next_attempt_at if state != "delivered" else None,
+        next_attempt_at=row.next_attempt_at if state in {"pending", "retrying"} else None,
         delivered_at=row.delivered_at,
         pending_age_seconds=pending_age,
         delivery_latency_seconds=latency,
         sla_seconds=sla,
         sla_breached=pending_age is not None and pending_age >= sla,
     )
+
+
+async def retry_escalation_delivery(db: AsyncSession, user: User, public_id: str) -> EscalationDeliveryOut:
+    ticket = await _admin_ticket(db, user, public_id)
+    row = await db.scalar(select(SupportEscalationOutbox).where(SupportEscalationOutbox.ticket_id == ticket.id, SupportEscalationOutbox.school_id == user.school_id))
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Доставка эскалации не найдена")
+    if row.status != "dead_letter":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Доставка не ожидает ручного повтора")
+    now = utc_now()
+    row.status = "pending"
+    row.attempts = 0
+    row.next_attempt_at = now
+    row.last_error = None
+    row.updated_at = now
+    ticket.escalation_status = "pending_delivery"
+    db.add(SupportEvent(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, actor_id=user.id, action="escalation_delivery_retried", metadata_json=None, created_at=now))
+    await db.commit()
+    return await escalation_delivery(db, user, public_id)
 
 
 async def messages(db: AsyncSession, user: User, public_id: str, admin: bool, before: str | None, limit: int) -> MessagePage:

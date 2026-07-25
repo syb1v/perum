@@ -50,8 +50,9 @@ export function isVersionConflict(error: unknown) {
   return candidate.status === 409 && candidate.originalErrorData?.detail?.code === 'VERSION_CONFLICT';
 }
 
-export function escalationDeliveryLabel(state: 'pending' | 'retrying' | 'delivered') {
+export function escalationDeliveryLabel(state: 'pending' | 'retrying' | 'delivered' | 'failed') {
   if (state === 'delivered') return 'Доставлено в PERUM';
+  if (state === 'failed') return 'Требуется ручной повтор';
   if (state === 'retrying') return 'Повторная отправка';
   return 'Ожидает отправки';
 }
