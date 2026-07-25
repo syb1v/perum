@@ -1,5 +1,5 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -11,7 +11,7 @@ from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent
 from app.models.social import FriendRequest, Friendship, SocialSettings, UserBlock
 from app.modules.social import service
-from app.modules.social.schemas import SettingsPatch
+from app.modules.social.schemas import FriendRequestOut, SettingsPatch, StudentProfile
 from app.telemetry import collect_metrics
 
 
@@ -205,3 +205,10 @@ def test_create_persists_expiration_before_blocked_pair_rejection():
             await db.close()
             await engine.dispose()
     asyncio.run(run())
+
+
+def test_social_friend_contracts_reject_unknown_fields():
+    student = StudentProfile(id=1, name="Student", avatar=None, class_name="5A")
+    assert student.id == 1
+    with pytest.raises(ValueError):
+        FriendRequestOut(id=1, status="pending", student=student, created_at=datetime.now(), expires_at=datetime.now(), leaked=True)

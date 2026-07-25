@@ -12959,6 +12959,7 @@
             "title": "Reason Code"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "student_id"
@@ -12991,6 +12992,7 @@
             "title": "Created At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -13681,6 +13683,7 @@
             "title": "Client Request Id"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "student_id",
@@ -13712,6 +13715,7 @@
             "title": "Expires At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -19559,6 +19563,7 @@
             "title": "Next Cursor"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "items",
@@ -19592,6 +19597,7 @@
             "title": "Class Name"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",

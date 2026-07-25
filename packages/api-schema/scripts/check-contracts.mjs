@@ -164,6 +164,11 @@ for (const path of ['/api/social/students', '/api/social/friends']) {
     throw new Error(`${path} must return StudentPage`);
   }
 }
+for (const name of ['StudentProfile', 'StudentPage', 'FriendRequestOut', 'BlockOut']) {
+  if (tenantOpenapi.components.schemas[name].additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
 for (const [path, itemSchema] of [
   ['/api/social/friend-requests', 'FriendRequestOut'],
   ['/api/social/blocks', 'BlockOut'],

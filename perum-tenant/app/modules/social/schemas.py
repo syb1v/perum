@@ -4,6 +4,10 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+class FriendContract(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
 class SettingsOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     social_enabled: bool
@@ -47,24 +51,24 @@ class SettingsPatch(BaseModel):
         return self
 
 
-class StudentProfile(BaseModel):
+class StudentProfile(FriendContract):
     id: int
     name: str
     avatar: str | None
     class_name: str
 
 
-class StudentPage(BaseModel):
+class StudentPage(FriendContract):
     items: list[StudentProfile]
     next_cursor: int | None
 
 
-class FriendRequestCreate(BaseModel):
+class FriendRequestCreate(FriendContract):
     student_id: int
     client_request_id: str = Field(min_length=1, max_length=64)
 
 
-class FriendRequestOut(BaseModel):
+class FriendRequestOut(FriendContract):
     id: int
     status: str
     student: StudentProfile
@@ -72,12 +76,12 @@ class FriendRequestOut(BaseModel):
     expires_at: datetime
 
 
-class BlockCreate(BaseModel):
+class BlockCreate(FriendContract):
     student_id: int
     reason_code: str | None = Field(None, max_length=50)
 
 
-class BlockOut(BaseModel):
+class BlockOut(FriendContract):
     id: int
     student: StudentProfile
     reason_code: str | None
