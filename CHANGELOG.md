@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Evidence table в master plan синхронизирована с фактическим support scope: curated contracts = 101 path, Native escalation/exact RPC receipts/DLQ recovery больше не перечисляются как remaining; attachments, real push evidence, alert delivery и org/platform Native parity остаются открытыми без изменения общей оценки готовности.
 - Tenant support escalation delivery получила bounded terminal policy: permanent 4xx переходят в `dead_letter` сразу, transport/5xx/408/425/429 ограничены 8 попытками. School operator видит authoritative `failed` и может явно вернуть неизменный payload в очередь; добавлены migration, audit event, Mobile retry control и 101-й curated path.
 - Internal Tenant↔Core support escalation RPC получил exact closed receipts для intake, outbound pull и ack. Tenant валидирует весь 2xx payload до изменения outbox/ticket/cursor, включая literals, UUID, non-negative versions/cursors и `ok=true`; malformed responses fail closed. Curated contract gate расширен до 100 paths.
 - Native school operator support thread получил privacy-safe escalation request: только открытый неэскалированный тикет можно поставить в durable account-scoped outbox с обезличенным summary, generated `EscalateCreate`, immutable action ID и enqueue-time version. Retry/crash recovery/conflict semantics переиспользуют существующий admin action lifecycle без optimistic escalation state.
