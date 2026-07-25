@@ -18,6 +18,9 @@ export const queryKeys = {
   adminSupportEscalationDelivery: (accountId: string, ticketId: string) => [...queryKeys.account(accountId), 'support-admin', 'delivery', ticketId] as const,
   notifications: (accountId: string) => [...queryKeys.account(accountId), 'notifications'] as const,
   homework: (accountId: string) => [...queryKeys.account(accountId), 'homework'] as const,
+  studentDiary: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'diary'] as const,
+  studentGrades: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'grades'] as const,
+  studentFinals: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'finals'] as const,
 };
 
 export const socialInvalidationKeys = {

@@ -57,6 +57,7 @@ class MobileCapabilities(BaseModel):
     support_admin: StrictBool
     support_attachments: StrictBool
     offline_preferences: StrictBool
+    student_academics: StrictBool
     offline_homework_state: StrictBool
     offline_social_messages: StrictBool
     offline_support_messages: StrictBool

@@ -2760,6 +2760,8 @@ export interface components {
             support_attachments: boolean;
             /** Offline Preferences */
             offline_preferences: boolean;
+            /** Student Academics */
+            student_academics: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -3355,6 +3357,8 @@ export interface components {
             support_attachments: boolean;
             /** Offline Preferences */
             offline_preferences: boolean;
+            /** Student Academics */
+            student_academics: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

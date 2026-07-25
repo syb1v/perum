@@ -1,6 +1,6 @@
 import type { Query } from '@tanstack/react-query';
 
-const persistedScopes = new Set(['preferences', 'conversations', 'messages', 'unread', 'support', 'support-admin', 'notifications', 'homework']);
+const persistedScopes = new Set(['preferences', 'conversations', 'messages', 'unread', 'support', 'support-admin', 'notifications', 'homework', 'academics']);
 
 export function shouldPersistQuery(query: Query) {
   if (query.state.status !== 'success') return false;
