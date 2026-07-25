@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Mobile Teacher parity получил read-only weekly diary: atomic `teacher_diary` capability, offset-scoped persisted queries, class/subject/time/status/homework/control-work rendering and loading/error/empty/offline states. Android/iOS exports and 109 Mobile tests passed; journal mutations remain out of scope.
 - Mobile Parent parity получил read-only academics vertical: atomic `parent_academics` capability, stable/fallback child selection, child-scoped cached diary/grades/finals and explicit loading/error/empty/offline states. Android/iOS exports, descriptor parity and 109 Mobile tests passed.
 - Mobile student parity расширен read-only academics vertical: новый atomic `student_academics` capability связывает Tenant descriptor, Core discovery и Mobile fail-closed parser; экран показывает weekly diary, grades and finals with loading/error/empty/offline cached states. Android/iOS static exports, typecheck and 108 Mobile tests passed.
 - Social settings and realtime ticket DTO are closed: settings snapshot/patch and WebSocket ticket receipt reject unknown fields while preserving rollout convergence, quiet-hours validation and realtime transport behavior.

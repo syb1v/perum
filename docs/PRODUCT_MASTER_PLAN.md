@@ -272,6 +272,13 @@ Mobile Parent parity получил read-only academics vertical: atomic
 states. Android/iOS exports и 109 Mobile tests прошли; analytics/transactions/push и
 physical-device evidence остаются вне slice.
 
+Mobile Teacher parity получил read-only weekly diary: atomic `teacher_diary`
+capability проходит Tenant/Core/Mobile descriptor boundary, week-offset cache хранит
+class/subject/time/status/homework/control-work projection и показывает
+loading/error/empty/offline states. Android/iOS exports и 109 Mobile tests прошли;
+grade/topic/occurrence mutations и полноценный offline journal остаются отдельным
+большим vertical.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
