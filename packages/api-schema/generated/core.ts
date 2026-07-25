@@ -2770,6 +2770,8 @@ export interface components {
             teacher_homeroom: boolean;
             /** Teacher Works */
             teacher_works: boolean;
+            /** Teacher Analytics */
+            teacher_analytics: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -3375,6 +3377,8 @@ export interface components {
             teacher_homeroom: boolean;
             /** Teacher Works */
             teacher_works: boolean;
+            /** Teacher Analytics */
+            teacher_analytics: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

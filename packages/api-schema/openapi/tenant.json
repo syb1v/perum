@@ -16261,6 +16261,10 @@
             "type": "boolean",
             "title": "Teacher Works"
           },
+          "teacher_analytics": {
+            "type": "boolean",
+            "title": "Teacher Analytics"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16306,6 +16310,7 @@
           "teacher_diary",
           "teacher_homeroom",
           "teacher_works",
+          "teacher_analytics",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
