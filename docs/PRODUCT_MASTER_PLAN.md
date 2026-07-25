@@ -234,6 +234,11 @@ schemas закрыты от unknown fields, generated gate фиксирует au
 conflict semantics. Multi-device concurrency QA по-прежнему отложен до отдельного
 concurrency environment и preview window.
 
+P1 Friends read/mutation DTO дополнительно закрыты от unknown fields: student
+search/friends pages, friend requests и blocks используют общий closed contract, а
+generated gate фиксирует producer shape. Chat/moderation/settings policy, production
+pilot, attachments, push и anti-abuse thresholds этим slice не менялись.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Friends contract family hardened: `StudentProfile/Page`, friend request и block request/response DTO теперь closed, contract gate отклоняет open generated schemas, focused test фиксирует unknown-field rejection. Chat/moderation/settings policy и production rollout не менялись.
 - Homework state contracts hardened: Tenant `HomeworkStateUpdate`, `HomeworkStudentStateOut` и authoritative `HomeworkStateOut` теперь closed (`extra=forbid`), generated OpenAPI gate фиксирует state receipt boundary, а focused test отклоняет unknown fields без изменения status/version/conflict semantics.
 - Support escalation observability расширена terminal `failed` telemetry от Tenant до Core rollup и unlabeled Prometheus gauge. Добавлены четыре validated alert rules, local-null Alertmanager wiring и incident runbook; внешний approved receiver и firing/resolved delivery evidence намеренно остаются operator blockers.
 - Evidence table в master plan синхронизирована с фактическим support scope: curated contracts = 101 path, Native escalation/exact RPC receipts/DLQ recovery больше не перечисляются как remaining; attachments, real push evidence, alert delivery и org/platform Native parity остаются открытыми без изменения общей оценки готовности.
