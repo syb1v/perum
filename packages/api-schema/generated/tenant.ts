@@ -3942,8 +3942,11 @@ export interface components {
         FriendRequestOut: {
             /** Id */
             id: number;
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "rejected" | "cancelled" | "expired";
             student: components["schemas"]["StudentProfile"];
             /**
              * Created At

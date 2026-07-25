@@ -212,3 +212,5 @@ def test_social_friend_contracts_reject_unknown_fields():
     assert student.id == 1
     with pytest.raises(ValueError):
         FriendRequestOut(id=1, status="pending", student=student, created_at=datetime.now(), expires_at=datetime.now(), leaked=True)
+    with pytest.raises(ValueError):
+        FriendRequestOut(id=1, status="unknown", student=student, created_at=datetime.now(), expires_at=datetime.now())

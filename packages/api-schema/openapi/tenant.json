@@ -13699,6 +13699,13 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "rejected",
+              "cancelled",
+              "expired"
+            ],
             "title": "Status"
           },
           "student": {

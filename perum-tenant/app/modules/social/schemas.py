@@ -70,7 +70,7 @@ class FriendRequestCreate(FriendContract):
 
 class FriendRequestOut(FriendContract):
     id: int
-    status: str
+    status: Literal["pending", "accepted", "rejected", "cancelled", "expired"]
     student: StudentProfile
     created_at: datetime
     expires_at: datetime
