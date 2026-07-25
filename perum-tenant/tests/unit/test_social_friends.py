@@ -11,7 +11,7 @@ from app.models import Organization, School, User
 from app.models.academic import Class, ClassStudent
 from app.models.social import FriendRequest, Friendship, SocialSettings, UserBlock
 from app.modules.social import service
-from app.modules.social.schemas import FriendRequestOut, SettingsPatch, StudentProfile
+from app.modules.social.schemas import FriendRequestOut, RealtimeTicketOut, SettingsPatch, StudentProfile
 from app.telemetry import collect_metrics
 
 
@@ -214,3 +214,10 @@ def test_social_friend_contracts_reject_unknown_fields():
         FriendRequestOut(id=1, status="pending", student=student, created_at=datetime.now(), expires_at=datetime.now(), leaked=True)
     with pytest.raises(ValueError):
         FriendRequestOut(id=1, status="unknown", student=student, created_at=datetime.now(), expires_at=datetime.now())
+
+
+def test_social_settings_and_realtime_contracts_reject_unknown_fields():
+    with pytest.raises(ValueError):
+        SettingsPatch(friend_scope="school", leaked=True)
+    with pytest.raises(ValueError):
+        RealtimeTicketOut(ticket="token", expires_at=datetime.now(), websocket_path="/ws", leaked=True)

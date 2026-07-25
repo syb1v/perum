@@ -17686,6 +17686,7 @@
             "title": "Websocket Path"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "ticket",
@@ -18490,6 +18491,7 @@
             "title": "History Deletes At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "social_enabled",
@@ -18629,6 +18631,7 @@
             "title": "Social Quiet Hours End"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "SettingsPatch"
       },

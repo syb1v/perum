@@ -16,8 +16,12 @@ class ModerationContract(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class SettingsOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class SocialSettingsContract(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class SettingsOut(SocialSettingsContract):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
     social_enabled: bool
     friend_scope: Literal["classmates", "school"]
     social_min_grade: int | None
@@ -35,13 +39,13 @@ class SettingsOut(BaseModel):
     history_deletes_at: datetime | None
 
 
-class RealtimeTicketOut(BaseModel):
+class RealtimeTicketOut(SocialSettingsContract):
     ticket: str
     expires_at: datetime
     websocket_path: str
 
 
-class SettingsPatch(BaseModel):
+class SettingsPatch(SocialSettingsContract):
     social_enabled: bool | None = None
     friend_scope: Literal["classmates", "school"] | None = None
     social_min_grade: int | None = Field(None, ge=1, le=11)

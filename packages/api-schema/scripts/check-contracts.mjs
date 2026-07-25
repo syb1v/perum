@@ -169,6 +169,11 @@ for (const name of ['StudentProfile', 'StudentPage', 'FriendRequestOut', 'BlockO
     throw new Error(`${name} must reject additional properties`);
   }
 }
+for (const name of ['SettingsOut', 'SettingsPatch', 'RealtimeTicketOut']) {
+  if (tenantOpenapi.components.schemas[name].additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
 if (JSON.stringify(tenantOpenapi.components.schemas.FriendRequestOut.properties.status.enum) !== JSON.stringify(['pending', 'accepted', 'rejected', 'cancelled', 'expired'])) {
   throw new Error('FriendRequestOut status literals differ from the lifecycle contract');
 }
