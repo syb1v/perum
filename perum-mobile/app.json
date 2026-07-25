@@ -40,6 +40,12 @@
         "projectId": "eebb39ca-480d-400b-b723-7258d6e880b6"
       }
     },
-    "owner": "sybiv"
+    "owner": "sybiv",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/eebb39ca-480d-400b-b723-7258d6e880b6"
+    }
   }
 }
