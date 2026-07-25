@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Active moderation case/action boundary hardened: create, summary/page, evidence/detail и action receipt schemas closed; case/action statuses constrained to authoritative `open|dismissed|actioned` lifecycle. Evidence visibility, retention, actions and policy thresholds are unchanged.
 - Active 1:1 social chat response family hardened: message/page, conversation/page, unread and report receipts are closed and guarded against unknown fields. Existing generated send/read/report request bindings, groups/attachments/parent policy and anti-abuse behavior are unchanged.
 - Friend request response status сужен до authoritative lifecycle `pending|accepted|rejected|cancelled|expired`; generated gate и focused test отклоняют неизвестные состояния без изменения request transitions или rollout policy.
 - Friends contract family hardened: `StudentProfile/Page`, friend request и block request/response DTO теперь closed, contract gate отклоняет open generated schemas, focused test фиксирует unknown-field rejection. Chat/moderation/settings policy и production rollout не менялись.

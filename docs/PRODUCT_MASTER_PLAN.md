@@ -249,6 +249,11 @@ conversations/pages, unread count и report receipt отклоняют unknown f
 закреплены generated gate. Existing send/read/report request identities не менялись;
 groups, attachments, parent observer policy и anti-abuse остаются отдельным scope.
 
+Active moderation boundary теперь также closed: action request, case summary/page,
+evidence/detail и action receipt отклоняют unknown fields, а case/action status
+ограничен authoritative `open|dismissed|actioned` lifecycle. Evidence visibility,
+retention, available actions и policy thresholds не менялись.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
