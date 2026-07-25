@@ -91,7 +91,8 @@ async def collect_metrics(db, school_id: int) -> dict:
         "scanner": {"backlog": scanner_backlog},
         "support_escalation_delivery": {
             "pending": sum(row.status == "pending" and row.attempts == 0 for row in delivery_rows),
-            "retrying": sum(row.status == "error" or row.attempts > 0 for row in delivery_rows),
+            "retrying": sum(row.status == "error" for row in delivery_rows),
+            "failed": sum(row.status == "dead_letter" for row in delivery_rows),
             "sla_breached": sum(age >= delivery_sla for age in delivery_ages),
             "oldest_pending_age_seconds": max(delivery_ages, default=0),
         },

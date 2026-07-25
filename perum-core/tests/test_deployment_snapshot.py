@@ -123,6 +123,7 @@ def test_authenticated_metrics_are_sanitized_before_persistence():
         "support_escalation_delivery": {
             "pending": 1,
             "retrying": 0,
+            "failed": 0,
             "sla_breached": 0,
             "oldest_pending_age_seconds": 5,
         },

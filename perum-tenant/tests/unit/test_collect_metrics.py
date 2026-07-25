@@ -92,7 +92,7 @@ def test_collect_metrics_exact_values():
         "conversations": 0, "messages": 0, "reports": 0,
     }
     assert m["scanner"] == {"backlog": 0}
-    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
+    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "failed": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
     assert m["support_escalation_delivery"] in [case["metrics"] for case in DELIVERY_FIXTURE["accepted"]]
     assert sorted(m["support_escalation_delivery"]) == DELIVERY_FIXTURE["fields"]
     assert sorted(key for key, value in m.items() if not isinstance(value, dict)) == METRICS_FIXTURE["scalar_fields"]
@@ -117,4 +117,4 @@ def test_collect_metrics_empty_school():
     assert set(m.keys()) == EXPECTED_KEYS
     assert all(isinstance(value, (bool, int)) for value in m["social"].values())
     assert m["scanner"] == {"backlog": 0}
-    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}
+    assert m["support_escalation_delivery"] == {"pending": 0, "retrying": 0, "failed": 0, "sla_breached": 0, "oldest_pending_age_seconds": 0}

@@ -169,10 +169,21 @@ services:
       - "9090:9090"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/rules:/etc/prometheus/rules:ro
       # Bearer-токен для скрейпа /metrics (вне VCS; создаётся на сервере из
       # METRICS_TOKEN). Файл может отсутствовать в dev — тогда токен пустой.
       - ./observability/metrics_token:/etc/prometheus/metrics_token:ro
       - prometheus_data:/prometheus
+    networks:
+      - perum_internal
+
+  alertmanager:
+    image: ${IMAGE_REGISTRY:-docker.io}/prom/alertmanager:latest
+    container_name: perum_alertmanager
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml"]
+    volumes:
+      - ./observability/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     networks:
       - perum_internal
 

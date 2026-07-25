@@ -61,20 +61,26 @@ registry access, disk pressure и Docker daemon. Не перезапускайт
 Platform и org dashboard показывают Tenant escalation delivery из последнего
 school telemetry snapshot. `healthy` означает свежую валидную телеметрию без
 очереди; `warning` — pending/retrying в пределах SLA; `critical` — хотя бы один
-SLA breach; `unknown` — snapshot отсутствует, старше 180 секунд или malformed.
+SLA breach или dead-letter; `unknown` — snapshot отсутствует, старше 180 секунд или malformed.
 `unknown` нельзя интерпретировать как нулевой backlog.
 
 Prometheus экспортирует unlabeled gauges с префиксом
-`perum_support_escalation_delivery_`: `pending`, `retrying`, `sla_breached`,
+`perum_support_escalation_delivery_`: `pending`, `retrying`, `failed`, `sla_breached`,
 `oldest_pending_seconds`, `reporting_schools`, `unknown_schools`. Начните triage с
 `sla_breached > 0`, затем проверьте `retrying` и freshness telemetry выбранной
 школы. При диагностике outbox не выводите `payload_json`, `last_error`, message
 content или identifiers; используйте только status/count/timestamps.
 
-Tenant `error` означает автоматический retry, а не terminal failure. Core relay
+Tenant `error` означает автоматический retry, `dead_letter` — terminal failure после
+permanent 4xx или 8 неуспешных попыток. В school operator Mobile UI откройте ticket,
+проверьте `failed` без просмотра payload и выполните явный manual retry только после
+устранения причины. Retry сохраняет исходные correlation/payload identities и
+создаёт audit event. Core relay
 является pull/ACK и имеет только pending/delivered. Prometheus gauges и PromQL
-условия не означают доставку уведомлений: Alertmanager/contact points и receivers
-не настроены, пока отдельный operations cycle не подтвердит test notification.
+rules находятся в `deploy/observability/rules/support-escalation.yml`; локальный
+Alertmanager использует `local-null`, поэтому rules не означают доставку уведомлений.
+Approved contact point считается готовым только после test alert и подтверждённых
+firing/resolved receipts во внешнем incident record.
 
 ## Required external configuration
 

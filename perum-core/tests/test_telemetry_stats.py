@@ -76,7 +76,7 @@ def test_support_delivery_requires_fresh_strict_aggregate_and_rolls_up():
         (_school(3), _metric(last_heartbeat_at=now - timedelta(hours=1), payload=payload)),
     ], now)
     assert schools[1]["support_escalation_delivery"]["telemetry_status"] == "critical"
-    assert agg["support_escalation_delivery"] == {"pending": 2, "retrying": 2, "sla_breached": 1, "oldest_pending_age_seconds": 400, "schools_reporting": 2, "schools_unknown": 1}
+    assert agg["support_escalation_delivery"] == {"pending": 2, "retrying": 2, "failed": 1, "sla_breached": 1, "oldest_pending_age_seconds": 400, "schools_reporting": 2, "schools_unknown": 1}
     for invalid in DELIVERY_FIXTURE["rejected"]:
         assert support_delivery(_metric(last_heartbeat_at=now, payload={"support_escalation_delivery": invalid}), now) is None
 

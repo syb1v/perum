@@ -30,7 +30,7 @@ class _PopulatedDB(_DB):
         self.calls += 1
         if self.calls == 4:
             school = SimpleNamespace(id=1, slug="school-secret", name="School", status="active")
-            metric = SimpleNamespace(last_heartbeat_at=datetime.utcnow(), students=10, users_total=12, avg_grade=None, payload={"support_escalation_delivery": {"pending": 1, "retrying": 2, "sla_breached": 1, "oldest_pending_age_seconds": 400}}, admins=0, teachers=0, parents=0, grades_total=0, active_24h=0, balance_total=0)
+            metric = SimpleNamespace(last_heartbeat_at=datetime.utcnow(), students=10, users_total=12, avg_grade=None, payload={"support_escalation_delivery": {"pending": 1, "retrying": 2, "failed": 1, "sla_breached": 1, "oldest_pending_age_seconds": 400}}, admins=0, teachers=0, parents=0, grades_total=0, active_24h=0, balance_total=0)
             return SimpleNamespace(all=lambda: [(school, "org-secret", metric)])
         return _Result()
 
@@ -45,6 +45,7 @@ def test_support_delivery_metrics_are_unlabelled_and_populated_school_path_works
     support_lines = [line for line in output.splitlines() if line.startswith("perum_support_")]
     assert "perum_support_escalation_delivery_pending 1" in support_lines
     assert "perum_support_escalation_delivery_retrying 2" in support_lines
+    assert "perum_support_escalation_delivery_failed 1" in support_lines
     assert "perum_support_escalation_delivery_sla_breached 1" in support_lines
     assert "perum_support_escalation_delivery_unknown_schools 0" in support_lines
     assert all("{" not in line and "school-secret" not in line and "org-secret" not in line for line in support_lines)

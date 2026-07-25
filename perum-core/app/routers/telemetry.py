@@ -40,7 +40,7 @@ _METRIC_SECTIONS = {
     },
     "scanner": {"backlog"},
     "support_escalation_delivery": {
-        "pending", "retrying", "sla_breached", "oldest_pending_age_seconds",
+        "pending", "retrying", "failed", "sla_breached", "oldest_pending_age_seconds",
     },
 }
 

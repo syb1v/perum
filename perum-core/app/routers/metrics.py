@@ -111,6 +111,7 @@ async def metrics(
     for name, help_, key in (
         ("perum_support_escalation_delivery_pending", "Support escalations pending delivery", "pending"),
         ("perum_support_escalation_delivery_retrying", "Support escalations retrying delivery", "retrying"),
+        ("perum_support_escalation_delivery_failed", "Support escalations requiring manual recovery", "failed"),
         ("perum_support_escalation_delivery_sla_breached", "Support escalations beyond delivery SLA", "sla_breached"),
         ("perum_support_escalation_delivery_oldest_pending_seconds", "Oldest undelivered support escalation age", "oldest_pending_age_seconds"),
         ("perum_support_escalation_delivery_reporting_schools", "Schools with fresh valid support delivery telemetry", "schools_reporting"),

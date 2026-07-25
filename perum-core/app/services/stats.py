@@ -20,7 +20,7 @@ _AGG_KEYS = (
     "users_total", "students", "teachers", "parents", "admins",
     "grades_total", "active_24h", "balance_total",
 )
-_SUPPORT_KEYS = ("pending", "retrying", "sla_breached", "oldest_pending_age_seconds")
+_SUPPORT_KEYS = ("pending", "retrying", "failed", "sla_breached", "oldest_pending_age_seconds")
 
 
 def support_delivery(metric: SchoolMetric | None, now: datetime) -> dict | None:
@@ -36,7 +36,7 @@ def support_delivery(metric: SchoolMetric | None, now: datetime) -> dict | None:
         if isinstance(value, bool) or not isinstance(value, int) or value < 0:
             return None
         values[key] = value
-    values["telemetry_status"] = "critical" if values["sla_breached"] else "warning" if values["pending"] or values["retrying"] else "healthy"
+    values["telemetry_status"] = "critical" if values["failed"] or values["sla_breached"] else "warning" if values["pending"] or values["retrying"] else "healthy"
     return values
 
 
@@ -45,6 +45,7 @@ def support_delivery_rollup(schools: list[dict]) -> dict:
     return {
         "pending": sum(item["pending"] for item in reporting),
         "retrying": sum(item["retrying"] for item in reporting),
+        "failed": sum(item["failed"] for item in reporting),
         "sla_breached": sum(item["sla_breached"] for item in reporting),
         "oldest_pending_age_seconds": max((item["oldest_pending_age_seconds"] for item in reporting), default=0),
         "schools_reporting": len(reporting),

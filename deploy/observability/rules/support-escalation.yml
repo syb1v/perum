@@ -1,0 +1,39 @@
+groups:
+  - name: perum-support-escalation
+    rules:
+      - alert: PerumSupportEscalationDeadLetter
+        expr: perum_support_escalation_delivery_failed > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: perum-support
+        annotations:
+          summary: Support escalation requires manual recovery
+          runbook_url: docs/RUNBOOK.md#support-escalation-delivery
+      - alert: PerumSupportEscalationSlaBreached
+        expr: perum_support_escalation_delivery_sla_breached > 0
+        for: 5m
+        labels:
+          severity: critical
+          service: perum-support
+        annotations:
+          summary: Support escalation delivery SLA is breached
+          runbook_url: docs/RUNBOOK.md#support-escalation-delivery
+      - alert: PerumSupportEscalationRetrying
+        expr: perum_support_escalation_delivery_retrying > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: perum-support
+        annotations:
+          summary: Support escalation delivery keeps retrying
+          runbook_url: docs/RUNBOOK.md#support-escalation-delivery
+      - alert: PerumSupportEscalationTelemetryUnknown
+        expr: perum_support_escalation_delivery_unknown_schools > 0
+        for: 10m
+        labels:
+          severity: warning
+          service: perum-support
+        annotations:
+          summary: Support escalation telemetry is missing or stale
+          runbook_url: docs/RUNBOOK.md#support-escalation-delivery

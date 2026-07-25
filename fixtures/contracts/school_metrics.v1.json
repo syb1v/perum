@@ -27,6 +27,7 @@
       "school_enabled"
     ],
     "support_escalation_delivery": [
+      "failed",
       "oldest_pending_age_seconds",
       "pending",
       "retrying",
