@@ -536,6 +536,36 @@ for (const [field, expectedRef] of [
     throw new Error(`TeacherAnalyticsDashboardOut ${field} item ref differs from the client contract`);
   }
 }
+if (responseSchemaRef(tenantOpenapi, '/api/admin/dashboard/overview', 'get') !== '#/components/schemas/AdminDashboardOverviewOut') {
+  throw new Error('GET /api/admin/dashboard/overview must return AdminDashboardOverviewOut');
+}
+for (const [name, fields] of [
+  ['AdminDashboardOverviewOut', ['success', 'kpi', 'class_performance', 'grade_distribution', 'attendance', 'failing_students', 'teacher_activity', 'daily_avg']],
+  ['AdminDashboardKpiOut', ['average_grade', 'total_grades', 'total_students', 'failing_count', 'absences', 'homework_count', 'control_work_count']],
+  ['AdminDashboardClassPerformanceOut', ['class_id', 'class_name', 'grade_level', 'avg_grade', 'grades_count']],
+  ['AdminDashboardGradeDistributionOut', ['grade_value', 'count']],
+  ['AdminDashboardAttendanceOut', ['mark', 'count']],
+  ['AdminDashboardFailingStudentOut', ['id', 'name', 'avg', 'grades_count', 'class_name']],
+  ['AdminDashboardTeacherActivityOut', ['id', 'name', 'grades_given']],
+  ['AdminDashboardDailyAverageOut', ['date', 'avg_grade']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields) || schema.additionalProperties !== false) {
+    throw new Error(`${name} must remain an exact closed school overview contract`);
+  }
+}
+const adminOverview = tenantOpenapi.components.schemas.AdminDashboardOverviewOut.properties;
+if (adminOverview.kpi.$ref !== '#/components/schemas/AdminDashboardKpiOut') throw new Error('Admin dashboard KPI ref differs from the client contract');
+for (const [field, expectedRef] of [
+  ['class_performance', '#/components/schemas/AdminDashboardClassPerformanceOut'],
+  ['grade_distribution', '#/components/schemas/AdminDashboardGradeDistributionOut'],
+  ['attendance', '#/components/schemas/AdminDashboardAttendanceOut'],
+  ['failing_students', '#/components/schemas/AdminDashboardFailingStudentOut'],
+  ['teacher_activity', '#/components/schemas/AdminDashboardTeacherActivityOut'],
+  ['daily_avg', '#/components/schemas/AdminDashboardDailyAverageOut'],
+]) {
+  if (adminOverview[field].items?.$ref !== expectedRef) throw new Error(`Admin dashboard ${field} ref differs from the client contract`);
+}
 if (responseSchemaRef(tenantOpenapi, '/api/teacher/analytics/students/problem', 'get') !== '#/components/schemas/TeacherAnalyticsProblemStudentsOut') {
   throw new Error('GET /api/teacher/analytics/students/problem must return TeacherAnalyticsProblemStudentsOut');
 }

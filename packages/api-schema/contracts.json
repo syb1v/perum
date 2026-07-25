@@ -25,6 +25,7 @@
     "/api/support/tickets/{ticket_id}/read",
     "/api/support/unread-count",
     "/api/admin/support/tickets",
+    "/api/admin/dashboard/overview",
     "/api/admin/support/tickets/{ticket_id}",
     "/api/admin/support/tickets/{ticket_id}/messages",
     "/api/admin/support/tickets/{ticket_id}/read",

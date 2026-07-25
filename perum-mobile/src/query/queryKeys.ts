@@ -36,6 +36,7 @@ export const queryKeys = {
   teacherAnalyticsPicker: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'picker'] as const,
   teacherAnalyticsPeriods: (accountId: string, classId: number) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'periods', classId] as const,
   teacherAnalyticsDashboard: (accountId: string, classId: number, subjectId: number | null, start: string, end: string) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'dashboard', classId, subjectId, start, end] as const,
+  schoolAdminOverview: (accountId: string, periodDays: number) => [...queryKeys.account(accountId), 'school-admin-overview', periodDays] as const,
 };
 
 export const socialInvalidationKeys = {

@@ -15,6 +15,7 @@ import {
     BarElement,
 } from 'chart.js';
 import { Line, Bar } from 'react-chartjs-2';
+import type { components } from '@perum/api-schema/tenant';
 import api from '@/lib/apiClient';
 import styles from './AdminDashboardTab.module.css';
 
@@ -31,46 +32,7 @@ ChartJS.register(
     BarElement
 );
 
-interface ClassPerformance {
-    class_id: number;
-    class_name: string;
-    grade_level: number | null;
-    avg_grade: number;
-    grades_count: number;
-}
-
-interface FailingStudent {
-    id: number;
-    name: string;
-    avg: number;
-    grades_count: number;
-    class_name: string | null;
-}
-
-interface TeacherActivity {
-    id: number;
-    name: string;
-    grades_given: number;
-}
-
-interface OverviewResponse {
-    success: boolean;
-    kpi: {
-        average_grade: number;
-        total_grades: number;
-        total_students: number;
-        failing_count: number;
-        absences: number;
-        homework_count: number;
-        control_work_count: number;
-    };
-    class_performance: ClassPerformance[];
-    grade_distribution: { grade_value: number; count: number }[];
-    attendance: { mark: string; count: number }[];
-    failing_students: FailingStudent[];
-    teacher_activity: TeacherActivity[];
-    daily_avg: { date: string; avg_grade: number }[];
-}
+type OverviewResponse = components['schemas']['AdminDashboardOverviewOut'];
 
 export default function AdminDashboardTab() {
     const [data, setData] = useState<OverviewResponse | null>(null);

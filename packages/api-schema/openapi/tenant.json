@@ -1708,9 +1708,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Dashboard Overview Api Admin Dashboard Overview Get"
+                  "$ref": "#/components/schemas/AdminDashboardOverviewOut"
                 }
               }
             }
@@ -12732,6 +12730,279 @@
         ],
         "title": "AddStudentRequest"
       },
+      "AdminDashboardAttendanceOut": {
+        "properties": {
+          "mark": {
+            "type": "string",
+            "title": "Mark"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "mark",
+          "count"
+        ],
+        "title": "AdminDashboardAttendanceOut"
+      },
+      "AdminDashboardClassPerformanceOut": {
+        "properties": {
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "grade_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Level"
+          },
+          "avg_grade": {
+            "type": "number",
+            "title": "Avg Grade"
+          },
+          "grades_count": {
+            "type": "integer",
+            "title": "Grades Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_id",
+          "class_name",
+          "grade_level",
+          "avg_grade",
+          "grades_count"
+        ],
+        "title": "AdminDashboardClassPerformanceOut"
+      },
+      "AdminDashboardDailyAverageOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date"
+          },
+          "avg_grade": {
+            "type": "number",
+            "title": "Avg Grade"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "date",
+          "avg_grade"
+        ],
+        "title": "AdminDashboardDailyAverageOut"
+      },
+      "AdminDashboardFailingStudentOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "avg": {
+            "type": "number",
+            "title": "Avg"
+          },
+          "grades_count": {
+            "type": "integer",
+            "title": "Grades Count"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "avg",
+          "grades_count",
+          "class_name"
+        ],
+        "title": "AdminDashboardFailingStudentOut"
+      },
+      "AdminDashboardGradeDistributionOut": {
+        "properties": {
+          "grade_value": {
+            "type": "integer",
+            "title": "Grade Value"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "grade_value",
+          "count"
+        ],
+        "title": "AdminDashboardGradeDistributionOut"
+      },
+      "AdminDashboardKpiOut": {
+        "properties": {
+          "average_grade": {
+            "type": "number",
+            "title": "Average Grade"
+          },
+          "total_grades": {
+            "type": "integer",
+            "title": "Total Grades"
+          },
+          "total_students": {
+            "type": "integer",
+            "title": "Total Students"
+          },
+          "failing_count": {
+            "type": "integer",
+            "title": "Failing Count"
+          },
+          "absences": {
+            "type": "integer",
+            "title": "Absences"
+          },
+          "homework_count": {
+            "type": "integer",
+            "title": "Homework Count"
+          },
+          "control_work_count": {
+            "type": "integer",
+            "title": "Control Work Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "average_grade",
+          "total_grades",
+          "total_students",
+          "failing_count",
+          "absences",
+          "homework_count",
+          "control_work_count"
+        ],
+        "title": "AdminDashboardKpiOut"
+      },
+      "AdminDashboardOverviewOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "kpi": {
+            "$ref": "#/components/schemas/AdminDashboardKpiOut"
+          },
+          "class_performance": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardClassPerformanceOut"
+            },
+            "type": "array",
+            "title": "Class Performance"
+          },
+          "grade_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardGradeDistributionOut"
+            },
+            "type": "array",
+            "title": "Grade Distribution"
+          },
+          "attendance": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardAttendanceOut"
+            },
+            "type": "array",
+            "title": "Attendance"
+          },
+          "failing_students": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardFailingStudentOut"
+            },
+            "type": "array",
+            "title": "Failing Students"
+          },
+          "teacher_activity": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardTeacherActivityOut"
+            },
+            "type": "array",
+            "title": "Teacher Activity"
+          },
+          "daily_avg": {
+            "items": {
+              "$ref": "#/components/schemas/AdminDashboardDailyAverageOut"
+            },
+            "type": "array",
+            "title": "Daily Avg"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "kpi",
+          "class_performance",
+          "grade_distribution",
+          "attendance",
+          "failing_students",
+          "teacher_activity",
+          "daily_avg"
+        ],
+        "title": "AdminDashboardOverviewOut"
+      },
+      "AdminDashboardTeacherActivityOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "grades_given": {
+            "type": "integer",
+            "title": "Grades Given"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "grades_given"
+        ],
+        "title": "AdminDashboardTeacherActivityOut"
+      },
       "AdminUnreadOut": {
         "properties": {
           "tickets": {
@@ -16273,6 +16544,10 @@
             "type": "boolean",
             "title": "Teacher Analytics"
           },
+          "school_admin_overview": {
+            "type": "boolean",
+            "title": "School Admin Overview"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16321,6 +16596,7 @@
           "teacher_homeroom",
           "teacher_works",
           "teacher_analytics",
+          "school_admin_overview",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

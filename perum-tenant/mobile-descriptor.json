@@ -26,6 +26,7 @@
     "teacher_homeroom": true,
     "teacher_works": true,
     "teacher_analytics": true,
+    "school_admin_overview": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,

@@ -1,6 +1,80 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+
+class AdminDashboardKpiOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    average_grade: float
+    total_grades: int
+    total_students: int
+    failing_count: int
+    absences: int
+    homework_count: int
+    control_work_count: int
+
+
+class AdminDashboardClassPerformanceOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    class_id: int
+    class_name: str
+    grade_level: int | None
+    avg_grade: float
+    grades_count: int
+
+
+class AdminDashboardGradeDistributionOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    grade_value: int
+    count: int
+
+
+class AdminDashboardAttendanceOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    mark: str
+    count: int
+
+
+class AdminDashboardFailingStudentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    avg: float
+    grades_count: int
+    class_name: str | None
+
+
+class AdminDashboardTeacherActivityOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    grades_given: int
+
+
+class AdminDashboardDailyAverageOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    date: str
+    avg_grade: float
+
+
+class AdminDashboardOverviewOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    success: bool
+    kpi: AdminDashboardKpiOut
+    class_performance: list[AdminDashboardClassPerformanceOut]
+    grade_distribution: list[AdminDashboardGradeDistributionOut]
+    attendance: list[AdminDashboardAttendanceOut]
+    failing_students: list[AdminDashboardFailingStudentOut]
+    teacher_activity: list[AdminDashboardTeacherActivityOut]
+    daily_avg: list[AdminDashboardDailyAverageOut]
 
 
 # ---- Subjects ----

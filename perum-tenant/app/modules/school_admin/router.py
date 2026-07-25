@@ -19,6 +19,7 @@ from app.modules.school_admin.schemas import (
     AcademicYearCreate,
     AcademicYearUpdate,
     AddStudentRequest,
+    AdminDashboardOverviewOut,
     BellScheduleCreate,
     BellScheduleUpdate,
     ClassCreate,
@@ -152,10 +153,10 @@ async def occurrence_backfill_apply(payload: OccurrenceBackfillApply, user: User
 
 
 # ============ Dashboard ============
-@router.get("/dashboard/overview")
+@router.get("/dashboard/overview", response_model=AdminDashboardOverviewOut)
 async def dashboard_overview(
     period_days: int = 30, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
-) -> dict:
+) -> AdminDashboardOverviewOut:
     return await service.dashboard_overview(db, await _school(user, db), period_days)
 
 

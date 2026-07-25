@@ -3607,6 +3607,97 @@ export interface components {
             /** Student Id */
             student_id: number;
         };
+        /** AdminDashboardAttendanceOut */
+        AdminDashboardAttendanceOut: {
+            /** Mark */
+            mark: string;
+            /** Count */
+            count: number;
+        };
+        /** AdminDashboardClassPerformanceOut */
+        AdminDashboardClassPerformanceOut: {
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string;
+            /** Grade Level */
+            grade_level: number | null;
+            /** Avg Grade */
+            avg_grade: number;
+            /** Grades Count */
+            grades_count: number;
+        };
+        /** AdminDashboardDailyAverageOut */
+        AdminDashboardDailyAverageOut: {
+            /** Date */
+            date: string;
+            /** Avg Grade */
+            avg_grade: number;
+        };
+        /** AdminDashboardFailingStudentOut */
+        AdminDashboardFailingStudentOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Avg */
+            avg: number;
+            /** Grades Count */
+            grades_count: number;
+            /** Class Name */
+            class_name: string | null;
+        };
+        /** AdminDashboardGradeDistributionOut */
+        AdminDashboardGradeDistributionOut: {
+            /** Grade Value */
+            grade_value: number;
+            /** Count */
+            count: number;
+        };
+        /** AdminDashboardKpiOut */
+        AdminDashboardKpiOut: {
+            /** Average Grade */
+            average_grade: number;
+            /** Total Grades */
+            total_grades: number;
+            /** Total Students */
+            total_students: number;
+            /** Failing Count */
+            failing_count: number;
+            /** Absences */
+            absences: number;
+            /** Homework Count */
+            homework_count: number;
+            /** Control Work Count */
+            control_work_count: number;
+        };
+        /** AdminDashboardOverviewOut */
+        AdminDashboardOverviewOut: {
+            /** Success */
+            success: boolean;
+            kpi: components["schemas"]["AdminDashboardKpiOut"];
+            /** Class Performance */
+            class_performance: components["schemas"]["AdminDashboardClassPerformanceOut"][];
+            /** Grade Distribution */
+            grade_distribution: components["schemas"]["AdminDashboardGradeDistributionOut"][];
+            /** Attendance */
+            attendance: components["schemas"]["AdminDashboardAttendanceOut"][];
+            /** Failing Students */
+            failing_students: components["schemas"]["AdminDashboardFailingStudentOut"][];
+            /** Teacher Activity */
+            teacher_activity: components["schemas"]["AdminDashboardTeacherActivityOut"][];
+            /** Daily Avg */
+            daily_avg: components["schemas"]["AdminDashboardDailyAverageOut"][];
+        };
+        /** AdminDashboardTeacherActivityOut */
+        AdminDashboardTeacherActivityOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Grades Given */
+            grades_given: number;
+        };
         /** AdminUnreadOut */
         AdminUnreadOut: {
             /** Tickets */
@@ -4730,6 +4821,8 @@ export interface components {
             teacher_works: boolean;
             /** Teacher Analytics */
             teacher_analytics: boolean;
+            /** School Admin Overview */
+            school_admin_overview: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -7681,9 +7774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminDashboardOverviewOut"];
                 };
             };
             /** @description Validation Error */

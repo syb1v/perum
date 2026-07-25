@@ -8682,6 +8682,10 @@
             "type": "boolean",
             "title": "Teacher Analytics"
           },
+          "school_admin_overview": {
+            "type": "boolean",
+            "title": "School Admin Overview"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -8730,6 +8734,7 @@
           "teacher_homeroom",
           "teacher_works",
           "teacher_analytics",
+          "school_admin_overview",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
@@ -10488,6 +10493,10 @@
             "type": "boolean",
             "title": "Teacher Analytics"
           },
+          "school_admin_overview": {
+            "type": "boolean",
+            "title": "School Admin Overview"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -10536,6 +10545,7 @@
           "teacher_homeroom",
           "teacher_works",
           "teacher_analytics",
+          "school_admin_overview",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
