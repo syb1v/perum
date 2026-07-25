@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Mobile Parent parity получил read-only analytics and balance vertical: atomic `parent_analytics` capability, stable child selection, child-scoped persisted summary/period analytics/recent transactions queries и independent section retries. Contract parity, focused Parent authorization tests, Android/iOS exports и 120 Mobile tests прошли; charts/exports/mutations и полная transaction history остаются вне slice.
 - Mobile Teacher parity получил read-only analytics dashboard: atomic `teacher_analytics` capability, generated class/subject/period selectors, filter-scoped persisted queries, KPI, dynamics, problem topics и attention students. Contract parity, focused Core/Tenant tests, Android/iOS exports и 117 Mobile tests прошли; reports/exports/charts/drill-down/mutations остаются вне slice.
 - Mobile Teacher parity расширен read-only works feed: atomic `teacher_works` capability, account-scoped persisted pagination, overlap deduplication и homework/control cards с loading/error/empty/offline states. Descriptor parity, focused Core/Tenant tests, Android/iOS exports и 113 Mobile tests прошли; filters/details/mutations и offline journal остаются вне slice.
 - Mobile role parity evidence table синхронизирована с фактическими Student/Parent/Teacher read-only academics verticals; remaining scope уточнён без изменения общей оценки готовности.
