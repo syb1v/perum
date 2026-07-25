@@ -6529,9 +6529,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Pending Escalations Api Support Escalations Pending Get"
+                  "$ref": "#/components/schemas/EscalationListOut"
                 }
               }
             }
@@ -6595,9 +6593,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Escalation Detail Api Support Escalations  Ticket Id  Get"
+                  "$ref": "#/components/schemas/EscalationDetailOut"
                 }
               }
             }
@@ -6701,9 +6697,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Approve Escalation Api Support Escalations  Ticket Id  Approve Post"
+                  "$ref": "#/components/schemas/EscalationDecisionOut"
                 }
               }
             }
@@ -6760,9 +6754,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Reject Escalation Api Support Escalations  Ticket Id  Reject Post"
+                  "$ref": "#/components/schemas/EscalationDecisionOut"
                 }
               }
             }
@@ -6819,9 +6811,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Relay Escalation Reply Api Support Escalations  Ticket Id  Relay Post"
+                  "$ref": "#/components/schemas/EscalationRelayOut"
                 }
               }
             }
@@ -7951,6 +7941,55 @@
         ],
         "title": "EscalationAction"
       },
+      "EscalationDecisionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "approval_status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "approval_status",
+          "version"
+        ],
+        "title": "EscalationDecisionOut"
+      },
+      "EscalationDetailOut": {
+        "properties": {
+          "ticket": {
+            "$ref": "#/components/schemas/EscalationTicketDetailOut"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/EscalationMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ticket",
+          "messages"
+        ],
+        "title": "EscalationDetailOut"
+      },
       "EscalationIntake": {
         "properties": {
           "school_public_id": {
@@ -8015,6 +8054,83 @@
         ],
         "title": "EscalationIntake"
       },
+      "EscalationListOut": {
+        "properties": {
+          "tickets": {
+            "items": {
+              "$ref": "#/components/schemas/EscalationTicketOut"
+            },
+            "type": "array",
+            "title": "Tickets"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tickets"
+        ],
+        "title": "EscalationListOut"
+      },
+      "EscalationMessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "public_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Public Id"
+          },
+          "client_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message Id"
+          },
+          "sender_type": {
+            "type": "string",
+            "enum": [
+              "school",
+              "platform_admin",
+              "org_school_relay"
+            ],
+            "title": "Sender Type"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "public_id",
+          "client_message_id",
+          "sender_type",
+          "body",
+          "created_at"
+        ],
+        "title": "EscalationMessageOut"
+      },
       "EscalationRelay": {
         "properties": {
           "client_message_id": {
@@ -8036,6 +8152,257 @@
           "body"
         ],
         "title": "EscalationRelay"
+      },
+      "EscalationRelayOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "replayed": {
+            "type": "boolean",
+            "title": "Replayed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "replayed"
+        ],
+        "title": "EscalationRelayOut"
+      },
+      "EscalationTicketDetailOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "org_id": {
+            "type": "integer",
+            "title": "Org Id"
+          },
+          "source": {
+            "type": "string",
+            "const": "school",
+            "title": "Source"
+          },
+          "school_id": {
+            "type": "integer",
+            "title": "School Id"
+          },
+          "tenant_ticket_public_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Ticket Public Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "approval_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status"
+          },
+          "approval_version": {
+            "type": "integer",
+            "title": "Approval Version"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "platform_unread": {
+            "type": "boolean",
+            "title": "Platform Unread"
+          },
+          "org_unread": {
+            "type": "boolean",
+            "title": "Org Unread"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "redacted_snapshot": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Redacted Snapshot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "org_id",
+          "source",
+          "school_id",
+          "tenant_ticket_public_id",
+          "correlation_id",
+          "approval_status",
+          "approval_version",
+          "subject",
+          "status",
+          "platform_unread",
+          "org_unread",
+          "created_at",
+          "last_message_at",
+          "redacted_snapshot"
+        ],
+        "title": "EscalationTicketDetailOut"
+      },
+      "EscalationTicketOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "org_id": {
+            "type": "integer",
+            "title": "Org Id"
+          },
+          "source": {
+            "type": "string",
+            "const": "school",
+            "title": "Source"
+          },
+          "school_id": {
+            "type": "integer",
+            "title": "School Id"
+          },
+          "tenant_ticket_public_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Ticket Public Id"
+          },
+          "correlation_id": {
+            "type": "string",
+            "title": "Correlation Id"
+          },
+          "approval_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status"
+          },
+          "approval_version": {
+            "type": "integer",
+            "title": "Approval Version"
+          },
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "platform_unread": {
+            "type": "boolean",
+            "title": "Platform Unread"
+          },
+          "org_unread": {
+            "type": "boolean",
+            "title": "Org Unread"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "org_id",
+          "source",
+          "school_id",
+          "tenant_ticket_public_id",
+          "correlation_id",
+          "approval_status",
+          "approval_version",
+          "subject",
+          "status",
+          "platform_unread",
+          "org_unread",
+          "created_at",
+          "last_message_at"
+        ],
+        "title": "EscalationTicketOut"
       },
       "HTTPValidationError": {
         "properties": {

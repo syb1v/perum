@@ -39,7 +39,7 @@ export function getTokenPayload(): Record<string, any> | null {
   }
 }
 
-export async function papi(path: string, opts: RequestInit = {}): Promise<any> {
+export async function papi<T = any>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(opts.headers as Record<string, string>),

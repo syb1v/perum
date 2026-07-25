@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import SupportEscalationEvent, SupportMessage, SupportTicket
-from app.routers.support import EscalationIntake, MessageCreate, TicketCreate, escalation_relay_delivery, outbound_escalation, _authenticate_school, _platform_visible
+from app.routers.support import EscalationDetailOut, EscalationIntake, EscalationListOut, EscalationRelayOut, MessageCreate, TicketCreate, escalation_relay_delivery, outbound_escalation, _authenticate_school, _platform_visible
 
 client = TestClient(app)
 
@@ -47,6 +47,35 @@ def test_payloads_are_text_only_and_bounded():
         EscalationIntake(
             school_public_id=uuid4(), correlation_id="c", subject="ok", message="x" * 4001
         )
+
+
+def test_escalation_success_schemas_are_closed_and_distinct():
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    for name in [
+        "EscalationListOut",
+        "EscalationDetailOut",
+        "EscalationTicketOut",
+        "EscalationTicketDetailOut",
+        "EscalationMessageOut",
+        "EscalationDecisionOut",
+        "EscalationRelayOut",
+    ]:
+        assert schemas[name]["additionalProperties"] is False
+
+    assert "redacted_snapshot" not in schemas["EscalationTicketOut"]["properties"]
+    assert "redacted_snapshot" in schemas["EscalationTicketDetailOut"]["required"]
+    assert set(schemas["EscalationDecisionOut"]["required"]) == {"id", "approval_status", "version"}
+    assert set(schemas["EscalationRelayOut"]["required"]) == {"id", "replayed"}
+
+    with pytest.raises(ValueError):
+        EscalationListOut(tickets=[], leaked=True)
+    with pytest.raises(ValueError):
+        EscalationRelayOut(id=1, replayed=False, body="must not leak")
+
+
+def test_escalation_detail_requires_nullable_wire_fields():
+    with pytest.raises(ValueError):
+        EscalationDetailOut.model_validate({"ticket": {"id": 1}, "messages": []})
 
 
 def test_model_defaults_preserve_direct_ticket_compatibility():

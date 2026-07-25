@@ -2491,6 +2491,24 @@ export interface components {
             /** Expected Version */
             expected_version: number;
         };
+        /** EscalationDecisionOut */
+        EscalationDecisionOut: {
+            /** Id */
+            id: number;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "approved" | "rejected";
+            /** Version */
+            version: number;
+        };
+        /** EscalationDetailOut */
+        EscalationDetailOut: {
+            ticket: components["schemas"]["EscalationTicketDetailOut"];
+            /** Messages */
+            messages: components["schemas"]["EscalationMessageOut"][];
+        };
         /** EscalationIntake */
         EscalationIntake: {
             /**
@@ -2513,12 +2531,129 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** EscalationListOut */
+        EscalationListOut: {
+            /** Tickets */
+            tickets: components["schemas"]["EscalationTicketOut"][];
+        };
+        /** EscalationMessageOut */
+        EscalationMessageOut: {
+            /** Id */
+            id: number;
+            /**
+             * Public Id
+             * Format: uuid
+             */
+            public_id: string;
+            /** Client Message Id */
+            client_message_id: string | null;
+            /**
+             * Sender Type
+             * @enum {string}
+             */
+            sender_type: "school" | "platform_admin" | "org_school_relay";
+            /** Body */
+            body: string;
+            /** Created At */
+            created_at: string | null;
+        };
         /** EscalationRelay */
         EscalationRelay: {
             /** Client Message Id */
             client_message_id: string;
             /** Body */
             body: string;
+        };
+        /** EscalationRelayOut */
+        EscalationRelayOut: {
+            /** Id */
+            id: number;
+            /** Replayed */
+            replayed: boolean;
+        };
+        /** EscalationTicketDetailOut */
+        EscalationTicketDetailOut: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /**
+             * Source
+             * @constant
+             */
+            source: "school";
+            /** School Id */
+            school_id: number;
+            /** Tenant Ticket Public Id */
+            tenant_ticket_public_id: string | null;
+            /** Correlation Id */
+            correlation_id: string;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "pending" | "approved" | "rejected";
+            /** Approval Version */
+            approval_version: number;
+            /** Subject */
+            subject: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "pending" | "closed";
+            /** Platform Unread */
+            platform_unread: boolean;
+            /** Org Unread */
+            org_unread: boolean;
+            /** Created At */
+            created_at: string | null;
+            /** Last Message At */
+            last_message_at: string | null;
+            /** Redacted Snapshot */
+            redacted_snapshot: {
+                [key: string]: unknown;
+            };
+        };
+        /** EscalationTicketOut */
+        EscalationTicketOut: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /**
+             * Source
+             * @constant
+             */
+            source: "school";
+            /** School Id */
+            school_id: number;
+            /** Tenant Ticket Public Id */
+            tenant_ticket_public_id: string | null;
+            /** Correlation Id */
+            correlation_id: string;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "pending" | "approved" | "rejected";
+            /** Approval Version */
+            approval_version: number;
+            /** Subject */
+            subject: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "pending" | "closed";
+            /** Platform Unread */
+            platform_unread: boolean;
+            /** Org Unread */
+            org_unread: boolean;
+            /** Created At */
+            created_at: string | null;
+            /** Last Message At */
+            last_message_at: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -7532,9 +7667,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationListOut"];
                 };
             };
         };
@@ -7559,9 +7692,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationDetailOut"];
                 };
             };
             /** @description Validation Error */
@@ -7627,9 +7758,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationDecisionOut"];
                 };
             };
             /** @description Validation Error */
@@ -7664,9 +7793,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationDecisionOut"];
                 };
             };
             /** @description Validation Error */
@@ -7701,9 +7828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationRelayOut"];
                 };
             };
             /** @description Validation Error */

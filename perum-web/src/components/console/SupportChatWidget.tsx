@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { components as CoreComponents } from "@perum/api-schema/core";
 import { papi } from "@/lib/platformApi";
 import styles from "./SupportChatWidget.module.css";
 
@@ -14,7 +15,11 @@ type Ticket = {
   created_at: string | null;
 };
 type Msg = { id: number; sender_type: string; body: string; created_at: string | null };
-type Escalation = Ticket & { approval_status: string; approval_version: number; source: string };
+type Escalation = CoreComponents["schemas"]["EscalationTicketOut"];
+type EscalationDetail = CoreComponents["schemas"]["EscalationDetailOut"];
+type EscalationList = CoreComponents["schemas"]["EscalationListOut"];
+type EscalationDecision = CoreComponents["schemas"]["EscalationDecisionOut"];
+type EscalationRelayReceipt = CoreComponents["schemas"]["EscalationRelayOut"];
 
 const POLL_MS = 15_000;
 const STATUS_LABEL: Record<string, string> = { open: "открыт", pending: "в работе", closed: "закрыт" };
@@ -42,7 +47,7 @@ export default function SupportChatWidget() {
   const [busy, setBusy] = useState(false);
   const [unread, setUnread] = useState(false);
   const [escalations, setEscalations] = useState<Escalation[]>([]);
-  const [activeEscalation, setActiveEscalation] = useState<{ ticket: Escalation; messages: Msg[] } | null>(null);
+  const [activeEscalation, setActiveEscalation] = useState<EscalationDetail | null>(null);
   const [relayDraft, setRelayDraft] = useState("");
   const bodyRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +55,7 @@ export default function SupportChatWidget() {
 
   const loadTickets = useCallback(async () => {
     try {
-      const [r, pending] = await Promise.all([papi("/api/support/tickets"), papi("/api/support/escalations/pending")]);
+      const [r, pending] = await Promise.all([papi("/api/support/tickets"), papi<EscalationList>("/api/support/escalations/pending")]);
       const list: Ticket[] = r.tickets || [];
       setTickets(list);
       setEscalations(pending.tickets || []);
@@ -61,7 +66,7 @@ export default function SupportChatWidget() {
   async function decideEscalation(ticket: Escalation, action: "approve" | "reject") {
     setBusy(true);
     try {
-      await papi(`/api/support/escalations/${ticket.id}/${action}`, { method: "POST", body: JSON.stringify({ client_action_id: crypto.randomUUID(), expected_version: ticket.approval_version }) });
+      await papi<EscalationDecision>(`/api/support/escalations/${ticket.id}/${action}`, { method: "POST", body: JSON.stringify({ client_action_id: crypto.randomUUID(), expected_version: ticket.approval_version }) });
       await loadTickets();
     } finally { setBusy(false); }
   }
@@ -69,7 +74,7 @@ export default function SupportChatWidget() {
   async function openEscalation(ticket: Escalation) {
     setBusy(true);
     try {
-      const detail = await papi(`/api/support/escalations/${ticket.id}?full=true`);
+      const detail = await papi<EscalationDetail>(`/api/support/escalations/${ticket.id}?full=true`);
       setActiveEscalation(detail);
       setRelayDraft("");
     } finally { setBusy(false); }
@@ -79,7 +84,7 @@ export default function SupportChatWidget() {
     if (!activeEscalation || !relayDraft.trim()) return;
     setBusy(true);
     try {
-      await papi(`/api/support/escalations/${activeEscalation.ticket.id}/relay`, { method: "POST", body: JSON.stringify({ client_message_id: crypto.randomUUID(), body: relayDraft.trim() }) });
+      await papi<EscalationRelayReceipt>(`/api/support/escalations/${activeEscalation.ticket.id}/relay`, { method: "POST", body: JSON.stringify({ client_message_id: crypto.randomUUID(), body: relayDraft.trim() }) });
       setActiveEscalation(null);
       setRelayDraft("");
       await loadTickets();

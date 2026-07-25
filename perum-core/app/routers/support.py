@@ -11,7 +11,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,6 +77,60 @@ class RelayDeliveryItem(BaseModel):
 
 class RelayDeliveryPage(BaseModel):
     items: list[RelayDeliveryItem]
+
+
+class EscalationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class EscalationTicketOut(EscalationResponse):
+    id: int
+    org_id: int
+    source: Literal["school"]
+    school_id: int
+    tenant_ticket_public_id: str | None
+    correlation_id: str
+    approval_status: Literal["pending", "approved", "rejected"]
+    approval_version: int
+    subject: str
+    status: Literal["open", "pending", "closed"]
+    platform_unread: bool
+    org_unread: bool
+    created_at: datetime | None
+    last_message_at: datetime | None
+
+
+class EscalationTicketDetailOut(EscalationTicketOut):
+    redacted_snapshot: dict
+
+
+class EscalationMessageOut(EscalationResponse):
+    id: int
+    public_id: UUID
+    client_message_id: str | None
+    sender_type: Literal["school", "platform_admin", "org_school_relay"]
+    body: str
+    created_at: datetime | None
+
+
+class EscalationListOut(EscalationResponse):
+    tickets: list[EscalationTicketOut]
+
+
+class EscalationDetailOut(EscalationResponse):
+    ticket: EscalationTicketDetailOut
+    messages: list[EscalationMessageOut]
+
+
+class EscalationDecisionOut(EscalationResponse):
+    id: int
+    approval_status: Literal["approved", "rejected"]
+    version: int
+
+
+class EscalationRelayOut(EscalationResponse):
+    id: int
+    replayed: bool
 
 
 def _ticket_dict(t: SupportTicket, org_name: str | None = None) -> dict:
@@ -428,7 +482,7 @@ async def ack_outbound(
     return {"ok": True, "cursor": ticket.outbound_ack_cursor}
 
 
-@router.get("/escalations/pending", dependencies=[Depends(require_org_admin)])
+@router.get("/escalations/pending", response_model=EscalationListOut, dependencies=[Depends(require_org_admin)])
 async def pending_escalations(
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
@@ -448,14 +502,14 @@ async def pending_escalations(
     return {"tickets": [_ticket_dict(ticket) for ticket in rows]}
 
 
-@router.get("/escalations/{ticket_id}", dependencies=[Depends(require_org_admin)])
+@router.get("/escalations/{ticket_id}", response_model=EscalationDetailOut, dependencies=[Depends(require_org_admin)])
 async def escalation_detail(
     ticket_id: int,
     full: bool = False,
     limit: int = Query(default=50, ge=1, le=200),
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EscalationDecisionOut:
     ticket = await db.get(SupportTicket, ticket_id)
     if ticket is None or ticket.org_id != admin.org_id or ticket.source != "school":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "escalation not found")
@@ -510,7 +564,7 @@ async def _decide_escalation(
     if existing_event is not None:
         if existing_event.org_admin_id != admin.id or existing_event.action != action:
             raise HTTPException(status.HTTP_409_CONFLICT, "client action id already used")
-        return {"id": ticket_id, "approval_status": action, "version": existing_event.to_version}
+        return EscalationDecisionOut(id=ticket_id, approval_status=action, version=existing_event.to_version)
     now = datetime.utcnow()
     values = {
         "approval_status": action,
@@ -547,36 +601,36 @@ async def _decide_escalation(
         to_version=payload.expected_version + 1,
     ))
     await db.commit()
-    return {"id": ticket_id, "approval_status": action, "version": payload.expected_version + 1}
+    return EscalationDecisionOut(id=ticket_id, approval_status=action, version=payload.expected_version + 1)
 
 
-@router.post("/escalations/{ticket_id}/approve", dependencies=[Depends(require_org_admin)])
+@router.post("/escalations/{ticket_id}/approve", response_model=EscalationDecisionOut, dependencies=[Depends(require_org_admin)])
 async def approve_escalation(
     ticket_id: int,
     payload: EscalationAction,
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EscalationDecisionOut:
     return await _decide_escalation(ticket_id, "approved", payload, admin, db)
 
 
-@router.post("/escalations/{ticket_id}/reject", dependencies=[Depends(require_org_admin)])
+@router.post("/escalations/{ticket_id}/reject", response_model=EscalationDecisionOut, dependencies=[Depends(require_org_admin)])
 async def reject_escalation(
     ticket_id: int,
     payload: EscalationAction,
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EscalationDecisionOut:
     return await _decide_escalation(ticket_id, "rejected", payload, admin, db)
 
 
-@router.post("/escalations/{ticket_id}/relay", dependencies=[Depends(require_org_admin)])
+@router.post("/escalations/{ticket_id}/relay", response_model=EscalationRelayOut, dependencies=[Depends(require_org_admin)])
 async def relay_escalation_reply(
     ticket_id: int,
     payload: EscalationRelay,
     admin: OrgAdmin = Depends(require_org_admin),
     db: AsyncSession = Depends(get_db),
-) -> dict:
+) -> EscalationRelayOut:
     ticket = await db.get(SupportTicket, ticket_id)
     if ticket is None or ticket.org_id != admin.org_id or ticket.source != "school":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "escalation not found")
@@ -592,7 +646,7 @@ async def relay_escalation_reply(
     if existing is not None:
         if existing.sender_type != "org_school_relay" or existing.sender_id != admin.id or existing.body != body:
             raise HTTPException(status.HTTP_409_CONFLICT, "client message id already used")
-        return {"id": existing.id, "replayed": True}
+        return EscalationRelayOut(id=existing.id, replayed=True)
     message = SupportMessage(
         ticket_id=ticket.id,
         sender_type="org_school_relay",
@@ -605,4 +659,4 @@ async def relay_escalation_reply(
     ticket.org_unread = False
     await db.commit()
     await db.refresh(message)
-    return {"id": message.id, "replayed": False}
+    return EscalationRelayOut(id=message.id, replayed=False)

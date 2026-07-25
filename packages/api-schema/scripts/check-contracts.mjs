@@ -59,6 +59,20 @@ function assertExactClosedObject(name, fields, required = fields) {
   return schema.properties;
 }
 
+function assertExactCoreClosedObject(name, fields, required = fields) {
+  const schema = coreOpenapi.components.schemas[name];
+  if (schema.additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields)) {
+    throw new Error(`${name} properties differ from the live contract`);
+  }
+  if (JSON.stringify(schema.required ?? []) !== JSON.stringify(required)) {
+    throw new Error(`${name} required fields differ from the live contract`);
+  }
+  return schema.properties;
+}
+
 function assertNullableVariant(name, schema, type) {
   const variants = schema.anyOf ?? [];
   if (!variants.some(variant => variant.type === type) || !variants.some(variant => variant.type === 'null')) {
@@ -117,6 +131,26 @@ function schemaVersion(schema) {
 if (schemaVersion(tenantSchemaVersion) !== 1 || schemaVersion(coreSchemaVersion) !== 1) {
   throw new Error('Core/Tenant mobile descriptor schema_version must be exactly 1');
 }
+
+for (const [path, method, schema] of [
+  ['/api/support/escalations/pending', 'get', 'EscalationListOut'],
+  ['/api/support/escalations/{ticket_id}', 'get', 'EscalationDetailOut'],
+  ['/api/support/escalations/{ticket_id}/approve', 'post', 'EscalationDecisionOut'],
+  ['/api/support/escalations/{ticket_id}/reject', 'post', 'EscalationDecisionOut'],
+  ['/api/support/escalations/{ticket_id}/relay', 'post', 'EscalationRelayOut'],
+]) {
+  if (responseSchemaRef(coreOpenapi, path, method) !== `#/components/schemas/${schema}`) {
+    throw new Error(`${method.toUpperCase()} ${path} must return ${schema}`);
+  }
+}
+assertExactCoreClosedObject('EscalationListOut', ['tickets']);
+assertExactCoreClosedObject('EscalationDetailOut', ['ticket', 'messages']);
+assertExactCoreClosedObject('EscalationDecisionOut', ['id', 'approval_status', 'version']);
+assertExactCoreClosedObject('EscalationRelayOut', ['id', 'replayed']);
+assertExactCoreClosedObject('EscalationMessageOut', ['id', 'public_id', 'client_message_id', 'sender_type', 'body', 'created_at']);
+const escalationTicketFields = ['id', 'org_id', 'source', 'school_id', 'tenant_ticket_public_id', 'correlation_id', 'approval_status', 'approval_version', 'subject', 'status', 'platform_unread', 'org_unread', 'created_at', 'last_message_at'];
+assertExactCoreClosedObject('EscalationTicketOut', escalationTicketFields);
+assertExactCoreClosedObject('EscalationTicketDetailOut', [...escalationTicketFields, 'redacted_snapshot']);
 
 for (const path of ['/api/social/students', '/api/social/friends']) {
   if (responseSchemaRef(tenantOpenapi, path, 'get') !== '#/components/schemas/StudentPage') {
