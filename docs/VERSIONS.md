@@ -282,3 +282,4 @@
 | 279 | 2026-07-24 | 61f7c39 | fix(mobile): связан Expo EAS project |
 | 280 | 2026-07-24 | b0a9793 | feat(mobile): добавлен Expo publish script |
 | 281 | 2026-07-24 | 1ad7ed2 | fix(mobile): исправлен iOS EAS preflight |
+| 282 | 2026-07-24 | f8dff1c | feat(mobile): настроен EAS Update channel |

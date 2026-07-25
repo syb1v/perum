@@ -196,6 +196,12 @@ store/provider credentials.
 public runtime values закреплены в EAS profiles. Signing credentials и завершённый
 signed build всё ещё требуют отдельного operator evidence.
 
+EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
+project update URL и `appVersion` runtime policy закреплены, remote preview channel и
+branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
+только на отсутствии Apple internal-distribution credentials; signing по-прежнему
+не заявляется готовым.
+
 Tenant Discovery automated readiness усилена deterministic rollback success/failure
 matrix и fail-closed pilot collector: anonymous discovery не получает bearer,
 redirect/media-type/size/schema/school mismatch отклоняются, synthetic evidence
