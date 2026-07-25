@@ -197,9 +197,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Intake Escalation Internal Support Escalations Post"
+                  "$ref": "#/components/schemas/EscalationIntakeOut"
                 }
               }
             }
@@ -280,9 +278,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Outbound Escalation Internal Support Escalations Outbound Get"
+                  "$ref": "#/components/schemas/EscalationOutboundOut"
                 }
               }
             }
@@ -341,9 +337,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Ack Outbound Internal Support Escalations Outbound Ack Post"
+                  "$ref": "#/components/schemas/EscalationOutboundAckOut"
                 }
               }
             }
@@ -8054,6 +8048,36 @@
         ],
         "title": "EscalationIntake"
       },
+      "EscalationIntakeOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "approval_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "approval_status",
+          "version"
+        ],
+        "title": "EscalationIntakeOut"
+      },
       "EscalationListOut": {
         "properties": {
           "tickets": {
@@ -8130,6 +8154,132 @@
           "created_at"
         ],
         "title": "EscalationMessageOut"
+      },
+      "EscalationOutboundAckOut": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok"
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ok",
+          "cursor"
+        ],
+        "title": "EscalationOutboundAckOut"
+      },
+      "EscalationOutboundMessageOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "public_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Public Id"
+          },
+          "client_message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Message Id"
+          },
+          "sender_type": {
+            "type": "string",
+            "const": "org_school_relay",
+            "title": "Sender Type"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "public_id",
+          "client_message_id",
+          "sender_type",
+          "body",
+          "created_at"
+        ],
+        "title": "EscalationOutboundMessageOut"
+      },
+      "EscalationOutboundOut": {
+        "properties": {
+          "approval_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "title": "Approval Status"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Version"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/EscalationOutboundMessageOut"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Cursor"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approval_status",
+          "status",
+          "version",
+          "messages",
+          "cursor"
+        ],
+        "title": "EscalationOutboundOut"
       },
       "EscalationRelay": {
         "properties": {

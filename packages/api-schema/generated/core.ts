@@ -2531,6 +2531,18 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** EscalationIntakeOut */
+        EscalationIntakeOut: {
+            /** Id */
+            id: number;
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "pending" | "approved" | "rejected";
+            /** Version */
+            version: number;
+        };
         /** EscalationListOut */
         EscalationListOut: {
             /** Tickets */
@@ -2556,6 +2568,56 @@ export interface components {
             body: string;
             /** Created At */
             created_at: string | null;
+        };
+        /** EscalationOutboundAckOut */
+        EscalationOutboundAckOut: {
+            /**
+             * Ok
+             * @constant
+             */
+            ok: true;
+            /** Cursor */
+            cursor: number;
+        };
+        /** EscalationOutboundMessageOut */
+        EscalationOutboundMessageOut: {
+            /** Id */
+            id: number;
+            /**
+             * Public Id
+             * Format: uuid
+             */
+            public_id: string;
+            /** Client Message Id */
+            client_message_id: string | null;
+            /**
+             * Sender Type
+             * @constant
+             */
+            sender_type: "org_school_relay";
+            /** Body */
+            body: string;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** EscalationOutboundOut */
+        EscalationOutboundOut: {
+            /**
+             * Approval Status
+             * @enum {string}
+             */
+            approval_status: "pending" | "approved" | "rejected";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "pending" | "closed";
+            /** Version */
+            version: number;
+            /** Messages */
+            messages: components["schemas"]["EscalationOutboundMessageOut"][];
+            /** Cursor */
+            cursor: number;
         };
         /** EscalationRelay */
         EscalationRelay: {
@@ -3532,9 +3594,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationIntakeOut"];
                 };
             };
             /** @description Validation Error */
@@ -3569,9 +3629,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationOutboundOut"];
                 };
             };
             /** @description Validation Error */
@@ -3606,9 +3664,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EscalationOutboundAckOut"];
                 };
             };
             /** @description Validation Error */

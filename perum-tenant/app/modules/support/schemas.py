@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -132,3 +133,31 @@ class EscalationDeliveryOut(BaseModel):
     delivery_latency_seconds: int | None
     sla_seconds: int
     sla_breached: bool
+
+
+class CoreEscalationIntakeReceipt(StrictModel):
+    id: int
+    approval_status: Literal["pending", "approved", "rejected"]
+    version: int = Field(ge=0)
+
+
+class CoreEscalationMessage(StrictModel):
+    id: int
+    public_id: UUID
+    client_message_id: str | None
+    sender_type: Literal["org_school_relay"]
+    body: str
+    created_at: datetime | None
+
+
+class CoreEscalationOutboundReceipt(StrictModel):
+    approval_status: Literal["pending", "approved", "rejected"]
+    status: Literal["open", "pending", "closed"]
+    version: int = Field(ge=0)
+    messages: list[CoreEscalationMessage]
+    cursor: int = Field(ge=0)
+
+
+class CoreEscalationAckReceipt(StrictModel):
+    ok: Literal[True]
+    cursor: int = Field(ge=0)

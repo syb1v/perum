@@ -21,6 +21,31 @@ from app.models import (
     User,
 )
 from app.modules.support.router import admin_router, router
+from app.modules.support.schemas import CoreEscalationAckReceipt, CoreEscalationIntakeReceipt, CoreEscalationOutboundReceipt
+
+
+def test_core_escalation_receipts_fail_closed():
+    assert CoreEscalationIntakeReceipt.model_validate({"id": 1, "approval_status": "pending", "version": 0}).id == 1
+    assert CoreEscalationAckReceipt.model_validate({"ok": True, "cursor": 4}).cursor == 4
+    valid = {
+        "approval_status": "approved",
+        "status": "open",
+        "version": 1,
+        "messages": [{"id": 4, "public_id": "00000000-0000-4000-8000-000000000004", "client_message_id": "reply-4", "sender_type": "org_school_relay", "body": "Ответ", "created_at": None}],
+        "cursor": 4,
+    }
+    assert CoreEscalationOutboundReceipt.model_validate(valid).messages[0].id == 4
+    for malformed in [
+        {**valid, "approval_status": "unknown"},
+        {**valid, "cursor": -1},
+        {**valid, "leaked": True},
+        {**valid, "messages": [{**valid["messages"][0], "sender_type": "platform_admin"}]},
+    ]:
+        try:
+            CoreEscalationOutboundReceipt.model_validate(malformed)
+        except ValueError:
+            continue
+        raise AssertionError("malformed Core escalation receipt was accepted")
 
 
 async def setup_app():

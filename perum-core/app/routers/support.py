@@ -133,6 +133,34 @@ class EscalationRelayOut(EscalationResponse):
     replayed: bool
 
 
+class EscalationIntakeOut(EscalationResponse):
+    id: int
+    approval_status: Literal["pending", "approved", "rejected"]
+    version: int = Field(ge=0)
+
+
+class EscalationOutboundMessageOut(EscalationResponse):
+    id: int
+    public_id: UUID
+    client_message_id: str | None
+    sender_type: Literal["org_school_relay"]
+    body: str
+    created_at: datetime | None
+
+
+class EscalationOutboundOut(EscalationResponse):
+    approval_status: Literal["pending", "approved", "rejected"]
+    status: Literal["open", "pending", "closed"]
+    version: int = Field(ge=0)
+    messages: list[EscalationOutboundMessageOut]
+    cursor: int = Field(ge=0)
+
+
+class EscalationOutboundAckOut(EscalationResponse):
+    ok: Literal[True]
+    cursor: int = Field(ge=0)
+
+
 def _ticket_dict(t: SupportTicket, org_name: str | None = None) -> dict:
     d = {
         "id": t.id,
@@ -367,7 +395,7 @@ async def set_status(ticket_id: int, payload: StatusPatch, db: AsyncSession = De
     return {"id": t.id, "status": t.status}
 
 
-@internal_router.post("/escalations", status_code=status.HTTP_201_CREATED)
+@internal_router.post("/escalations", status_code=status.HTTP_201_CREATED, response_model=EscalationIntakeOut)
 async def intake_escalation(
     payload: EscalationIntake,
     x_internal_token: str | None = Header(default=None),
@@ -431,7 +459,7 @@ async def intake_escalation(
     return {"id": ticket.id, "approval_status": "pending", "version": 0}
 
 
-@internal_router.get("/escalations/outbound")
+@internal_router.get("/escalations/outbound", response_model=EscalationOutboundOut)
 async def outbound_escalation(
     school_public_id: UUID,
     correlation_id: str = Query(min_length=1, max_length=128),
@@ -459,7 +487,7 @@ async def outbound_escalation(
     }
 
 
-@internal_router.post("/escalations/outbound/ack")
+@internal_router.post("/escalations/outbound/ack", response_model=EscalationOutboundAckOut)
 async def ack_outbound(
     payload: OutboundAck,
     x_internal_token: str | None = Header(default=None),

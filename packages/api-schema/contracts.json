@@ -99,5 +99,8 @@
     ,"/api/support/escalations/{ticket_id}/approve"
     ,"/api/support/escalations/{ticket_id}/reject"
     ,"/api/support/escalations/{ticket_id}/relay"
+    ,"/internal/support/escalations"
+    ,"/internal/support/escalations/outbound"
+    ,"/internal/support/escalations/outbound/ack"
   ]
 }

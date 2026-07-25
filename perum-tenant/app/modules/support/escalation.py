@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 import httpx
@@ -11,6 +11,7 @@ from app.core.config import get_settings
 from app.core.db import SessionLocal
 from app.core.time import utc_now
 from app.models import Notification, SupportEscalationOutbox, SupportEscalationReceipt, SupportEvent, SupportMessage, SupportTicket, User
+from app.modules.support.schemas import CoreEscalationAckReceipt, CoreEscalationIntakeReceipt, CoreEscalationOutboundReceipt
 
 logger = logging.getLogger("perum.tenant.support.escalation")
 
@@ -33,14 +34,14 @@ async def deliver_outbox(client: httpx.AsyncClient) -> None:
             try:
                 response = await client.post(f"{get_settings().CONTROL_PLANE_URL.rstrip('/')}/internal/support/escalations", json=row.payload_json, headers=_headers())
                 response.raise_for_status()
-                result = response.json()
+                result = CoreEscalationIntakeReceipt.model_validate(response.json())
                 row.status = "delivered"
                 row.attempts += 1
                 row.last_error = None
                 row.delivered_at = utc_now()
                 row.updated_at = row.delivered_at
-                ticket.core_ticket_id = result["id"]
-                ticket.escalation_status = {"pending": "pending_org_approval", "approved": "approved", "rejected": "rejected"}.get(result["approval_status"], "pending_org_approval")
+                ticket.core_ticket_id = result.id
+                ticket.escalation_status = {"pending": "pending_org_approval", "approved": "approved", "rejected": "rejected"}[result.approval_status]
                 db.add(SupportEvent(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, action="escalation_delivered", metadata_json={"status": ticket.escalation_status}, created_at=utc_now()))
             except (httpx.HTTPError, KeyError, ValueError) as exc:
                 row.status = "error"
@@ -50,13 +51,6 @@ async def deliver_outbox(client: httpx.AsyncClient) -> None:
                 row.next_attempt_at = row.updated_at + timedelta(seconds=min(300, 2 ** min(row.attempts, 8)))
                 ticket.escalation_status = "delivery_error"
             await db.commit()
-
-
-def _created_at(value: str | None) -> datetime:
-    if not value:
-        return utc_now()
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    return parsed.replace(tzinfo=None)
 
 
 async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
@@ -71,17 +65,17 @@ async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
             headers=_headers(),
         )
         response.raise_for_status()
-        payload = response.json()
-        status_value = {"pending": "pending_org_approval", "approved": "approved", "rejected": "rejected"}.get(payload["approval_status"], ticket.escalation_status)
+        payload = CoreEscalationOutboundReceipt.model_validate(response.json())
+        status_value = {"pending": "pending_org_approval", "approved": "approved", "rejected": "rejected"}[payload.approval_status]
         status_changed = status_value != ticket.escalation_status
         ticket.escalation_status = status_value
-        for item in payload.get("messages", []):
-            core_message_id = int(item["id"])
+        for item in payload.messages:
+            core_message_id = item.id
             receipt = await db.scalar(select(SupportEscalationReceipt).where(SupportEscalationReceipt.ticket_id == ticket.id, SupportEscalationReceipt.core_message_id == core_message_id))
             if receipt is not None:
                 continue
-            now = _created_at(item.get("created_at"))
-            message = SupportMessage(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, sender_id=None, client_message_id=f"core-{core_message_id}", body=item["body"], side="admin_inbox", sender_snapshot="organization_support", created_at=now)
+            now = item.created_at.replace(tzinfo=None) if item.created_at else utc_now()
+            message = SupportMessage(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, sender_id=None, client_message_id=f"core-{core_message_id}", body=item.body, side="admin_inbox", sender_snapshot="organization_support", created_at=now)
             db.add(message)
             await db.flush()
             db.add_all([
@@ -94,7 +88,7 @@ async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
                     school_id=ticket.school_id,
                     user_id=user_id,
                     title=f"Ответ организации: {ticket.subject}",
-                    text=item["body"][:255],
+                    text=item.body[:255],
                     type="support",
                     ref_type="admin_support_ticket",
                     ref_id=ticket.public_id,
@@ -106,7 +100,7 @@ async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
             ticket.last_message_side = "admin_inbox"
             ticket.last_message_at = now
             ticket.updated_at = utc_now()
-        cursor = int(payload.get("cursor", ticket.last_core_message_cursor))
+        cursor = payload.cursor
         ticket.last_core_message_cursor = max(ticket.last_core_message_cursor, cursor)
         if status_changed:
             db.add(SupportEvent(id=str(uuid4()), school_id=ticket.school_id, ticket_id=ticket.id, action="escalation_status_changed", metadata_json={"status": status_value}, created_at=utc_now()))
@@ -121,6 +115,7 @@ async def pull_ticket(client: httpx.AsyncClient, ticket_id: int) -> None:
         headers=_headers(),
     )
     ack.raise_for_status()
+    CoreEscalationAckReceipt.model_validate(ack.json())
 
 
 async def pull_outbound(client: httpx.AsyncClient) -> None:

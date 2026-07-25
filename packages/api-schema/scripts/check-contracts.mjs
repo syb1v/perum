@@ -29,8 +29,8 @@ function responseSchema(document, path, method) {
   return dereference(document, response.content['application/json'].schema);
 }
 
-function responseSchemaRef(document, path, method) {
-  return document.paths[path][method].responses['200'].content['application/json'].schema.$ref;
+function responseSchemaRef(document, path, method, status = '200') {
+  return document.paths[path][method].responses[status].content['application/json'].schema.$ref;
 }
 
 function assertClosedObject(name, schema) {
@@ -132,14 +132,17 @@ if (schemaVersion(tenantSchemaVersion) !== 1 || schemaVersion(coreSchemaVersion)
   throw new Error('Core/Tenant mobile descriptor schema_version must be exactly 1');
 }
 
-for (const [path, method, schema] of [
-  ['/api/support/escalations/pending', 'get', 'EscalationListOut'],
-  ['/api/support/escalations/{ticket_id}', 'get', 'EscalationDetailOut'],
-  ['/api/support/escalations/{ticket_id}/approve', 'post', 'EscalationDecisionOut'],
-  ['/api/support/escalations/{ticket_id}/reject', 'post', 'EscalationDecisionOut'],
-  ['/api/support/escalations/{ticket_id}/relay', 'post', 'EscalationRelayOut'],
+for (const [path, method, schema, status] of [
+  ['/api/support/escalations/pending', 'get', 'EscalationListOut', '200'],
+  ['/api/support/escalations/{ticket_id}', 'get', 'EscalationDetailOut', '200'],
+  ['/api/support/escalations/{ticket_id}/approve', 'post', 'EscalationDecisionOut', '200'],
+  ['/api/support/escalations/{ticket_id}/reject', 'post', 'EscalationDecisionOut', '200'],
+  ['/api/support/escalations/{ticket_id}/relay', 'post', 'EscalationRelayOut', '200'],
+  ['/internal/support/escalations', 'post', 'EscalationIntakeOut', '201'],
+  ['/internal/support/escalations/outbound', 'get', 'EscalationOutboundOut', '200'],
+  ['/internal/support/escalations/outbound/ack', 'post', 'EscalationOutboundAckOut', '200'],
 ]) {
-  if (responseSchemaRef(coreOpenapi, path, method) !== `#/components/schemas/${schema}`) {
+  if (responseSchemaRef(coreOpenapi, path, method, status) !== `#/components/schemas/${schema}`) {
     throw new Error(`${method.toUpperCase()} ${path} must return ${schema}`);
   }
 }
@@ -151,6 +154,10 @@ assertExactCoreClosedObject('EscalationMessageOut', ['id', 'public_id', 'client_
 const escalationTicketFields = ['id', 'org_id', 'source', 'school_id', 'tenant_ticket_public_id', 'correlation_id', 'approval_status', 'approval_version', 'subject', 'status', 'platform_unread', 'org_unread', 'created_at', 'last_message_at'];
 assertExactCoreClosedObject('EscalationTicketOut', escalationTicketFields);
 assertExactCoreClosedObject('EscalationTicketDetailOut', [...escalationTicketFields, 'redacted_snapshot']);
+assertExactCoreClosedObject('EscalationIntakeOut', ['id', 'approval_status', 'version']);
+assertExactCoreClosedObject('EscalationOutboundOut', ['approval_status', 'status', 'version', 'messages', 'cursor']);
+assertExactCoreClosedObject('EscalationOutboundMessageOut', ['id', 'public_id', 'client_message_id', 'sender_type', 'body', 'created_at']);
+assertExactCoreClosedObject('EscalationOutboundAckOut', ['ok', 'cursor']);
 
 for (const path of ['/api/social/students', '/api/social/friends']) {
   if (responseSchemaRef(tenantOpenapi, path, 'get') !== '#/components/schemas/StudentPage') {
