@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class HomeworkCreate(BaseModel):
@@ -49,13 +49,17 @@ class HomeworkUpdate(BaseModel):
         return self
 
 
-class HomeworkStateUpdate(BaseModel):
+class HomeworkStateContract(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class HomeworkStateUpdate(HomeworkStateContract):
     client_action_id: str = Field(min_length=1, max_length=64)
     version: int = Field(ge=0)
     status: str = Field(pattern=r"^(not_started|in_progress|completed)$")
 
 
-class HomeworkStudentStateOut(BaseModel):
+class HomeworkStudentStateOut(HomeworkStateContract):
     status: Literal["not_started", "in_progress", "completed"]
     version: int
     completed_at: datetime | None

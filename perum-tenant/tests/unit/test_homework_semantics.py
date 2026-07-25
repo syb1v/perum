@@ -15,6 +15,13 @@ from app.modules.coursework.schemas import HomeworkCreate, HomeworkListOut, Home
 from app.modules.coursework.service import create_homework, list_homework, update_homework_state
 
 
+def test_homework_state_receipt_rejects_unknown_fields():
+    receipt = HomeworkStateOut(homework_id=1, status="completed", version=2, completed_at=None, replayed=False)
+    assert receipt.version == 2
+    with pytest.raises(ValueError):
+        HomeworkStateOut(homework_id=1, status="completed", version=2, completed_at=None, replayed=False, leaked=True)
+
+
 async def _seed():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as connection:

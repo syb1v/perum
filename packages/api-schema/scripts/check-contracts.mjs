@@ -209,6 +209,11 @@ for (const [name, fields] of [
     throw new Error(`${name} required fields differ from the preferences client contract`);
   }
 }
+for (const name of ['HomeworkStateUpdate', 'HomeworkStudentStateOut', 'HomeworkStateOut']) {
+  if (tenantOpenapi.components.schemas[name].additionalProperties !== false) {
+    throw new Error(`${name} must reject additional properties`);
+  }
+}
 for (const [path, method, schema] of [
   ['/api/push/registration', 'get', 'PushRegistrationStatusOut'],
   ['/api/push/installations/{installation_id}/registration', 'put', 'PushRegistrationOut'],
