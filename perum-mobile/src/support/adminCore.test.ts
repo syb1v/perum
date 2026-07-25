@@ -31,6 +31,12 @@ test('metadata and assignment actions carry version and stable idempotency ident
   assert.deepEqual(adminTicketActionPayload(assignment, 5, 'action-2'), { client_action_id: 'action-2', expected_version: 5, assignee_id: 7 });
 });
 
+test('escalation uses generated privacy-safe payload and school operator endpoint', () => {
+  const escalation = { kind: 'escalation', redactedSummary: 'Обезличенное описание проблемы' } as const;
+  assert.equal(adminTicketActionPath('ticket-1', escalation), '/admin/support/tickets/ticket-1/escalate');
+  assert.deepEqual(adminTicketActionPayload(escalation, 6, 'action-3'), { client_action_id: 'action-3', expected_version: 6, redacted_summary: 'Обезличенное описание проблемы' });
+});
+
 test('admin replies use only the school operator endpoint', () => {
   assert.equal(adminTicketReplyPath('ticket-1'), '/admin/support/tickets/ticket-1/messages');
 });

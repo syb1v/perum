@@ -1,4 +1,4 @@
-import type { AdminSupportAssign, AdminSupportTicketPatch, SupportMessage } from './types';
+import type { AdminSupportAssign, AdminSupportEscalate, AdminSupportTicketPatch, SupportMessage } from './types';
 
 import { isSchoolSupportOperator } from '@perum/domain';
 
@@ -20,10 +20,12 @@ export type AdminTicketAction =
   | { kind: 'metadata'; field: 'status'; value: NonNullable<AdminSupportTicketPatch['status']> }
   | { kind: 'metadata'; field: 'category'; value: NonNullable<AdminSupportTicketPatch['category']> }
   | { kind: 'metadata'; field: 'priority'; value: NonNullable<AdminSupportTicketPatch['priority']> }
-  | { kind: 'assignment'; assigneeId: number | null };
+  | { kind: 'assignment'; assigneeId: number | null }
+  | { kind: 'escalation'; redactedSummary: string };
 
 export function adminTicketActionPath(ticketId: string, action: AdminTicketAction) {
-  return action.kind === 'assignment' ? `/admin/support/tickets/${ticketId}/assign` : `/admin/support/tickets/${ticketId}`;
+  if (action.kind === 'assignment') return `/admin/support/tickets/${ticketId}/assign`;
+  return action.kind === 'escalation' ? `/admin/support/tickets/${ticketId}/escalate` : `/admin/support/tickets/${ticketId}`;
 }
 
 export function adminTicketReplyPath(ticketId: string) {
@@ -34,8 +36,9 @@ export function adminTicketReadPath(ticketId: string) {
   return `/admin/support/tickets/${ticketId}/read`;
 }
 
-export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string): AdminSupportTicketPatch | AdminSupportAssign {
+export function adminTicketActionPayload(action: AdminTicketAction, expectedVersion: number, clientActionId: string): AdminSupportTicketPatch | AdminSupportAssign | AdminSupportEscalate {
   if (action.kind === 'assignment') return { client_action_id: clientActionId, expected_version: expectedVersion, assignee_id: action.assigneeId };
+  if (action.kind === 'escalation') return { client_action_id: clientActionId, expected_version: expectedVersion, redacted_summary: action.redactedSummary };
   if (action.field === 'status') return { client_action_id: clientActionId, expected_version: expectedVersion, status: action.value };
   if (action.field === 'category') return { client_action_id: clientActionId, expected_version: expectedVersion, category: action.value };
   return { client_action_id: clientActionId, expected_version: expectedVersion, priority: action.value };

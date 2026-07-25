@@ -272,6 +272,7 @@ if (!tenantOpenapi.components.schemas.app__modules__support__schemas__ReadCreate
 for (const [path, method, schema] of [
   ['/api/admin/support/tickets/{ticket_id}', 'patch', 'TicketPatch'],
   ['/api/admin/support/tickets/{ticket_id}/assign', 'post', 'AssignCreate'],
+  ['/api/admin/support/tickets/{ticket_id}/escalate', 'post', 'EscalateCreate'],
   ['/api/admin/support/tickets/{ticket_id}/messages', 'post', 'app__modules__support__schemas__MessageCreate'],
   ['/api/admin/support/tickets/{ticket_id}/read', 'post', 'app__modules__support__schemas__ReadCreate'],
 ]) {
@@ -283,6 +284,7 @@ for (const [path, method, schema] of [
 for (const [name, fields] of [
   ['TicketPatch', ['client_action_id', 'expected_version']],
   ['AssignCreate', ['client_action_id', 'expected_version']],
+  ['EscalateCreate', ['client_action_id', 'expected_version', 'redacted_summary']],
 ]) {
   const required = tenantOpenapi.components.schemas[name].required ?? [];
   if (fields.some(field => !required.includes(field))) {
