@@ -285,6 +285,13 @@ roster используют generated `TeacherHomeroomOut`; nullable names от�
 login fallback. Loading/error/empty/offline states, Android/iOS exports и 109 tests
 готовы; bulk-balance, roster management и другие mutations не включены.
 
+Mobile Teacher parity расширен read-only works feed: atomic `teacher_works`
+capability проходит Tenant/Core/Mobile descriptor boundary, account-scoped persisted
+infinite query использует generated `TeacherWorksOut`, выводит homework/control cards
+и удаляет overlap по stable work ID при offset drift. Loading/error/empty/offline
+states, Android/iOS exports и 113 Mobile tests готовы; filters/details/mutations,
+analytics и полноценный offline journal остаются отдельными verticals.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
@@ -1040,7 +1047,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Mobile send/read/report payloads и moderation inbox/detail/action receipt используют curated generated schemas; Web использует generated moderation types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester и read-only diary/grades/finals готовы; Parent получил child-scoped read-only diary/grades/finals; Teacher получил read-only weekly diary и homeroom overview; school admin/director получили support inbox/escalation foundation. Остаются student analytics/transactions и прочие функции, Parent analytics/transactions, Teacher works/analytics и полноценный offline journal, остальные school admin/director и org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester и read-only diary/grades/finals готовы; Parent получил child-scoped read-only diary/grades/finals; Teacher получил read-only weekly diary, homeroom overview и paginated works feed; school admin/director получили support inbox/escalation foundation. Остаются student analytics/transactions и прочие функции, Parent analytics/transactions, Teacher works filters/details/mutations, analytics и полноценный offline journal, остальные school admin/director и org/platform admin workflows |
 | P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке
