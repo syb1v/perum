@@ -202,6 +202,12 @@ store/provider credentials.
 public runtime values закреплены в EAS profiles. Signing credentials и завершённый
 signed build всё ещё требуют отдельного operator evidence.
 
+Native school escalation request теперь реализован поверх существующего durable admin
+action outbox: exact operator role/capability, open/non-escalated guards, privacy
+warning, generated `EscalateCreate`, stable action ID/version, retry/recovery и
+explicit conflict discard. Client не меняет escalation state до authoritative Tenant
+receipt; signing/device evidence в этот repository-controlled slice не входит.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

@@ -284,3 +284,4 @@
 | 281 | 2026-07-24 | 1ad7ed2 | fix(mobile): исправлен iOS EAS preflight |
 | 282 | 2026-07-24 | f8dff1c | feat(mobile): настроен EAS Update channel |
 | 283 | 2026-07-25 | c4dab25 | fix(contracts): типизированы Core support escalations |
+| 284 | 2026-07-25 | 4b38835 | feat(mobile): добавлена эскалация поддержки |
