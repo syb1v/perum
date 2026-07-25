@@ -8666,6 +8666,10 @@
             "type": "boolean",
             "title": "Teacher Homeroom"
           },
+          "teacher_works": {
+            "type": "boolean",
+            "title": "Teacher Works"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -8710,6 +8714,7 @@
           "parent_academics",
           "teacher_diary",
           "teacher_homeroom",
+          "teacher_works",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
@@ -10452,6 +10457,10 @@
             "type": "boolean",
             "title": "Teacher Homeroom"
           },
+          "teacher_works": {
+            "type": "boolean",
+            "title": "Teacher Works"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -10496,6 +10505,7 @@
           "parent_academics",
           "teacher_diary",
           "teacher_homeroom",
+          "teacher_works",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

@@ -22,6 +22,7 @@
     "parent_academics": true,
     "teacher_diary": true,
     "teacher_homeroom": true,
+    "teacher_works": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,

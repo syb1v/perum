@@ -4722,6 +4722,8 @@ export interface components {
             teacher_diary: boolean;
             /** Teacher Homeroom */
             teacher_homeroom: boolean;
+            /** Teacher Works */
+            teacher_works: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

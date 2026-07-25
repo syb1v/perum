@@ -32,6 +32,7 @@ def _manifest() -> dict:
             "parent_academics": True,
             "teacher_diary": True,
             "teacher_homeroom": True,
+            "teacher_works": True,
             "offline_homework_state": True,
             "offline_social_messages": True,
             "offline_support_messages": True,
