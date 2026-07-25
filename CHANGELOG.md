@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Social settings and realtime ticket DTO are closed: settings snapshot/patch and WebSocket ticket receipt reject unknown fields while preserving rollout convergence, quiet-hours validation and realtime transport behavior.
 - Active moderation case/action boundary hardened: create, summary/page, evidence/detail и action receipt schemas closed; case/action statuses constrained to authoritative `open|dismissed|actioned` lifecycle. Evidence visibility, retention, actions and policy thresholds are unchanged.
 - Active 1:1 social chat response family hardened: message/page, conversation/page, unread and report receipts are closed and guarded against unknown fields. Existing generated send/read/report request bindings, groups/attachments/parent policy and anti-abuse behavior are unchanged.
 - Friend request response status сужен до authoritative lifecycle `pending|accepted|rejected|cancelled|expired`; generated gate и focused test отклоняют неизвестные состояния без изменения request transitions или rollout policy.

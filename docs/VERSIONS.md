@@ -295,3 +295,4 @@
 | 292 | 2026-07-25 | 0d7bde1 | fix(contracts): закреплён lifecycle заявок |
 | 293 | 2026-07-25 | b3abca3 | fix(contracts): закрыты chat receipts |
 | 294 | 2026-07-25 | ee3d308 | fix(contracts): закрыты moderation schemas |
+| 295 | 2026-07-25 | 58a0562 | fix(contracts): закрыты social settings DTO |

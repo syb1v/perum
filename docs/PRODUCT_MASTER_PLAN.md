@@ -254,6 +254,11 @@ evidence/detail и action receipt отклоняют unknown fields, а case/act
 ограничен authoritative `open|dismissed|actioned` lifecycle. Evidence visibility,
 retention, available actions и policy thresholds не менялись.
 
+Social settings snapshot/patch и realtime ticket receipt теперь closed и закреплены
+generated gate. Rollout convergence, quiet-hours validation, WebSocket transport и
+production enablement не менялись. Дальнейший Social progress требует product
+verticals/evidence, а не дополнительного contract-only polishing.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
