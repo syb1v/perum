@@ -60,6 +60,7 @@ class MobileBuildCapabilitiesV1(BaseModel):
     teacher_works: StrictBool
     teacher_analytics: StrictBool
     school_admin_overview: StrictBool
+    school_admin_social_moderation: StrictBool
     offline_homework_state: StrictBool
     offline_social_messages: StrictBool
     offline_support_messages: StrictBool

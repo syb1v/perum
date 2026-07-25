@@ -36,6 +36,7 @@ class TenantCapabilities(BaseModel):
     teacher_works: bool
     teacher_analytics: bool
     school_admin_overview: bool
+    school_admin_social_moderation: bool
     offline_homework_state: bool
     offline_social_messages: bool
     offline_support_messages: bool

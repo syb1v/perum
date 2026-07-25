@@ -11,6 +11,7 @@ test('persists only explicitly reviewed account query families', () => {
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'teacher-analytics', 'dashboard'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'child', 1, 'analytics'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'user', 'me'])), false);
+  assert.equal(shouldPersistQuery(query(['account', 'a', 'school-admin-moderation'])), false);
   assert.equal(shouldPersistQuery(query(['auth', 'tokens'])), false);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'homework'], 'error')), false);
 });

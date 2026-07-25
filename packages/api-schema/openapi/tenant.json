@@ -16548,6 +16548,10 @@
             "type": "boolean",
             "title": "School Admin Overview"
           },
+          "school_admin_social_moderation": {
+            "type": "boolean",
+            "title": "School Admin Social Moderation"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16597,6 +16601,7 @@
           "teacher_works",
           "teacher_analytics",
           "school_admin_overview",
+          "school_admin_social_moderation",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

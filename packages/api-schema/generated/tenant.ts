@@ -4823,6 +4823,8 @@ export interface components {
             teacher_analytics: boolean;
             /** School Admin Overview */
             school_admin_overview: boolean;
+            /** School Admin Social Moderation */
+            school_admin_social_moderation: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

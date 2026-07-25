@@ -27,6 +27,7 @@
     "teacher_works": true,
     "teacher_analytics": true,
     "school_admin_overview": true,
+    "school_admin_social_moderation": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,
