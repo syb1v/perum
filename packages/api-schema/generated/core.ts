@@ -2764,6 +2764,8 @@ export interface components {
             student_academics: boolean;
             /** Parent Academics */
             parent_academics: boolean;
+            /** Teacher Diary */
+            teacher_diary: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -3363,6 +3365,8 @@ export interface components {
             student_academics: boolean;
             /** Parent Academics */
             parent_academics: boolean;
+            /** Teacher Diary */
+            teacher_diary: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

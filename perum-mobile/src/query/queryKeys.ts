@@ -25,6 +25,7 @@ export const queryKeys = {
   parentDiary: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'diary'] as const,
   parentGrades: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'grades'] as const,
   parentFinals: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'finals'] as const,
+  teacherDiary: (accountId: string, weekOffset: number) => [...queryKeys.account(accountId), 'academics', 'teacher-diary', weekOffset] as const,
 };
 
 export const socialInvalidationKeys = {

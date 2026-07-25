@@ -29,6 +29,7 @@ class TenantCapabilities(BaseModel):
     offline_preferences: bool
     student_academics: bool
     parent_academics: bool
+    teacher_diary: bool
     offline_homework_state: bool
     offline_social_messages: bool
     offline_support_messages: bool

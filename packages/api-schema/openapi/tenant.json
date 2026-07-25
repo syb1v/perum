@@ -16249,6 +16249,10 @@
             "type": "boolean",
             "title": "Parent Academics"
           },
+          "teacher_diary": {
+            "type": "boolean",
+            "title": "Teacher Diary"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16291,6 +16295,7 @@
           "offline_preferences",
           "student_academics",
           "parent_academics",
+          "teacher_diary",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
