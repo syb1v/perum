@@ -2762,6 +2762,8 @@ export interface components {
             offline_preferences: boolean;
             /** Student Academics */
             student_academics: boolean;
+            /** Student Analytics */
+            student_analytics: boolean;
             /** Parent Academics */
             parent_academics: boolean;
             /** Parent Analytics */
@@ -3371,6 +3373,8 @@ export interface components {
             offline_preferences: boolean;
             /** Student Academics */
             student_academics: boolean;
+            /** Student Analytics */
+            student_analytics: boolean;
             /** Parent Academics */
             parent_academics: boolean;
             /** Parent Analytics */

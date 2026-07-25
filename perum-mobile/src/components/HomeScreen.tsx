@@ -72,6 +72,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     <View style={styles.spacer} />
     {user.role === 'student' && has('offline_homework_state') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/homework')}><Text style={styles.primaryText}>Домашние задания</Text></Pressable> : null}
     {user.role === 'student' && has('student_academics') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/academics' as never)}><Text style={styles.primaryText}>Дневник и оценки</Text></Pressable> : null}
+    {user.role === 'student' && has('student_analytics') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/analytics' as never)}><Text style={styles.primaryText}>Аналитика оценок</Text></Pressable> : null}
     {user.role === 'parent' && has('parent_academics') ? <Pressable style={styles.primary} onPress={() => router.push('/(parent)/academics' as never)}><Text style={styles.primaryText}>Успеваемость детей</Text></Pressable> : null}
     {user.role === 'parent' && has('parent_analytics') ? <Pressable style={styles.primary} onPress={() => router.push('/(parent)/analytics' as never)}><Text style={styles.primaryText}>Аналитика и баланс</Text></Pressable> : null}
     {user.role === 'teacher' && has('teacher_diary') ? <Pressable style={styles.primary} onPress={() => router.push('/(teacher)/diary' as never)}><Text style={styles.primaryText}>Расписание учителя</Text></Pressable> : null}

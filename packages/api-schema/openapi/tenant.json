@@ -16245,6 +16245,10 @@
             "type": "boolean",
             "title": "Student Academics"
           },
+          "student_analytics": {
+            "type": "boolean",
+            "title": "Student Analytics"
+          },
           "parent_academics": {
             "type": "boolean",
             "title": "Parent Academics"
@@ -16310,6 +16314,7 @@
           "support_attachments",
           "offline_preferences",
           "student_academics",
+          "student_analytics",
           "parent_academics",
           "parent_analytics",
           "teacher_diary",

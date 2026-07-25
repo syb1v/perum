@@ -29,6 +29,7 @@ def _manifest() -> dict:
             "support_attachments": False,
             "offline_preferences": True,
             "student_academics": True,
+            "student_analytics": True,
             "parent_academics": True,
             "parent_analytics": True,
             "teacher_diary": True,

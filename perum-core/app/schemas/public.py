@@ -28,6 +28,7 @@ class TenantCapabilities(BaseModel):
     support_attachments: bool
     offline_preferences: bool
     student_academics: bool
+    student_analytics: bool
     parent_academics: bool
     parent_analytics: bool
     teacher_diary: bool

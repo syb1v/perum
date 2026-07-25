@@ -19,6 +19,7 @@
     "support_attachments": false,
     "offline_preferences": true,
     "student_academics": true,
+    "student_analytics": true,
     "parent_academics": true,
     "parent_analytics": true,
     "teacher_diary": true,

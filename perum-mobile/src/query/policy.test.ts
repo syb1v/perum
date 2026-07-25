@@ -6,6 +6,7 @@ test('persists only explicitly reviewed account query families', () => {
   const query = (queryKey: readonly unknown[], status = 'success') => ({ queryKey, state: { status } }) as never;
   assert.equal(shouldPersistQuery(query(['account', 'a', 'homework'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'diary'])), true);
+  assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'analytics'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'teacher-works'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'teacher-analytics', 'dashboard'])), true);
   assert.equal(shouldPersistQuery(query(['account', 'a', 'academics', 'child', 1, 'analytics'])), true);
