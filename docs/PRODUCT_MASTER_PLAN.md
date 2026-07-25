@@ -279,6 +279,12 @@ loading/error/empty/offline states. Android/iOS exports и 109 Mobile tests пр
 grade/topic/occurrence mutations и полноценный offline journal остаются отдельным
 большим vertical.
 
+Mobile Teacher parity получил read-only homeroom overview: atomic
+`teacher_homeroom` capability, assigned/unassigned branches, aggregate class stats и
+roster используют generated `TeacherHomeroomOut`; nullable names отображаются с
+login fallback. Loading/error/empty/offline states, Android/iOS exports и 109 tests
+готовы; bulk-balance, roster management и другие mutations не включены.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

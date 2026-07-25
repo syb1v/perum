@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Mobile Teacher parity получил read-only homeroom overview: atomic `teacher_homeroom` capability, assigned/unassigned branches, aggregate stats and roster with authoritative nullable names/login fallback. Android/iOS exports and 109 tests passed; bulk-balance and roster mutations remain excluded.
 - Mobile Teacher parity получил read-only weekly diary: atomic `teacher_diary` capability, offset-scoped persisted queries, class/subject/time/status/homework/control-work rendering and loading/error/empty/offline states. Android/iOS exports and 109 Mobile tests passed; journal mutations remain out of scope.
 - Mobile Parent parity получил read-only academics vertical: atomic `parent_academics` capability, stable/fallback child selection, child-scoped cached diary/grades/finals and explicit loading/error/empty/offline states. Android/iOS exports, descriptor parity and 109 Mobile tests passed.
 - Mobile student parity расширен read-only academics vertical: новый atomic `student_academics` capability связывает Tenant descriptor, Core discovery и Mobile fail-closed parser; экран показывает weekly diary, grades and finals with loading/error/empty/offline cached states. Android/iOS static exports, typecheck and 108 Mobile tests passed.
