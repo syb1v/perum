@@ -293,3 +293,4 @@
 | 290 | 2026-07-25 | bd2fa8e | chore(contracts): обновлены homework schemas |
 | 291 | 2026-07-25 | 23791e2 | fix(contracts): закрыты Friends DTO |
 | 292 | 2026-07-25 | 0d7bde1 | fix(contracts): закреплён lifecycle заявок |
+| 293 | 2026-07-25 | b3abca3 | fix(contracts): закрыты chat receipts |

@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Active 1:1 social chat response family hardened: message/page, conversation/page, unread and report receipts are closed and guarded against unknown fields. Existing generated send/read/report request bindings, groups/attachments/parent policy and anti-abuse behavior are unchanged.
 - Friend request response status сужен до authoritative lifecycle `pending|accepted|rejected|cancelled|expired`; generated gate и focused test отклоняют неизвестные состояния без изменения request transitions или rollout policy.
 - Friends contract family hardened: `StudentProfile/Page`, friend request и block request/response DTO теперь closed, contract gate отклоняет open generated schemas, focused test фиксирует unknown-field rejection. Chat/moderation/settings policy и production rollout не менялись.
 - Homework state contracts hardened: Tenant `HomeworkStateUpdate`, `HomeworkStudentStateOut` и authoritative `HomeworkStateOut` теперь closed (`extra=forbid`), generated OpenAPI gate фиксирует state receipt boundary, а focused test отклоняет unknown fields без изменения status/version/conflict semantics.

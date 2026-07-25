@@ -244,6 +244,11 @@ Friend request response теперь также фиксирует exact lifecyc
 clients и regression gate. Existing transitions, PostgreSQL contention semantics и
 rollout policy не менялись.
 
+Active 1:1 chat response envelopes теперь closed: messages/pages,
+conversations/pages, unread count и report receipt отклоняют unknown fields и
+закреплены generated gate. Existing send/read/report request identities не менялись;
+groups, attachments, parent observer policy и anti-abuse остаются отдельным scope.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
