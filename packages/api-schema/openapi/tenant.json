@@ -13379,6 +13379,7 @@
             "title": "Created At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -13413,6 +13414,7 @@
             "title": "Next Cursor"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "items",
@@ -17960,6 +17962,7 @@
             "title": "Created At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -21317,6 +21320,7 @@
             "title": "Unread Count"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "unread_count"
@@ -21917,6 +21921,7 @@
             "title": "Expires At"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "id",
@@ -21949,6 +21954,7 @@
             "title": "Next Cursor"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "items",

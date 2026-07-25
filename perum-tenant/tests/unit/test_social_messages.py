@@ -1,5 +1,5 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -13,7 +13,12 @@ from app.models.academic import Class, ClassStudent
 from app.models.social import ConversationMember, FriendRequest, Friendship, Message, SocialAuditEvent, SocialReadReceipt
 from app.modules.social import retention, service
 from app.modules.social.realtime import manager
-from app.modules.social.schemas import SettingsPatch
+from app.modules.social.schemas import MessageOut, SettingsPatch
+
+
+def test_social_message_receipt_rejects_unknown_fields():
+    with pytest.raises(ValueError):
+        MessageOut(id=1, sender_id=1, client_message_id="m-1", body="text", created_at=datetime.now(), expires_at=datetime.now(), leaked=True)
 
 
 async def seed():

@@ -8,6 +8,10 @@ class FriendContract(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ChatContract(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
 class SettingsOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     social_enabled: bool
@@ -97,8 +101,8 @@ class MessageCreate(BaseModel):
     body: str = Field(min_length=1, max_length=4000)
 
 
-class MessageOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class MessageOut(ChatContract):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
     id: int
     sender_id: int
     client_message_id: str
@@ -107,12 +111,12 @@ class MessageOut(BaseModel):
     expires_at: datetime
 
 
-class MessagePage(BaseModel):
+class MessagePage(ChatContract):
     items: list[MessageOut]
     next_cursor: int | None
 
 
-class ConversationOut(BaseModel):
+class ConversationOut(ChatContract):
     id: int
     peer: StudentProfile
     last_message: MessageOut | None
@@ -123,7 +127,7 @@ class ConversationOut(BaseModel):
     created_at: datetime
 
 
-class ConversationPage(BaseModel):
+class ConversationPage(ChatContract):
     items: list[ConversationOut]
     next_cursor: int | None
 
@@ -133,7 +137,7 @@ class ReadCreate(BaseModel):
     client_action_id: str | None = Field(None, min_length=1, max_length=64)
 
 
-class UnreadCountOut(BaseModel):
+class UnreadCountOut(ChatContract):
     unread_count: int
 
 
@@ -144,7 +148,7 @@ class ReportCreate(BaseModel):
     client_report_id: str = Field(min_length=1, max_length=64)
 
 
-class ReportOut(BaseModel):
+class ReportOut(ChatContract):
     id: int
     message_id: int
     category: str
