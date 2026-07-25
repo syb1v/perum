@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Mobile Teacher parity получил read-only analytics dashboard: atomic `teacher_analytics` capability, generated class/subject/period selectors, filter-scoped persisted queries, KPI, dynamics, problem topics и attention students. Contract parity, focused Core/Tenant tests, Android/iOS exports и 117 Mobile tests прошли; reports/exports/charts/drill-down/mutations остаются вне slice.
 - Mobile Teacher parity расширен read-only works feed: atomic `teacher_works` capability, account-scoped persisted pagination, overlap deduplication и homework/control cards с loading/error/empty/offline states. Descriptor parity, focused Core/Tenant tests, Android/iOS exports и 113 Mobile tests прошли; filters/details/mutations и offline journal остаются вне slice.
 - Mobile role parity evidence table синхронизирована с фактическими Student/Parent/Teacher read-only academics verticals; remaining scope уточнён без изменения общей оценки готовности.
 - Mobile Teacher parity получил read-only homeroom overview: atomic `teacher_homeroom` capability, assigned/unassigned branches, aggregate stats and roster with authoritative nullable names/login fallback. Android/iOS exports and 109 tests passed; bulk-balance and roster mutations remain excluded.
