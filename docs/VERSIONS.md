@@ -288,3 +288,4 @@
 | 285 | 2026-07-25 | 70eedb1 | fix(support): закрыты internal RPC receipts |
 | 286 | 2026-07-25 | be590af | fix(support): ограничены escalation retries |
 | 287 | 2026-07-25 | 30e21e3 | docs(plan): синхронизирован support roadmap |
+| 288 | 2026-07-25 | 808b4cf | feat(observability): добавлены escalation alerts |
