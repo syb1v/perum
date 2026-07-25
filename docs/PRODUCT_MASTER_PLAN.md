@@ -208,6 +208,12 @@ warning, generated `EscalateCreate`, stable action ID/version, retry/recovery и
 explicit conflict discard. Client не меняет escalation state до authoritative Tenant
 receipt; signing/device evidence в этот repository-controlled slice не входит.
 
+Internal Tenant↔Core escalation receipts теперь закрыты и проверяются до local state
+mutation: intake, outbound pull и ack фиксируют exact literals, UUID, non-negative
+versions/cursors и `ok=true`. Malformed 2xx больше не может пометить outbox delivered,
+создать частичный message или продвинуть cursor; curated manifest расширен до 100
+paths. Terminal retry/dead-letter policy остаётся отдельным scope.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился

@@ -285,3 +285,4 @@
 | 282 | 2026-07-24 | f8dff1c | feat(mobile): настроен EAS Update channel |
 | 283 | 2026-07-25 | c4dab25 | fix(contracts): типизированы Core support escalations |
 | 284 | 2026-07-25 | 4b38835 | feat(mobile): добавлена эскалация поддержки |
+| 285 | 2026-07-25 | 70eedb1 | fix(support): закрыты internal RPC receipts |

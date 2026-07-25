@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-25
 
+- Internal Tenant↔Core support escalation RPC получил exact closed receipts для intake, outbound pull и ack. Tenant валидирует весь 2xx payload до изменения outbox/ticket/cursor, включая literals, UUID, non-negative versions/cursors и `ok=true`; malformed responses fail closed. Curated contract gate расширен до 100 paths.
 - Native school operator support thread получил privacy-safe escalation request: только открытый неэскалированный тикет можно поставить в durable account-scoped outbox с обезличенным summary, generated `EscalateCreate`, immutable action ID и enqueue-time version. Retry/crash recovery/conflict semantics переиспользуют существующий admin action lifecycle без optimistic escalation state.
 - Core organization support escalation boundary закрыта end-to-end: pending/detail/approve/reject/relay получили отдельные closed response schemas, active Web widget использует generated Core DTO, а curated contract gate проверяет exact bindings и required fields для 97 paths. Approval, relay idempotency, authorization и UX не менялись.
 
