@@ -290,3 +290,4 @@
 | 287 | 2026-07-25 | 30e21e3 | docs(plan): синхронизирован support roadmap |
 | 288 | 2026-07-25 | 808b4cf | feat(observability): добавлены escalation alerts |
 | 289 | 2026-07-25 | 132eb0f | fix(contracts): закрыты homework state receipts |
+| 290 | 2026-07-25 | bd2fa8e | chore(contracts): обновлены homework schemas |
