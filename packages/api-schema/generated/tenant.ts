@@ -4720,6 +4720,8 @@ export interface components {
             parent_academics: boolean;
             /** Teacher Diary */
             teacher_diary: boolean;
+            /** Teacher Homeroom */
+            teacher_homeroom: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

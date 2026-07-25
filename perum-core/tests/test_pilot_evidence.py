@@ -34,7 +34,7 @@ class FakeClient:
                 "refresh_sessions": True, "session_management": True, "push_registration": True,
                 "push_delivery": True, "social_friends": False, "social_messages": False,
                 "social_realtime": False, "social_attachments": False, "support_requester": False,
-                "support_admin": False, "support_attachments": False, "offline_preferences": True, "student_academics": True, "parent_academics": True, "teacher_diary": True,
+                "support_admin": False, "support_attachments": False, "offline_preferences": True, "student_academics": True, "parent_academics": True, "teacher_diary": True, "teacher_homeroom": True,
                 "offline_homework_state": True, "offline_social_messages": False,
                 "offline_support_messages": False, "offline_read_cursors": True,
                 "offline_social_read_cursors": False, "offline_support_ticket_creation": False,

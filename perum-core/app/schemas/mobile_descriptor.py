@@ -54,6 +54,7 @@ class MobileBuildCapabilitiesV1(BaseModel):
     student_academics: StrictBool
     parent_academics: StrictBool
     teacher_diary: StrictBool
+    teacher_homeroom: StrictBool
     offline_homework_state: StrictBool
     offline_social_messages: StrictBool
     offline_support_messages: StrictBool
