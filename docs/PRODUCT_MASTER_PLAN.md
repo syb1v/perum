@@ -259,6 +259,12 @@ generated gate. Rollout convergence, quiet-hours validation, WebSocket transport
 production enablement не менялись. Дальнейший Social progress требует product
 verticals/evidence, а не дополнительного contract-only polishing.
 
+Mobile student parity получил read-only academics vertical: atomic
+`student_academics` capability проходит Tenant descriptor → Core discovery → Mobile
+exact parser, а account-scoped persisted queries показывают weekly diary, grades и
+finals с loading/error/empty/offline states. Android/iOS static exports, typecheck и
+108 Mobile tests прошли; mutations, analytics и physical-device evidence не входят.
+
 EAS Update repository configuration завершена: SDK 57-compatible `expo-updates`,
 project update URL и `appVersion` runtime policy закреплены, remote preview channel и
 branch созданы. Повторный iOS build прошёл config/typecheck/107 tests и остановился
