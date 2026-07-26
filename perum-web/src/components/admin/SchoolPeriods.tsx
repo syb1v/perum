@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
 import styles from '@/app/admin/page.module.css';
 import api from '@/lib/apiClient';
-import { AcademicYear } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
 
-interface SchoolPeriod {
-    id: number;
-    name: string;
-    period_type: string;
-    start_date: string;
-    end_date: string;
-    is_active: boolean;
-    academic_year_id?: number | null;
-    target_grades?: string | null;
-}
+type SchoolPeriod = components['schemas']['AdminSchoolPeriodOut'];
+type SchoolPeriodsResponse = components['schemas']['AdminSchoolPeriodsOut'];
+type AcademicYearsResponse = components['schemas']['AdminAcademicYearsOut'];
+type AcademicYear = components['schemas']['AdminAcademicYearOut'];
 
 export default function SchoolPeriods() {
     const [periods, setPeriods] = useState<SchoolPeriod[]>([]);
@@ -34,8 +28,8 @@ export default function SchoolPeriods() {
         try {
             setIsLoading(true);
             const [periodsRes, yearsRes] = await Promise.all([
-                api.get<{ periods: SchoolPeriod[] }>('/admin/school-periods'),
-                api.get<{ academic_years: AcademicYear[] }>('/admin/academic-years')
+                api.get<SchoolPeriodsResponse>('/admin/school-periods'),
+                api.get<AcademicYearsResponse>('/admin/academic-years')
             ]);
             setPeriods(periodsRes.periods);
             setAcademicYears(yearsRes.academic_years);
@@ -99,7 +93,7 @@ export default function SchoolPeriods() {
         setIsActive(period.is_active);
         setAcademicYearId(period.academic_year_id || '');
         if (period.target_grades) {
-            try { setTargetGrades(JSON.parse(period.target_grades)); } catch { setTargetGrades([]); }
+            setTargetGrades(period.target_grades ?? []);
         } else {
             setTargetGrades([]);
         }
@@ -274,9 +268,9 @@ export default function SchoolPeriods() {
                                             {period.period_type === 'half_year' && 'Полугодие'}
                                             {period.period_type === 'holiday' && 'Каникулы'}
                                             {period.period_type === 'vacation' && 'Праздник'}
-                                            {period.target_grades ? (
+                                            {period.target_grades?.length ? (
                                                 <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>
-                                                    Кл: {JSON.parse(period.target_grades).join(', ')}
+                                                    Кл: {period.target_grades.join(', ')}
                                                 </div>
                                             ) : null}
                                         </td>

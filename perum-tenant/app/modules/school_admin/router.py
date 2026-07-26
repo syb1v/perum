@@ -19,7 +19,9 @@ from app.modules.school_admin.schemas import (
     AcademicYearCreate,
     AcademicYearUpdate,
     AddStudentRequest,
+    AdminAcademicYearsOut,
     AdminDashboardOverviewOut,
+    AdminSchoolPeriodsOut,
     BellScheduleCreate,
     BellScheduleUpdate,
     ClassCreate,
@@ -326,8 +328,8 @@ async def update_class_schedule(
 
 
 # ============ Academic years ============
-@router.get("/academic-years")
-async def get_academic_years(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/academic-years", response_model=AdminAcademicYearsOut)
+async def get_academic_years(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> AdminAcademicYearsOut:
     return {"academic_years": await acad.list_academic_years(db, await _school(user, db))}
 
 
@@ -359,8 +361,8 @@ async def delete_academic_year(
 
 
 # ============ School periods ============
-@router.get("/school-periods")
-async def get_school_periods(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/school-periods", response_model=AdminSchoolPeriodsOut)
+async def get_school_periods(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> AdminSchoolPeriodsOut:
     return {"periods": await acad.list_school_periods(db, await _school(user, db))}
 
 

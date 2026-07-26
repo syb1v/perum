@@ -39,6 +39,7 @@ export const queryKeys = {
   schoolAdminOverview: (accountId: string, periodDays: number) => [...queryKeys.account(accountId), 'school-admin-overview', periodDays] as const,
   schoolAdminModeration: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-moderation'] as const,
   schoolAdminModerationCase: (accountId: string, caseId: number) => [...queryKeys.schoolAdminModeration(accountId), 'case', caseId] as const,
+  schoolAdminAcademicCalendar: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-academic-calendar'] as const,
 };
 
 export const socialInvalidationKeys = {

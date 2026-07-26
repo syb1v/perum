@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,8 +43,8 @@ async def list_academic_years(db: AsyncSession, school_id: int) -> list[dict]:
         {
             "id": y.id,
             "name": y.name,
-            "start_date": _iso(y.start_date),
-            "end_date": _iso(y.end_date),
+            "start_date": y.start_date,
+            "end_date": y.end_date,
             "is_current": y.is_current,
         }
         for y in rows
@@ -131,14 +133,26 @@ async def list_school_periods(db: AsyncSession, school_id: int) -> list[dict]:
             "id": p.id,
             "name": p.name,
             "period_type": p.period_type,
-            "start_date": _iso(p.start_date),
-            "end_date": _iso(p.end_date),
+            "start_date": p.start_date,
+            "end_date": p.end_date,
             "is_active": p.is_active,
             "academic_year_id": p.academic_year_id,
-            "target_grades": p.target_grades,
+            "target_grades": _target_grades(p.target_grades),
         }
         for p in rows
     ]
+
+
+def _target_grades(value: str | None) -> list[int] | None:
+    if value is None:
+        return None
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(parsed, list) or any(type(item) is not int or item < 1 or item > 11 for item in parsed):
+        return None
+    return parsed
 
 
 async def _get_period(db, school_id, period_id) -> SchoolPeriod:

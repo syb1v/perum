@@ -2648,9 +2648,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Academic Years Api Admin Academic Years Get"
+                  "$ref": "#/components/schemas/AdminAcademicYearsOut"
                 }
               }
             }
@@ -2828,9 +2826,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get School Periods Api Admin School Periods Get"
+                  "$ref": "#/components/schemas/AdminSchoolPeriodsOut"
                 }
               }
             }
@@ -12730,6 +12726,59 @@
         ],
         "title": "AddStudentRequest"
       },
+      "AdminAcademicYearOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
+          },
+          "is_current": {
+            "type": "boolean",
+            "title": "Is Current"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "start_date",
+          "end_date",
+          "is_current"
+        ],
+        "title": "AdminAcademicYearOut"
+      },
+      "AdminAcademicYearsOut": {
+        "properties": {
+          "academic_years": {
+            "items": {
+              "$ref": "#/components/schemas/AdminAcademicYearOut"
+            },
+            "type": "array",
+            "title": "Academic Years"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "academic_years"
+        ],
+        "title": "AdminAcademicYearsOut"
+      },
       "AdminDashboardAttendanceOut": {
         "properties": {
           "mark": {
@@ -13002,6 +13051,90 @@
           "grades_given"
         ],
         "title": "AdminDashboardTeacherActivityOut"
+      },
+      "AdminSchoolPeriodOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "period_type": {
+            "type": "string",
+            "enum": [
+              "quarter",
+              "half_year",
+              "holiday",
+              "vacation"
+            ],
+            "title": "Period Type"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End Date"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "academic_year_id": {
+            "type": "integer",
+            "title": "Academic Year Id"
+          },
+          "target_grades": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Grades"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "period_type",
+          "start_date",
+          "end_date",
+          "is_active",
+          "academic_year_id",
+          "target_grades"
+        ],
+        "title": "AdminSchoolPeriodOut"
+      },
+      "AdminSchoolPeriodsOut": {
+        "properties": {
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/AdminSchoolPeriodOut"
+            },
+            "type": "array",
+            "title": "Periods"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "periods"
+        ],
+        "title": "AdminSchoolPeriodsOut"
       },
       "AdminUnreadOut": {
         "properties": {
@@ -16552,6 +16685,10 @@
             "type": "boolean",
             "title": "School Admin Social Moderation"
           },
+          "school_admin_academic_calendar": {
+            "type": "boolean",
+            "title": "School Admin Academic Calendar"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16602,6 +16739,7 @@
           "teacher_analytics",
           "school_admin_overview",
           "school_admin_social_moderation",
+          "school_admin_academic_calendar",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

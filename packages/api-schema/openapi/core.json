@@ -8690,6 +8690,10 @@
             "type": "boolean",
             "title": "School Admin Social Moderation"
           },
+          "school_admin_academic_calendar": {
+            "type": "boolean",
+            "title": "School Admin Academic Calendar"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -8740,6 +8744,7 @@
           "teacher_analytics",
           "school_admin_overview",
           "school_admin_social_moderation",
+          "school_admin_academic_calendar",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
@@ -10506,6 +10511,10 @@
             "type": "boolean",
             "title": "School Admin Social Moderation"
           },
+          "school_admin_academic_calendar": {
+            "type": "boolean",
+            "title": "School Admin Academic Calendar"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -10556,6 +10565,7 @@
           "teacher_analytics",
           "school_admin_overview",
           "school_admin_social_moderation",
+          "school_admin_academic_calendar",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

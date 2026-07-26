@@ -28,6 +28,7 @@
     "teacher_analytics": true,
     "school_admin_overview": true,
     "school_admin_social_moderation": true,
+    "school_admin_academic_calendar": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,

@@ -539,6 +539,30 @@ for (const [field, expectedRef] of [
 if (responseSchemaRef(tenantOpenapi, '/api/admin/dashboard/overview', 'get') !== '#/components/schemas/AdminDashboardOverviewOut') {
   throw new Error('GET /api/admin/dashboard/overview must return AdminDashboardOverviewOut');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/admin/academic-years', 'get') !== '#/components/schemas/AdminAcademicYearsOut') {
+  throw new Error('GET /api/admin/academic-years must return AdminAcademicYearsOut');
+}
+if (responseSchemaRef(tenantOpenapi, '/api/admin/school-periods', 'get') !== '#/components/schemas/AdminSchoolPeriodsOut') {
+  throw new Error('GET /api/admin/school-periods must return AdminSchoolPeriodsOut');
+}
+for (const [name, fields] of [
+  ['AdminAcademicYearsOut', ['academic_years']],
+  ['AdminAcademicYearOut', ['id', 'name', 'start_date', 'end_date', 'is_current']],
+  ['AdminSchoolPeriodsOut', ['periods']],
+  ['AdminSchoolPeriodOut', ['id', 'name', 'period_type', 'start_date', 'end_date', 'is_active', 'academic_year_id', 'target_grades']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields) || schema.additionalProperties !== false) {
+    throw new Error(`${name} must remain an exact closed academic calendar contract`);
+  }
+}
+if (tenantOpenapi.components.schemas.AdminAcademicYearsOut.properties.academic_years.items?.$ref !== '#/components/schemas/AdminAcademicYearOut') throw new Error('AdminAcademicYearsOut item ref differs from the client contract');
+if (tenantOpenapi.components.schemas.AdminSchoolPeriodsOut.properties.periods.items?.$ref !== '#/components/schemas/AdminSchoolPeriodOut') throw new Error('AdminSchoolPeriodsOut item ref differs from the client contract');
+const adminPeriod = tenantOpenapi.components.schemas.AdminSchoolPeriodOut.properties;
+if (JSON.stringify(adminPeriod.period_type.enum) !== JSON.stringify(['quarter', 'half_year', 'holiday', 'vacation'])) throw new Error('AdminSchoolPeriodOut period_type enum differs from the client contract');
+const targetGradesArray = adminPeriod.target_grades.anyOf?.find((variant) => variant.type === 'array');
+if (targetGradesArray?.items?.type !== 'integer' || !adminPeriod.target_grades.anyOf?.some((variant) => variant.type === 'null')) throw new Error('AdminSchoolPeriodOut target_grades must be nullable integer array');
+if (adminPeriod.academic_year_id.anyOf?.some((variant) => variant.type === 'null')) throw new Error('AdminSchoolPeriodOut academic_year_id must be school-scoped and non-null');
 for (const [name, fields] of [
   ['AdminDashboardOverviewOut', ['success', 'kpi', 'class_performance', 'grade_distribution', 'attendance', 'failing_students', 'teacher_activity', 'daily_avg']],
   ['AdminDashboardKpiOut', ['average_grade', 'total_grades', 'total_students', 'failing_count', 'absences', 'homework_count', 'control_work_count']],

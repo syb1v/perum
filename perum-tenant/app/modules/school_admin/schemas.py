@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -75,6 +76,41 @@ class AdminDashboardOverviewOut(BaseModel):
     failing_students: list[AdminDashboardFailingStudentOut]
     teacher_activity: list[AdminDashboardTeacherActivityOut]
     daily_avg: list[AdminDashboardDailyAverageOut]
+
+
+class AdminAcademicYearOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    start_date: datetime
+    end_date: datetime
+    is_current: bool
+
+
+class AdminAcademicYearsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    academic_years: list[AdminAcademicYearOut]
+
+
+class AdminSchoolPeriodOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    period_type: Literal["quarter", "half_year", "holiday", "vacation"]
+    start_date: datetime
+    end_date: datetime
+    is_active: bool
+    academic_year_id: int
+    target_grades: list[int] | None
+
+
+class AdminSchoolPeriodsOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    periods: list[AdminSchoolPeriodOut]
 
 
 # ---- Subjects ----

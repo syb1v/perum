@@ -117,7 +117,7 @@ def test_authoritative_alias_returns_stable_public_contract():
             [
                 "refresh_sessions", "session_management", "push_registration", "push_delivery",
                 "social_friends", "social_messages", "social_realtime", "social_attachments",
-                "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+                "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
                 "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
                 "offline_support_ticket_creation",
             ],
@@ -218,7 +218,7 @@ def test_release_manifest_controls_mobile_contract_and_revision():
             [
                 "refresh_sessions", "session_management", "push_registration", "push_delivery",
                 "social_friends", "social_messages", "social_realtime", "social_attachments",
-                "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+                "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
                 "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
                 "offline_support_ticket_creation",
             ],
@@ -257,7 +257,7 @@ def test_sequential_release_upgrade_and_downgrade_change_revision_and_effective_
         [
             "refresh_sessions", "session_management", "push_registration", "push_delivery",
             "social_friends", "social_messages", "social_realtime", "social_attachments",
-            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
             "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
             "offline_support_ticket_creation",
         ],
@@ -304,7 +304,7 @@ def test_deployment_snapshot_only_gates_runtime_dependent_capabilities():
         [
             "refresh_sessions", "session_management", "push_registration", "push_delivery",
             "social_friends", "social_messages", "social_realtime", "social_attachments",
-            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
             "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
             "offline_support_ticket_creation",
         ],
@@ -351,7 +351,7 @@ def test_stale_snapshot_disables_only_runtime_dependent_capabilities():
         [
             "refresh_sessions", "session_management", "push_registration", "push_delivery",
             "social_friends", "social_messages", "social_realtime", "social_attachments",
-            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
             "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
             "offline_support_ticket_creation",
         ],
@@ -397,7 +397,7 @@ def test_snapshot_cannot_raise_build_false_capability():
         [
             "refresh_sessions", "session_management", "push_registration", "push_delivery",
             "social_friends", "social_messages", "social_realtime", "social_attachments",
-            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
             "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
             "offline_support_ticket_creation",
         ],
@@ -452,7 +452,7 @@ def test_missing_snapshot_keeps_build_only_capabilities_and_emits_safe_telemetry
         [
             "refresh_sessions", "session_management", "push_registration", "push_delivery",
             "social_friends", "social_messages", "social_realtime", "social_attachments",
-            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "offline_homework_state",
+            "support_requester", "support_admin", "support_attachments", "offline_preferences", "student_academics", "student_analytics", "parent_academics", "parent_analytics", "teacher_diary", "teacher_homeroom", "teacher_works", "teacher_analytics", "school_admin_overview", "school_admin_social_moderation", "school_admin_academic_calendar", "offline_homework_state",
             "offline_social_messages", "offline_support_messages", "offline_read_cursors", "offline_social_read_cursors",
             "offline_support_ticket_creation",
         ],

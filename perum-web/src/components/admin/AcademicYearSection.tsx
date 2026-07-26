@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import styles from '@/app/admin/page.module.css';
 import api from '@/lib/apiClient';
-import { AcademicYear } from '@/types';
+import type { components } from '@perum/api-schema/tenant';
+
+type AcademicYearsResponse = components['schemas']['AdminAcademicYearsOut'];
+type AcademicYear = components['schemas']['AdminAcademicYearOut'];
 
 export default function AcademicYearSection() {
     const [years, setYears] = useState<AcademicYear[]>([]);
@@ -18,7 +21,7 @@ export default function AcademicYearSection() {
     const fetchYears = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get<{ academic_years: AcademicYear[] }>('/admin/academic-years');
+            const response = await api.get<AcademicYearsResponse>('/admin/academic-years');
             setYears(response.academic_years);
             setError('');
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

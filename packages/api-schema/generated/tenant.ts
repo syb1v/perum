@@ -3607,6 +3607,30 @@ export interface components {
             /** Student Id */
             student_id: number;
         };
+        /** AdminAcademicYearOut */
+        AdminAcademicYearOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Start Date
+             * Format: date-time
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date-time
+             */
+            end_date: string;
+            /** Is Current */
+            is_current: boolean;
+        };
+        /** AdminAcademicYearsOut */
+        AdminAcademicYearsOut: {
+            /** Academic Years */
+            academic_years: components["schemas"]["AdminAcademicYearOut"][];
+        };
         /** AdminDashboardAttendanceOut */
         AdminDashboardAttendanceOut: {
             /** Mark */
@@ -3697,6 +3721,39 @@ export interface components {
             name: string;
             /** Grades Given */
             grades_given: number;
+        };
+        /** AdminSchoolPeriodOut */
+        AdminSchoolPeriodOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /**
+             * Period Type
+             * @enum {string}
+             */
+            period_type: "quarter" | "half_year" | "holiday" | "vacation";
+            /**
+             * Start Date
+             * Format: date-time
+             */
+            start_date: string;
+            /**
+             * End Date
+             * Format: date-time
+             */
+            end_date: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Academic Year Id */
+            academic_year_id: number;
+            /** Target Grades */
+            target_grades: number[] | null;
+        };
+        /** AdminSchoolPeriodsOut */
+        AdminSchoolPeriodsOut: {
+            /** Periods */
+            periods: components["schemas"]["AdminSchoolPeriodOut"][];
         };
         /** AdminUnreadOut */
         AdminUnreadOut: {
@@ -4825,6 +4882,8 @@ export interface components {
             school_admin_overview: boolean;
             /** School Admin Social Moderation */
             school_admin_social_moderation: boolean;
+            /** School Admin Academic Calendar */
+            school_admin_academic_calendar: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -8426,9 +8485,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminAcademicYearsOut"];
                 };
             };
         };
@@ -8553,9 +8610,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminSchoolPeriodsOut"];
                 };
             };
         };
