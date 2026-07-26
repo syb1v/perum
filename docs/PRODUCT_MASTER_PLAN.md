@@ -2,7 +2,7 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-26**.
+> эти оценки. Последнее обновление live-блока: **2026-07-27**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
@@ -324,6 +324,15 @@ boundary. Exact-role memory-only screen разделяет будние и су�
 gate = 107 paths, Android/iOS exports и 137 Mobile tests прошли; создание/изменение,
 class assignment и offline persistence не включены. Полный Tenant suite дополнительно
 закреплён deterministic sorted field order общего privacy-safe delivery fixture.
+
+Ограниченный двухсерверный demo contour подтверждён на Ubuntu 24.04: Core/PostgreSQL/
+Web/Caddy и отдельный synthetic school Tenant/PostgreSQL/Redis/Web/Caddy прошли
+HTTPS health, TLS, migrations и role login smoke для platform admin,
+school admin, teacher, student и parent. Clean Docker build исправлен для monorepo
+workspace context и Next 16/Sentry runtime dependencies. `deploy/demo-school`
+явно не использует remote Agent и не является evidence provisioning, Stage F,
+scanner, attachments, backup/restore или production rollout; общий процент и
+незакрытые шкалы не изменены.
 
 Mobile Parent parity получил read-only academics vertical: atomic
 `parent_academics` capability проходит Tenant/Core/Mobile descriptor boundary,

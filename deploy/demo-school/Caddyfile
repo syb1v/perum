@@ -1,0 +1,14 @@
+{
+    email {$ACME_EMAIL}
+}
+
+{$SCHOOL_HOST} {
+    @backend path /api/* /health /health/* /ws/* /static/img/*
+    handle @backend {
+        reverse_proxy tenant:3000
+    }
+    handle {
+        reverse_proxy web:3000
+    }
+    encode gzip zstd
+}

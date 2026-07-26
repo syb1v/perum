@@ -33,6 +33,33 @@ status и health. Provisioner сохраняет DB/appdata volumes и при ap
 пытается вернуть прежний image. После rollback проверьте совместимость DB migration;
 не выполняйте downgrade schema без явно подготовленной migration strategy.
 
+## Ограниченный demo school stack
+
+`deploy/demo-school/` предназначен только для временного показа одной синтетической
+школы, когда remote node provisioning ещё не прошёл production gates. Он запускает
+отдельные Tenant PostgreSQL/Redis/API, общий Web и Caddy TLS; наружу публикуются
+только `80/443`. Создайте `deploy/demo-school/.env` вне VCS с `RELEASE_TAG`,
+`TENANT_DB_PASSWORD`, `TENANT_SECRET_KEY`, `SCHOOL_HOST`,
+`PLATFORM_BASE_DOMAIN` и `ACME_EMAIL`, затем выполните:
+
+```bash
+docker compose --env-file deploy/demo-school/.env \
+  -f deploy/demo-school/docker-compose.yml build tenant web
+docker compose --env-file deploy/demo-school/.env \
+  -f deploy/demo-school/docker-compose.yml up -d
+docker compose --env-file deploy/demo-school/.env \
+  -f deploy/demo-school/docker-compose.yml exec tenant python -m app.scripts.seed_defaults
+docker compose --env-file deploy/demo-school/.env \
+  -f deploy/demo-school/docker-compose.yml exec tenant python -m app.scripts.seed_test_data
+```
+
+`seed_test_data` создаёт только synthetic data и известный seed password. До
+передачи доступа обязательно замените пароль каждого созданного пользователя,
+проверьте login → `/api/user/me` для выбранных ролей и убедитесь, что seed password
+больше не принимается. Этот stack не регистрирует organization/school в Core, не
+доказывает Agent transport, provisioning, backup/restore, scanner, attachments,
+push или production rollout и не закрывает соответствующие пункты master plan.
+
 ## Backup и restore
 
 - Backup включает control DB, каждую school DB, school appdata и конфигурационные
@@ -87,10 +114,11 @@ firing/resolved receipts во внешнем incident record.
 GitHub variables/secrets, production env, DNS/provider tokens, encryption keys,
 metrics credentials, registry auth, SSH deploy access, mobile store/EAS credentials
 и backup keys создаются операторами вне VCS. Значения должны ротироваться по policy.
-Core production validation требует непустые `SECRET_KEY`, `ENCRYPTION_KEY`,
-`PLATFORM_ADMIN_PASSWORD`, `AGENT_TOKEN` и разрешённый `CORS_ORIGINS`; сверяйте
+Core production validation требует непустые `SECRET_KEY`,
+`SECRETS_ENCRYPTION_KEY`, `BOOTSTRAP_ADMIN_PASSWORD` и `AGENT_TOKEN`; сверяйте
 полный набор с `perum-core/app/core/config.py`, даже если remote nodes ещё не
-используются. Example env не заменяет startup validation.
+используются. CORS origins строятся из `PUBLIC_BASE_DOMAIN`. Example env не
+заменяет startup validation.
 
 Mobile runtime config не должен содержать credentials. `EXPO_PUBLIC_CORE_API_URL`
 обязан быть HTTPS URL без userinfo/query/fragment, `EXPO_PUBLIC_LINK_HOST` —

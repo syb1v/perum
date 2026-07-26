@@ -11,12 +11,17 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json ./
+COPY perum-web/package.json ./perum-web/package.json
+COPY packages/api-client/package.json ./packages/api-client/package.json
+COPY packages/api-schema/package.json ./packages/api-schema/package.json
+COPY packages/design-tokens/package.json ./packages/design-tokens/package.json
+COPY packages/domain/package.json ./packages/domain/package.json
 RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app ./
 COPY . .
 
 # Next.js telemetry is disabled
@@ -30,7 +35,7 @@ ENV NEXT_PUBLIC_BASE_DOMAIN=${NEXT_PUBLIC_BASE_DOMAIN}
 # Ограничиваем память Node.js (чтобы сервер не зависал при сборке)
 ENV NODE_OPTIONS="--max-old-space-size=1024"
 
-RUN npm run build
+RUN npm run build --workspace perum-web
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -43,15 +48,18 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy the standalone build from the builder
-COPY --from=builder /app/public ./public
+COPY --from=builder /app/perum-web/public ./public
 # Set the correct permission for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/perum-web/.next/standalone/perum-web ./
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+RUN ln -s require-in-the-middle node_modules/require-in-the-middle-2ca7b9c2766f317e \
+    && ln -s import-in-the-middle node_modules/import-in-the-middle-ac114f323ad7e863
+COPY --from=builder --chown=nextjs:nodejs /app/perum-web/.next/static ./.next/static
 
 USER nextjs
 

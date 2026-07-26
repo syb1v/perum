@@ -4,6 +4,12 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-27
+
+- Добавлен ограниченный двухсерверный demo contour: воспроизводимый `deploy/demo-school` запускает отдельные Tenant PostgreSQL/Redis/API, общий Web и Caddy TLS без scanner/attachments/push. На Ubuntu 24.04 подтверждены Core и school HTTPS health, migrations, Web routing и login → `/api/user/me` для platform admin, school admin, teacher, student и parent; demo не считается remote-node provisioning или production rollout evidence.
+- Исправлен clean production Web image: compose использует monorepo context, Dockerfile устанавливает workspace manifests, собирает `perum-web`, копирует корректный Next 16 standalone path и runtime dependency tree с Sentry synthetic aliases. Root `.dockerignore` исключает VCS, venv, local dependencies/build output и нерелевантные приложения из Web context.
+- Production runbook синхронизирован с фактическими Core settings `SECRETS_ENCRYPTION_KEY`/`BOOTSTRAP_ADMIN_PASSWORD`, документирует CORS derivation и безопасный synthetic demo flow с обязательной заменой известного seed password.
+
 ## [Unreleased] — 2026-07-26
 
 - Mobile school admin/director parity получил read-only расписание звонков: `GET /admin/bell-schedules` закрыт generated `AdminBellSchedulesOut`, atomic `school_admin_bell_schedules` проходит descriptor boundary, а exact-role memory-only экран разделяет будние/субботние уроки и показывает loading/error/empty/offline states. Contract gate = 107 paths, Mobile = 137 tests, Core/Tenant suites, Web typecheck/build и Android/iOS exports прошли; mutations, class assignments и offline persistence остаются вне slice.

@@ -1,0 +1,93 @@
+name: perum-demo-school
+
+services:
+  tenant_db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: perum
+      POSTGRES_PASSWORD: ${TENANT_DB_PASSWORD}
+      POSTGRES_DB: perum
+    volumes:
+      - tenant_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U perum -d perum"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - school_internal
+
+  tenant_redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
+    networks:
+      - school_internal
+
+  tenant:
+    build:
+      context: ../../perum-tenant
+    image: perum-tenant:${RELEASE_TAG}
+    restart: unless-stopped
+    environment:
+      ORG_SLUG: demo-school
+      ORG_NAME: Демо-школа PERUM
+      DATABASE_URL: postgresql://perum:${TENANT_DB_PASSWORD}@tenant_db:5432/perum
+      REDIS_URL: redis://tenant_redis:6379/0
+      SECRET_KEY: ${TENANT_SECRET_KEY}
+      TELEMETRY_INTERVAL_S: 0
+      SOCIAL_ROLLOUT_ENABLED: "false"
+      MEDIA_ENABLED: "false"
+      PUSH_DELIVERY_ENABLED: "false"
+      RELEASE_IMAGE: perum-tenant:${RELEASE_TAG}
+    depends_on:
+      tenant_db:
+        condition: service_healthy
+      tenant_redis:
+        condition: service_started
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 3000 --proxy-headers --forwarded-allow-ips=*"]
+    volumes:
+      - tenant_media:/app/data/media
+    networks:
+      - school_internal
+
+  web:
+    build:
+      context: ../..
+      dockerfile: perum-web/Dockerfile
+      args:
+        NEXT_PUBLIC_BASE_DOMAIN: ${PLATFORM_BASE_DOMAIN}
+    image: perum-web:${RELEASE_TAG}
+    restart: unless-stopped
+    networks:
+      - school_internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SCHOOL_HOST: ${SCHOOL_HOST}
+      ACME_EMAIL: ${ACME_EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - tenant
+      - web
+    networks:
+      - school_internal
+
+volumes:
+  tenant_db_data:
+  tenant_media:
+  caddy_data:
+  caddy_config:
+
+networks:
+  school_internal:
+    driver: bridge

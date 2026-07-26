@@ -123,7 +123,8 @@ services:
 
   perum_web:
     build:
-      context: ../perum-web
+      context: ..
+      dockerfile: perum-web/Dockerfile
       args:
         NODE_IMAGE: ${IMAGE_REGISTRY:-docker.io}/library/node:20-alpine
         # Апекс-домен ядра (лендинг) vs кастомный домен школы — middleware/host.ts.

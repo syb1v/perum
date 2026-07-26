@@ -1,0 +1,14 @@
+.git
+.github
+**/.env
+**/.env.*
+**/.next
+**/.venv
+**/__pycache__
+**/node_modules
+**/*.pyc
+docs
+deploy
+perum-core
+perum-mobile
+perum-tenant
