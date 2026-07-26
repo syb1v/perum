@@ -3,7 +3,7 @@ import test from 'node:test';
 import { hasCapabilities, hasCapability } from './capabilities';
 import type { TenantAccount } from './types';
 
-const base = { descriptorCapabilities: { social_messages: true, social_realtime: false, student_academics: true, student_analytics: true, parent_academics: true, parent_analytics: true, teacher_diary: true, teacher_homeroom: true, teacher_works: true, teacher_analytics: true, school_admin_overview: true, school_admin_social_moderation: true, school_admin_academic_calendar: true } } as TenantAccount;
+const base = { descriptorCapabilities: { social_messages: true, social_realtime: false, student_academics: true, student_analytics: true, parent_academics: true, parent_analytics: true, teacher_diary: true, teacher_homeroom: true, teacher_works: true, teacher_analytics: true, school_admin_overview: true, school_admin_social_moderation: true, school_admin_academic_calendar: true, school_admin_class_directory: true } } as TenantAccount;
 
 test('capability selectors are fail closed', () => {
   assert.equal(hasCapability(base, 'social_messages'), true);
@@ -18,6 +18,7 @@ test('capability selectors are fail closed', () => {
   assert.equal(hasCapability(base, 'school_admin_overview'), true);
   assert.equal(hasCapability(base, 'school_admin_social_moderation'), true);
   assert.equal(hasCapability(base, 'school_admin_academic_calendar'), true);
+  assert.equal(hasCapability(base, 'school_admin_class_directory'), true);
   assert.equal(hasCapability(base, 'social_realtime'), false);
   assert.equal(hasCapability(null, 'social_messages'), false);
   assert.equal(hasCapabilities(base, ['social_messages', 'social_realtime']), false);

@@ -563,6 +563,17 @@ if (JSON.stringify(adminPeriod.period_type.enum) !== JSON.stringify(['quarter', 
 const targetGradesArray = adminPeriod.target_grades.anyOf?.find((variant) => variant.type === 'array');
 if (targetGradesArray?.items?.type !== 'integer' || !adminPeriod.target_grades.anyOf?.some((variant) => variant.type === 'null')) throw new Error('AdminSchoolPeriodOut target_grades must be nullable integer array');
 if (adminPeriod.academic_year_id.anyOf?.some((variant) => variant.type === 'null')) throw new Error('AdminSchoolPeriodOut academic_year_id must be school-scoped and non-null');
+if (responseSchemaRef(tenantOpenapi, '/api/admin/classes', 'get') !== '#/components/schemas/AdminClassesOut') throw new Error('GET /api/admin/classes must return AdminClassesOut');
+for (const [name, fields] of [
+  ['AdminClassesOut', ['classes']],
+  ['AdminClassOut', ['id', 'name', 'teacher', 'student_count', 'bell_schedule_id', 'grade_level', 'is_profile', 'parent_id', 'created_at']],
+  ['AdminClassTeacherOut', ['id', 'name']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields) || schema.additionalProperties !== false) throw new Error(`${name} must remain an exact closed class directory contract`);
+}
+if (tenantOpenapi.components.schemas.AdminClassesOut.properties.classes.items?.$ref !== '#/components/schemas/AdminClassOut') throw new Error('AdminClassesOut item ref differs from the client contract');
+if (tenantOpenapi.components.schemas.AdminClassOut.properties.teacher.anyOf?.find((variant) => variant.$ref)?.$ref !== '#/components/schemas/AdminClassTeacherOut') throw new Error('AdminClassOut teacher ref differs from the client contract');
 for (const [name, fields] of [
   ['AdminDashboardOverviewOut', ['success', 'kpi', 'class_performance', 'grade_distribution', 'attendance', 'failing_students', 'teacher_activity', 'daily_avg']],
   ['AdminDashboardKpiOut', ['average_grade', 'total_grades', 'total_students', 'failing_count', 'absences', 'homework_count', 'control_work_count']],

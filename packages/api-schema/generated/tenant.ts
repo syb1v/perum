@@ -3631,6 +3631,38 @@ export interface components {
             /** Academic Years */
             academic_years: components["schemas"]["AdminAcademicYearOut"][];
         };
+        /** AdminClassOut */
+        AdminClassOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            teacher: components["schemas"]["AdminClassTeacherOut"] | null;
+            /** Student Count */
+            student_count: number;
+            /** Bell Schedule Id */
+            bell_schedule_id: number | null;
+            /** Grade Level */
+            grade_level: number | null;
+            /** Is Profile */
+            is_profile: number;
+            /** Parent Id */
+            parent_id: null;
+            /** Created At */
+            created_at: string | null;
+        };
+        /** AdminClassTeacherOut */
+        AdminClassTeacherOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string | null;
+        };
+        /** AdminClassesOut */
+        AdminClassesOut: {
+            /** Classes */
+            classes: components["schemas"]["AdminClassOut"][];
+        };
         /** AdminDashboardAttendanceOut */
         AdminDashboardAttendanceOut: {
             /** Mark */
@@ -4884,6 +4916,8 @@ export interface components {
             school_admin_social_moderation: boolean;
             /** School Admin Academic Calendar */
             school_admin_academic_calendar: boolean;
+            /** School Admin Class Directory */
+            school_admin_class_directory: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -8184,9 +8218,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminClassesOut"];
                 };
             };
         };

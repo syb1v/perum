@@ -20,6 +20,7 @@ from app.modules.school_admin.schemas import (
     AcademicYearUpdate,
     AddStudentRequest,
     AdminAcademicYearsOut,
+    AdminClassesOut,
     AdminDashboardOverviewOut,
     AdminSchoolPeriodsOut,
     BellScheduleCreate,
@@ -247,8 +248,8 @@ async def delete_work_type(
 
 
 # ============ Classes ============
-@router.get("/classes")
-async def get_classes(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
+@router.get("/classes", response_model=AdminClassesOut)
+async def get_classes(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> AdminClassesOut:
     return {"classes": await cls.list_classes(db, await _school(user, db))}
 
 

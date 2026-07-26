@@ -10,7 +10,7 @@ const now = Date.parse('2026-07-17T12:00:00.000Z');
 const capabilities = {
   refresh_sessions: true, session_management: true, push_registration: true, push_delivery: false,
   social_friends: true, social_messages: true, social_realtime: true, social_attachments: false,
-  support_requester: true, support_admin: true, support_attachments: false, offline_preferences: true, student_academics: true, student_analytics: true, parent_academics: true, parent_analytics: true, teacher_diary: true, teacher_homeroom: true, teacher_works: true, teacher_analytics: true, school_admin_overview: true, school_admin_social_moderation: true, school_admin_academic_calendar: true, offline_homework_state: true,
+  support_requester: true, support_admin: true, support_attachments: false, offline_preferences: true, student_academics: true, student_analytics: true, parent_academics: true, parent_analytics: true, teacher_diary: true, teacher_homeroom: true, teacher_works: true, teacher_analytics: true, school_admin_overview: true, school_admin_social_moderation: true, school_admin_academic_calendar: true, school_admin_class_directory: true, offline_homework_state: true,
   offline_social_messages: true, offline_support_messages: true, offline_read_cursors: false, offline_social_read_cursors: false, offline_support_ticket_creation: false,
 };
 

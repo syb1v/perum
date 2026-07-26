@@ -2198,9 +2198,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Classes Api Admin Classes Get"
+                  "$ref": "#/components/schemas/AdminClassesOut"
                 }
               }
             }
@@ -12779,6 +12777,130 @@
         ],
         "title": "AdminAcademicYearsOut"
       },
+      "AdminClassOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "teacher": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminClassTeacherOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "student_count": {
+            "type": "integer",
+            "title": "Student Count"
+          },
+          "bell_schedule_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bell Schedule Id"
+          },
+          "grade_level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grade Level"
+          },
+          "is_profile": {
+            "type": "integer",
+            "title": "Is Profile"
+          },
+          "parent_id": {
+            "type": "null",
+            "title": "Parent Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "teacher",
+          "student_count",
+          "bell_schedule_id",
+          "grade_level",
+          "is_profile",
+          "parent_id",
+          "created_at"
+        ],
+        "title": "AdminClassOut"
+      },
+      "AdminClassTeacherOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AdminClassTeacherOut"
+      },
+      "AdminClassesOut": {
+        "properties": {
+          "classes": {
+            "items": {
+              "$ref": "#/components/schemas/AdminClassOut"
+            },
+            "type": "array",
+            "title": "Classes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "classes"
+        ],
+        "title": "AdminClassesOut"
+      },
       "AdminDashboardAttendanceOut": {
         "properties": {
           "mark": {
@@ -16689,6 +16811,10 @@
             "type": "boolean",
             "title": "School Admin Academic Calendar"
           },
+          "school_admin_class_directory": {
+            "type": "boolean",
+            "title": "School Admin Class Directory"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16740,6 +16866,7 @@
           "school_admin_overview",
           "school_admin_social_moderation",
           "school_admin_academic_calendar",
+          "school_admin_class_directory",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

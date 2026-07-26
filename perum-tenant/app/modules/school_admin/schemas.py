@@ -113,6 +113,33 @@ class AdminSchoolPeriodsOut(BaseModel):
     periods: list[AdminSchoolPeriodOut]
 
 
+class AdminClassTeacherOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str | None
+
+
+class AdminClassOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    teacher: AdminClassTeacherOut | None
+    student_count: int
+    bell_schedule_id: int | None
+    grade_level: int | None
+    is_profile: int
+    parent_id: None
+    created_at: str | None
+
+
+class AdminClassesOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    classes: list[AdminClassOut]
+
+
 # ---- Subjects ----
 class SubjectCreate(BaseModel):
     name: str

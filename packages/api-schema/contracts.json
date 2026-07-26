@@ -28,6 +28,7 @@
     "/api/admin/dashboard/overview",
     "/api/admin/academic-years",
     "/api/admin/school-periods",
+    "/api/admin/classes",
     "/api/admin/support/tickets/{ticket_id}",
     "/api/admin/support/tickets/{ticket_id}/messages",
     "/api/admin/support/tickets/{ticket_id}/read",

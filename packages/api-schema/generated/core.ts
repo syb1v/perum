@@ -2782,6 +2782,8 @@ export interface components {
             school_admin_social_moderation: boolean;
             /** School Admin Academic Calendar */
             school_admin_academic_calendar: boolean;
+            /** School Admin Class Directory */
+            school_admin_class_directory: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -3399,6 +3401,8 @@ export interface components {
             school_admin_social_moderation: boolean;
             /** School Admin Academic Calendar */
             school_admin_academic_calendar: boolean;
+            /** School Admin Class Directory */
+            school_admin_class_directory: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
