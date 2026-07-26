@@ -177,6 +177,31 @@ class AdminTeacherDirectoryOut(BaseModel):
     teachers: list[AdminTeacherDirectoryTeacherOut]
 
 
+class AdminBellScheduleItemOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    lesson_number: int
+    start_time: str | None
+    end_time: str | None
+    is_saturday: bool
+
+
+class AdminBellScheduleOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    classes_count: int
+    items: list[AdminBellScheduleItemOut]
+
+
+class AdminBellSchedulesOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    success: Literal[True]
+    data: list[AdminBellScheduleOut]
+
+
 # ---- Subjects ----
 class SubjectCreate(BaseModel):
     name: str

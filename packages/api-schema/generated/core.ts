@@ -2786,6 +2786,8 @@ export interface components {
             school_admin_class_directory: boolean;
             /** School Admin Teacher Directory */
             school_admin_teacher_directory: boolean;
+            /** School Admin Bell Schedules */
+            school_admin_bell_schedules: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -3407,6 +3409,8 @@ export interface components {
             school_admin_class_directory: boolean;
             /** School Admin Teacher Directory */
             school_admin_teacher_directory: boolean;
+            /** School Admin Bell Schedules */
+            school_admin_bell_schedules: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

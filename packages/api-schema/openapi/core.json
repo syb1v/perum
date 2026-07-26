@@ -8702,6 +8702,10 @@
             "type": "boolean",
             "title": "School Admin Teacher Directory"
           },
+          "school_admin_bell_schedules": {
+            "type": "boolean",
+            "title": "School Admin Bell Schedules"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -8755,6 +8759,7 @@
           "school_admin_academic_calendar",
           "school_admin_class_directory",
           "school_admin_teacher_directory",
+          "school_admin_bell_schedules",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
@@ -10533,6 +10538,10 @@
             "type": "boolean",
             "title": "School Admin Teacher Directory"
           },
+          "school_admin_bell_schedules": {
+            "type": "boolean",
+            "title": "School Admin Bell Schedules"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -10586,6 +10595,7 @@
           "school_admin_academic_calendar",
           "school_admin_class_directory",
           "school_admin_teacher_directory",
+          "school_admin_bell_schedules",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

@@ -4,6 +4,11 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-26
+
+- Mobile school admin/director parity получил read-only расписание звонков: `GET /admin/bell-schedules` закрыт generated `AdminBellSchedulesOut`, atomic `school_admin_bell_schedules` проходит descriptor boundary, а exact-role memory-only экран разделяет будние/субботние уроки и показывает loading/error/empty/offline states. Contract gate = 107 paths, Mobile = 137 tests, Core/Tenant suites, Web typecheck/build и Android/iOS exports прошли; mutations, class assignments и offline persistence остаются вне slice.
+- Исправлен порядок полей общего privacy-safe support delivery fixture: Tenant full suite теперь детерминированно сверяет отсортированный allowlist без изменения telemetry payload или production semantics.
+
 ## [Unreleased] — 2026-07-25
 
 - Mobile school admin/director parity получил privacy-minimized read-only teacher directory: new `GET /admin/teacher-directory` returns only active teacher display names and subject/class metadata, atomic `school_admin_teacher_directory` opens exact-role Mobile screen, and legacy teacher login/email/assignment IDs remain excluded. Contract gate = 106 paths, Mobile = 134 tests, focused Tenant/Core suites and Android/iOS exports passed; assignments, schedules, profiles and mutations remain excluded.

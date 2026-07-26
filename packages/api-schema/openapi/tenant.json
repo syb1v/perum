@@ -3002,9 +3002,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Bell Schedules Api Admin Bell Schedules Get"
+                  "$ref": "#/components/schemas/AdminBellSchedulesOut"
                 }
               }
             }
@@ -12803,6 +12801,104 @@
         ],
         "title": "AdminAcademicYearsOut"
       },
+      "AdminBellScheduleItemOut": {
+        "properties": {
+          "lesson_number": {
+            "type": "integer",
+            "title": "Lesson Number"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "is_saturday": {
+            "type": "boolean",
+            "title": "Is Saturday"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesson_number",
+          "start_time",
+          "end_time",
+          "is_saturday"
+        ],
+        "title": "AdminBellScheduleItemOut"
+      },
+      "AdminBellScheduleOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "classes_count": {
+            "type": "integer",
+            "title": "Classes Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminBellScheduleItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "classes_count",
+          "items"
+        ],
+        "title": "AdminBellScheduleOut"
+      },
+      "AdminBellSchedulesOut": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": true,
+            "title": "Success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AdminBellScheduleOut"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "success",
+          "data"
+        ],
+        "title": "AdminBellSchedulesOut"
+      },
       "AdminClassOut": {
         "properties": {
           "id": {
@@ -16944,6 +17040,10 @@
             "type": "boolean",
             "title": "School Admin Teacher Directory"
           },
+          "school_admin_bell_schedules": {
+            "type": "boolean",
+            "title": "School Admin Bell Schedules"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16997,6 +17097,7 @@
           "school_admin_academic_calendar",
           "school_admin_class_directory",
           "school_admin_teacher_directory",
+          "school_admin_bell_schedules",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

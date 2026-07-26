@@ -31,6 +31,7 @@
     "school_admin_academic_calendar": true,
     "school_admin_class_directory": true,
     "school_admin_teacher_directory": true,
+    "school_admin_bell_schedules": true,
     "offline_homework_state": true,
     "offline_social_messages": true,
     "offline_support_messages": true,

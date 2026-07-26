@@ -591,6 +591,22 @@ const teacherDirectoryTeacher = tenantOpenapi.components.schemas.AdminTeacherDir
 if (teacherDirectoryTeacher.assignments.items?.$ref !== '#/components/schemas/AdminTeacherDirectoryAssignmentOut') throw new Error('AdminTeacherDirectoryTeacherOut assignment ref differs from the client contract');
 const teacherDirectoryAssignment = tenantOpenapi.components.schemas.AdminTeacherDirectoryAssignmentOut.properties;
 if (teacherDirectoryAssignment.subject.$ref !== '#/components/schemas/AdminTeacherDirectorySubjectOut' || teacherDirectoryAssignment.class?.$ref !== '#/components/schemas/AdminTeacherDirectoryClassOut') throw new Error('AdminTeacherDirectoryAssignmentOut refs differ from the client contract');
+if (responseSchemaRef(tenantOpenapi, '/api/admin/bell-schedules', 'get') !== '#/components/schemas/AdminBellSchedulesOut') throw new Error('GET /api/admin/bell-schedules must return AdminBellSchedulesOut');
+for (const [name, fields] of [
+  ['AdminBellSchedulesOut', ['success', 'data']],
+  ['AdminBellScheduleOut', ['id', 'name', 'classes_count', 'items']],
+  ['AdminBellScheduleItemOut', ['lesson_number', 'start_time', 'end_time', 'is_saturday']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields) || schema.additionalProperties !== false) throw new Error(`${name} must remain an exact closed bell schedules contract`);
+}
+const bellSchedules = tenantOpenapi.components.schemas.AdminBellSchedulesOut.properties;
+if (bellSchedules.success.const !== true || bellSchedules.data.items?.$ref !== '#/components/schemas/AdminBellScheduleOut') throw new Error('AdminBellSchedulesOut envelope differs from the client contract');
+const bellSchedule = tenantOpenapi.components.schemas.AdminBellScheduleOut.properties;
+if (bellSchedule.items.items?.$ref !== '#/components/schemas/AdminBellScheduleItemOut') throw new Error('AdminBellScheduleOut item ref differs from the client contract');
+const bellScheduleItem = tenantOpenapi.components.schemas.AdminBellScheduleItemOut.properties;
+assertNullableVariant('AdminBellScheduleItemOut start_time', bellScheduleItem.start_time, 'string');
+assertNullableVariant('AdminBellScheduleItemOut end_time', bellScheduleItem.end_time, 'string');
 for (const [name, fields] of [
   ['AdminDashboardOverviewOut', ['success', 'kpi', 'class_performance', 'grade_distribution', 'attendance', 'failing_students', 'teacher_activity', 'daily_avg']],
   ['AdminDashboardKpiOut', ['average_grade', 'total_grades', 'total_students', 'failing_count', 'absences', 'homework_count', 'control_work_count']],

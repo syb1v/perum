@@ -64,6 +64,7 @@ class MobileBuildCapabilitiesV1(BaseModel):
     school_admin_academic_calendar: StrictBool
     school_admin_class_directory: StrictBool
     school_admin_teacher_directory: StrictBool
+    school_admin_bell_schedules: StrictBool
     offline_homework_state: StrictBool
     offline_social_messages: StrictBool
     offline_support_messages: StrictBool

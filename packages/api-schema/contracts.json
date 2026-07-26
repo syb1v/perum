@@ -30,6 +30,7 @@
     "/api/admin/school-periods",
     "/api/admin/classes",
     "/api/admin/teacher-directory",
+    "/api/admin/bell-schedules",
     "/api/admin/support/tickets/{ticket_id}",
     "/api/admin/support/tickets/{ticket_id}/messages",
     "/api/admin/support/tickets/{ticket_id}/read",

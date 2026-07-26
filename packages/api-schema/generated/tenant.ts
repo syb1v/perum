@@ -3648,6 +3648,38 @@ export interface components {
             /** Academic Years */
             academic_years: components["schemas"]["AdminAcademicYearOut"][];
         };
+        /** AdminBellScheduleItemOut */
+        AdminBellScheduleItemOut: {
+            /** Lesson Number */
+            lesson_number: number;
+            /** Start Time */
+            start_time: string | null;
+            /** End Time */
+            end_time: string | null;
+            /** Is Saturday */
+            is_saturday: boolean;
+        };
+        /** AdminBellScheduleOut */
+        AdminBellScheduleOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Classes Count */
+            classes_count: number;
+            /** Items */
+            items: components["schemas"]["AdminBellScheduleItemOut"][];
+        };
+        /** AdminBellSchedulesOut */
+        AdminBellSchedulesOut: {
+            /**
+             * Success
+             * @constant
+             */
+            success: true;
+            /** Data */
+            data: components["schemas"]["AdminBellScheduleOut"][];
+        };
         /** AdminClassOut */
         AdminClassOut: {
             /** Id */
@@ -4970,6 +5002,8 @@ export interface components {
             school_admin_class_directory: boolean;
             /** School Admin Teacher Directory */
             school_admin_teacher_directory: boolean;
+            /** School Admin Bell Schedules */
+            school_admin_bell_schedules: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -8819,9 +8853,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminBellSchedulesOut"];
                 };
             };
         };
