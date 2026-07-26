@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AdminDashboardKpiOut(BaseModel):
@@ -138,6 +138,43 @@ class AdminClassesOut(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     classes: list[AdminClassOut]
+
+
+class AdminTeacherDirectorySubjectOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+
+
+class AdminTeacherDirectoryClassOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+
+
+class AdminTeacherDirectoryAssignmentOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    subject: AdminTeacherDirectorySubjectOut
+    class_: AdminTeacherDirectoryClassOut = Field(alias="class")
+
+    model_config = ConfigDict(extra="forbid", strict=True, populate_by_name=True)
+
+
+class AdminTeacherDirectoryTeacherOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    name: str
+    assignments: list[AdminTeacherDirectoryAssignmentOut]
+
+
+class AdminTeacherDirectoryOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    teachers: list[AdminTeacherDirectoryTeacherOut]
 
 
 # ---- Subjects ----

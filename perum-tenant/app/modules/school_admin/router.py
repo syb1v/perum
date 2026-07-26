@@ -23,6 +23,7 @@ from app.modules.school_admin.schemas import (
     AdminClassesOut,
     AdminDashboardOverviewOut,
     AdminSchoolPeriodsOut,
+    AdminTeacherDirectoryOut,
     BellScheduleCreate,
     BellScheduleUpdate,
     ClassCreate,
@@ -431,6 +432,11 @@ async def delete_bell_schedule(
 @router.get("/teachers")
 async def get_teachers(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> dict:
     return {"teachers": await tch.list_teachers(db, await _school(user, db))}
+
+
+@router.get("/teacher-directory", response_model=AdminTeacherDirectoryOut)
+async def teacher_directory(user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)) -> AdminTeacherDirectoryOut:
+    return {"teachers": await tch.teacher_directory(db, await _school(user, db))}
 
 
 @router.post("/teacher-subjects")

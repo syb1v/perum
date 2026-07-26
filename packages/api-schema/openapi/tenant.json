@@ -3197,6 +3197,32 @@
         ]
       }
     },
+    "/api/admin/teacher-directory": {
+      "get": {
+        "tags": [
+          "school_admin"
+        ],
+        "summary": "Teacher Directory",
+        "operationId": "teacher_directory_api_admin_teacher_directory_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTeacherDirectoryOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/admin/teacher-subjects": {
       "post": {
         "tags": [
@@ -13258,6 +13284,105 @@
         ],
         "title": "AdminSchoolPeriodsOut"
       },
+      "AdminTeacherDirectoryAssignmentOut": {
+        "properties": {
+          "subject": {
+            "$ref": "#/components/schemas/AdminTeacherDirectorySubjectOut"
+          },
+          "class": {
+            "$ref": "#/components/schemas/AdminTeacherDirectoryClassOut"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "subject",
+          "class"
+        ],
+        "title": "AdminTeacherDirectoryAssignmentOut"
+      },
+      "AdminTeacherDirectoryClassOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AdminTeacherDirectoryClassOut"
+      },
+      "AdminTeacherDirectoryOut": {
+        "properties": {
+          "teachers": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTeacherDirectoryTeacherOut"
+            },
+            "type": "array",
+            "title": "Teachers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "teachers"
+        ],
+        "title": "AdminTeacherDirectoryOut"
+      },
+      "AdminTeacherDirectorySubjectOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "AdminTeacherDirectorySubjectOut"
+      },
+      "AdminTeacherDirectoryTeacherOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "assignments": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTeacherDirectoryAssignmentOut"
+            },
+            "type": "array",
+            "title": "Assignments"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "assignments"
+        ],
+        "title": "AdminTeacherDirectoryTeacherOut"
+      },
       "AdminUnreadOut": {
         "properties": {
           "tickets": {
@@ -16815,6 +16940,10 @@
             "type": "boolean",
             "title": "School Admin Class Directory"
           },
+          "school_admin_teacher_directory": {
+            "type": "boolean",
+            "title": "School Admin Teacher Directory"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -16867,6 +16996,7 @@
           "school_admin_social_moderation",
           "school_admin_academic_calendar",
           "school_admin_class_directory",
+          "school_admin_teacher_directory",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

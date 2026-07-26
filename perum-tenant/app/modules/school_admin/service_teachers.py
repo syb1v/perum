@@ -58,6 +58,25 @@ async def list_teachers(db: AsyncSession, school_id: int) -> list[dict]:
     return out
 
 
+async def teacher_directory(db: AsyncSession, school_id: int) -> list[dict]:
+    teachers = (await db.execute(select(User).where(User.school_id == school_id, User.role == TEACHER, User.is_active.is_(True)).order_by(User.last_name, User.first_name, User.id))).scalars().all()
+    assignments = (await db.execute(select(TeacherSubject).where(TeacherSubject.school_id == school_id))).scalars().all()
+    subject_ids = {item.subject_id for item in assignments}
+    class_ids = {item.class_id for item in assignments}
+    subjects = {item.id: item for item in (await db.execute(select(Subject).where(Subject.school_id == school_id, Subject.id.in_(subject_ids)))).scalars().all()} if subject_ids else {}
+    classes = {item.id: item for item in (await db.execute(select(Class).where(Class.school_id == school_id, Class.id.in_(class_ids)))).scalars().all()} if class_ids else {}
+    by_teacher: dict[int, list[dict]] = {teacher.id: [] for teacher in teachers}
+    for assignment in assignments:
+        if assignment.teacher_id not in by_teacher or assignment.subject_id not in subjects or assignment.class_id not in classes:
+            continue
+        subject = subjects[assignment.subject_id]
+        cls = classes[assignment.class_id]
+        by_teacher[assignment.teacher_id].append({"subject": {"id": subject.id, "name": subject.name}, "class": {"id": cls.id, "name": cls.name}})
+    for values in by_teacher.values():
+        values.sort(key=lambda item: (item["class"]["name"], item["subject"]["name"], item["class"]["id"], item["subject"]["id"]))
+    return [{"id": teacher.id, "name": _teacher_name(teacher), "assignments": by_teacher[teacher.id]} for teacher in teachers]
+
+
 async def assign(db: AsyncSession, school_id: int, data: TeacherSubjectAssign) -> TeacherSubject:
     await _validate_assignment_refs(db, school_id, data.teacher_id, data.subject_id, data.class_id)
     exists = (

@@ -8698,6 +8698,10 @@
             "type": "boolean",
             "title": "School Admin Class Directory"
           },
+          "school_admin_teacher_directory": {
+            "type": "boolean",
+            "title": "School Admin Teacher Directory"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -8750,6 +8754,7 @@
           "school_admin_social_moderation",
           "school_admin_academic_calendar",
           "school_admin_class_directory",
+          "school_admin_teacher_directory",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",
@@ -10524,6 +10529,10 @@
             "type": "boolean",
             "title": "School Admin Class Directory"
           },
+          "school_admin_teacher_directory": {
+            "type": "boolean",
+            "title": "School Admin Teacher Directory"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -10576,6 +10585,7 @@
           "school_admin_social_moderation",
           "school_admin_academic_calendar",
           "school_admin_class_directory",
+          "school_admin_teacher_directory",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

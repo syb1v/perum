@@ -823,6 +823,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/teacher-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Teacher Directory */
+        get: operations["teacher_directory_api_admin_teacher_directory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/teacher-subjects": {
         parameters: {
             query?: never;
@@ -3787,6 +3804,39 @@ export interface components {
             /** Periods */
             periods: components["schemas"]["AdminSchoolPeriodOut"][];
         };
+        /** AdminTeacherDirectoryAssignmentOut */
+        AdminTeacherDirectoryAssignmentOut: {
+            subject: components["schemas"]["AdminTeacherDirectorySubjectOut"];
+            class: components["schemas"]["AdminTeacherDirectoryClassOut"];
+        };
+        /** AdminTeacherDirectoryClassOut */
+        AdminTeacherDirectoryClassOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /** AdminTeacherDirectoryOut */
+        AdminTeacherDirectoryOut: {
+            /** Teachers */
+            teachers: components["schemas"]["AdminTeacherDirectoryTeacherOut"][];
+        };
+        /** AdminTeacherDirectorySubjectOut */
+        AdminTeacherDirectorySubjectOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+        };
+        /** AdminTeacherDirectoryTeacherOut */
+        AdminTeacherDirectoryTeacherOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Assignments */
+            assignments: components["schemas"]["AdminTeacherDirectoryAssignmentOut"][];
+        };
         /** AdminUnreadOut */
         AdminUnreadOut: {
             /** Tickets */
@@ -4918,6 +4968,8 @@ export interface components {
             school_admin_academic_calendar: boolean;
             /** School Admin Class Directory */
             school_admin_class_directory: boolean;
+            /** School Admin Teacher Directory */
+            school_admin_teacher_directory: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */
@@ -8897,6 +8949,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    teacher_directory_api_admin_teacher_directory_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTeacherDirectoryOut"];
                 };
             };
         };

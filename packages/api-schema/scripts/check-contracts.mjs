@@ -574,6 +574,23 @@ for (const [name, fields] of [
 }
 if (tenantOpenapi.components.schemas.AdminClassesOut.properties.classes.items?.$ref !== '#/components/schemas/AdminClassOut') throw new Error('AdminClassesOut item ref differs from the client contract');
 if (tenantOpenapi.components.schemas.AdminClassOut.properties.teacher.anyOf?.find((variant) => variant.$ref)?.$ref !== '#/components/schemas/AdminClassTeacherOut') throw new Error('AdminClassOut teacher ref differs from the client contract');
+if (responseSchemaRef(tenantOpenapi, '/api/admin/teacher-directory', 'get') !== '#/components/schemas/AdminTeacherDirectoryOut') throw new Error('GET /api/admin/teacher-directory must return AdminTeacherDirectoryOut');
+for (const [name, fields] of [
+  ['AdminTeacherDirectoryOut', ['teachers']],
+  ['AdminTeacherDirectoryTeacherOut', ['id', 'name', 'assignments']],
+  ['AdminTeacherDirectoryAssignmentOut', ['subject', 'class']],
+  ['AdminTeacherDirectorySubjectOut', ['id', 'name']],
+  ['AdminTeacherDirectoryClassOut', ['id', 'name']],
+]) {
+  const schema = tenantOpenapi.components.schemas[name];
+  if (JSON.stringify(Object.keys(schema.properties ?? {})) !== JSON.stringify(fields) || JSON.stringify(schema.required ?? []) !== JSON.stringify(fields) || schema.additionalProperties !== false) throw new Error(`${name} must remain an exact closed teacher directory contract`);
+}
+const teacherDirectory = tenantOpenapi.components.schemas.AdminTeacherDirectoryOut.properties;
+if (teacherDirectory.teachers.items?.$ref !== '#/components/schemas/AdminTeacherDirectoryTeacherOut') throw new Error('AdminTeacherDirectoryOut item ref differs from the client contract');
+const teacherDirectoryTeacher = tenantOpenapi.components.schemas.AdminTeacherDirectoryTeacherOut.properties;
+if (teacherDirectoryTeacher.assignments.items?.$ref !== '#/components/schemas/AdminTeacherDirectoryAssignmentOut') throw new Error('AdminTeacherDirectoryTeacherOut assignment ref differs from the client contract');
+const teacherDirectoryAssignment = tenantOpenapi.components.schemas.AdminTeacherDirectoryAssignmentOut.properties;
+if (teacherDirectoryAssignment.subject.$ref !== '#/components/schemas/AdminTeacherDirectorySubjectOut' || teacherDirectoryAssignment.class?.$ref !== '#/components/schemas/AdminTeacherDirectoryClassOut') throw new Error('AdminTeacherDirectoryAssignmentOut refs differ from the client contract');
 for (const [name, fields] of [
   ['AdminDashboardOverviewOut', ['success', 'kpi', 'class_performance', 'grade_distribution', 'attendance', 'failing_students', 'teacher_activity', 'daily_avg']],
   ['AdminDashboardKpiOut', ['average_grade', 'total_grades', 'total_students', 'failing_count', 'absences', 'homework_count', 'control_work_count']],

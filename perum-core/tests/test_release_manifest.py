@@ -40,6 +40,7 @@ def _manifest() -> dict:
             "school_admin_social_moderation": True,
             "school_admin_academic_calendar": True,
             "school_admin_class_directory": True,
+            "school_admin_teacher_directory": True,
             "offline_homework_state": True,
             "offline_social_messages": True,
             "offline_support_messages": True,
