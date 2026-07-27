@@ -19,6 +19,10 @@ def test_domain_is_lowercased_and_stripped():
     assert _make("  ACME.RU  ").domain == "acme.ru"
 
 
+def test_unicode_domain_is_normalized_to_idna():
+    assert _make("пэрум.рф").domain == "xn--l1afdm2c.xn--p1ai"
+
+
 @pytest.mark.parametrize("domain", [
     "notadomain",
     "-acme.ru",

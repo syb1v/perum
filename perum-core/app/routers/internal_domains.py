@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.db import get_db
-from app.models import OrganizationDomain, SchoolDomain
+from app.models import Organization, OrganizationDomain, SchoolDomain
 
 router = APIRouter()
 
@@ -51,5 +51,12 @@ async def validate_domain(domain: str = Query(...), db: AsyncSession = Depends(g
         )
     )
     if known_org:
+        return "ok"
+    primary_org = await db.scalar(
+        select(Organization.id).where(
+            Organization.domain.in_(candidates), Organization.status == "active"
+        )
+    )
+    if primary_org:
         return "ok"
     raise HTTPException(status.HTTP_403_FORBIDDEN, f"домен {host} не разрешён")

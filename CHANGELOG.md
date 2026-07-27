@@ -6,6 +6,8 @@
 
 ## [Unreleased] — 2026-07-27
 
+- Исправлен organization domain lifecycle: Core нормализует Unicode hostname в punycode, platform UI показывает сообщения FastAPI validation detail вместо `[object Object]`, node bootstrap публикует HTTPS/on-demand TLS, Agent восстанавливает routes в TLS server, а ACME gate принимает активный primary organization domain.
+- Добавлен безопасный Ubuntu installer `deploy/scripts/deploy-core.sh` для первичного развёртывания и обновления Core: установка prerequisites/Docker, генерация закрытого production env, локальная domain-specific Web-сборка, запуск Compose и обязательный health gate. `.gitattributes` фиксирует LF для исполняемых shell-скриптов.
 - Добавлен ограниченный двухсерверный demo contour: воспроизводимый `deploy/demo-school` запускает отдельные Tenant PostgreSQL/Redis/API, общий Web и Caddy TLS без scanner/attachments/push. На Ubuntu 24.04 подтверждены Core и school HTTPS health, migrations, Web routing и login → `/api/user/me` для platform admin, school admin, teacher, student и parent; demo не считается remote-node provisioning или production rollout evidence.
 - Исправлен clean production Web image: compose использует monorepo context, Dockerfile устанавливает workspace manifests, собирает `perum-web`, копирует корректный Next 16 standalone path и runtime dependency tree с Sentry synthetic aliases. Root `.dockerignore` исключает VCS, venv, local dependencies/build output и нерелевантные приложения из Web context.
 - Production runbook синхронизирован с фактическими Core settings `SECRETS_ENCRYPTION_KEY`/`BOOTSTRAP_ADMIN_PASSWORD`, документирует CORS derivation и безопасный synthetic demo flow с обязательной заменой известного seed password.

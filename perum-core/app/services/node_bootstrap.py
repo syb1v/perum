@@ -124,6 +124,7 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -162,15 +163,24 @@ networks:
     driver: bridge
 """
 
-# Caddyfile ноды: admin для управления маршрутами воркером + :80-сервер с catch-all
-# (нужен непустой routes-массив, иначе вставка маршрута школы падает с 500).
+# Caddyfile ноды: admin для управления маршрутами воркером, HTTP redirect и HTTPS
+# server с on-demand TLS для зарегистрированных доменов.
 CADDYFILE = """\
 {
 \tadmin 0.0.0.0:2019
-\tauto_https off
+\ton_demand_tls {
+\t\task {{ core_url }}/internal/validate-domain
+\t}
 }
 
 :80 {
+\tredir https://{host}{uri} permanent
+}
+
+:443 {
+\ttls {
+\t\ton_demand
+\t}
 \trespond "PERUM node OK" 200
 }
 """
@@ -277,7 +287,7 @@ async def generate_bootstrap_script(
     script = script.replace("{{ agent_token }}", settings.AGENT_TOKEN)
     script = script.replace("{{ tenant_image }}", tenant_image)
     script = script.replace("{{ compose }}", compose)
-    script = script.replace("{{ caddyfile }}", CADDYFILE)
+    script = script.replace("{{ caddyfile }}", CADDYFILE.replace("{{ core_url }}", _public_core_url(settings)))
 
     logger.info("Generated bootstrap for node %s (org=%s)", node.name, org.slug if org else None)
     return BootstrapResult(script=script, docker_compose=compose, enrollment_token=raw_token)

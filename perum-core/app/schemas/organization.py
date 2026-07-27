@@ -6,7 +6,9 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 # first char a letter, last char alnum, middle 1-38 of [a-z0-9-] → total length 3-40
 SLUG_PATTERN = re.compile(r"^[a-z][a-z0-9-]{1,38}[a-z0-9]$")
 # Базовая валидация доменного имени (FQDN): метки a-z0-9 с дефисами, TLD ≥2 букв.
-DOMAIN_PATTERN = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$")
+DOMAIN_PATTERN = re.compile(
+    r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+([a-z]{2,}|xn--[a-z0-9-]{2,59})$"
+)
 
 
 def slug_from_domain(domain: str) -> str:
@@ -52,6 +54,10 @@ class OrganizationCreate(BaseModel):
         if v.startswith(("http://", "https://")):
             v = v.split("//", 1)[1]
         v = v.split("/", 1)[0].split(":", 1)[0]
+        try:
+            v = v.encode("idna").decode("ascii")
+        except UnicodeError as exc:
+            raise ValueError("домен должен быть валидным FQDN, напр. acme.ru") from exc
         if not DOMAIN_PATTERN.match(v):
             raise ValueError("домен должен быть валидным FQDN, напр. acme.ru")
         return v

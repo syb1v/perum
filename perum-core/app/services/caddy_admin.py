@@ -181,5 +181,5 @@ _caddy_admin: CaddyAdmin | None = None
 def get_caddy_admin() -> CaddyAdmin:
     global _caddy_admin
     if _caddy_admin is None:
-        _caddy_admin = CaddyAdmin()
+        _caddy_admin = CaddyAdmin(listen_suffix=":443" if settings.ROLE == "org_agent" else ":80")
     return _caddy_admin

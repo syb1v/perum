@@ -56,8 +56,14 @@ export async function papi<T = any>(path: string, opts: RequestInit = {}): Promi
     data = text;
   }
   if (!res.ok) {
+    const detail = data && typeof data === "object" ? data.detail : null;
+    const message = Array.isArray(detail)
+      ? detail.map((item) => item?.msg).filter(Boolean).join("; ")
+      : typeof detail === "string"
+        ? detail
+        : `HTTP ${res.status}`;
     const err: any = new Error(
-      data && typeof data === "object" && data.detail ? String(data.detail) : `HTTP ${res.status}`,
+      message,
     );
     err.status = res.status;
     throw err;
