@@ -9,6 +9,15 @@
 **/*.pyc
 docs
 deploy
+!deploy
+deploy/*
+!deploy/scanner
+deploy/scanner/*
+!deploy/scanner/clamd
+deploy/scanner/clamd/*
+!deploy/scanner/clamd/Dockerfile
+!deploy/scanner/clamd/clamd.conf
+!deploy/scanner/clamd/freshclam.conf
 perum-core
 !perum-core
 perum-core/*

@@ -42,6 +42,10 @@ evidence; attachment capabilities остаются `false`.
 исправлен exact allowlist только для двух relay files; scanner workflow теперь
 также отслеживает production Tenant scanner/image inputs и проходит общий YAML
 gate. Это CI correction, а не scanner evidence до зелёного повторного run.
+Повторный run `30374213811` подтвердил relay build/runtime, но обнаружил тот же
+context exclusion для clamd config. Allowlist дополнен только `Dockerfile`,
+`clamd.conf` и `freshclam.conf`; статус candidate остаётся незакрытым до нового
+полного topology run.
 
 Двухсерверный production foundation работает в текущей доменной схеме:
 `пэрум.рф` обслуживает Core/Web, `grsn-panel.ru` — organization landing/Agent.
