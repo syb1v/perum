@@ -322,4 +322,5 @@
 | 319 | 2026-07-28 17:00 | 6d467c3 | docs(scanner): зафиксирован зелёный protocol-restricted candidate run 30375275580 |
 | 320 | 2026-07-28 17:15 | 25ca2d5 | fix(scanner): Core updater требует обе свежие и валидные signature DB |
 | 321 | 2026-07-28 17:30 | 71a532e | fix(scanner): bounded active+pending admission закрывает unbounded relay waiters |
-| 322 | 2026-07-28 17:45 | _______ | docs(scanner): зафиксирован bounded-admission candidate run 30377208978 |
+| 322 | 2026-07-28 17:45 | 4989f46 | docs(scanner): зафиксирован bounded-admission candidate run 30377208978 |
+| 323 | 2026-07-28 18:00 | _______ | fix(scanner): OTA relay preflight останавливает update до destructive app swap |

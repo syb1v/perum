@@ -84,6 +84,8 @@ Each scanner-capable school-hosting node runs one `clamd` on the internal `perum
 
 The `clamd` signature volume belongs only to the node scanner. No school volume is mounted into `clamd` or a relay. School archive, reprovision, update, suspend and purge lifecycle operations include that school's relay through its school label without deleting the shared scanner.
 
+Tenant OTA validates the complete existing scanner/relay contract before removing the old app container. Missing managed resources may be created, but configuration/image/network drift fails closed: the old app and release tag remain untouched, update history records a preflight failure, and no rollback is claimed because replacement never started. Drifted relay replacement requires an explicit maintenance lifecycle; OTA does not remove a scanner dependency from a running school.
+
 ## Requirements
 
 - Scanner-capable node: minimum 8 GiB RAM. Capacity planning should reserve at least 3 GiB and 2 CPU for `clamd`, plus 128 MiB and 0.25 CPU per active relay.

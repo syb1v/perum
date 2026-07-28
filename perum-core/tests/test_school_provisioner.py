@@ -126,3 +126,34 @@ def test_failed_update_and_rollback_records_terminal_failure(monkeypatch):
     assert db.history.status == "failed"
     assert db.history.error_message == "update and rollback failed: new image unhealthy; rollback: old image unhealthy"
     assert db.history.completed_at is not None
+
+
+def test_scanner_preflight_failure_leaves_old_app_untouched_without_rollback(monkeypatch):
+    school, db = _update_subject()
+    school.status = "updating"
+    docker = AsyncMock()
+    preflight = AsyncMock(side_effect=RuntimeError("relay configuration drift"))
+    swap = AsyncMock()
+    monkeypatch.setattr("app.services.school_provisioner.get_docker_client", lambda: docker)
+    monkeypatch.setattr("app.services.school_provisioner.ensure_school_relay", preflight)
+    monkeypatch.setattr("app.services.school_provisioner._swap_app", swap)
+
+    with pytest.raises(ProvisioningError, match="scanner relay validation failed before app replacement"):
+        asyncio.run(update_school(
+            school,
+            db,
+            Settings(SCANNER_NODE_ENABLED=True),
+            to_image="tenant:new",
+            social_rollout_enabled=False,
+            social_rollout_generation=0,
+        ))
+
+    preflight.assert_awaited_once()
+    swap.assert_not_awaited()
+    docker.remove_container.assert_not_awaited()
+    assert school.status == "active"
+    assert school.release_tag == "tenant:old"
+    assert db.history.status == "failed"
+    assert "relay configuration drift" in db.history.error_message
+    assert "rollback" not in db.history.error_message
+    assert db.history.completed_at is not None

@@ -520,6 +520,7 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
     settings = settings or get_settings()
     docker = get_docker_client()
     label_slug = school_label_slug(school.slug)
+    status_before_update = "active" if school.status == "updating" else school.status
 
     from_image = school.release_tag or settings.TENANT_IMAGE
     # На ноде нет таблицы релизов — целевой образ передаёт ядро (to_image).
@@ -554,6 +555,17 @@ async def update_school(school: School, db: AsyncSession, settings: Settings | N
         from app.services.social_rollout import desired_runtime
         social_rollout_enabled, social_rollout_generation = await desired_runtime(db, school.id)
     spec = build_school_stack_spec(school, secret, settings, image=to_image, social_rollout_enabled=social_rollout_enabled, social_rollout_generation=social_rollout_generation)
+
+    if settings.SCANNER_NODE_ENABLED:
+        try:
+            await ensure_school_relay(spec, label_slug, settings, docker)
+        except Exception as exc:
+            school.status = status_before_update
+            history.status = "failed"
+            history.error_message = f"scanner relay validation failed before app replacement: {exc}"
+            history.completed_at = datetime.utcnow()
+            await db.commit()
+            raise ProvisioningError(history.error_message) from exc
 
     school.status = "updating"
     await db.commit()

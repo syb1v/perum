@@ -12,6 +12,7 @@
 - Core scanner provisioning больше не принимает частично загруженные signatures: updater health требует обе свежие базы `main`/`daily` и успешную aggregate validation через `clamscan`, а тот же exact predicate проверяется как Docker drift contract до запуска `clamd`.
 - Scanner relay получил bounded admission до semaphore: active sessions и дополнительные pending sessions ограничены отдельно, overflow закрывается до command parsing/upstream, а terminal paths гарантированно возвращают слот. Core provisioning и drift verification передают один exact pending limit.
 - Candidate run `30377208978` подтвердил bounded-admission relay в полном disposable scanner contour, включая topology/recovery/fairness и immutable digest verification; новые clamd/relay digests остаются candidate до operator review и target-node saturation/load pilot.
+- Tenant OTA теперь валидирует существующий scanner/relay до удаления app: drift записывается как preflight failure, старые app/release tag остаются нетронутыми, школа возвращается в `active`, а история не заявляет rollback, который фактически не выполнялся.
 
 ## [Unreleased] — 2026-07-27
 
