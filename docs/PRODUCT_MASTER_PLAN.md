@@ -66,6 +66,15 @@ descriptor → Core discovery → Mobile fail-closed validation; единств�
 только name/weight. Query остаётся memory-only с loading/error/empty/offline
 states; create/edit/archive/delete, PII и offline persistence вне slice.
 
+Production provisioning школы выявил stale node fallback
+`ghcr.io/syb1v/perum-tenant:1.0.0`: tag отсутствует в GHCR, current release в Core
+не зарегистрирован, школа `sch2` завершилась pull 404 до создания stack. Старый
+доступный image `git-5d07885a7439` имеет descriptor до текущих atomic capabilities,
+поэтому не используется как ложный current release. Tenant version повышена до
+`1.1.3` для tenant-only immutable build и exact manifest registration; после
+успешного workflow node fallback и failed school должны быть переведены на один
+зарегистрированный image с повторным provisioning/health evidence.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
