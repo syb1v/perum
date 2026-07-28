@@ -129,6 +129,17 @@ contracts теперь additive передают оба stable UUID; existing ro
 in-place и school перепривязывается без destructive cleanup. Stale shadow rows
 не удаляются автоматически до отдельного migration/restore proof.
 
+Перед production reconciliation создан node metadata backup. Canonical UUID
+транзакционно присвоены существующим shadow rows: org
+`51433742-416f-4622-b6d1-8de6b7aaae0c`, school
+`568dbf13-9553-4dff-909d-dffb35de75af`; Tenant containers, DB, secrets и volumes
+не менялись. Agent restart подтвердил school resync, но выявил конфликт guard:
+`grsn-panel.ru` одновременно является node `PUBLIC_BASE_DOMAIN` и legitimate org
+landing apex. `add_proxy_route` теперь разрешает exact apex только в `org_agent`,
+при этом school `add_route`, `admin.<base>` и `www.<base>` остаются запрещены.
+Независимый probe с Core host подтвердил landing `200` за 0.14 с и school login
+`200` за 0.21 с; внешний timeout из workspace связан с его egress path, не origin.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

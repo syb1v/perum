@@ -2,6 +2,7 @@
 анти-спуфинг X-Forwarded-For в rate-limit. Чистая логика, без сети и БД."""
 
 import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import ValidationError
@@ -45,6 +46,35 @@ def test_caddy_add_route_rejects_platform_hosts(host: str):
     # ДО любого сетевого вызова, поэтому отсутствие Caddy в тесте не мешает.
     with pytest.raises(CaddyAdminError, match="зарезервирован"):
         asyncio.run(CaddyAdmin().add_route("sch-evil", host, "school_evil_app:3000"))
+
+
+def test_org_agent_landing_may_use_its_apex_but_not_platform_subdomains():
+    async def run():
+        client = AsyncMock()
+        delete_response = MagicMock(status_code=404, text="unknown object")
+        get_response = MagicMock()
+        get_response.json.return_value = {"srv0": {"listen": [":443"]}}
+        put_response = MagicMock(status_code=200)
+        client.delete.return_value = delete_response
+        client.get.return_value = get_response
+        client.put.return_value = put_response
+        context = MagicMock()
+        context.__aenter__.return_value = client
+        with patch("app.services.caddy_admin.settings.ROLE", "org_agent"), patch(
+            "app.services.caddy_admin.settings.PUBLIC_BASE_DOMAIN", "example.test"
+        ), patch("app.services.caddy_admin.httpx.AsyncClient", return_value=context):
+            await CaddyAdmin(listen_suffix=":443").add_proxy_route(
+                "lnd-example", "example.test", "172.18.0.3:80"
+            )
+
+        assert client.put.await_count == 1
+
+    asyncio.run(run())
+
+    with patch("app.services.caddy_admin.settings.ROLE", "org_agent"), patch(
+        "app.services.caddy_admin.settings.PUBLIC_BASE_DOMAIN", "example.test"
+    ), pytest.raises(CaddyAdminError, match="зарезервирован"):
+        asyncio.run(CaddyAdmin().add_proxy_route("lnd-admin", "admin.example.test", "172.18.0.3:80"))
 
 
 # --- rate-limit берёт реальный клиентский IP (последний хоп), не подделанный первый ---

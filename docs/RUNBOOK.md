@@ -76,6 +76,12 @@ DB/volume; ambiguous legacy rows оставляются для отдельно�
 PWA worker. После Web rollout проверьте, что `/sw.js` удаляет caches, `/login`
 отдаёт `200`, а shaped `/api/login` достигает Tenant.
 
+На organization node exact `PUBLIC_BASE_DOMAIN` может быть apex landing этой org.
+Он разрешён только для `add_proxy_route` в `ROLE=org_agent`; school route и
+`admin`/`www` не должны обходить reserved-host guard. После Agent restart в логах
+должны быть успешны обе строки `node caddy sync: landing <domain>` и
+`node caddy sync: school <host>`.
+
 Release registration обязана завершиться `201` и вернуть тот же image/SHA с
 `is_current=true`. `401` означает token drift между GitHub secret и Core;
 `422` означает descriptor/schema drift. Не вставляйте release напрямую в DB и не

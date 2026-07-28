@@ -116,7 +116,10 @@ class CaddyAdmin:
         """Простой маршрут: ВСЕ пути host → один upstream (для лендинга орг — там нет
         разделения /api/web). Вставляется первым (terminal), id `perum-org-<slug>`."""
         base = settings.PUBLIC_BASE_DOMAIN.lower()
-        if host.lower() in {base, f"admin.{base}", f"www.{base}"}:
+        reserved = {f"admin.{base}", f"www.{base}"}
+        if settings.ROLE != "org_agent":
+            reserved.add(base)
+        if host.lower() in reserved:
             raise CaddyAdminError(f"host '{host}' зарезервирован платформой")
         async with httpx.AsyncClient(timeout=10.0) as client:
             await self._delete_id(client, route_id(slug), ignore_missing=True)
