@@ -84,7 +84,9 @@ class CaddyAdmin:
             return next(iter(servers))
         raise CaddyAdminError("no HTTP servers configured in Caddy")
 
-    async def add_route(self, slug: str, host: str, app_upstream: str) -> None:
+    async def add_route(
+        self, slug: str, host: str, app_upstream: str, *, web_upstream: str | None = None
+    ) -> None:
         """Insert (or replace) the org route at the front of the :80 server.
 
         Splits the host: /api + /docs → the org's tenant app (app_upstream),
@@ -99,7 +101,7 @@ class CaddyAdmin:
             # Remove any stale route with the same id first to keep @id unique.
             await self._delete_id(client, route_id(slug), ignore_missing=True)
             server = await self._http_server_name(client)
-            route = _build_route(slug, host, app_upstream, settings.WEB_UPSTREAM)
+            route = _build_route(slug, host, app_upstream, web_upstream or settings.WEB_UPSTREAM)
             resp = await client.put(
                 f"{self.base_url}/config/apps/http/servers/{server}/routes/0",
                 json=route,

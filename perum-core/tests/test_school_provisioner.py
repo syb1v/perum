@@ -6,7 +6,7 @@ import pytest
 
 from app.core.config import Settings
 from app.models import School, SchoolSecret, UpdateHistory
-from app.services.school_provisioner import ProvisioningError, _bring_up, update_school
+from app.services.school_provisioner import ProvisioningError, _add_school_route, _bring_up, update_school
 from app.services.stack_spec import build_school_stack_spec
 
 
@@ -36,6 +36,28 @@ def test_failed_provision_keeps_preexisting_volumes():
     docker.remove_containers.assert_awaited()
     docker.remove_volume.assert_not_awaited()
     docker.remove_stack.assert_not_awaited()
+
+
+def test_node_school_route_uses_inspected_ips_for_host_network_caddy():
+    async def run():
+        docker = AsyncMock()
+        docker.container_ip.side_effect = ["172.20.0.4", "172.18.0.8"]
+        caddy = AsyncMock()
+
+        await _add_school_route(
+            Settings(ROLE="org_agent"), docker, caddy, "sch-alpha",
+            "alpha.example.test", "school_alpha_app",
+        )
+
+        assert [call.args[0] for call in docker.container_ip.await_args_list] == [
+            "school_alpha_app", "perum_web",
+        ]
+        caddy.add_route.assert_awaited_once_with(
+            "sch-alpha", "alpha.example.test", "172.20.0.4:3000",
+            web_upstream="172.18.0.8:3000",
+        )
+
+    asyncio.run(run())
 
 
 class UpdateDB:

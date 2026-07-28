@@ -60,6 +60,13 @@ Agent не должен подключаться к `school_<slug>_net`: это 
 означает старый Agent image с прямым Docker-DNS вызовом; обновите Agent, а не
 подключайте его к каждой school network и не публикуйте `/internal` через Caddy.
 
+Node Caddy работает в host network и не должен получать upstream вида
+`school_<slug>_app:3000` или `perum_web:3000`: host resolver не видит Docker DNS,
+что проявляется как public `502` при healthy containers. Agent обязан записывать
+inspect-derived bridge IP и пересинхронизировать их после своего restart. При
+диагностике сопоставьте upstreams из Caddy admin config с `docker inspect` app/Web;
+не подключайте host-network Caddy к изолированным school networks.
+
 Release registration обязана завершиться `201` и вернуть тот же image/SHA с
 `is_current=true`. `401` означает token drift между GitHub secret и Core;
 `422` означает descriptor/schema drift. Не вставляйте release напрямую в DB и не

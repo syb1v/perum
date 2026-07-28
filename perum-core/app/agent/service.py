@@ -403,7 +403,7 @@ async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingRespo
         code, out = await docker.exec(name, ["sh", "-c", f"echo {html_b64} | base64 -d > /usr/share/nginx/html/index.html"])
         if code != 0:
             return AgentLandingResponse(success=False, domain=req.domain, message=f"write index failed: {out[-300:]}")
-        await caddy.add_proxy_route(label, req.domain, f"{name}:80")
+        await caddy.add_proxy_route(label, req.domain, f"{await docker.container_ip(name)}:80")
         # Сохраняем домен орг в локальном shadow-record — нужен для Caddy re-sync
         # при рестарте ноды. Если записи ещё нет (pool-нода, первое провижининг) — создаём.
         from sqlalchemy import select as _sel
@@ -441,6 +441,7 @@ async def _resync_node_caddy_routes() -> None:
     )
 
     caddy = get_caddy_admin()
+    docker = DockerClient()
     try:
         async with SessionLocal() as db:
             state = await db.scalar(_sel(_AS).limit(1))
@@ -455,7 +456,8 @@ async def _resync_node_caddy_routes() -> None:
             for org in all_orgs:
                 lbl = landing_label_slug(org.slug)
                 try:
-                    await caddy.add_proxy_route(lbl, org.domain, f"{landing_container_name(org.slug)}:80")
+                    upstream = f"{await docker.container_ip(landing_container_name(org.slug))}:80"
+                    await caddy.add_proxy_route(lbl, org.domain, upstream)
                     logger.info("node caddy sync: landing %s", org.domain)
                 except Exception as exc:
                     logger.warning("node caddy sync: landing %s failed: %s", org.domain, exc)
@@ -466,9 +468,11 @@ async def _resync_node_caddy_routes() -> None:
             )).all()
             for domain, school in active:
                 try:
+                    app_upstream = f"{await docker.container_ip(school_container_name(school.slug, 'app'))}:3000"
+                    web_upstream = f"{await docker.container_ip('perum_web')}:3000"
                     await caddy.add_route(
-                        school_label_slug(school.slug), domain.domain,
-                        f"{school_container_name(school.slug, 'app')}:3000",
+                        school_label_slug(school.slug), domain.domain, app_upstream,
+                        web_upstream=web_upstream,
                     )
                     logger.info("node caddy sync: school %s", domain.domain)
                 except Exception as exc:  # noqa: BLE001

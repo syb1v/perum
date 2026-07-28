@@ -95,6 +95,16 @@ school network, и возвращал `Temporary failure in name resolution`. Ag
 только через exec environment. Unit contract фиксирует отсутствие secrets в
 command args, сохранение Tenant HTTP status/data и bounded transport failures.
 
+Следующая production-проверка отделила public-route defect: internal RPC уже
+создавал администратора, но новый Agent startup resync вставил перед временным
+рабочим TLS route upstreams `school_sch2_app`/`perum_web`. Host-network Caddy не
+использует Docker DNS, поэтому Web отвечал `502` (`lookup perum_web ... server
+misbehaving`). Broken route удалён, origin снова отвечает `/health` `200`, а Web
+route штатно возвращает auth redirect `307`. Version-controlled provisioning,
+unsuspend, landing и startup resync теперь берут bridge IP через Docker inspect;
+Agent и Caddy не подключаются к school networks. Regression test фиксирует оба
+upstream IP и отсутствие возврата к Docker-only hostname.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

@@ -150,6 +150,22 @@ async def _safe_cleanup(label_slug: str, docker: DockerClient, caddy: CaddyAdmin
         logger.error("school %s: cleanup remove_route failed: %s", label_slug, exc)
 
 
+async def _add_school_route(
+    settings: Settings,
+    docker: DockerClient,
+    caddy: CaddyAdmin,
+    label_slug: str,
+    host: str,
+    app_container: str,
+) -> None:
+    if settings.ROLE == "org_agent":
+        app_upstream = f"{await docker.container_ip(app_container)}:3000"
+        web_upstream = f"{await docker.container_ip('perum_web')}:3000"
+        await caddy.add_route(label_slug, host, app_upstream, web_upstream=web_upstream)
+    else:
+        await caddy.add_route(label_slug, host, f"{app_container}:3000")
+
+
 async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker: DockerClient, caddy: CaddyAdmin, admin_email: str | None) -> SchoolProvisionOutcome:
     created_volumes: list[str] = []
     try:
@@ -185,8 +201,8 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
-        # Подключить caddy к школьной сети — чтобы проксировать трафик в app.
-        await docker.connect_to_network("caddy", spec.network)
+        if settings.ROLE != "org_agent":
+            await docker.connect_to_network("caddy", spec.network)
 
         code, out = await docker.exec(spec.app_container, ["alembic", "upgrade", "head"], workdir="/app")
         if code != 0:
@@ -200,7 +216,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
 
         # Реальный домен школы (полный поддомен орг) — если задан ядром; иначе fallback.
         host = spec.host or f"{spec.slug}.{settings.PUBLIC_BASE_DOMAIN}"
-        await caddy.add_route(label_slug, host, f"{spec.app_container}:3000")
+        await _add_school_route(settings, docker, caddy, label_slug, host, spec.app_container)
         logger.info("school %s: provisioned, route %s -> %s:3000", spec.slug, host, spec.app_container)
         return SchoolProvisionOutcome(school=None, host=host, admin_login=admin_login, admin_temp_password=admin_pw)  # type: ignore[arg-type]
     except Exception as exc:
@@ -481,7 +497,7 @@ async def unsuspend_school(school: School, db: AsyncSession, settings: Settings 
         await docker.wait_for_healthy(app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
     except Exception as exc:  # noqa: BLE001
         logger.warning("school %s: unsuspend health wait failed (%s) — маршрут всё равно ставим", school.slug, exc)
-    await caddy.add_route(label_slug, host, f"{app_container}:3000")
+    await _add_school_route(settings, docker, caddy, label_slug, host, app_container)
     school.status = "active"
     school.suspended_at = None
     school.suspended_by = None

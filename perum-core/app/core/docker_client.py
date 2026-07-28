@@ -332,6 +332,17 @@ class DockerClient:
 
         return await asyncio.to_thread(_exec)
 
+    async def container_ip(self, name: str) -> str:
+        def _container_ip() -> str:
+            container = self.client.containers.get(name)
+            networks = container.attrs.get("NetworkSettings", {}).get("Networks", {})
+            addresses = [cfg.get("IPAddress") for cfg in networks.values() if cfg.get("IPAddress")]
+            if not addresses:
+                raise DockerClientError(f"container '{name}' has no bridge IP")
+            return addresses[0]
+
+        return await asyncio.to_thread(_container_ip)
+
     async def remove_containers(self, slug: str) -> list[str]:
         """Remove the org's containers but keep its data volume.
 
