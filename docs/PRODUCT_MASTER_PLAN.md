@@ -140,6 +140,13 @@ landing apex. `add_proxy_route` теперь разрешает exact apex то�
 Независимый probe с Core host подтвердил landing `200` за 0.14 с и school login
 `200` за 0.21 с; внешний timeout из workspace связан с его egress path, не origin.
 
+Production Agent image `sha256:ec6a0fa4774f` прошёл deliberate restart proof:
+startup resync успешно восстановил `landing grsn-panel.ru` на `172.18.0.3:80` и
+`school school-1.grsn-panel.ru` на Tenant `172.20.0.4:3000`/Web
+`172.18.0.8:3000`. Probe с внешнего Core host после restart: landing `200`, school
+login `200`, cache-purge `sw.js` `200`. Legacy punycode shadow row не участвует в
+canonical routes и намеренно не удалена до отдельного backup/restore cleanup proof.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
