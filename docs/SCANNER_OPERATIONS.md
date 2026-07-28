@@ -68,6 +68,14 @@ Source `0fde735`; clamd candidate
 `sha256:6431e6c5a1307ff3e6b3990eab42a6a36e05faf367029140b68fee0424f1ae97`, relay
 candidate `sha256:52cc6c19340a7210f2007c50847245d67f01a3c29079b1498503219b6f4fe6a0`.
 Оба digest остаются candidate до operator review и target-node evidence.
+
+Bounded-admission candidate run
+`https://github.com/syb1v/perum/actions/runs/30377208978` зелёный. Source
+`71a532e`; clamd candidate
+`sha256:04684c8725a6bb77abb41a9ab2e501c09ca6c73a3e6776ed245e96b901a3967e`, relay
+candidate `sha256:f35804972f4137f146774fbbd6b9785b1e87ee2292a892ffd90aa7848f87427a`.
+Topology/recovery/fairness и immutable digest verification прошли; это не
+target-node saturation evidence и не production sizing.
 Status `candidate`; target-node load profile и operator approval отсутствуют.
 
 ## Node topology
