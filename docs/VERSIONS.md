@@ -329,4 +329,5 @@
 | 326 | 2026-07-28 19:00 | be32d5e | fix(deploy): provisioning требует registered immutable Tenant release и диагностирует registration drift |
 | 327 | 2026-07-28 19:20 | 1a54266 | fix(agent): internal RPC выполняется внутри isolated Tenant app через Docker exec |
 | 328 | 2026-07-28 19:45 | 02875e1 | fix(node): Caddy routes используют inspect-derived upstream IP для host network |
-| 329 | 2026-07-28 19:55 | _______ | docs(node): зафиксирован production rollout устойчивого school route |
+| 329 | 2026-07-28 19:55 | a9d534b | docs(node): зафиксирован production rollout устойчивого school route |
+| 330 | 2026-07-28 20:20 | _______ | fix(identity): provisioning reconciles organization и school по stable UUID |

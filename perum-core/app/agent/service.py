@@ -186,18 +186,36 @@ async def get_agent_schools(db: AsyncSession) -> AgentSchoolListResponse:
     return AgentSchoolListResponse(schools=list(schools_map.values()), total=len(schools_map))
 
 
-async def _ensure_local_org(db: AsyncSession, state: AgentState) -> int:
+async def _ensure_local_org(db: AsyncSession, state: AgentState, req: AgentProvisionSchoolRequest) -> int:
     """На ноде нужна строка организации (School.org_id NOT NULL). Заводим/находим
     её по slug из enroll. Ядро остаётся источником истины — это лишь локальная
     привязка для стека на ноде."""
     from sqlalchemy import select as _select
     from app.models import Organization
-    org = await db.scalar(_select(Organization).where(Organization.slug == state.org_slug))
+    org = None
+    if req.org_public_id:
+        org = await db.scalar(_select(Organization).where(Organization.public_id == req.org_public_id))
     if org is None:
-        org = Organization(slug=state.org_slug, name=state.org_name or state.org_slug, status="active")
+        org = await db.scalar(_select(Organization).where(Organization.slug == (req.org_slug or state.org_slug)))
+    if org is None:
+        values = dict(
+            slug=req.org_slug or state.org_slug,
+            domain=req.org_domain,
+            name=req.org_name or state.org_name or req.org_slug or state.org_slug,
+            status="active",
+        )
+        if req.org_public_id:
+            values["public_id"] = req.org_public_id
+        org = Organization(**values)
         db.add(org)
-        await db.commit()
-        await db.refresh(org)
+    else:
+        if req.org_public_id:
+            org.public_id = req.org_public_id
+        org.slug = req.org_slug or org.slug
+        org.domain = req.org_domain or org.domain
+        org.name = req.org_name or org.name
+    await db.commit()
+    await db.refresh(org)
     return org.id
 
 
@@ -214,13 +232,31 @@ async def provision_school_on_node(
         from sqlalchemy import select as _select
         from app.models import School, SchoolSecret
 
-        org_id = await _ensure_local_org(db, state)
-        school = await db.scalar(_select(School).where(School.slug == req.school_slug))
+        org_id = await _ensure_local_org(db, state, req)
+        school = None
+        if req.school_public_id:
+            school = await db.scalar(_select(School).where(School.public_id == req.school_public_id))
         if school is None:
-            school = School(org_id=org_id, slug=req.school_slug, name=req.school_name, status="provisioning")
+            school = await db.scalar(_select(School).where(School.slug == req.school_slug))
+        if school is None:
+            values = dict(
+                org_id=org_id,
+                slug=req.school_slug,
+                name=req.school_name,
+                status="provisioning",
+            )
+            if req.school_public_id:
+                values["public_id"] = req.school_public_id
+            school = School(**values)
             db.add(school)
-            await db.commit()
-            await db.refresh(school)
+        else:
+            school.org_id = org_id
+            school.slug = req.school_slug
+            school.name = req.school_name
+            if req.school_public_id:
+                school.public_id = req.school_public_id
+        await db.commit()
+        await db.refresh(school)
 
         # Секреты школы генерирует ЯДРО и передаёт сюда — чтобы db_password/токены на
         # ноде совпадали с записью ядра (бэкапы, управление). Кладём их в локальную БД.
@@ -408,13 +444,28 @@ async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingRespo
         # при рестарте ноды. Если записи ещё нет (pool-нода, первое провижининг) — создаём.
         from sqlalchemy import select as _sel
         from app.models import Organization as _Org
-        local_org = await db.scalar(_sel(_Org).where(_Org.slug == slug))
+        local_org = None
+        if req.org_public_id:
+            local_org = await db.scalar(_sel(_Org).where(_Org.public_id == req.org_public_id))
+        if local_org is None:
+            local_org = await db.scalar(_sel(_Org).where(_Org.slug == slug))
         if local_org:
-            if not local_org.domain:
-                local_org.domain = req.domain
-                await db.commit()
+            if req.org_public_id:
+                local_org.public_id = req.org_public_id
+            local_org.slug = slug
+            local_org.name = req.org_name
+            local_org.domain = req.domain
+            await db.commit()
         else:
-            db.add(_Org(slug=slug, name=req.org_name, domain=req.domain, status="active"))
+            values = dict(
+                slug=slug,
+                name=req.org_name,
+                domain=req.domain,
+                status="active",
+            )
+            if req.org_public_id:
+                values["public_id"] = req.org_public_id
+            db.add(_Org(**values))
             await db.commit()
         return AgentLandingResponse(success=True, domain=req.domain, message="landing provisioned")
     except Exception as exc:  # noqa: BLE001

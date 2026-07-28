@@ -652,6 +652,7 @@ async def _refresh_org_landing(org_id: int, db: AsyncSession) -> None:
             "domain": org.domain,
             "org_name": org.name,
             "org_slug": org.slug,
+            "org_public_id": str(org.public_id),
             "school_hosts": school_hosts,
         })
         org.landing_status = "active" if resp.get("success") else "failed"
@@ -763,6 +764,11 @@ async def provision_school_orchestrated(school: School, db: AsyncSession, settin
     from app.services.social_rollout import desired_runtime
     social_enabled, social_generation = await desired_runtime(db, school.id)
     req = {
+        "org_public_id": str(org.public_id) if org else None,
+        "org_slug": org.slug if org else None,
+        "org_name": org.name if org else None,
+        "org_domain": org.domain if org else None,
+        "school_public_id": str(school.public_id),
         "school_slug": school.slug, "school_name": school.name, "release_tag": image,
         "db_password": secret.db_password, "secret_key": secret.secret_key,
         "telemetry_token": secret.telemetry_token, "internal_rpc_token": secret.internal_rpc_token,

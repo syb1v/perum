@@ -67,6 +67,15 @@ inspect-derived bridge IP и пересинхронизировать их по�
 диагностике сопоставьте upstreams из Caddy admin config с `docker inspect` app/Web;
 не подключайте host-network Caddy к изолированным school networks.
 
+При reprovision/rename сверяйте `Organization.public_id` и `School.public_id`
+между Core и node shadow DB. Slug/domain являются mutable routing metadata и не
+могут определять создание новой identity. Reconciliation не должна удалять school
+DB/volume; ambiguous legacy rows оставляются для отдельной ручной проверки.
+`perum_web` должен иметь Watchtower enable label: иначе `pull_policy: always`
+работает только при compose invocation, и браузеры продолжают получать старый
+PWA worker. После Web rollout проверьте, что `/sw.js` удаляет caches, `/login`
+отдаёт `200`, а shaped `/api/login` достигает Tenant.
+
 Release registration обязана завершиться `201` и вернуть тот же image/SHA с
 `is_current=true`. `401` означает token drift между GitHub secret и Core;
 `422` означает descriptor/schema drift. Не вставляйте release напрямую в DB и не

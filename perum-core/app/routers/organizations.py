@@ -111,7 +111,8 @@ async def create_organization(
 
     try:
         resp = await RemoteNodeClient().provision_landing(node, {
-            "domain": org.domain, "org_name": org.name, "org_slug": org.slug, "school_hosts": [],
+            "domain": org.domain, "org_name": org.name, "org_slug": org.slug,
+            "org_public_id": str(org.public_id), "school_hosts": [],
         })
         org.landing_status = "active" if resp.get("success") else "failed"
     except RemoteNodeError as exc:
@@ -158,6 +159,7 @@ async def reprovision_organization(org_id: int, db: AsyncSession = Depends(get_d
     try:
         resp = await RemoteNodeClient().provision_landing(node, {
             "domain": org.domain, "org_name": org.name, "org_slug": org.slug,
+            "org_public_id": str(org.public_id),
             "school_hosts": school_hosts,
         })
         org.landing_status = "active" if resp.get("success") else "failed"

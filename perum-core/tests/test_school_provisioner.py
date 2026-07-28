@@ -8,6 +8,7 @@ from app.core.config import Settings
 from app.models import School, SchoolSecret, UpdateHistory
 from app.services.school_provisioner import ProvisioningError, _add_school_route, _bring_up, update_school
 from app.services.stack_spec import build_school_stack_spec
+from app.agent.schemas import AgentLandingRequest, AgentProvisionSchoolRequest
 
 
 def test_failed_provision_keeps_preexisting_volumes():
@@ -58,6 +59,34 @@ def test_node_school_route_uses_inspected_ips_for_host_network_caddy():
         )
 
     asyncio.run(run())
+
+
+def test_agent_identity_contract_carries_stable_organization_and_school_ids():
+    org_id = uuid4()
+    school_id = uuid4()
+    request = AgentProvisionSchoolRequest(
+        org_public_id=org_id,
+        org_slug="acme",
+        org_name="Acme",
+        org_domain="acme.example",
+        school_public_id=school_id,
+        school_slug="school-1",
+        school_name="School 1",
+        release_tag="tenant:git-a",
+        db_password="db",
+        secret_key="secret",
+        telemetry_token="telemetry",
+    )
+    landing = AgentLandingRequest(
+        org_public_id=org_id,
+        org_slug="acme",
+        org_name="Acme",
+        domain="acme.example",
+    )
+
+    assert request.org_public_id == org_id
+    assert request.school_public_id == school_id
+    assert landing.org_public_id == org_id
 
 
 class UpdateDB:

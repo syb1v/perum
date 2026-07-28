@@ -281,6 +281,8 @@ services:
     container_name: perum_web
     restart: unless-stopped
     pull_policy: always
+    labels:
+      com.centurylinklabs.watchtower.enable: "true"
     environment:
       NODE_ENV: production
     networks:

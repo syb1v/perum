@@ -7159,13 +7159,24 @@
             "type": "string",
             "title": "Org Slug"
           },
+          "org_public_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Public Id"
+          },
           "school_hosts": {
             "items": {
               "type": "string"
             },
             "type": "array",
-            "title": "School Hosts",
-            "default": []
+            "title": "School Hosts"
           }
         },
         "type": "object",
@@ -7240,6 +7251,63 @@
       },
       "AgentProvisionSchoolRequest": {
         "properties": {
+          "org_public_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Public Id"
+          },
+          "org_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Slug"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Name"
+          },
+          "org_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Org Domain"
+          },
+          "school_public_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Public Id"
+          },
           "school_slug": {
             "type": "string",
             "title": "School Slug"

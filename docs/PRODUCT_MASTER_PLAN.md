@@ -112,6 +112,23 @@ resync автоматически создал canonical `perum-org-sch-sch2` с
 после удаления `https://school-1.grsn-panel.ru/health` отвечает `200`, а `/`
 штатно перенаправляет `307` на `/login`.
 
+Login/landing incident выявил два дополнительных drift. Node Web не имел
+Watchtower label и оставался на старом PWA image: browser navigation обслуживалась
+старым offline worker, а login POST не доходил до Tenant. Targeted Web pull/recreate
+установил текущий image `sha256:cd3544fb89a6`; production `sw.js` теперь только
+удаляет старые caches, `/login` отвечает `200`, shaped auth POST доходит до Tenant
+и возвращает ожидаемый `401`, active school admin сохранён. Web добавлен в labeled
+Watchtower rollout.
+
+Организация физически не удалялась, а node shadow metadata теряла identity:
+Core содержит canonical org UUID `51433742-416f-4622-b6d1-8de6b7aaae0c` и school
+UUID `568dbf13-9553-4dff-909d-dffb35de75af`, тогда как Agent генерировал новые
+UUID и связывал active `sch2` с technical `pool`. Mutable domain/slug swap поэтому
+создавал новую shadow org, хотя Tenant DB/volume оставались на месте. Agent
+contracts теперь additive передают оба stable UUID; existing rows reconciled
+in-place и school перепривязывается без destructive cleanup. Stale shadow rows
+не удаляются автоматически до отдельного migration/restore proof.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

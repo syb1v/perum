@@ -2208,11 +2208,10 @@ export interface components {
             org_name: string;
             /** Org Slug */
             org_slug: string;
-            /**
-             * School Hosts
-             * @default []
-             */
-            school_hosts: string[];
+            /** Org Public Id */
+            org_public_id?: string | null;
+            /** School Hosts */
+            school_hosts?: string[];
         };
         /** AgentLandingResponse */
         AgentLandingResponse: {
@@ -2237,6 +2236,16 @@ export interface components {
         };
         /** AgentProvisionSchoolRequest */
         AgentProvisionSchoolRequest: {
+            /** Org Public Id */
+            org_public_id?: string | null;
+            /** Org Slug */
+            org_slug?: string | null;
+            /** Org Name */
+            org_name?: string | null;
+            /** Org Domain */
+            org_domain?: string | null;
+            /** School Public Id */
+            school_public_id?: string | null;
             /** School Slug */
             school_slug: string;
             /** School Name */

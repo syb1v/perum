@@ -6,6 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 
 class AgentProvisionSchoolRequest(BaseModel):
+    org_public_id: UUID | None = None
+    org_slug: str | None = None
+    org_name: str | None = None
+    org_domain: str | None = None
+    school_public_id: UUID | None = None
     school_slug: str
     school_name: str
     release_tag: str
@@ -27,7 +32,8 @@ class AgentLandingRequest(BaseModel):
     domain: str
     org_name: str
     org_slug: str
-    school_hosts: list[str] = []  # для списка школ на странице лендинга
+    org_public_id: UUID | None = None
+    school_hosts: list[str] = Field(default_factory=list)  # для списка школ на странице лендинга
 
 
 class AgentLandingResponse(BaseModel):
