@@ -7,7 +7,7 @@ import pytest
 from app.core.config import Settings
 from app.core.docker_client import DockerClientError
 from app.models import School, SchoolSecret
-from app.services.scanner_stack import ensure_school_relay
+from app.services.scanner_stack import UPDATER_HEALTH, ensure_school_relay
 from app.services.stack_spec import build_school_stack_spec
 
 
@@ -44,6 +44,11 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         updater_verify = docker.verify_container.await_args_list[0].kwargs
         assert updater_verify["networks"] == {settings.SCANNER_UPDATE_NETWORK}
         assert updater_verify["mounts"] == {"perum_node_clam_signatures": ("/var/lib/clamav", "rw")}
+        updater = [call.kwargs for call in docker.run_container.await_args_list if call.kwargs["role"] == "freshclam"][0]
+        assert updater["health"].test == UPDATER_HEALTH
+        assert updater_verify["health_test"] == UPDATER_HEALTH
+        assert "main.cvd" in UPDATER_HEALTH[1] and "daily.cvd" in UPDATER_HEALTH[1]
+        assert "clamscan --database=/var/lib/clamav --version" in UPDATER_HEALTH[1]
         clamd_verify = docker.verify_container.await_args_list[1].kwargs
         assert clamd_verify["health_test"] == ["CMD-SHELL", "clamdscan --ping 1 >/dev/null 2>&1"]
         assert clamd_verify["mounts"] == {"perum_node_clam_signatures": ("/var/lib/clamav", "ro")}

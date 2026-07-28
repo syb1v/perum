@@ -15,6 +15,12 @@ CLAMD_CONTAINER = "perum_node_clamd"
 UPDATER_CONTAINER = "perum_node_freshclam"
 SIGNATURE_VOLUME = "perum_node_clam_signatures"
 _node_scanner_lock = asyncio.Lock()
+UPDATER_HEALTH = [
+    "CMD-SHELL",
+    "test -n \"$(find /var/lib/clamav -maxdepth 1 -type f \\( -name 'main.cvd' -o -name 'main.cld' \\) -mmin -2880 -print -quit)\" "
+    "&& test -n \"$(find /var/lib/clamav -maxdepth 1 -type f \\( -name 'daily.cvd' -o -name 'daily.cld' \\) -mmin -2880 -print -quit)\" "
+    "&& clamscan --database=/var/lib/clamav --version >/dev/null 2>&1",
+]
 
 
 def _pinned(image: str) -> bool:
@@ -35,13 +41,12 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
         await docker.verify_network(settings.SCANNER_UPDATE_NETWORK, slug=SCANNER_LABEL, internal=False)
         await docker.ensure_image(settings.SCANNER_CLAMD_IMAGE)
         await docker.create_volume(SIGNATURE_VOLUME, slug=SCANNER_LABEL)
-        updater_health = ["CMD-SHELL", "test -n \"$(find /var/lib/clamav -maxdepth 1 -type f \\( -name 'daily.c?d' -o -name 'main.c?d' \\) -mmin -2880 -print -quit)\""]
         if not await docker.container_exists(UPDATER_CONTAINER):
             await docker.run_container(
                 name=UPDATER_CONTAINER, image=settings.SCANNER_CLAMD_IMAGE, slug=SCANNER_LABEL, role="freshclam",
                 network=settings.SCANNER_UPDATE_NETWORK,
                 volumes={SIGNATURE_VOLUME: {"bind": "/var/lib/clamav", "mode": "rw"}},
-                health=HealthSpec(test=updater_health, start_period_s=30, retries=30),
+                health=HealthSpec(test=UPDATER_HEALTH, start_period_s=30, retries=30),
                 command=["freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf"],
                 mem_limit=settings.SCANNER_UPDATER_MEMORY,
                 nano_cpus=int(settings.SCANNER_UPDATER_CPUS * 1_000_000_000), cap_drop=["ALL"],
@@ -53,7 +58,7 @@ async def ensure_node_scanner(settings: Settings, docker: DockerClient) -> None:
             read_only=True, cap_drop={"ALL"}, mem_limit=settings.SCANNER_UPDATER_MEMORY,
             nano_cpus=int(settings.SCANNER_UPDATER_CPUS * 1_000_000_000), require_health=True,
             user=settings.SCANNER_CLAM_USER, security_opt={"no-new-privileges"}, pids_limit=32,
-            command=["freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf"], health_test=updater_health,
+            command=["freshclam", "--daemon", "--foreground", "--config-file=/etc/clamav/freshclam.conf"], health_test=UPDATER_HEALTH,
         )
         await docker.wait_for_healthy(UPDATER_CONTAINER, timeout_s=max(settings.APP_HEALTH_TIMEOUT_S, 300))
         if not await docker.container_exists(CLAMD_CONTAINER):

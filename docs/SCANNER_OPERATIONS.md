@@ -16,7 +16,9 @@ Updater topology: `perum_node_freshclam` находится только в mana
 update network и монтирует signature volume `rw`; `perum_node_clamd` находится
 только в internal scanner backend и монтирует тот же volume `ro`. Updater не имеет
 school/backend connectivity, clamd не имеет egress. Core запускает clamd только
-после fresh updater health, определяемого наличием database младше 48 часов.
+после updater health: обе `main.cvd|cld` и `daily.cvd|cld` должны быть младше
+48 часов, а aggregate directory должен проходить `clamscan` validation. Empty,
+partial, stale или malformed signature set fail closed оставляет clamd незапущенным.
 
 Recorded relay candidate: run `29693030308`, source `1e6929d`, exact OCI digest
 `sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.

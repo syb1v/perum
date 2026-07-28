@@ -52,6 +52,13 @@ digest verification. Source `0fde735`; clamd candidate
 candidate `sha256:52cc6c19340a7210f2007c50847245d67f01a3c29079b1498503219b6f4fe6a0`.
 Это не approved images, production sizing или target-node evidence.
 
+Core node provisioning теперь использует тот же strict signature bootstrap
+contract, что disposable harness: updater healthy только при наличии обеих свежих
+`main.cvd|cld` и `daily.cvd|cld` и успешном `clamscan` aggregate validation.
+Один файл, stale/invalid set и health-command drift fail closed не запускают
+`clamd`. Tenant `VERSION` timestamp остаётся authoritative runtime freshness gate;
+production flags и readiness percentages не меняются.
+
 Двухсерверный production foundation работает в текущей доменной схеме:
 `пэрум.рф` обслуживает Core/Web, `grsn-panel.ru` — organization landing/Agent.
 После domain swap устранены stale Cloudflare zone binding, удалявший platform
