@@ -17044,6 +17044,10 @@
             "type": "boolean",
             "title": "School Admin Bell Schedules"
           },
+          "school_admin_work_types": {
+            "type": "boolean",
+            "title": "School Admin Work Types"
+          },
           "offline_homework_state": {
             "type": "boolean",
             "title": "Offline Homework State"
@@ -17098,6 +17102,7 @@
           "school_admin_class_directory",
           "school_admin_teacher_directory",
           "school_admin_bell_schedules",
+          "school_admin_work_types",
           "offline_homework_state",
           "offline_social_messages",
           "offline_support_messages",

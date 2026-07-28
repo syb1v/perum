@@ -59,6 +59,13 @@ contract, что disposable harness: updater healthy только при нал�
 `clamd`. Tenant `VERSION` timestamp остаётся authoritative runtime freshness gate;
 production flags и readiness percentages не меняются.
 
+Mobile `school_admin`/`director` parity расширена privacy-safe read-only
+справочником видов работ. Atomic `school_admin_work_types` проходит Tenant
+descriptor → Core discovery → Mobile fail-closed validation; единственный GET
+`/journal/work-types` использует generated `JournalWorkTypesOut` и показывает
+только name/weight. Query остаётся memory-only с loading/error/empty/offline
+states; create/edit/archive/delete, PII и offline persistence вне slice.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
@@ -1197,7 +1204,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Mobile send/read/report payloads и moderation inbox/detail/action receipt используют curated generated schemas; Web использует generated moderation types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals и grade analytics готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, read-only moderation queue/detail, academic calendar, class/teacher directories и расписание звонков. Остаются student transactions/economy и прочие функции, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, moderation actions, sensitive admin offline policy, calendar/class/teacher/bell-schedule CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals и grade analytics готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, read-only moderation queue/detail, academic calendar, class/teacher directories, расписание звонков и справочник видов работ. Остаются student transactions/economy и прочие функции, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, moderation actions, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
 | P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, DNS-only TLS, Agent heartbeat и domain routing подтверждены; CI получает production Docker contexts и immutable health-gated deploy. Остаются tenant image release и provisioning школы, backup/restore proof, security/accessibility/device matrix, stores, реальные pilots, staged flags, metrics и rollback evidence |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке

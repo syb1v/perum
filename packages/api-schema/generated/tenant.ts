@@ -5004,6 +5004,8 @@ export interface components {
             school_admin_teacher_directory: boolean;
             /** School Admin Bell Schedules */
             school_admin_bell_schedules: boolean;
+            /** School Admin Work Types */
+            school_admin_work_types: boolean;
             /** Offline Homework State */
             offline_homework_state: boolean;
             /** Offline Social Messages */

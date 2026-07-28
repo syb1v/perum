@@ -13,6 +13,7 @@
 - Scanner relay получил bounded admission до semaphore: active sessions и дополнительные pending sessions ограничены отдельно, overflow закрывается до command parsing/upstream, а terminal paths гарантированно возвращают слот. Core provisioning и drift verification передают один exact pending limit.
 - Candidate run `30377208978` подтвердил bounded-admission relay в полном disposable scanner contour, включая topology/recovery/fairness и immutable digest verification; новые clamd/relay digests остаются candidate до operator review и target-node saturation/load pilot.
 - Tenant OTA теперь валидирует существующий scanner/relay до удаления app: drift записывается как preflight failure, старые app/release tag остаются нетронутыми, школа возвращается в `active`, а история не заявляет rollback, который фактически не выполнялся.
+- Mobile school admin/director получил privacy-safe read-only справочник видов работ: atomic `school_admin_work_types` проходит Tenant/Core/Mobile descriptor boundary, экран использует generated `JournalWorkTypesOut`, показывает name/weight и хранит данные только в памяти. Mutations, PII и offline persistence не добавлены.
 
 ## [Unreleased] — 2026-07-27
 

@@ -43,6 +43,7 @@ export const queryKeys = {
   schoolAdminClassDirectory: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-class-directory'] as const,
   schoolAdminTeacherDirectory: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-teacher-directory'] as const,
   schoolAdminBellSchedules: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-bell-schedules'] as const,
+  schoolAdminWorkTypes: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-work-types'] as const,
 };
 
 export const socialInvalidationKeys = {

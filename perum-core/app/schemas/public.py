@@ -41,6 +41,7 @@ class TenantCapabilities(BaseModel):
     school_admin_class_directory: bool
     school_admin_teacher_directory: bool
     school_admin_bell_schedules: bool
+    school_admin_work_types: bool
     offline_homework_state: bool
     offline_social_messages: bool
     offline_support_messages: bool
