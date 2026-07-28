@@ -10,5 +10,11 @@
 docs
 deploy
 perum-core
+!perum-core
+perum-core/*
+!perum-core/app
+perum-core/app/*
+!perum-core/app/__init__.py
+!perum-core/app/scanner_relay.py
 perum-mobile
 perum-tenant

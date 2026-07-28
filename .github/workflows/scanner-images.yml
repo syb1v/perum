@@ -5,7 +5,11 @@ on:
     branches: [main]
     paths:
       - "deploy/scanner/**"
+      - ".dockerignore"
       - "perum-core/app/scanner_relay.py"
+      - "perum-tenant/Dockerfile"
+      - "perum-tenant/requirements.txt"
+      - "perum-tenant/app/modules/media/scanner.py"
       - ".github/workflows/scanner-images.yml"
   workflow_dispatch: {}
 

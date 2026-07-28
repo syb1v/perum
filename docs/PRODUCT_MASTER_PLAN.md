@@ -37,6 +37,11 @@ unterminated команды отклоняются до upstream connection. Uni
 проверяет доступность daemon. Это закрывает repository cross-school control-command
 gap, но не заменяет новый candidate run, operator digest review или target-node
 evidence; attachment capabilities остаются `false`.
+Первый hosted run `30373784558` fail closed обнаружил, что общий Web
+`.dockerignore` исключал relay sources из scanner candidate context. Context
+исправлен exact allowlist только для двух relay files; scanner workflow теперь
+также отслеживает production Tenant scanner/image inputs и проходит общий YAML
+gate. Это CI correction, а не scanner evidence до зелёного повторного run.
 
 Двухсерверный production foundation работает в текущей доменной схеме:
 `пэрум.рф` обслуживает Core/Web, `grsn-panel.ru` — organization landing/Agent.
