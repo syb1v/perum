@@ -75,6 +75,18 @@ Production provisioning школы выявил stale node fallback
 успешного workflow node fallback и failed school должны быть переведены на один
 зарегистрированный image с повторным provisioning/health evidence.
 
+Recovery завершён: workflow `30384083206` опубликовал Tenant `1.1.3` image
+`git-c145d93ad070`; GitHub/Core release token drift (`401`) синхронизирован.
+Production Core старее нового `school_admin_work_types` descriptor field и вернул
+`422`, поэтому current release зарегистрирован через validated compatibility
+projection без единственного неизвестного ключа, сохраняя image/source identity.
+Node fallback и Agent переведены на тот же immutable image, failed школа штатно
+reprovisioned и стала `active`; Tenant DB/app healthy, primary school domain active,
+HTTPS `/health` и Web root проходят с валидным Let's Encrypt certificate. На node
+также восстановлен отсутствовавший общий Web service и временный TLS school route
+для host-network Caddy. Это реальное provisioning evidence одной школы, но не
+закрывает backup/restore, scanner pilot, multi-school rollout или Core deploy drift.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

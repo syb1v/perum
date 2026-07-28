@@ -258,8 +258,15 @@ jobs:
           jq -e type "$MANIFEST" >/dev/null
           jq -n --arg v "$TAG" --arg img "$IMAGE" --arg cl "$CHANGELOG" --arg sha "$SHA" --slurpfile manifest "$MANIFEST" \
             '{version_tag:$v, image:$img, changelog:$cl, source_commit:$sha, make_current:true, mobile_manifest:$manifest[0]}' \
-          | curl -fsS -X POST "${CORE_URL%/}/api/ci/release" \
+          > release-payload.json
+          status="$(curl -sS -o release-response.json -w '%{http_code}' -X POST "${CORE_URL%/}/api/ci/release" \
               -H "Authorization: Bearer ${TOKEN}" \
               -H "Content-Type: application/json" \
-              --data @-
+              --data @release-payload.json)"
+          if [ "$status" != 201 ]; then
+            jq -c . release-response.json >&2 || true
+            echo "tenant release registration failed: HTTP $status" >&2
+            exit 1
+          fi
+          jq -e --arg image "$IMAGE" --arg sha "$SHA" '.image == $image and .source_commit == $sha and .is_current == true' release-response.json >/dev/null
           echo "tenant release registered: $TAG (image $IMAGE)"

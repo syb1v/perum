@@ -40,6 +40,26 @@ status и health. Provisioner сохраняет DB/appdata volumes и при ap
 пытается вернуть прежний image. После rollback проверьте совместимость DB migration;
 не выполняйте downgrade schema без явно подготовленной migration strategy.
 
+До создания или reprovision школы проверьте четыре инварианта:
+
+1. В Core существует ровно один current stable release с immutable
+   `ghcr.io/.../perum-tenant:git-<sha>` или digest image, `source_commit` и
+   descriptor manifest.
+2. Target node успешно выполняет `docker pull` этого exact image. Не используйте
+   semver tag, если workflow его фактически не публиковал, и не используйте
+   `latest` как provisioning identity.
+3. `TENANT_IMAGE` в node env совпадает с current release и служит только fallback;
+   после изменения env Agent должен быть пересоздан и снова стать healthy.
+4. На host-network Caddy убедитесь, что school host присутствует в TLS server, а
+   общий `perum_web` доступен из Caddy. Проверяйте отдельно HTTPS `/health` (Tenant)
+   и `/` (Web), certificate SAN/expiry и фактический image school app.
+
+Release registration обязана завершиться `201` и вернуть тот же image/SHA с
+`is_current=true`. `401` означает token drift между GitHub secret и Core;
+`422` означает descriptor/schema drift. Не вставляйте release напрямую в DB и не
+добавляйте неизвестные Core capabilities: обновите Core либо используйте явно
+зафиксированную compatibility projection только как временный recovery шаг.
+
 ## Ограниченный demo school stack
 
 `deploy/demo-school/` предназначен только для временного показа одной синтетической

@@ -4,7 +4,8 @@
 # ============================================================================
 # Узел управляет школьными стеками локально; ядро даёт команды через HTTP API.
 # Запуск на сервере ноды:
-#   sudo bash deploy-node.sh --core-url https://admin.grsn-panel.ru --enroll-token <TOKEN>
+#   sudo bash deploy-node.sh --core-url https://admin.grsn-panel.ru --enroll-token <TOKEN> \
+#     --tenant-image ghcr.io/syb1v/perum-tenant:git-<sha12>
 #
 # Токен подключения (enrollment token) получается в ядре:
 #   Консоль платформы → Инфраструктура → Создать ноду → скопировать токен
@@ -14,7 +15,7 @@
 #   --enroll-token TOKEN  Токен подключения к ядру (ОБЯЗАТЕЛЕН)
 #   --domain DOMAIN       Домен орг для авто-HTTPS (если пусто — pool-нода, только HTTP)
 #   --agent-token TOKEN   AGENT_TOKEN (по умолчанию из переменной или auto)
-#   --tenant-image IMG    Образ тенанта для школ (по умолчанию: ghcr.io/syb1v/perum-tenant:latest)
+#   --tenant-image IMG    Current immutable Tenant release из Core (ОБЯЗАТЕЛЕН)
 #   --registry REGISTRY   Реестр базовых образов (по умолчанию: mirror.gcr.io)
 #   --dir DIR             Каталог установки (по умолчанию: /opt/perum-node)
 #   --dry-run             Только показать, что будет сделано
@@ -41,7 +42,7 @@ CORE_URL=""
 ENROLL_TOKEN=""
 ORG_DOMAIN="${ORG_DOMAIN:-}"
 AGENT_TOKEN="${AGENT_TOKEN:-}"
-TENANT_IMAGE="${TENANT_IMAGE:-ghcr.io/syb1v/perum-tenant:latest}"
+TENANT_IMAGE="${TENANT_IMAGE:-}"
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-mirror.gcr.io}"
 AGENT_IMAGE="${AGENT_IMAGE:-ghcr.io/syb1v/perum-core:latest}"
 PUBLIC_BASE_DOMAIN="${PUBLIC_BASE_DOMAIN:-}"
@@ -94,6 +95,9 @@ if [[ -z "$PUBLIC_BASE_DOMAIN" ]]; then
   PUBLIC_BASE_DOMAIN=$(echo "$CORE_URL" | sed -E 's|https?://||; s|^admin\.||; s|/.*||; s|:.*||')
   warn "PUBLIC_BASE_DOMAIN определён из CORE_URL: ${PUBLIC_BASE_DOMAIN}"
 fi
+[[ -z "$TENANT_IMAGE" ]] && die "TENANT_IMAGE обязателен: передайте --tenant-image с current immutable release из Core"
+[[ "$TENANT_IMAGE" =~ @sha256:[0-9a-fA-F]{64}$ || "$TENANT_IMAGE" =~ :git-[0-9a-fA-F]{12,}$ ]] \
+  || die "TENANT_IMAGE должен быть immutable digest или git-<sha> tag"
 
 # ── Проверка прав ────────────────────────────────────────────────────────
 if [[ "$DRY_RUN" != true ]]; then

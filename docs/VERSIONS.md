@@ -325,4 +325,5 @@
 | 322 | 2026-07-28 17:45 | 4989f46 | docs(scanner): зафиксирован bounded-admission candidate run 30377208978 |
 | 323 | 2026-07-28 18:00 | d520786 | fix(scanner): OTA relay preflight останавливает update до destructive app swap |
 | 324 | 2026-07-28 18:20 | 7703d9b | feat(mobile): добавлен read-only справочник видов работ для школьных операторов |
-| 325 | 2026-07-28 18:40 | _______ | chore(tenant): версия 1.1.3 для immutable production provisioning release |
+| 325 | 2026-07-28 18:40 | c145d93 | chore(tenant): версия 1.1.3 для immutable production provisioning release |
+| 326 | 2026-07-28 19:00 | _______ | fix(deploy): provisioning требует registered immutable Tenant release и диагностирует registration drift |
