@@ -8,6 +8,7 @@
 
 - Per-school ClamAV relay теперь принимает только exact `VERSION` и `INSTREAM` до соединения с общим daemon: административные, session и malformed команды fail closed, а disposable topology gate доказывает отклонение `SHUTDOWN` без остановки `clamd`. Attachment capabilities остаются выключены до нового candidate run и target-node pilot.
 - Исправлен scanner candidate build context после Web Docker hardening: root `.dockerignore` узко пропускает только исходники relay и конфигурацию clamd, scanner workflow отслеживает фактические Tenant scanner/image inputs, а обычный CI валидирует его YAML.
+- Scanner candidate run `30375275580` подтвердил command-restricted relay в disposable topology: `SHUTDOWN` отклонён без остановки общего daemon, clean/EICAR, freshness, outage/recreation, five-school fairness, immutable publish и digest verification прошли. Digests остаются candidate до operator review и target-node pilot.
 
 ## [Unreleased] — 2026-07-27
 

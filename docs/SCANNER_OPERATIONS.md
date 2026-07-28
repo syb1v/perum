@@ -57,6 +57,15 @@ GitHub runner; абсолютные latency/throughput не переносятс
 Recorded fairness candidate run `29700812844`, source `380be3e`: clamd
 `sha256:7bae7c5ad91408183d3e6813359ef9dfb231bd3f836aacaf7834db75e171863a`,
 relay `sha256:2c9dc02e827a7878288cbe9f7674549b9bf601a28abf022b07635c0943f2d553`.
+
+Protocol-restricted candidate run
+`https://github.com/syb1v/perum/actions/runs/30375275580` зелёный. Он дополнительно
+проверяет, что relay отклоняет `zSHUTDOWN\0` до upstream connection, после чего
+общий daemon отвечает на direct `VERSION`, а relay продолжает clean/EICAR scans.
+Source `0fde735`; clamd candidate
+`sha256:6431e6c5a1307ff3e6b3990eab42a6a36e05faf367029140b68fee0424f1ae97`, relay
+candidate `sha256:52cc6c19340a7210f2007c50847245d67f01a3c29079b1498503219b6f4fe6a0`.
+Оба digest остаются candidate до operator review и target-node evidence.
 Status `candidate`; target-node load profile и operator approval отсутствуют.
 
 ## Node topology

@@ -318,4 +318,5 @@
 | 315 | 2026-07-28 15:00 | d6779a1 | test(ci): DNS regression test не зависит от локального pytest plugin; audit запускается после Web build |
 | 316 | 2026-07-28 16:00 | 089ab46 | fix(scanner): per-school relay ограничен безопасными ClamAV-командами до upstream connection |
 | 317 | 2026-07-28 16:30 | c758f08 | fix(ci): восстановлен scanner relay context и расширены trigger/YAML gates |
-| 318 | 2026-07-28 16:45 | _______ | fix(ci): разрешена exact clamd configuration в scanner candidate context |
+| 318 | 2026-07-28 16:45 | 0fde735 | fix(ci): разрешена exact clamd configuration в scanner candidate context |
+| 319 | 2026-07-28 17:00 | _______ | docs(scanner): зафиксирован зелёный protocol-restricted candidate run 30375275580 |
