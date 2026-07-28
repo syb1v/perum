@@ -87,6 +87,14 @@ HTTPS `/health` и Web root проходят с валидным Let's Encrypt c
 для host-network Caddy. Это реальное provisioning evidence одной школы, но не
 закрывает backup/restore, scanner pilot, multi-school rollout или Core deploy drift.
 
+После provisioning internal RPC выявил network-namespace defect: Agent в общей
+`perum_internal` не может Docker-DNS-resolve app, находящийся только в isolated
+school network, и возвращал `Temporary failure in name resolution`. Agent теперь
+не подключается к school networks и не публикует `/internal`: typed request
+выполняется Docker exec внутри Tenant app к `127.0.0.1`, а body/tokens передаются
+только через exec environment. Unit contract фиксирует отсутствие secrets в
+command args, сохранение Tenant HTTP status/data и bounded transport failures.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

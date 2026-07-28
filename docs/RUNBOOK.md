@@ -54,6 +54,12 @@ status и health. Provisioner сохраняет DB/appdata volumes и при ap
    общий `perum_web` доступен из Caddy. Проверяйте отдельно HTTPS `/health` (Tenant)
    и `/` (Web), certificate SAN/expiry и фактический image school app.
 
+Agent не должен подключаться к `school_<slug>_net`: это нарушает межшкольную
+изоляцию. Внутренние Core→Tenant операции выполняются Agent через Docker exec
+внутри app container к loopback. Ошибка `Temporary failure in name resolution`
+означает старый Agent image с прямым Docker-DNS вызовом; обновите Agent, а не
+подключайте его к каждой school network и не публикуйте `/internal` через Caddy.
+
 Release registration обязана завершиться `201` и вернуть тот же image/SHA с
 `is_current=true`. `401` означает token drift между GitHub secret и Core;
 `422` означает descriptor/schema drift. Не вставляйте release напрямую в DB и не

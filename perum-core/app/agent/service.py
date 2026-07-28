@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -518,20 +519,41 @@ async def internal_rpc_on_node(db: AsyncSession, school_slug: str, req) -> "Agen
     if not secret:
         return AgentInternalRpcResponse(status_code=409, data={"detail": "school secret missing on node"})
 
-    url = f"http://{school_container_name(school_slug, 'app')}:3000/internal{req.path}"
-    headers = {"X-Telemetry-Token": secret.telemetry_token}
-    if getattr(secret, "internal_rpc_token", None):
-        headers["X-Internal-Token"] = secret.internal_rpc_token
+    container = school_container_name(school_slug, "app")
+    script = (
+        "import json,os,urllib.error,urllib.request;"
+        "data=os.environ['RPC_BODY'].encode() if os.environ['RPC_BODY'] else None;"
+        "headers={'X-Telemetry-Token':os.environ['RPC_TELEMETRY_TOKEN']};"
+        "token=os.environ.get('RPC_INTERNAL_TOKEN');"
+        "token and headers.update({'X-Internal-Token':token});"
+        "request=urllib.request.Request('http://127.0.0.1:3000/internal'+os.environ['RPC_PATH'],data=data,headers=headers|({'Content-Type':'application/json'} if data else {}),method=os.environ['RPC_METHOD']);"
+        "status=500;body='';"
+        "\ntry:\n response=urllib.request.urlopen(request,timeout=15);status=response.status;body=response.read().decode()"
+        "\nexcept urllib.error.HTTPError as exc:\n status=exc.code;body=exc.read().decode()"
+        "\nprint(json.dumps({'status':status,'body':body}))"
+    )
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            resp = await client.request(req.method, url, headers=headers, json=req.body)
+        code, output = await DockerClient().exec(
+            container,
+            ["python", "-c", script],
+            environment={
+                "RPC_METHOD": req.method,
+                "RPC_PATH": req.path,
+                "RPC_BODY": json.dumps(req.body) if req.body is not None else "",
+                "RPC_TELEMETRY_TOKEN": secret.telemetry_token,
+                "RPC_INTERNAL_TOKEN": getattr(secret, "internal_rpc_token", None) or "",
+            },
+        )
     except Exception as exc:  # noqa: BLE001
         return AgentInternalRpcResponse(status_code=502, data={"detail": f"school unreachable on node: {exc}"})
+    if code != 0:
+        return AgentInternalRpcResponse(status_code=502, data={"detail": "school internal RPC failed on node"})
     try:
-        data = resp.json() if resp.content else {}
+        result = json.loads(output)
+        data = json.loads(result["body"]) if result["body"] else {}
     except Exception:  # noqa: BLE001
-        data = {"detail": resp.text[:300]}
-    return AgentInternalRpcResponse(status_code=resp.status_code, data=data)
+        return AgentInternalRpcResponse(status_code=502, data={"detail": "invalid school internal RPC response"})
+    return AgentInternalRpcResponse(status_code=int(result["status"]), data=data)
 
 
 async def send_heartbeat(

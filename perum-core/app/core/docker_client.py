@@ -319,11 +319,14 @@ class DockerClient:
         )
 
     async def exec(
-        self, name: str, cmd: list[str], *, workdir: str | None = None
+        self, name: str, cmd: list[str], *, workdir: str | None = None,
+        environment: dict[str, str] | None = None,
     ) -> tuple[int, str]:
         def _exec() -> tuple[int, str]:
             container = self.client.containers.get(name)
-            exit_code, output = container.exec_run(cmd=cmd, workdir=workdir, demux=False)
+            exit_code, output = container.exec_run(
+                cmd=cmd, workdir=workdir, environment=environment, demux=False
+            )
             text = output.decode("utf-8", errors="replace") if output else ""
             return exit_code, text
 
