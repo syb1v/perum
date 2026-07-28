@@ -311,7 +311,8 @@
 | 308 | 2026-07-25 | 529e308 | feat(mobile): добавлен каталог классов |
 | 309 | 2026-07-25 | 2652213 | feat(mobile): добавлен каталог учителей |
 | 310 | 2026-07-26 | 81c2b15 | feat(mobile): добавлено расписание звонков |
-| 314 | 2026-07-28 12:00 | _______ | CI/release: защищён DNS sweep, исправлены PWA fallback, Web Docker context, immutable deploy и IDN defaults |
+| 314 | 2026-07-28 12:00 | 5d2d22a | CI/release: защищён DNS sweep, исправлены PWA fallback, Web Docker context, immutable deploy и IDN defaults |
+| 315 | 2026-07-28 15:00 | _______ | test(ci): DNS regression test не зависит от локального pytest plugin; audit запускается после Web build |
 | 311 | 2026-07-27 | d8eacf3 | fix(deploy): подготовлен двухсерверный demo contour |
 | 312 | 2026-07-27 | 5e8d930 | chore(deploy): добавлен installer ядра |
 | 313 | 2026-07-27 | 5e8d930 | fix(core): поддержано создание организации с IDN-доменом |

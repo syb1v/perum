@@ -99,12 +99,12 @@ jobs:
         run: npm run typecheck
       - name: Test shared packages
         run: npm run test:shared
-      - name: Audit production dependencies
-        run: npm run audit:ci
       - name: Typecheck
         run: npm run typecheck:web
       - name: Production build
         run: npm run build:web
+      - name: Audit production dependencies
+        run: npm run audit:ci
 
   docker-builds:
     name: Production Docker build contexts
