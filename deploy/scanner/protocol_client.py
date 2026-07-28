@@ -5,8 +5,9 @@ import struct
 
 async def main():
     reader, writer = await asyncio.open_connection(os.environ["SCANNER_HOST"], 3310)
-    if os.environ.get("COMMAND") == "VERSION":
-        writer.write(b"zVERSION\0")
+    command = os.environ.get("COMMAND")
+    if command:
+        writer.write(f"z{command}\0".encode("ascii"))
     else:
         payload = b"A" * int(os.environ["PAYLOAD_BYTES"]) if os.environ.get("PAYLOAD_BYTES") else os.environ["PAYLOAD"].encode()
         writer.write(b"zINSTREAM\0" + struct.pack("!I", len(payload)) + payload + struct.pack("!I", 0))

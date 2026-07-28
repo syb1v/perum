@@ -59,6 +59,9 @@ try:
     assert "OK" in direct, f"direct clean response mismatch: {direct!r}"
     run("docker", "run", "--rm", "--network", backend, "--workdir", "/app", "-v", f"{sys.argv[5]}:/app/freshness.py:ro", "--entrypoint", "python", tenant, "freshness.py", daemon)
     base = ("docker", "run", "--rm", "--network", school, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={proxy}", "--entrypoint", "python")
+    rejected = subprocess.run((*base, "-e", "COMMAND=SHUTDOWN", relay, "/client.py"), capture_output=True, text=True)
+    assert rejected.returncode != 0 and "Traceback" in rejected.stderr
+    assert "ClamAV" in run("docker", "run", "--rm", "--network", backend, "-v", f"{sys.argv[4]}:/client.py:ro", "-e", f"SCANNER_HOST={daemon}", "-e", "COMMAND=VERSION", "--entrypoint", "python", relay, "/client.py")
     clean = run(*base, "-e", "PAYLOAD=clean", relay, "/client.py")
     eicar = run(*base, "-e", "PAYLOAD=X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*", relay, "/client.py")
     relay_logs = run("docker", "logs", proxy, check=False)

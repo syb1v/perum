@@ -316,3 +316,4 @@
 | 313 | 2026-07-27 | 5e8d930 | fix(core): поддержано создание организации с IDN-доменом |
 | 314 | 2026-07-28 12:00 | 5d2d22a | CI/release: защищён DNS sweep, исправлены PWA fallback, Web Docker context, immutable deploy и IDN defaults |
 | 315 | 2026-07-28 15:00 | d6779a1 | test(ci): DNS regression test не зависит от локального pytest plugin; audit запускается после Web build |
+| 316 | 2026-07-28 16:00 | _______ | fix(scanner): per-school relay ограничен безопасными ClamAV-командами до upstream connection |

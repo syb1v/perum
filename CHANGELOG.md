@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-28
+
+- Per-school ClamAV relay теперь принимает только exact `VERSION` и `INSTREAM` до соединения с общим daemon: административные, session и malformed команды fail closed, а disposable topology gate доказывает отклонение `SHUTDOWN` без остановки `clamd`. Attachment capabilities остаются выключены до нового candidate run и target-node pilot.
+
 ## [Unreleased] — 2026-07-27
 
 - Cloudflare DNS sweep больше не удаляет произвольные A-записи зоны: cleanup ограничен record IDs, которыми владеют школы этой организации, поэтому stale `cf_zone_id` не может удалить platform apex/admin или ручные DNS records.

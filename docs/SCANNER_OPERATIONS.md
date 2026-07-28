@@ -69,7 +69,7 @@ The `clamd` signature volume belongs only to the node scanner. No school volume 
 
 - Scanner-capable node: minimum 8 GiB RAM. Capacity planning should reserve at least 3 GiB and 2 CPU for `clamd`, plus 128 MiB and 0.25 CPU per active relay.
 - Set `SCANNER_CLAMD_IMAGE` and `SCANNER_RELAY_IMAGE` to immutable `@sha256:` digests. Mutable tags are rejected.
-- `SCANNER_RELAY_IMAGE` is an immutable perum-core image containing `app.scanner_relay`; provisioning overrides its command to run only the byte-transparent relay.
+- `SCANNER_RELAY_IMAGE` is an immutable perum-core image containing `app.scanner_relay`; provisioning overrides its command to run the bounded relay. The relay accepts only exact null-terminated `zVERSION` and `zINSTREAM` commands before opening the shared `clamd` connection. Administrative, session, malformed and unterminated commands fail closed, so a school cannot send `SHUTDOWN` or `RELOAD` to the node daemon.
 - Leave `SCANNER_NODE_ENABLED=false` until both approved images exist and the pilot gates below pass.
 - Freshclam or the approved clamd image must update the private signature volume. Signatures older than 48 hours make readiness false and all ambiguous scans retry while content remains quarantined.
 - Do not publish TCP 3310, add app/clamd cross-network attachments, or mount school data into scanner containers.

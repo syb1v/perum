@@ -177,16 +177,16 @@ network, а `clamd` подключён только к scanner network. TCP 3310
 
 1. Реальные Docker inspect значения и image-defined runtime behaviour ещё не
    подтверждены approved images на тестовой node.
-2. Approved digest-pinned clamd и relay images отсутствуют. Relay имеет только
-   candidate; clamd/updater candidate ждёт real-Docker workflow evidence.
-3. Docker CLI отсутствовал, поэтому compose/container topology и real EICAR не
-   проверялись.
-4. PostgreSQL доступен, но локальные credentials были отклонены; migration
-   проверена только SQLite upgrade smoke.
-5. `npm` отсутствовал; frontend не изменялся, но repository-wide npm gates в этом
-   цикле не запускались.
-6. Freshclam persistence, stale-signature recovery, resource benchmark и
-   operational dashboards не проверены на реальной node.
+2. Approved digest-pinned clamd и relay images отсутствуют. Disposable GitHub
+   runs подтвердили только candidate images; security/operator approval открыт.
+3. Compose topology, EICAR, persistence/outage и bounded fairness подтверждены на
+   disposable GitHub runner, но не на целевой node.
+4. PostgreSQL 15 migration/concurrency подтверждены run `29691375244`; target-node
+   database evidence не требуется для scanner image approval и не подменяет pilot.
+5. Repository-wide frontend gates не относятся к scanner-only slice; attachment UI
+   и capability rollout до pilot не начинались.
+6. Freshclam persistence и stale-signature recovery подтверждены только disposable
+   candidate runs; target-node recovery, sizing и operational review открыты.
 
 Порядок продолжения без изменения архитектуры:
 
