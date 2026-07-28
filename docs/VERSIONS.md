@@ -320,4 +320,5 @@
 | 317 | 2026-07-28 16:30 | c758f08 | fix(ci): восстановлен scanner relay context и расширены trigger/YAML gates |
 | 318 | 2026-07-28 16:45 | 0fde735 | fix(ci): разрешена exact clamd configuration в scanner candidate context |
 | 319 | 2026-07-28 17:00 | 6d467c3 | docs(scanner): зафиксирован зелёный protocol-restricted candidate run 30375275580 |
-| 320 | 2026-07-28 17:15 | _______ | fix(scanner): Core updater требует обе свежие и валидные signature DB |
+| 320 | 2026-07-28 17:15 | 25ca2d5 | fix(scanner): Core updater требует обе свежие и валидные signature DB |
+| 321 | 2026-07-28 17:30 | _______ | fix(scanner): bounded active+pending admission закрывает unbounded relay waiters |

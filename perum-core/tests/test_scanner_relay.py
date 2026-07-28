@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.scanner_relay import _handle, _pipe, _read_command
+from app.scanner_relay import _Admission, _admit_handle, _handle, _pipe, _read_command
 
 
 class Reader:
@@ -79,5 +79,46 @@ def test_relay_rejects_unsafe_or_malformed_commands_before_upstream(command):
             )
         opener.assert_not_awaited()
         assert writer.closed
+
+    asyncio.run(run())
+
+
+def test_relay_admission_is_bounded_and_recovers():
+    admission = _Admission(2)
+    assert admission.acquire()
+    assert admission.acquire()
+    assert not admission.acquire()
+    admission.release()
+    assert admission.acquire()
+    admission.release()
+    admission.release()
+    assert admission.current == 0
+
+
+def test_relay_overflow_closes_before_upstream_and_terminal_path_releases_slot():
+    async def run():
+        options = {
+            "upstream_host": "clamd",
+            "upstream_port": 3310,
+            "connect_timeout": 1,
+            "idle_timeout": 1,
+            "total_timeout": 1,
+            "max_bytes": 1024,
+        }
+        admission = _Admission(1)
+        assert admission.acquire()
+        overflow = Writer()
+        opener = AsyncMock()
+        with patch("app.scanner_relay.asyncio.open_connection", opener):
+            await _admit_handle(admission, asyncio.Semaphore(1), stream(b"zVERSION\0"), overflow, **options)
+        opener.assert_not_awaited()
+        assert overflow.closed and admission.current == 1
+        admission.release()
+
+        malformed = Writer()
+        with patch("app.scanner_relay.asyncio.open_connection", opener):
+            await _admit_handle(admission, asyncio.Semaphore(1), stream(b"zSHUTDOWN\0"), malformed, **options)
+        opener.assert_not_awaited()
+        assert malformed.closed and admission.current == 0
 
     asyncio.run(run())

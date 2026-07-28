@@ -37,6 +37,7 @@ def test_relay_is_only_dual_homed_school_component_without_volumes():
         docker.connect_to_network.assert_awaited_once_with("school_alpha_scanner_relay", settings.SCANNER_BACKEND_NETWORK, required=True)
         assert relay["security_opt"] == ["no-new-privileges"] and relay["pids_limit"] == 32
         assert relay["environment"]["MAX_BYTES"] == str(settings.SCANNER_RELAY_MAX_BYTES)
+        assert relay["environment"]["MAX_PENDING_CONNECTIONS"] == str(settings.SCANNER_RELAY_MAX_PENDING_CONNECTIONS)
         assert docker.verify_container.await_count == 3
         relay_verify = docker.verify_container.await_args_list[-1].kwargs
         assert relay_verify["command"] == ["python", "-m", "app.scanner_relay"]

@@ -8,6 +8,21 @@ _ALLOWED_COMMANDS = {b"zVERSION\0", b"zINSTREAM\0"}
 _MAX_COMMAND_BYTES = max(map(len, _ALLOWED_COMMANDS))
 
 
+class _Admission:
+    def __init__(self, limit: int) -> None:
+        self.limit = limit
+        self.current = 0
+
+    def acquire(self) -> bool:
+        if self.current >= self.limit:
+            return False
+        self.current += 1
+        return True
+
+    def release(self) -> None:
+        self.current -= 1
+
+
 async def _close(writer: asyncio.StreamWriter) -> None:
     writer.close()
     try:
@@ -74,6 +89,23 @@ async def _handle(
         await _close(client_writer)
 
 
+async def _admit_handle(
+    admission: _Admission,
+    semaphore: asyncio.Semaphore,
+    client_reader: asyncio.StreamReader,
+    client_writer: asyncio.StreamWriter,
+    **options,
+) -> None:
+    if not admission.acquire():
+        await _close(client_writer)
+        return
+    try:
+        async with semaphore:
+            await _handle(client_reader, client_writer, **options)
+    finally:
+        admission.release()
+
+
 async def _serve() -> None:
     upstream_host = os.environ["UPSTREAM_HOST"]
     upstream_port = int(os.environ.get("UPSTREAM_PORT", "3310"))
@@ -83,22 +115,25 @@ async def _serve() -> None:
     total_timeout = float(os.environ.get("TOTAL_TIMEOUT_S", "30"))
     max_bytes = int(os.environ.get("MAX_BYTES", str(12 * 1024 * 1024)))
     max_connections = int(os.environ.get("MAX_CONNECTIONS", "4"))
-    if not 1 <= upstream_port <= 65535 or not 1 <= listen_port <= 65535 or min(connect_timeout, idle_timeout, total_timeout) <= 0 or max_bytes < 1024 or max_connections < 1:
+    max_pending_connections = int(os.environ.get("MAX_PENDING_CONNECTIONS", "8"))
+    if not 1 <= upstream_port <= 65535 or not 1 <= listen_port <= 65535 or min(connect_timeout, idle_timeout, total_timeout) <= 0 or max_bytes < 1024 or max_connections < 1 or not 0 <= max_pending_connections <= 256:
         raise ValueError("invalid relay configuration")
     semaphore = asyncio.Semaphore(max_connections)
+    admission = _Admission(max_connections + max_pending_connections)
 
     async def handle(client_reader: asyncio.StreamReader, client_writer: asyncio.StreamWriter) -> None:
-        async with semaphore:
-            await _handle(
-                client_reader,
-                client_writer,
-                upstream_host=upstream_host,
-                upstream_port=upstream_port,
-                connect_timeout=connect_timeout,
-                idle_timeout=idle_timeout,
-                total_timeout=total_timeout,
-                max_bytes=max_bytes,
-            )
+        await _admit_handle(
+            admission,
+            semaphore,
+            client_reader,
+            client_writer,
+            upstream_host=upstream_host,
+            upstream_port=upstream_port,
+            connect_timeout=connect_timeout,
+            idle_timeout=idle_timeout,
+            total_timeout=total_timeout,
+            max_bytes=max_bytes,
+        )
 
     server = await asyncio.start_server(handle, "0.0.0.0", listen_port)
     async with server:

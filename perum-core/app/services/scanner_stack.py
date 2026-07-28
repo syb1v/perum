@@ -94,6 +94,7 @@ async def ensure_school_relay(spec: StackSpec, label_slug: str, settings: Settin
     environment = {
         "LISTEN_PORT": "3310", "UPSTREAM_HOST": CLAMD_CONTAINER, "UPSTREAM_PORT": "3310",
         "MAX_CONNECTIONS": str(settings.SCANNER_RELAY_MAX_CONNECTIONS),
+        "MAX_PENDING_CONNECTIONS": str(settings.SCANNER_RELAY_MAX_PENDING_CONNECTIONS),
         "CONNECT_TIMEOUT_S": str(settings.SCANNER_RELAY_CONNECT_TIMEOUT_S),
         "IDLE_TIMEOUT_S": str(settings.SCANNER_RELAY_IDLE_TIMEOUT_S),
         "TOTAL_TIMEOUT_S": str(settings.SCANNER_RELAY_TOTAL_TIMEOUT_S),

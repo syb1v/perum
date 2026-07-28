@@ -91,6 +91,7 @@ class Settings(BaseSettings):
     SCANNER_RELAY_CPUS: float = 0.25
     SCANNER_RELAY_USER: str = "65532:65532"
     SCANNER_RELAY_MAX_CONNECTIONS: int = Field(default=4, ge=1, le=64)
+    SCANNER_RELAY_MAX_PENDING_CONNECTIONS: int = Field(default=8, ge=0, le=256)
     SCANNER_RELAY_CONNECT_TIMEOUT_S: float = Field(default=3, gt=0)
     SCANNER_RELAY_IDLE_TIMEOUT_S: float = Field(default=10, gt=0)
     SCANNER_RELAY_TOTAL_TIMEOUT_S: float = Field(default=30, gt=0)

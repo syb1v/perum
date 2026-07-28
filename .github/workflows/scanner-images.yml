@@ -7,6 +7,8 @@ on:
       - "deploy/scanner/**"
       - ".dockerignore"
       - "perum-core/app/scanner_relay.py"
+      - "perum-core/app/core/config.py"
+      - "perum-core/app/services/scanner_stack.py"
       - "perum-tenant/Dockerfile"
       - "perum-tenant/requirements.txt"
       - "perum-tenant/app/modules/media/scanner.py"
