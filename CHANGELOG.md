@@ -6,6 +6,9 @@
 
 ## [Unreleased] — 2026-07-27
 
+- Cloudflare DNS sweep больше не удаляет произвольные A-записи зоны: cleanup ограничен record IDs, которыми владеют школы этой организации, поэтому stale `cf_zone_id` не может удалить platform apex/admin или ручные DNS records.
+- Service worker больше не подменяет сетевые сбои текстовой страницей `Офлайн`: navigation/assets снова обрабатывает браузер, а activation очищает старые PWA caches после domain/deploy изменений.
+- Укреплён production pipeline: Web release собирается из корня монорепо, CI проверяет реальные Docker context/Compose, production deploy закреплён за immutable commit tags с health gate и rollback, а доменные и tenant image defaults синхронизированы с текущим IDN Core (`пэрум.рф`) и release workflow.
 - Исправлен organization domain lifecycle: Core нормализует Unicode hostname в punycode, platform UI показывает сообщения FastAPI validation detail вместо `[object Object]`, node bootstrap публикует HTTPS/on-demand TLS, Agent восстанавливает routes в TLS server, а ACME gate принимает активный primary organization domain.
 - Добавлен безопасный Ubuntu installer `deploy/scripts/deploy-core.sh` для первичного развёртывания и обновления Core: установка prerequisites/Docker, генерация закрытого production env, локальная domain-specific Web-сборка, запуск Compose и обязательный health gate. `.gitattributes` фиксирует LF для исполняемых shell-скриптов.
 - Добавлен ограниченный двухсерверный demo contour: воспроизводимый `deploy/demo-school` запускает отдельные Tenant PostgreSQL/Redis/API, общий Web и Caddy TLS без scanner/attachments/push. На Ubuntu 24.04 подтверждены Core и school HTTPS health, migrations, Web routing и login → `/api/user/me` для platform admin, school admin, teacher, student и parent; demo не считается remote-node provisioning или production rollout evidence.

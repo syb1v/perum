@@ -106,6 +106,40 @@ jobs:
       - name: Production build
         run: npm run build:web
 
+  docker-builds:
+    name: Production Docker build contexts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build Core image
+        uses: docker/build-push-action@v6
+        with:
+          context: perum-core
+          file: perum-core/Dockerfile
+          push: false
+          tags: perum-core:ci
+      - name: Build Tenant image
+        uses: docker/build-push-action@v6
+        with:
+          context: perum-tenant
+          file: perum-tenant/Dockerfile
+          push: false
+          tags: perum-tenant:ci
+      - name: Build Web image from monorepo context
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: perum-web/Dockerfile
+          push: false
+          build-args: NEXT_PUBLIC_BASE_DOMAIN=xn--l1afdm2c.xn--p1ai
+          tags: perum-web:ci
+      - name: Validate production Compose merge
+        run: |
+          docker compose --env-file deploy/.env.prod.example \
+            -f deploy/docker-compose.core.yml \
+            -f deploy/docker-compose.prod.yml config --quiet
+
   mobile-checks:
     name: perum-mobile (tsc + tests + export)
     runs-on: ubuntu-latest

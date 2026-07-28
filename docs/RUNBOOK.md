@@ -6,9 +6,16 @@ least-privilege access, host inventory и секреты из approved secret ma
 
 ## Control plane deploy
 
-1. Убедитесь, что CI зелёный для нужного commit. Текущий SSH workflow публикует
-   immutable `git-<sha>`, но deploy использует mutable `latest` и `git pull`; он не
-   гарантирует, что checkout и image совпадают с инициировавшим workflow SHA.
+GitHub Environment `production` должен содержать SSH credentials хоста, а сам
+production checkout — отдельный read-only deploy key к репозиторию для исходящего
+`git fetch`. Это разные направления доступа; входящий `DEPLOY_SSH_KEY` не даёт
+серверу права читать GitHub. Repository variables и production `.env.prod` обязаны
+содержать один и тот же punycode `PUBLIC_BASE_DOMAIN`.
+
+1. Убедитесь, что CI зелёный для нужного commit. Release публикует immutable
+   `git-<sha>` images, а production deploy detached-checkout-ит тот же SHA и
+   передаёт соответствующие image refs в Compose. Не используйте `latest` как
+   deployment identity.
    Не запускайте параллельные deploy и перед миграциями вручную зафиксируйте
    фактически pulled image digests и checkout commit.
 2. Сделайте backup control DB и проверьте restore point.

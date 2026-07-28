@@ -3,8 +3,8 @@
 # deploy-core.sh — развёртывание perum-core (Control Plane) на Ubuntu-сервере
 # ============================================================================
 # Запуск прямо на сервере:
-#   bash deploy-core.sh --domain grsn-panel.ru
-#   bash deploy-core.sh --domain grsn-panel.ru --email ops@grsn-panel.ru
+#   bash deploy-core.sh --domain xn--l1afdm2c.xn--p1ai
+#   bash deploy-core.sh --domain xn--l1afdm2c.xn--p1ai --email ops@xn--l1afdm2c.xn--p1ai
 #
 # Флаги:
 #   --domain DOMAIN       Домен платформы (ОБЯЗАТЕЛЕН)
@@ -244,7 +244,7 @@ IMAGE_REGISTRY=mirror.gcr.io
 # Образы приложений (из GHCR)
 CORE_IMAGE=ghcr.io/syb1v/perum-core:latest
 WEB_IMAGE=ghcr.io/syb1v/perum-web:latest
-TENANT_IMAGE=ghcr.io/syb1v/perum-tenant:1.0.0
+TENANT_IMAGE=ghcr.io/syb1v/perum-tenant:git-__RELEASE_SHA12__
 
 # Pull policy: always = тянуть свежий образ при каждом compose up
 CORE_PULL_POLICY=${CORE_PULL_POLICY}

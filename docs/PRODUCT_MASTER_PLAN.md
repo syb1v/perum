@@ -2,7 +2,7 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-27**.
+> эти оценки. Последнее обновление live-блока: **2026-07-28**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
@@ -29,6 +29,19 @@ optimistic updates, attachments и push. One-school pilot Stage F и multi-devic
 conflict QA явно отложены; их prerequisites вынесены в
 [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
 и remaining scope не изменены.
+
+Двухсерверный production foundation работает в текущей доменной схеме:
+`пэрум.рф` обслуживает Core/Web, `grsn-panel.ru` — organization landing/Agent.
+После domain swap устранены stale Cloudflare zone binding, удалявший platform
+apex/admin records, и PWA fallback, скрывавший DNS-сбой текстом `Офлайн`.
+Release pipeline переводится на production Docker build contexts, immutable
+commit images, domain consistency, health gate и rollback. Это operational
+foundation, но не production rollout evidence: школа ещё не provisioned,
+tenant image release, backup/restore proof и staged pilot остаются открытыми.
+Hosted release также остаётся fail-closed на dependency audit: stable Next
+`16.2.12` входит в опубликованный high-severity advisory range, тогда как fix на
+дату среза доступен только в `16.3.0-preview.8+`; production не переводится на
+preview и ждёт stable patched release.
 
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
@@ -1133,7 +1146,7 @@ Flow:
 | P2 | Billing/ЮKassa | Не начато | catalog, checkout/webhooks, refunds/reconciliation, entitlements и org/platform UI; остановку school app не развивать, enforcement спроектировать отдельно позже |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
 | P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals и grade analytics готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, read-only moderation queue/detail, academic calendar, class/teacher directories и расписание звонков. Остаются student transactions/economy и прочие функции, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, moderation actions, sensitive admin offline policy, calendar/class/teacher/bell-schedule CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
-| P3 | Production rollout | Не начато | security/accessibility/device matrix, stores, pilots, staged flags, metrics и rollback runbooks |
+| P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, DNS-only TLS, Agent heartbeat и domain routing подтверждены; CI получает production Docker contexts и immutable health-gated deploy. Остаются tenant image release и provisioning школы, backup/restore proof, security/accessibility/device matrix, stores, реальные pilots, staged flags, metrics и rollback evidence |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке
 `Live progress` в начале файла. Таблица выше хранит evidence и remaining scope по
@@ -1148,6 +1161,9 @@ workstreams; исполнимая матрица текущего Stage F нах
 - PostgreSQL и SQLite migration smoke;
 - cross-school/cross-org RBAC matrix;
 - OpenAPI drift;
+- production Docker image builds и merged Compose validation;
+- immutable image/SHA identity, совпадение Web build domain с runtime domain;
+- ownership-safe DNS reconciliation, не затрагивающая platform/manual records;
 - web typecheck/build/Playwright;
 - mobile typecheck/unit/Maestro;
 - Android/iOS preview builds;

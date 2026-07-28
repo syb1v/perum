@@ -232,15 +232,9 @@ class DnsManager:
                 result.records.append(record)
                 result.synced += 1
 
-        # Оставшиеся в cf_by_name — записи без школ (удаляем)
-        domain = org.domain or ""
-        for name, record in cf_by_name.items():
-            # Не трогаем системные записи: апекс, www
-            if record.name == domain:
-                continue
-            if record.name == f"www.{domain}":
-                continue
-            if record.cf_record_id:
+        managed_record_ids = {school.cf_record_id for school in schools if school.cf_record_id}
+        for record in cf_by_name.values():
+            if record.cf_record_id in managed_record_ids:
                 await self.delete_record(org.cf_zone_id, record.cf_record_id)
                 result.deleted += 1
 
