@@ -105,6 +105,13 @@ unsuspend, landing и startup resync теперь берут bridge IP чере�
 Agent и Caddy не подключаются к school networks. Regression test фиксирует оба
 upstream IP и отсутствие возврата к Docker-only hostname.
 
+Production rollout `30388856111` опубликовал Core/Agent image; Watchtower
+пересоздал `perum_agent` на `sha256:af3d0a56eb42`, Agent остался healthy и startup
+resync автоматически создал canonical `perum-org-sch-sch2` с app
+`172.20.0.4:3000` и Web `172.18.0.8:3000`. Временный manual route удалён;
+после удаления `https://school-1.grsn-panel.ru/health` отвечает `200`, а `/`
+штатно перенаправляет `307` на `/login`.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
