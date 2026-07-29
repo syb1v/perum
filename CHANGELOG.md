@@ -4,6 +4,14 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-29
+
+- Production deploy переведён на fail-closed immutable contract: Core update требует exact commit и immutable Core/Web images, node bootstrap требует immutable Agent/Tenant/Web images, проверяет Compose и локальную доступность образов до recreation, поддерживает `--pull-never`, сохраняет существующие секреты и блокирует параллельный deploy. Mutable Watchtower rollout удалён из node template.
+- Добавлен operator-only PostgreSQL backup/restore verifier: custom dump, SHA-256 manifest без секретов, восстановление в явно подтверждённую временную БД, сравнение безопасных schema/table counts и обязательная cleanup. Public backup API и изменение routing не добавлены.
+- Multi-school isolation smoke теперь принимает credentials/hosts только через environment, явно проверяет ожидаемые HTTP statuses и опционально distinct Docker silos. k6 pilot ограничен 25 VU/300 секундами и выполняет только read-only health requests.
+- Добавлен scheduled read-only synthetic monitor на основе pilot evidence collector с bounded artifact retention и проверкой конфигурации без вывода токенов.
+- Web обновлён до стабильного Next.js `16.2.12`, а runtime PostCSS закреплён на `8.5.25`; typecheck и production build проходят. Sharp advisory остаётся upstream blocker: Next 16.2.12 требует `sharp 0.34.x`, а npm предлагает только несовместимый downgrade Next.
+
 ## [Unreleased] — 2026-07-28
 
 - Tenant version повышена до `1.1.3` для immutable release текущего descriptor/code в GHCR и регистрации current release в Core; это заменяет несуществующий node fallback `perum-tenant:1.0.0`, из-за которого provisioning школы завершался pull 404.

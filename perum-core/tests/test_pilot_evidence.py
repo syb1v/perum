@@ -4,7 +4,7 @@ from uuid import UUID
 
 import pytest
 
-from tools.pilot_evidence import EvidenceCollector, EvidenceError, HttpClient, MAX_RESPONSE_BYTES, NoRedirect, SIMULATIONS, render_markdown, synthetic_evidence
+from tools.pilot_evidence import EndpointSyntheticCollector, EvidenceCollector, EvidenceError, HttpClient, MAX_RESPONSE_BYTES, NoRedirect, SIMULATIONS, render_markdown, synthetic_evidence
 
 
 SCHOOL = UUID("12345678-1234-5678-9234-567812345678")
@@ -51,6 +51,43 @@ def test_collector_redacts_and_requires_unavailable_proofs_for_go():
     assert "private.example" not in serialized
     assert "secret" not in serialized
     assert evidence["pilot"].startswith("pilot-")
+
+
+def test_endpoint_synthetic_uses_only_public_endpoints_and_is_not_pilot_evidence():
+    client = FakeClient()
+    calls = []
+    original_get = client.get
+
+    def tracked_get(path, metrics=False):
+        calls.append((path, metrics))
+        return original_get(path, metrics)
+
+    client.get = tracked_get
+    evidence = EndpointSyntheticCollector(client, SCHOOL).collect()
+
+    assert evidence["decision"] == "GO"
+    assert evidence["evidence_kind"] == "public_endpoint_monitor"
+    assert evidence["synthetic"] is True
+    assert set(evidence["checks"]) == {"public_health", "public_tenant_discovery"}
+    assert calls == [("/health", False)]
+    assert "pilot" not in evidence
+
+
+def test_pilot_evidence_still_requires_internal_metrics():
+    client = FakeClient()
+    original_get = client.get
+
+    def metrics_unavailable(path, metrics=False):
+        if path == "/metrics":
+            return 0, None
+        return original_get(path, metrics)
+
+    client.get = metrics_unavailable
+    evidence = EvidenceCollector(client, SCHOOL, b"test-key").collect()
+
+    assert evidence["checks"]["descriptor_metrics_baseline"] is False
+    assert "descriptor_metrics_baseline" in evidence["findings"]
+    assert evidence["decision"] == "NO-GO"
 
 
 def test_synthetic_modes_are_explicit_and_no_go():

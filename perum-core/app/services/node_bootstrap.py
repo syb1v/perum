@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import secrets
+import shlex
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -23,9 +25,19 @@ from app.models import EnrollmentToken, Node, Organization, Release
 
 logger = logging.getLogger("perum.node_bootstrap")
 
+IMMUTABLE_IMAGE_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._:/@-]*(?:@sha256:[0-9a-fA-F]{64}|:git-[0-9a-fA-F]{12,})$"
+)
+
 
 def _public_core_url(settings) -> str:
     return settings.PUBLIC_CORE_URL or f"https://admin.{settings.PUBLIC_BASE_DOMAIN}"
+
+
+def _validate_app_image(name: str, image: str) -> str:
+    if not image or not IMMUTABLE_IMAGE_RE.search(image):
+        raise ValueError(f"{name} must use an immutable digest or git-<sha> tag of at least 12 characters")
+    return image
 
 
 # docker-compose.yml ноды. Плейсхолдеры {{...}} подставляются генератором; ${...} —
@@ -38,11 +50,7 @@ services:
     image: {{ agent_image }}
     container_name: perum_agent
     restart: unless-stopped
-    pull_policy: always
-    labels:
-      # Watchtower авто-обновляет ТОЛЬКО воркор при выходе нового образа ядра
-      # (CI пушит ghcr .../perum-core:latest при каждом изменении ядра).
-      com.centurylinklabs.watchtower.enable: "true"
+    pull_policy: missing
     environment:
       ROLE: "org_agent"
       ENROLLMENT_TOKEN: "${ENROLLMENT_TOKEN}"
@@ -78,6 +86,7 @@ services:
     image: {{ image_registry }}/library/postgres:15-alpine
     container_name: perum_node_db
     restart: unless-stopped
+    pull_policy: missing
     environment:
       POSTGRES_USER: perum
       POSTGRES_PASSWORD: "${NODE_DB_PW}"
@@ -96,6 +105,7 @@ services:
     image: {{ image_registry }}/library/redis:7-alpine
     container_name: shared_redis
     restart: unless-stopped
+    pull_policy: missing
     command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "allkeys-lru"]
     networks:
       - perum_internal
@@ -104,6 +114,7 @@ services:
     image: tecnativa/docker-socket-proxy:0.3
     container_name: docker_proxy
     restart: unless-stopped
+    pull_policy: missing
     environment:
       CONTAINERS: 1
       IMAGES: 1
@@ -122,6 +133,7 @@ services:
     image: {{ image_registry }}/library/caddy:2-alpine
     container_name: caddy
     restart: unless-stopped
+    pull_policy: missing
     ports:
       - "80:80"
       - "443:443"
@@ -132,23 +144,13 @@ services:
     networks:
       - perum_internal
 
-  # Авто-обновление воркора: следит за реестром и при выходе нового образа ядра
-  # сам пуллит его и пересоздаёт perum_agent (только контейнеры с label
-  # watchtower.enable=true — школы он не трогает). Так нода обновляется без SSH,
-  # сразу после того как CI (GitHub Actions) опубликует новый perum-core.
-  watchtower:
-    image: ghcr.io/containrrr/watchtower:latest
-    container_name: perum_watchtower
+  perum_web:
+    image: ${WEB_IMAGE}
+    container_name: perum_web
     restart: unless-stopped
+    pull_policy: missing
     environment:
-      WATCHTOWER_LABEL_ENABLE: "true"
-      WATCHTOWER_CLEANUP: "true"
-      WATCHTOWER_POLL_INTERVAL: "120"
-      # Образ watchtower использует старую версию Docker API client (1.25); на свежем
-      # демоне (≥API 1.40) без этого падает «client version too old».
-      DOCKER_API_VERSION: "1.44"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      NODE_ENV: production
     networks:
       - perum_internal
 
@@ -194,6 +196,12 @@ SCRIPT_TEMPLATE = """\
 set -euo pipefail
 
 DIR=/opt/perum-node
+PULL_NEVER=false
+if [[ "${1:-}" == "--pull-never" ]]; then
+  PULL_NEVER=true
+  shift
+fi
+[[ $# -eq 0 ]] || { echo "Неизвестный аргумент: $1" >&2; exit 1; }
 echo "==> ПЭРУМ нода: {{ node_name }}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -203,16 +211,35 @@ fi
 
 mkdir -p "$DIR/caddy"
 cd "$DIR"
+exec 9>"$DIR/.deploy.lock"
+flock -n 9 || { echo "Другое развёртывание уже выполняется в $DIR" >&2; exit 1; }
 
-NODE_DB_PW=$(openssl rand -hex 16)
-SECRET_KEY=$(openssl rand -hex 24)
-cat > .env <<ENVEOF
-ENROLLMENT_TOKEN={{ enrollment_token }}
-AGENT_TOKEN={{ agent_token }}
+env_value() {
+  local key="$1" line
+  [[ -f .env ]] || return 1
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "${line%%=*}" == "$key" ]] && { printf '%s' "${line#*=}"; return 0; }
+  done < .env
+  return 1
+}
+
+ENROLLMENT_TOKEN=$(env_value ENROLLMENT_TOKEN || printf '%s' {{ enrollment_token_shell }})
+AGENT_TOKEN=$(env_value AGENT_TOKEN || printf '%s' {{ agent_token_shell }})
+NODE_DB_PW=$(env_value NODE_DB_PW || openssl rand -hex 16)
+SECRET_KEY=$(env_value SECRET_KEY || openssl rand -hex 24)
+umask 077
+ENV_TMP=$(mktemp "$DIR/.env.tmp.XXXXXX")
+cat > "$ENV_TMP" <<ENVEOF
+ENROLLMENT_TOKEN=$ENROLLMENT_TOKEN
+AGENT_TOKEN=$AGENT_TOKEN
+AGENT_IMAGE={{ agent_image }}
 TENANT_IMAGE={{ tenant_image }}
+WEB_IMAGE={{ web_image }}
 NODE_DB_PW=$NODE_DB_PW
 SECRET_KEY=$SECRET_KEY
 ENVEOF
+chmod 600 "$ENV_TMP"
+mv -f "$ENV_TMP" .env
 
 cat > docker-compose.yml <<'COMPOSEEOF'
 {{ compose }}
@@ -223,7 +250,14 @@ cat > caddy/Caddyfile <<'CADDYEOF'
 CADDYEOF
 
 echo "==> Поднимаю стек ноды…"
-docker compose pull >/dev/null 2>&1 || true
+docker compose config -q
+for image in {{ required_images }}; do
+  if [[ "$PULL_NEVER" == true ]]; then
+    docker image inspect "$image" >/dev/null
+  else
+    docker image inspect "$image" >/dev/null 2>&1 || docker pull "$image"
+  fi
+done
 docker compose up -d
 
 echo "==> Готово. Проверка через ~30с: docker ps; docker logs perum_agent"
@@ -238,9 +272,9 @@ class BootstrapResult:
     enrollment_token: str
 
 
-def _render_compose(settings) -> str:
+def _render_compose(settings, agent_image: str | None = None) -> str:
     out = COMPOSE_TEMPLATE
-    out = out.replace("{{ agent_image }}", settings.AGENT_IMAGE)
+    out = out.replace("{{ agent_image }}", agent_image or settings.AGENT_IMAGE)
     out = out.replace("{{ core_url }}", _public_core_url(settings))
     out = out.replace("{{ base_domain }}", settings.PUBLIC_BASE_DOMAIN)
     out = out.replace("{{ image_registry }}", settings.IMAGE_REGISTRY)
@@ -254,6 +288,16 @@ async def generate_bootstrap_script(
     org: Organization | None = None,
 ) -> BootstrapResult:
     settings = get_settings()
+
+    agent_image = _validate_app_image("AGENT_IMAGE", settings.AGENT_IMAGE)
+    web_image = _validate_app_image("WEB_IMAGE", settings.WEB_IMAGE)
+
+    current = await db.scalar(
+        select(Release).where(Release.channel == "stable", Release.is_current.is_(True)).limit(1)
+    )
+    tenant_image = _validate_app_image(
+        "TENANT_IMAGE", (current.image or current.version_tag) if current else settings.TENANT_IMAGE
+    )
 
     raw_token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -271,21 +315,26 @@ async def generate_bootstrap_script(
     node.enrollment_token_id = enrollment_token.id
     await db.commit()
 
-    # Образ тенанта для школ на ноде = текущий релиз (пуллящийся из реестра).
-    current = await db.scalar(
-        select(Release).where(Release.channel == "stable", Release.is_current.is_(True)).limit(1)
-    )
-    tenant_image = (current.image or current.version_tag) if current else settings.TENANT_IMAGE
-
-    compose = _render_compose(settings)
+    compose = _render_compose(settings, agent_image)
+    required_images = [
+        agent_image,
+        tenant_image,
+        web_image,
+        "tecnativa/docker-socket-proxy:0.3",
+        f"{settings.IMAGE_REGISTRY}/library/postgres:15-alpine",
+        f"{settings.IMAGE_REGISTRY}/library/redis:7-alpine",
+        f"{settings.IMAGE_REGISTRY}/library/caddy:2-alpine",
+    ]
     filename = f"perum-node-{node.name}-bootstrap.sh"
     script = SCRIPT_TEMPLATE
     script = script.replace("{{ node_name }}", node.name)
     script = script.replace("{{ org_slug }}", org.slug if org else "pool")
     script = script.replace("{{ filename }}", filename)
-    script = script.replace("{{ enrollment_token }}", raw_token)
-    script = script.replace("{{ agent_token }}", settings.AGENT_TOKEN)
+    script = script.replace("{{ enrollment_token_shell }}", shlex.quote(raw_token))
+    script = script.replace("{{ agent_token_shell }}", shlex.quote(settings.AGENT_TOKEN))
     script = script.replace("{{ tenant_image }}", tenant_image)
+    script = script.replace("{{ web_image }}", web_image)
+    script = script.replace("{{ required_images }}", " ".join(f"'{image}'" for image in required_images))
     script = script.replace("{{ compose }}", compose)
     script = script.replace("{{ caddyfile }}", CADDYFILE.replace("{{ core_url }}", _public_core_url(settings)))
 

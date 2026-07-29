@@ -141,6 +141,37 @@ class EvidenceCollector:
         return "pilot-" + hmac.new(self.hmac_key, value.encode(), hashlib.sha256).hexdigest()[:16]
 
 
+@dataclass
+class EndpointSyntheticCollector:
+    client: Any
+    school_public_id: UUID
+
+    def collect(self) -> dict[str, Any]:
+        health_status, health = self.client.get("/health")
+        discovery_status, descriptor = self.client.post(
+            "/api/public/tenant-discovery",
+            {"school_public_id": str(self.school_public_id)},
+        )
+        descriptor_valid = False
+        if discovery_status == 200:
+            try:
+                descriptor_valid = TenantDiscoveryResponse.model_validate(descriptor).school_id == self.school_public_id
+            except (TypeError, ValueError):
+                pass
+        checks = {
+            "public_health": health_status == 200 and health == {"status": "ok"},
+            "public_tenant_discovery": descriptor_valid,
+        }
+        findings = [name for name, passed in checks.items() if not passed]
+        return {
+            "synthetic": True,
+            "evidence_kind": "public_endpoint_monitor",
+            "decision": "NO-GO" if findings else "GO",
+            "checks": checks,
+            "findings": findings,
+        }
+
+
 def synthetic_evidence(mode: str) -> dict[str, Any]:
     findings = {
         "unknown-release": ["descriptor_schema_valid", "descriptor_release_match"],
@@ -189,11 +220,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=Path("pilot-evidence"))
     parser.add_argument("--simulate", choices=SIMULATIONS)
     parser.add_argument("--template", action="store_true")
+    parser.add_argument("--endpoint-synthetic", action="store_true")
     args = parser.parse_args(argv)
+    selected_modes = sum((args.template, bool(args.simulate), args.endpoint_synthetic))
+    if selected_modes > 1:
+        parser.error("--template, --simulate, and --endpoint-synthetic are mutually exclusive")
     if args.template:
         evidence = template_evidence()
     elif args.simulate:
         evidence = synthetic_evidence(args.simulate)
+    elif args.endpoint_synthetic:
+        if not args.base_url or not args.school_public_id:
+            parser.error("--base-url and --school-public-id are required")
+        evidence = EndpointSyntheticCollector(HttpClient(args.base_url, ""), args.school_public_id).collect()
     else:
         if not args.base_url or not args.school_public_id:
             parser.error("--base-url and --school-public-id are required")

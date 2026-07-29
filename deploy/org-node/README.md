@@ -1,8 +1,8 @@
 # Legacy org-node reference
 
-`docker-compose.yml` в этом каталоге — ранний reference template. Он не содержит
-полный актуальный node stack и, в частности, монтирует raw Docker socket. Не
-используйте его для production или как bootstrap instruction.
+Ранний `docker-compose.yml` удалён: он не содержал полный актуальный node stack,
+использовал mutable images и монтировал raw Docker socket. Не восстанавливайте его
+для production или как bootstrap instruction.
 
 Актуальный compose/script генерируется Core из
 `perum-core/app/services/node_bootstrap.py`. Процедура описана в

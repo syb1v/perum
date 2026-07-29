@@ -165,9 +165,11 @@ creates a proxy/TLS owner for a school assigned to a remote node; it removes leg
 Core routes and node Caddy owns DNS/TLS/app routing. Agent resync removes landing
 routes whose managed container is absent and health counts actual
 `com.perum.role=app` school containers. Node installer uses `pull_policy: missing`;
-normal updates remain Watchtower-managed, while a verified image can be transferred
-with `docker save | ssh ... docker load` and started with `--pull never` during a
-GHCR egress outage.
+mutable Watchtower rollout удалён из version-controlled template. Agent/Web
+обновляются только явным immutable deploy, а verified image можно передать через
+`docker save | ssh ... docker load` и запустить с `--pull-never` во время GHCR
+egress outage. Template сохраняет существующие node secrets, валидирует
+Compose/images до recreation и использует host-local deploy lock.
 
 Последний client timeout был вызван DNS policy defect: `grsn-panel.ru` и
 `school-1.grsn-panel.ru` имели Cloudflare `proxied=false`, поэтому клиенты/VPN
@@ -224,10 +226,22 @@ Release pipeline переводится на production Docker build contexts, i
 commit images, domain consistency, health gate и rollback. Это operational
 foundation, но не production rollout evidence: школа ещё не provisioned,
 tenant image release, backup/restore proof и staged pilot остаются открытыми.
-Hosted release также остаётся fail-closed на dependency audit: stable Next
-`16.2.12` входит в опубликованный high-severity advisory range, тогда как fix на
-дату среза доступен только в `16.3.0-preview.8+`; production не переводится на
-preview и ждёт stable patched release.
+Hosted release также остаётся fail-closed на dependency audit. Stable Next обновлён
+до `16.2.12`, runtime PostCSS override — до `8.5.25`; Web typecheck/build проходят.
+High advisory остаётся в upstream `sharp`: Next `16.2.12` требует `0.34.x`, тогда
+как patched `sharp` начинается с `0.35.0`, а npm предлагает несовместимый downgrade
+Next. Production не получает forced dependency graph; нужен совместимый stable Next.
+
+Declarative resilience tooling реализован, но production evidence намеренно не
+заявляется до operator run. Core update требует exact 40-character commit и immutable
+Core/Web refs; node bootstrap требует immutable Agent/Tenant/Web refs, поддерживает
+offline preflight и больше не ротирует persisted secrets при rerun. Operator-only
+backup verifier создаёт custom PostgreSQL dump, SHA-256 manifest и восстанавливает
+его в явно подтверждённую temporary database с обязательной cleanup. Isolation smoke
+и bounded k6 pilot параметризованы, scheduled synthetic monitor добавлен. Открытые
+gates: применить новый template к Core/node без compose drift, выполнить реальный
+control/Tenant restore proof, минимум двухшкольный isolation/load pilot и настроить
+GitHub Environment variables/secrets для scheduled monitor.
 
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда

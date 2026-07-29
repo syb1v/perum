@@ -62,6 +62,11 @@ class Settings(BaseSettings):
         description="Image used when provisioning new org stacks",
     )
 
+    WEB_IMAGE: str = Field(
+        default="",
+        description="Immutable Web image used on organization nodes",
+    )
+
     IMAGE_REGISTRY: str = Field(
         default="docker.io",
         description=(
@@ -140,7 +145,7 @@ class Settings(BaseSettings):
     AGENT_PORT: int = Field(default=3001)
     # Образ ядра, который ставится на ноде как воркер (ROLE=org_agent). Тот же
     # perum-core, что и платформа. Bootstrap-скрипт ноды подставляет его в compose.
-    AGENT_IMAGE: str = Field(default="ghcr.io/syb1v/perum-core:latest")
+    AGENT_IMAGE: str = Field(default="")
     # Публичный URL ядра, по которому нода делает enroll и куда школы шлют телеметрию.
     # Пусто → выводится как https://admin.<PUBLIC_BASE_DOMAIN>.
     PUBLIC_CORE_URL: str = Field(default="")

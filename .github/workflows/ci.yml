@@ -211,4 +211,4 @@ jobs:
       - name: Parse workflow YAML
         run: |
           pip install pyyaml
-          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml')]"
+          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml')]"

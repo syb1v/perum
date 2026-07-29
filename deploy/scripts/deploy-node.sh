@@ -5,7 +5,9 @@
 # Узел управляет школьными стеками локально; ядро даёт команды через HTTP API.
 # Запуск на сервере ноды:
 #   sudo bash deploy-node.sh --core-url https://admin.grsn-panel.ru --enroll-token <TOKEN> \
-#     --tenant-image ghcr.io/syb1v/perum-tenant:git-<sha12>
+#     --agent-image ghcr.io/syb1v/perum-core:git-<sha12> \
+#     --tenant-image ghcr.io/syb1v/perum-tenant:git-<sha12> \
+#     --web-image ghcr.io/syb1v/perum-web:git-<sha12>
 #
 # Токен подключения (enrollment token) получается в ядре:
 #   Консоль платформы → Инфраструктура → Создать ноду → скопировать токен
@@ -15,11 +17,14 @@
 #   --enroll-token TOKEN  Токен подключения к ядру (ОБЯЗАТЕЛЕН)
 #   --domain DOMAIN       Домен орг для авто-HTTPS (если пусто — pool-нода, только HTTP)
 #   --agent-token TOKEN   AGENT_TOKEN (по умолчанию из переменной или auto)
+#   --agent-image IMG     Immutable образ агента (ОБЯЗАТЕЛЕН)
 #   --tenant-image IMG    Current immutable Tenant release из Core (ОБЯЗАТЕЛЕН)
+#   --web-image IMG       Immutable образ Web (ОБЯЗАТЕЛЕН)
 #   --registry REGISTRY   Реестр базовых образов (по умолчанию: mirror.gcr.io)
 #   --dir DIR             Каталог установки (по умолчанию: /opt/perum-node)
 #   --dry-run             Только показать, что будет сделано
 #   --no-docker           Пропустить установку Docker
+#   --pull-never          Не обращаться к registry, использовать загруженные образы
 #   -h, --help            Справка
 # ============================================================================
 
@@ -43,15 +48,20 @@ ENROLL_TOKEN=""
 ORG_DOMAIN="${ORG_DOMAIN:-}"
 AGENT_TOKEN="${AGENT_TOKEN:-}"
 TENANT_IMAGE="${TENANT_IMAGE:-}"
+WEB_IMAGE="${WEB_IMAGE:-}"
 IMAGE_REGISTRY="${IMAGE_REGISTRY:-mirror.gcr.io}"
-AGENT_IMAGE="${AGENT_IMAGE:-ghcr.io/syb1v/perum-core:latest}"
+AGENT_IMAGE="${AGENT_IMAGE:-}"
 PUBLIC_BASE_DOMAIN="${PUBLIC_BASE_DOMAIN:-}"
 INSTALL_DIR="/opt/perum-node"
 DRY_RUN=false
 NO_DOCKER=false
+PULL_NEVER=false
+AGENT_IMAGE_EXPLICIT=false
+TENANT_IMAGE_EXPLICIT=false
+WEB_IMAGE_EXPLICIT=false
 
 usage() {
-  sed -n '3,22p' "$0" | grep -E '^#( |$)' | sed 's/^# \?//'
+  sed -n '3,27p' "$0" | grep -E '^#( |$)' | sed 's/^# \?//'
   exit 0
 }
 
@@ -61,15 +71,44 @@ while [[ $# -gt 0 ]]; do
     --enroll-token)  ENROLL_TOKEN="$2"; shift 2 ;;
     --domain)        ORG_DOMAIN="$2"; shift 2 ;;
     --agent-token)   AGENT_TOKEN="$2"; shift 2 ;;
-    --tenant-image)  TENANT_IMAGE="$2"; shift 2 ;;
+    --agent-image)   AGENT_IMAGE="$2"; AGENT_IMAGE_EXPLICIT=true; shift 2 ;;
+    --tenant-image)  TENANT_IMAGE="$2"; TENANT_IMAGE_EXPLICIT=true; shift 2 ;;
+    --web-image)     WEB_IMAGE="$2"; WEB_IMAGE_EXPLICIT=true; shift 2 ;;
     --registry)      IMAGE_REGISTRY="$2"; shift 2 ;;
     --dir)           INSTALL_DIR="$2"; shift 2 ;;
     --dry-run)       DRY_RUN=true; shift ;;
     --no-docker)     NO_DOCKER=true; shift ;;
+    --pull-never)    PULL_NEVER=true; shift ;;
     -h|--help)       usage ;;
     *) die "Неизвестный аргумент: $1. Используйте --help" ;;
   esac
 done
+
+env_value() {
+  local key="$1" line
+  if [[ -r "${INSTALL_DIR}/.env" ]]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      [[ "${line%%=*}" == "$key" ]] && { printf '%s' "${line#*=}"; return 0; }
+    done < "${INSTALL_DIR}/.env"
+    return 1
+  fi
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "${line%%=*}" == "$key" ]] && { printf '%s' "${line#*=}"; return 0; }
+  done < <(sudo -n cat "${INSTALL_DIR}/.env" 2>/dev/null || true)
+  return 1
+}
+
+ENROLL_TOKEN=$(env_value ENROLLMENT_TOKEN || printf '%s' "$ENROLL_TOKEN")
+AGENT_TOKEN=$(env_value AGENT_TOKEN || printf '%s' "$AGENT_TOKEN")
+if [[ "$AGENT_IMAGE_EXPLICIT" != true ]]; then
+  AGENT_IMAGE=$(env_value AGENT_IMAGE || printf '%s' "$AGENT_IMAGE")
+fi
+if [[ "$TENANT_IMAGE_EXPLICIT" != true ]]; then
+  TENANT_IMAGE=$(env_value TENANT_IMAGE || printf '%s' "$TENANT_IMAGE")
+fi
+if [[ "$WEB_IMAGE_EXPLICIT" != true ]]; then
+  WEB_IMAGE=$(env_value WEB_IMAGE || printf '%s' "$WEB_IMAGE")
+fi
 
 # ── Интерактивный режим ──────────────────────────────────────────────────
 if [[ -z "$CORE_URL" ]]; then
@@ -95,9 +134,17 @@ if [[ -z "$PUBLIC_BASE_DOMAIN" ]]; then
   PUBLIC_BASE_DOMAIN=$(echo "$CORE_URL" | sed -E 's|https?://||; s|^admin\.||; s|/.*||; s|:.*||')
   warn "PUBLIC_BASE_DOMAIN определён из CORE_URL: ${PUBLIC_BASE_DOMAIN}"
 fi
-[[ -z "$TENANT_IMAGE" ]] && die "TENANT_IMAGE обязателен: передайте --tenant-image с current immutable release из Core"
-[[ "$TENANT_IMAGE" =~ @sha256:[0-9a-fA-F]{64}$ || "$TENANT_IMAGE" =~ :git-[0-9a-fA-F]{12,}$ ]] \
-  || die "TENANT_IMAGE должен быть immutable digest или git-<sha> tag"
+validate_app_image() {
+  local name="$1" image="$2"
+  [[ -n "$image" ]] || die "$name обязателен"
+  [[ "$image" =~ ^[A-Za-z0-9][A-Za-z0-9._:/@-]*$ ]] || die "$name содержит недопустимые символы"
+  [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ ]] \
+    || die "$name должен быть immutable digest или git-<sha> tag длиной не менее 12 символов"
+}
+
+validate_app_image "AGENT_IMAGE" "$AGENT_IMAGE"
+validate_app_image "TENANT_IMAGE" "$TENANT_IMAGE"
+validate_app_image "WEB_IMAGE" "$WEB_IMAGE"
 
 # ── Проверка прав ────────────────────────────────────────────────────────
 if [[ "$DRY_RUN" != true ]]; then
@@ -151,24 +198,29 @@ fi
 # ── [2/8] Создание каталога ──────────────────────────────────────────────
 step "2/8" "Создание каталога ${INSTALL_DIR}..."
 run "mkdir -p ${INSTALL_DIR}/caddy"
-cd "$INSTALL_DIR" 2>/dev/null || run "cd ${INSTALL_DIR}"
+if [[ "$DRY_RUN" != true ]]; then
+  run "mkdir ${INSTALL_DIR}/.deploy.lock.d" || die "Другое развёртывание уже выполняется в ${INSTALL_DIR}"
+  trap 'run "rmdir ${INSTALL_DIR}/.deploy.lock.d"' EXIT
+fi
 
 # ── [3/8] .env (секреты) ─────────────────────────────────────────────────
 step "3/8" "Генерация секретов..."
 
-NODE_DB_PW=$(openssl rand -hex 16)
-SECRET_KEY=$(openssl rand -hex 24)
+NODE_DB_PW=$(env_value NODE_DB_PW || openssl rand -hex 16)
+SECRET_KEY=$(env_value SECRET_KEY || openssl rand -hex 24)
 
-run "cat > ${INSTALL_DIR}/.env <<'ENVEOF'
+run "umask 077; env_tmp=\$(mktemp ${INSTALL_DIR}/.env.tmp.XXXXXX); cat > \"\$env_tmp\" <<'ENVEOF'
 ENROLLMENT_TOKEN=${ENROLL_TOKEN}
 AGENT_TOKEN=${AGENT_TOKEN}
+AGENT_IMAGE=${AGENT_IMAGE}
 TENANT_IMAGE=${TENANT_IMAGE}
+WEB_IMAGE=${WEB_IMAGE}
 NODE_DB_PW=${NODE_DB_PW}
 SECRET_KEY=${SECRET_KEY}
 CORE_URL=${CORE_URL}
 ACME_EMAIL=${ACME_EMAIL:-ops@perum.ru}
-ENVEOF"
-run "chmod 600 ${INSTALL_DIR}/.env"
+ENVEOF
+chmod 600 \"\$env_tmp\" && mv -f \"\$env_tmp\" ${INSTALL_DIR}/.env"
 ok ".env создан"
 
 # ── [4/8] docker-compose.yml ─────────────────────────────────────────────
@@ -182,8 +234,6 @@ services:
     container_name: perum_agent
     restart: unless-stopped
     pull_policy: missing
-    labels:
-      com.centurylinklabs.watchtower.enable: \"true\"
     environment:
       ROLE: org_agent
       ENROLLMENT_TOKEN: \${ENROLLMENT_TOKEN}
@@ -219,6 +269,7 @@ services:
     image: ${IMAGE_REGISTRY}/library/postgres:15-alpine
     container_name: perum_node_db
     restart: unless-stopped
+    pull_policy: missing
     environment:
       POSTGRES_USER: perum
       POSTGRES_PASSWORD: \${NODE_DB_PW}
@@ -237,6 +288,7 @@ services:
     image: ${IMAGE_REGISTRY}/library/redis:7-alpine
     container_name: shared_redis
     restart: unless-stopped
+    pull_policy: missing
     command: [\"redis-server\", \"--maxmemory\", \"128mb\", \"--maxmemory-policy\", \"allkeys-lru\"]
     networks:
       - perum_internal
@@ -245,6 +297,7 @@ services:
     image: tecnativa/docker-socket-proxy:0.3
     container_name: docker_proxy
     restart: unless-stopped
+    pull_policy: missing
     environment:
       CONTAINERS: 1
       IMAGES: 1
@@ -263,6 +316,7 @@ services:
     image: ${IMAGE_REGISTRY}/library/caddy:2-alpine
     container_name: caddy
     restart: unless-stopped
+    pull_policy: missing
     ports:
       - '80:80'
       - '443:443'
@@ -277,28 +331,12 @@ services:
       - perum_internal
 
   perum_web:
-    image: ghcr.io/syb1v/perum-web:latest
+    image: \${WEB_IMAGE}
     container_name: perum_web
     restart: unless-stopped
     pull_policy: missing
-    labels:
-      com.centurylinklabs.watchtower.enable: "true"
     environment:
       NODE_ENV: production
-    networks:
-      - perum_internal
-
-  watchtower:
-    image: ghcr.io/containrrr/watchtower:latest
-    container_name: perum_watchtower
-    restart: unless-stopped
-    environment:
-      WATCHTOWER_LABEL_ENABLE: \"true\"
-      WATCHTOWER_CLEANUP: \"true\"
-      WATCHTOWER_POLL_INTERVAL: \"120\"
-      DOCKER_API_VERSION: \"1.44\"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - perum_internal
 
@@ -319,7 +357,7 @@ step "5/8" "Запись Caddyfile..."
 
 if [[ -n "$ORG_DOMAIN" ]]; then
   # Выделенная нода под оргу: HTTPS с конкретным доменом
-  cat > ${INSTALL_DIR}/caddy/Caddyfile <<CADDYEOF
+  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
     email ops@perum.ru
@@ -331,11 +369,11 @@ if [[ -n "$ORG_DOMAIN" ]]; then
 ${ORG_DOMAIN} {
     respond "PERUM node OK" 200
 }
-CADDYEOF
+CADDYEOF"
   ok "Caddyfile с авто-HTTPS для ${ORG_DOMAIN}"
 else
   # Pool-нода: только HTTP, роуты управляются агентом через admin API
-  cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
+  run "cat > ${INSTALL_DIR}/caddy/Caddyfile <<'CADDYEOF'
 {
     admin 0.0.0.0:2019
     auto_https off
@@ -344,24 +382,25 @@ else
 :80 {
     respond "PERUM node OK" 200
 }
-CADDYEOF
+CADDYEOF"
 fi
 ok "Caddyfile записан"
 
 # ── [6/8] Предзагрузка образов ─────────────────────────────────────────
-if [[ "$DRY_RUN" != true ]]; then
-  step "6/8" "Предзагрузка образов..."
-  for img in tecnativa/docker-socket-proxy:0.3 ${IMAGE_REGISTRY}/library/postgres:15-alpine ${IMAGE_REGISTRY}/library/redis:7-alpine ${IMAGE_REGISTRY}/library/caddy:2-alpine; do
-    run "docker image inspect $img &>/dev/null || docker pull $img 2>/dev/null || docker pull ${IMAGE_REGISTRY}/$img 2>/dev/null || true"
-  done
-  ok "Образы предзагружены"
-fi
+step "6/8" "Проверка конфигурации и образов..."
+run "cd '${INSTALL_DIR}' && docker compose config -q"
+for img in "$AGENT_IMAGE" "$TENANT_IMAGE" "$WEB_IMAGE" "tecnativa/docker-socket-proxy:0.3" "${IMAGE_REGISTRY}/library/postgres:15-alpine" "${IMAGE_REGISTRY}/library/redis:7-alpine" "${IMAGE_REGISTRY}/library/caddy:2-alpine"; do
+  if [[ "$PULL_NEVER" == true ]]; then
+    run "docker image inspect '$img' >/dev/null"
+  else
+    run "docker image inspect '$img' >/dev/null 2>&1 || docker pull '$img'"
+  fi
+done
+ok "Конфигурация и образы проверены"
 
 # ── [7/8] Запуск стека ──────────────────────────────────────────────────
 step "7/8" "Запуск стека ноды..."
-cd "$INSTALL_DIR"
-run "docker compose pull 2>&1" || warn "Пуллинг образов частично не удался (может потребоваться зеркало)"
-run "docker compose up -d"
+run "cd ${INSTALL_DIR} && docker compose up -d"
 ok "Стек запущен"
 
 # ── [8/8] Проверка готовности ───────────────────────────────────────────

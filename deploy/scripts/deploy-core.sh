@@ -11,6 +11,9 @@
 #   --email EMAIL         Email для ACME/TLS (без него: admin@<domain>)
 #   --repo URL            URL репо  (по умолчанию: git@github.com:syb1v/perum.git)
 #   --branch BRANCH       Ветка     (по умолчанию: main)
+#   --commit SHA          Точный 40-символьный commit для --update
+#   --core-image IMG      Образ Core (immutable для --update/--no-build)
+#   --web-image IMG       Образ Web (immutable для --update)
 #   --path DIR            Путь      (по умолчанию: /opt/perum)
 #   --no-docker           Пропустить установку Docker (уже есть)
 #   --no-clone            Пропустить клон репо (уже есть)
@@ -19,10 +22,13 @@
 #   --skip-secrets        Не генерировать секреты (использовать готовый .env.prod)
 #   --dry-run             Только показать, что будет сделано
 #   --update              Режим обновления (без первичной настройки)
+#   --pull-never          Не обращаться к registry, использовать локальные образы
 #   -h, --help            Справка
 # ============================================================================
 
-set -euo pipefail
+set -Eeuo pipefail
+
+ORIGINAL_ARGS=("$@")
 
 # ── Цвета ─────────────────────────────────────────────────────────────────
 C_RESET='\033[0m'; C_BOLD='\033[1m'; C_GREEN='\033[0;32m'
@@ -47,6 +53,10 @@ DOMAIN=""
 EMAIL=""
 REPO_URL="git@github.com:syb1v/perum.git"
 BRANCH="main"
+COMMIT=""
+CORE_IMAGE="${CORE_IMAGE:-}"
+AGENT_IMAGE="${AGENT_IMAGE:-}"
+WEB_IMAGE="${WEB_IMAGE:-}"
 DEPLOY_PATH="/opt/perum"
 NO_DOCKER=false
 NO_CLONE=false
@@ -54,9 +64,10 @@ NO_BUILD=false
 SKIP_SECRETS=false
 DRY_RUN=false
 UPDATE=false
+PULL_NEVER=false
 
 usage() {
-  sed -n '3,22p' "$0" | grep -E '^(# |#$)' | sed 's/^# \?//'
+  sed -n '3,26p' "$0" | grep -E '^(# |#$)' | sed 's/^# \?//'
   exit 0
 }
 
@@ -66,6 +77,9 @@ while [[ $# -gt 0 ]]; do
     --email)        EMAIL="$2"; shift 2 ;;
     --repo)         REPO_URL="$2"; shift 2 ;;
     --branch)       BRANCH="$2"; shift 2 ;;
+    --commit)       COMMIT="$2"; shift 2 ;;
+    --core-image)   CORE_IMAGE="$2"; shift 2 ;;
+    --web-image)    WEB_IMAGE="$2"; shift 2 ;;
     --path)         DEPLOY_PATH="$2"; shift 2 ;;
     --no-docker)    NO_DOCKER=true; shift ;;
     --no-clone)     NO_CLONE=true; shift ;;
@@ -73,6 +87,7 @@ while [[ $# -gt 0 ]]; do
     --skip-secrets) SKIP_SECRETS=true; shift ;;
     --dry-run)      DRY_RUN=true; shift ;;
     --update)       UPDATE=true; shift ;;
+    --pull-never)   PULL_NEVER=true; shift ;;
     -h|--help)      usage ;;
     *) die "Неизвестный аргумент: $1. Используйте --help" ;;
   esac
@@ -86,6 +101,49 @@ done
 [[ "$DEPLOY_PATH" =~ ^/[a-zA-Z0-9._/-]+$ ]] || die "Некорректный абсолютный путь"
 [[ "$REPO_URL" =~ ^(git@github\.com:|https://github\.com/)[a-zA-Z0-9._/-]+\.git$ ]] \
   || die "Поддерживаются только SSH/HTTPS GitHub repository URL"
+
+validate_app_image() {
+  local name="$1" image="$2"
+  [[ -n "$image" ]] || die "$name обязателен"
+  validate_image_syntax "$name" "$image"
+  [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ ]] \
+    || die "$name должен быть immutable digest или git-<sha> tag длиной не менее 12 символов"
+}
+
+validate_image_syntax() {
+  local name="$1" image="$2"
+  [[ "$image" =~ ^[A-Za-z0-9][A-Za-z0-9._:/@-]*$ ]] || die "$name содержит недопустимые символы"
+}
+
+env_value() {
+  local key="$1" file="${DEPLOY_PATH}/deploy/.env.prod" line
+  [[ -f "$file" ]] || return 1
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "${line%%=*}" == "$key" ]] && { printf '%s' "${line#*=}"; return 0; }
+  done < "$file"
+  return 1
+}
+
+wait_for_app_readiness() {
+  local attempt
+  if [[ "$DRY_RUN" == true ]]; then
+    info "[DRY RUN] До 12 проверок perum_core /health и статуса perum_web с интервалом 5с"
+    return 0
+  fi
+  for attempt in $(seq 1 12); do
+    if docker exec perum_core curl -fsS http://localhost:3000/health >/dev/null 2>&1 \
+      && [[ "$(docker inspect --format '{{.State.Health.Status}}' perum_web 2>/dev/null)" == "healthy" ]]; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+persist_app_images() {
+  local env_file="${DEPLOY_PATH}/deploy/.env.prod"
+  run "env_tmp=\$(mktemp '${env_file}.tmp.XXXXXX') && cp --preserve=mode,ownership '${env_file}' \"\$env_tmp\" && sed -i -e 's|^CORE_IMAGE=.*|CORE_IMAGE=${CORE_IMAGE}|' -e 's|^AGENT_IMAGE=.*|AGENT_IMAGE=${AGENT_IMAGE}|' -e 's|^WEB_IMAGE=.*|WEB_IMAGE=${WEB_IMAGE}|' \"\$env_tmp\" && { grep -q '^CORE_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'CORE_IMAGE=${CORE_IMAGE}' >> \"\$env_tmp\"; } && { grep -q '^AGENT_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'AGENT_IMAGE=${AGENT_IMAGE}' >> \"\$env_tmp\"; } && { grep -q '^WEB_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'WEB_IMAGE=${WEB_IMAGE}' >> \"\$env_tmp\"; } && mv -f \"\$env_tmp\" '${env_file}'"
+}
 
 # ── Авто-режим: если запущено без --domain и без --update — спросить ─────
 if [[ "$UPDATE" != true ]] && [[ -z "$DOMAIN" ]]; then
@@ -105,6 +163,15 @@ fi
 if [[ "$DRY_RUN" != true ]]; then
   if [[ "$EUID" -ne 0 ]] && ! sudo -n true 2>/dev/null; then
     die "Нужны root-права. Запустите через sudo bash $0 --domain ${DOMAIN:-...}"
+  fi
+  if [[ "${PERUM_DEPLOY_LOCKED:-}" != "1" ]]; then
+    if [[ "$EUID" -eq 0 ]]; then
+      mkdir -p "$DEPLOY_PATH"
+      exec flock -n "${DEPLOY_PATH}/.deploy.lock" env PERUM_DEPLOY_LOCKED=1 bash "$0" "${ORIGINAL_ARGS[@]}"
+    else
+      sudo mkdir -p "$DEPLOY_PATH"
+      exec sudo flock -n "${DEPLOY_PATH}/.deploy.lock" env PERUM_DEPLOY_LOCKED=1 bash "$0" "${ORIGINAL_ARGS[@]}"
+    fi
   fi
 fi
 
@@ -128,17 +195,113 @@ if [[ "$UPDATE" == true ]]; then
   say "Режим: ОБНОВЛЕНИЕ (без первичной настройки)"
   info "Путь: ${DEPLOY_PATH}"
 
-  step "1" "git pull..."
-  run "cd ${DEPLOY_PATH} && git checkout ${BRANCH} && git pull --ff-only origin ${BRANCH}"
+  [[ "$COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || die "Для --update обязателен точный 40-символьный --commit"
+  [[ -f "${DEPLOY_PATH}/deploy/.env.prod" ]] || die "Не найден ${DEPLOY_PATH}/deploy/.env.prod"
+  PREVIOUS_CORE_IMAGE=$(env_value CORE_IMAGE || true)
+  PREVIOUS_AGENT_IMAGE=$(env_value AGENT_IMAGE || true)
+  PREVIOUS_WEB_IMAGE=$(env_value WEB_IMAGE || true)
+  [[ -n "$PREVIOUS_AGENT_IMAGE" ]] || PREVIOUS_AGENT_IMAGE="$PREVIOUS_CORE_IMAGE"
+  [[ -n "$CORE_IMAGE" ]] || CORE_IMAGE=$(env_value CORE_IMAGE || true)
+  [[ -n "$WEB_IMAGE" ]] || WEB_IMAGE=$(env_value WEB_IMAGE || true)
+  AGENT_IMAGE="$CORE_IMAGE"
+  validate_app_image "CORE_IMAGE" "$CORE_IMAGE"
+  validate_app_image "AGENT_IMAGE" "$AGENT_IMAGE"
+  validate_app_image "WEB_IMAGE" "$WEB_IMAGE"
+  [[ -n "$DOMAIN" ]] || DOMAIN=$(env_value PUBLIC_BASE_DOMAIN || true)
 
-  step "2" "docker compose pull perum_core perum_web..."
-  run "cd ${DEPLOY_PATH} && docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod pull perum_core perum_web"
+  if [[ "$DRY_RUN" == true ]]; then
+    info "[DRY RUN] PREVIOUS_COMMIT=\$(git -C '${DEPLOY_PATH}' rev-parse HEAD)"
+    PREVIOUS_COMMIT="0000000000000000000000000000000000000000"
+    PREVIOUS_CORE_RUNTIME_IMAGE="$PREVIOUS_CORE_IMAGE"
+    PREVIOUS_WEB_RUNTIME_IMAGE="$PREVIOUS_WEB_IMAGE"
+    ROLLBACK_ENV_BACKUP=""
+  else
+    PREVIOUS_COMMIT=$(git -C "${DEPLOY_PATH}" rev-parse HEAD) \
+      || die "Не удалось определить текущий git commit в ${DEPLOY_PATH}"
+    PREVIOUS_CORE_RUNTIME_IMAGE=$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null) \
+      || die "Не удалось определить текущий image ID контейнера perum_core"
+    PREVIOUS_WEB_RUNTIME_IMAGE=$(docker inspect --format '{{.Image}}' perum_web 2>/dev/null) \
+      || die "Не удалось определить текущий image ID контейнера perum_web"
+    ROLLBACK_ENV_BACKUP=$(mktemp)
+    cp --preserve=mode,ownership,timestamps "${DEPLOY_PATH}/deploy/.env.prod" "$ROLLBACK_ENV_BACKUP"
+  fi
+  [[ "$PREVIOUS_COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || die "Текущий git commit некорректен"
 
-  step "3" "docker compose up -d --force-recreate perum_core perum_web..."
-  run "cd ${DEPLOY_PATH} && docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod up -d --force-recreate perum_core perum_web"
+  if [[ "$DRY_RUN" != true ]]; then
+    PREVIOUS_CORE_IMAGE=$(docker inspect --format '{{.Config.Image}}' perum_core 2>/dev/null || printf '%s' "$PREVIOUS_CORE_IMAGE")
+    PREVIOUS_WEB_IMAGE=$(docker inspect --format '{{.Config.Image}}' perum_web 2>/dev/null || printf '%s' "$PREVIOUS_WEB_IMAGE")
+  fi
+  validate_image_syntax "предыдущий CORE_IMAGE" "$PREVIOUS_CORE_IMAGE"
+  validate_image_syntax "предыдущий AGENT_IMAGE" "$PREVIOUS_AGENT_IMAGE"
+  validate_image_syntax "предыдущий WEB_IMAGE" "$PREVIOUS_WEB_IMAGE"
+  validate_image_syntax "предыдущий runtime CORE_IMAGE" "$PREVIOUS_CORE_RUNTIME_IMAGE"
+  validate_image_syntax "предыдущий runtime WEB_IMAGE" "$PREVIOUS_WEB_RUNTIME_IMAGE"
+  run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null"
 
-  step "4" "docker image prune -f..."
-  run "docker image prune -f"
+  COMPOSE_UPDATE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+  ROLLBACK_ACTIVE=false
+
+  rollback_update() {
+    local failure_status="${1:-$?}" rollback_failed=false
+    trap - ERR INT TERM
+    set +e
+    if [[ "$ROLLBACK_ACTIVE" != true ]]; then
+      [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
+      exit "$failure_status"
+    fi
+    ROLLBACK_ACTIVE=false
+    warn "Обновление завершилось ошибкой; восстанавливаю предыдущий commit, конфигурацию и образы"
+    run "cd ${DEPLOY_PATH} && git checkout --detach '${PREVIOUS_COMMIT}'" || rollback_failed=true
+    if [[ "$DRY_RUN" != true ]]; then
+      cp --preserve=mode,ownership,timestamps "$ROLLBACK_ENV_BACKUP" "${DEPLOY_PATH}/deploy/.env.prod" || rollback_failed=true
+    fi
+    ROLLBACK_COMPOSE="cd ${DEPLOY_PATH} && CORE_IMAGE=${PREVIOUS_CORE_RUNTIME_IMAGE} AGENT_IMAGE=${PREVIOUS_AGENT_IMAGE} WEB_IMAGE=${PREVIOUS_WEB_RUNTIME_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+    run "${ROLLBACK_COMPOSE} config -q" || rollback_failed=true
+    run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null" || rollback_failed=true
+    run "${ROLLBACK_COMPOSE} up -d --pull never --force-recreate perum_core perum_web" || rollback_failed=true
+    wait_for_app_readiness || rollback_failed=true
+    [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
+    if [[ "$rollback_failed" == true ]]; then
+      err "Обновление и rollback не прошли проверку; проверьте docker compose logs perum_core perum_web"
+      exit 1
+    fi
+    err "Обновление не выполнено; предыдущий commit, конфигурация и Core/Web образы восстановлены и готовы"
+    exit "$failure_status"
+  }
+  trap rollback_update ERR
+  trap 'rollback_update 130' INT
+  trap 'rollback_update 143' TERM
+
+  step "1" "Проверка текущей Compose-конфигурации..."
+  run "${COMPOSE_UPDATE} config -q"
+
+  step "2" "Переключение на commit ${COMMIT}..."
+  run "cd ${DEPLOY_PATH} && git diff --quiet && git diff --cached --quiet"
+  run "cd ${DEPLOY_PATH} && git fetch --no-tags origin ${COMMIT} && git cat-file -e ${COMMIT}^{commit}"
+  run "cd ${DEPLOY_PATH} && git checkout --detach ${COMMIT}"
+  ROLLBACK_ACTIVE=true
+  run "${COMPOSE_UPDATE} config -q"
+
+  step "3" "Проверка образов..."
+  for image in "$CORE_IMAGE" "$WEB_IMAGE"; do
+    if [[ "$PULL_NEVER" == true ]]; then
+      run "docker image inspect '${image}' >/dev/null"
+    else
+      run "docker pull '${image}'"
+      run "docker image inspect '${image}' >/dev/null"
+    fi
+  done
+
+  step "4" "docker compose up -d --force-recreate perum_core perum_web..."
+  run "${COMPOSE_UPDATE} up -d --pull never --force-recreate perum_core perum_web"
+
+  step "5" "Ожидание готовности perum_core и perum_web..."
+  wait_for_app_readiness
+  persist_app_images
+  ROLLBACK_ACTIVE=false
+  trap - ERR INT TERM
+  [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
+  ok "perum_core и perum_web готовы; новые образы сохранены в deploy/.env.prod"
 
   echo ""
   say "Обновление завершено"
@@ -227,9 +390,19 @@ else
   AGENT_TOKEN=$(openssl rand -hex 32)
   GRAFANA_PASSWORD=$(openssl rand -hex 8)
   if [[ "$NO_BUILD" == true ]]; then
-    CORE_PULL_POLICY=always
+    CORE_PULL_POLICY=missing
   else
     CORE_PULL_POLICY=build
+  fi
+
+  [[ -n "$CORE_IMAGE" ]] || CORE_IMAGE="perum-core:local-build"
+  [[ -n "$WEB_IMAGE" ]] || WEB_IMAGE="perum-web:local-build"
+  AGENT_IMAGE="$CORE_IMAGE"
+  validate_image_syntax "CORE_IMAGE" "$CORE_IMAGE"
+  validate_image_syntax "AGENT_IMAGE" "$AGENT_IMAGE"
+  validate_image_syntax "WEB_IMAGE" "$WEB_IMAGE"
+  if [[ "$NO_BUILD" == true ]]; then
+    validate_app_image "CORE_IMAGE" "$CORE_IMAGE"
   fi
 
   run "mkdir -p ${DEPLOY_PATH}/deploy"
@@ -242,11 +415,12 @@ ENVIRONMENT=prod
 IMAGE_REGISTRY=mirror.gcr.io
 
 # Образы приложений (из GHCR)
-CORE_IMAGE=ghcr.io/syb1v/perum-core:latest
-WEB_IMAGE=ghcr.io/syb1v/perum-web:latest
+CORE_IMAGE=${CORE_IMAGE}
+AGENT_IMAGE=${AGENT_IMAGE}
+WEB_IMAGE=${WEB_IMAGE}
 TENANT_IMAGE=ghcr.io/syb1v/perum-tenant:git-__RELEASE_SHA12__
 
-# Pull policy: always = тянуть свежий образ при каждом compose up
+# Pull policy для первичной установки
 CORE_PULL_POLICY=${CORE_PULL_POLICY}
 WEB_PULL_POLICY=build
 
@@ -285,6 +459,18 @@ PRODENV"
 fi
 run "chmod 600 ${ENV_FILE}"
 
+[[ -n "$CORE_IMAGE" ]] || CORE_IMAGE=$(env_value CORE_IMAGE || true)
+[[ -n "$WEB_IMAGE" ]] || WEB_IMAGE=$(env_value WEB_IMAGE || true)
+if [[ "$NO_BUILD" == true ]]; then
+  validate_app_image "CORE_IMAGE" "$CORE_IMAGE"
+fi
+[[ -n "$CORE_IMAGE" ]] || CORE_IMAGE="perum-core:local-build"
+[[ -n "$WEB_IMAGE" ]] || WEB_IMAGE="perum-web:local-build"
+AGENT_IMAGE="$CORE_IMAGE"
+validate_image_syntax "CORE_IMAGE" "$CORE_IMAGE"
+validate_image_syntax "AGENT_IMAGE" "$AGENT_IMAGE"
+validate_image_syntax "WEB_IMAGE" "$WEB_IMAGE"
+
 # ── [4/7] Caddyfile — подстановка домена ─────────────────────────────────
 step "4/7" "Настройка Caddy под домен ${DOMAIN}..."
 
@@ -304,7 +490,10 @@ fi
 # ── [5/7] Предзагрузка docker-socket-proxy ───────────────────────────────
 step "5/7" "Предзагрузка docker-socket-proxy..."
 
-if [[ "$NO_BUILD" != true ]]; then
+if [[ "$PULL_NEVER" == true ]]; then
+  run "docker image inspect tecnativa/docker-socket-proxy:0.3 >/dev/null"
+  ok "docker-socket-proxy готов"
+elif [[ "$NO_BUILD" != true ]]; then
   run "
     if ! docker image inspect tecnativa/docker-socket-proxy:0.3 &>/dev/null; then
       docker pull tecnativa/docker-socket-proxy:0.3 2>/dev/null || {
@@ -324,7 +513,9 @@ fi
 # ── [6/7] Сборка или pull образов ─────────────────────────────────────────
 step "6/7" "Получение образов perum-core и perum-web..."
 
-COMPOSE_BASE="cd ${DEPLOY_PATH} && docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file ${ENV_FILE}"
+COMPOSE_BASE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file ${ENV_FILE}"
+
+run "${COMPOSE_BASE} config -q"
 
 # perum_web ОБЯЗАТЕЛЬНО собираем локально, потому что NEXT_PUBLIC_BASE_DOMAIN
 # вшивается в билд. GHCR-образ собран под другой домен — если его использовать,
@@ -336,38 +527,43 @@ run "${COMPOSE_BASE} build --no-cache --build-arg NEXT_PUBLIC_BASE_DOMAIN=${DOMA
 # По умолчанию собираем локально для консистентности; флаг --no-build оставлен
 # для совместимости, но он влияет только на perum_core/инфраструктуру.
 if [[ "$NO_BUILD" == true ]]; then
-  info "Тянем perum_core из GHCR..."
-  run "${COMPOSE_BASE} pull perum_core 2>&1"
+  if [[ "$PULL_NEVER" == true ]]; then
+    info "Проверяем локальный perum_core..."
+    run "docker image inspect '${CORE_IMAGE}' >/dev/null"
+  else
+    info "Тянем perum_core из GHCR..."
+    run "docker pull '${CORE_IMAGE}'"
+  fi
 else
   info "Сборка perum_core локально..."
   run "${COMPOSE_BASE} build --no-cache perum_core 2>&1"
 fi
 
 info "Pull базовых сервисов..."
-run "${COMPOSE_BASE} pull perum_control_db shared_redis caddy 2>&1"
+if [[ "$PULL_NEVER" == true ]]; then
+  run "${COMPOSE_BASE} config --images | while IFS= read -r image; do docker image inspect \"\$image\" >/dev/null; done"
+else
+  run "${COMPOSE_BASE} pull perum_control_db shared_redis caddy 2>&1"
+fi
 
 ok "Образы готовы"
 
 # ── [7/7] Запуск стека ────────────────────────────────────────────────────
 step "7/7" "Запуск perum-core..."
 
-run "${COMPOSE_BASE} up -d"
+if [[ "$PULL_NEVER" == true ]]; then
+  run "${COMPOSE_BASE} up -d --pull never"
+else
+  run "${COMPOSE_BASE} up -d"
+fi
 
 ok "Стек запущен. Жду инициализацию БД (alembic upgrade head)..."
 sleep 5
 
-# Проверка здоровья
-info "Проверка здоровья perum_core..."
-CORE_HEALTHY=false
-for i in $(seq 1 12); do
-  if run "docker exec perum_core curl -fsS http://localhost:3000/health 2>/dev/null"; then
-    ok "perum_core здоров!"
-    CORE_HEALTHY=true
-    break
-  fi
-  sleep 5
-done
-[[ "$CORE_HEALTHY" == true ]] || die "perum_core не прошёл health-check за 60 секунд"
+info "Проверка готовности perum_core и perum_web..."
+wait_for_app_readiness || die "perum_core/perum_web не прошли проверку готовности за 60 секунд"
+persist_app_images
+ok "perum_core и perum_web готовы; образы сохранены в deploy/.env.prod"
 
 # ── Финал ─────────────────────────────────────────────────────────────────
 echo ""

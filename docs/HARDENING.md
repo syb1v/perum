@@ -64,7 +64,9 @@
 
 - Dev defaults в compose небезопасны для production и должны переопределяться.
 - In-memory limits не обеспечивают глобальный limit для нескольких replicas.
-- Node Watchtower имеет raw Docker socket и является privileged host boundary.
+- Node template больше не использует Watchtower: Agent/Web обновляются только явным
+  immutable reconciliation. Уже установленные ноды должны удалить legacy Watchtower
+  во время контролируемого reconciliation.
 - Agent bearer auth не шифрует transport; public network требует TLS/VPN/ACL.
 - Полная key rotation/KMS policy и production scanner/delivery adapters требуют
   внешней настройки и дальнейшей реализации.

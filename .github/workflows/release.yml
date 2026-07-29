@@ -165,52 +165,29 @@ jobs:
           port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
           script: |
             set -euo pipefail
-            cd "${{ vars.DEPLOY_PATH || '/opt/perum' }}"
+            DEPLOY_PATH="${{ vars.DEPLOY_PATH || '/opt/perum' }}"
             RELEASE_SHA='${{ env.RELEASE_SHA }}'
-            git diff --quiet && git diff --cached --quiet
-            git fetch --prune origin main
-            git checkout --detach "$RELEASE_SHA"
-            COMPOSE="docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
-            PREVIOUS_CORE="$(docker inspect -f '{{.Config.Image}}' perum_core 2>/dev/null || true)"
-            PREVIOUS_WEB="$(docker inspect -f '{{.Config.Image}}' perum_web 2>/dev/null || true)"
-            [ -n "$PREVIOUS_CORE" ] && [ -n "$PREVIOUS_WEB" ]
-            CORE_TAG="$PREVIOUS_CORE"
-            WEB_TAG="$PREVIOUS_WEB"
-            SERVICES=""
+            [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
+            CORE_IMAGE="$(docker inspect -f '{{.Config.Image}}' perum_core 2>/dev/null)"
+            WEB_IMAGE="$(docker inspect -f '{{.Config.Image}}' perum_web 2>/dev/null)"
             if [ '${{ needs.changes.outputs.core }}' = true ]; then
-              CORE_TAG="ghcr.io/${{ github.repository_owner }}/perum-core:git-${RELEASE_SHA:0:12}"
-              SERVICES="$SERVICES perum_core"
+              CORE_IMAGE="ghcr.io/${{ github.repository_owner }}/perum-core:git-${RELEASE_SHA:0:12}"
             fi
             if [ '${{ needs.changes.outputs.web }}' = true ]; then
-              WEB_TAG="ghcr.io/${{ github.repository_owner }}/perum-web:git-${RELEASE_SHA:0:12}"
-              SERVICES="$SERVICES perum_web"
+              WEB_IMAGE="ghcr.io/${{ github.repository_owner }}/perum-web:git-${RELEASE_SHA:0:12}"
             fi
-            rollback() {
-              if [ -n "$PREVIOUS_CORE" ] && [ -n "$PREVIOUS_WEB" ]; then
-                CORE_IMAGE="$PREVIOUS_CORE" WEB_IMAGE="$PREVIOUS_WEB" \
-                  CORE_PULL_POLICY=always WEB_PULL_POLICY=always \
-                  $COMPOSE up -d perum_core perum_web || true
-              fi
-            }
-            trap rollback ERR
-            CORE_IMAGE="$CORE_TAG" WEB_IMAGE="$WEB_TAG" \
-              CORE_PULL_POLICY=always WEB_PULL_POLICY=always \
-              $COMPOSE pull $SERVICES
-            CORE_IMAGE="$CORE_TAG" WEB_IMAGE="$WEB_TAG" \
-              CORE_PULL_POLICY=always WEB_PULL_POLICY=always \
-              $COMPOSE up -d --force-recreate $SERVICES
-            for service in $SERVICES; do
-              for attempt in $(seq 1 30); do
-                state="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$service")"
-                [ "$state" = healthy ] && break
-                [ "$attempt" -eq 30 ] && { echo "$service health failed: $state" >&2; exit 1; }
-                sleep 2
-              done
+            for image in "$CORE_IMAGE" "$WEB_IMAGE"; do
+              [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ ]] || {
+                echo "Refusing mutable production image ref: $image" >&2
+                exit 1
+              }
             done
-            curl --fail --silent --show-error --max-time 15 https://admin.${{ vars.PUBLIC_BASE_DOMAIN }}/health >/dev/null
-            curl --fail --silent --show-error --max-time 15 https://${{ vars.PUBLIC_BASE_DOMAIN }}/ >/dev/null
-            trap - ERR
-            docker image prune -f
+            bash "${DEPLOY_PATH}/deploy/scripts/deploy-core.sh" \
+              --update \
+              --commit "$RELEASE_SHA" \
+              --core-image "$CORE_IMAGE" \
+              --web-image "$WEB_IMAGE" \
+              --path "$DEPLOY_PATH"
 
   tenant-release:
     # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.

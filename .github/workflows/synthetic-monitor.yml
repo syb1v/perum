@@ -1,0 +1,50 @@
+name: Synthetic monitor
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: synthetic-monitor
+  cancel-in-progress: false
+
+jobs:
+  public-endpoints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PERUM_SYNTHETIC_BASE_URL: ${{ vars.PERUM_SYNTHETIC_BASE_URL }}
+      PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID: ${{ vars.PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: perum-core/requirements.txt
+      - name: Install dependencies
+        run: pip install -r perum-core/requirements.txt
+      - name: Validate monitor configuration
+        run: |
+          test -n "$PERUM_SYNTHETIC_BASE_URL" || { printf '%s\n' 'Missing repository variable PERUM_SYNTHETIC_BASE_URL' >&2; exit 1; }
+          test -n "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" || { printf '%s\n' 'Missing repository variable PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID' >&2; exit 1; }
+      - name: Check public endpoints
+        working-directory: perum-core
+        run: |
+          python tools/pilot_evidence.py \
+            --endpoint-synthetic \
+            --base-url "$PERUM_SYNTHETIC_BASE_URL" \
+            --school-public-id "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" \
+            --output synthetic-monitor
+      - name: Upload monitor result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-endpoint-monitor
+          path: perum-core/synthetic-monitor
+          if-no-files-found: ignore
+          retention-days: 14

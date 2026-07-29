@@ -338,3 +338,4 @@
 | 335 | 2026-07-29 10:00 | 07fa91c | docs(routes): зафиксирован simultaneous production proof |
 | 336 | 2026-07-29 10:15 | 6b1f54f | fix(dns): public org и school records закреплены за Cloudflare proxy |
 | 337 | 2026-07-29 10:20 | _______ | docs(dns): зафиксирован VPN/Cloudflare production proof |
+| 338 | 2026-07-29 13:30 | _______ | fix(deploy): immutable fail-closed deploy и resilience verification tooling |

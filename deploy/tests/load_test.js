@@ -1,22 +1,28 @@
-// k6 нагрузочный тест (Фаза 10). Бьёт по дешёвым публичным эндпоинтам ядра и
-// логину платформы — без мутаций (стеки не провижинятся под нагрузкой).
-//
-// Запуск (нужен установленный k6):
-//   BASE=http://admin.perum.local k6 run deploy/tests/load_test.js
-//
-// Профиль: разгон до 50 VU за 30с, держим 1м, спуск. Пороги: p95 < 800ms, <1% ошибок.
-
 import http from "k6/http";
 import { check, sleep } from "k6";
 
-const BASE = __ENV.BASE || "http://admin.perum.local";
+function boundedInteger(value, fallback, maximum) {
+  const parsed = Number.parseInt(value || "", 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return Math.min(parsed, maximum);
+}
+
+const vus = boundedInteger(__ENV.VUS, 2, 25);
+const durationSeconds = boundedInteger(__ENV.DURATION_SECONDS, 30, 300);
+const schoolBases = (__ENV.SCHOOL_BASES || __ENV.BASE || "http://admin.perum.local")
+  .split(",")
+  .map((base) => base.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+if (schoolBases.length === 0 || schoolBases.length > 25) {
+  throw new Error("SCHOOL_BASES must contain between 1 and 25 comma-separated URLs");
+}
 
 export const options = {
-  stages: [
-    { duration: "30s", target: 50 },
-    { duration: "1m", target: 50 },
-    { duration: "15s", target: 0 },
-  ],
+  vus,
+  duration: `${durationSeconds}s`,
   thresholds: {
     http_req_duration: ["p(95)<800"],
     http_req_failed: ["rate<0.01"],
@@ -24,18 +30,13 @@ export const options = {
 };
 
 export default function () {
-  const health = http.get(`${BASE}/health`);
-  check(health, { "health 200": (r) => r.status === 200 });
-
-  // Неаутентифицированный запрос к защищённому ресурсу — должен быстро отбиваться 401.
-  // 401 здесь ожидаем, поэтому помечаем как валидный статус (не «провал» запроса).
-  const guarded = http.get(`${BASE}/api/organizations`, {
-    responseCallback: http.expectedStatuses(200, 401),
-  });
-  check(guarded, { "guarded 401": (r) => r.status === 401 });
-
+  for (const base of schoolBases) {
+    const response = http.get(`${base}/health`, {
+      redirects: 0,
+      timeout: "10s",
+      tags: { endpoint: "health" },
+    });
+    check(response, { "health is 200": (result) => result.status === 200 });
+  }
   sleep(1);
 }
-
-// Примечание: /metrics наружу через Caddy НЕ публикуется (Prometheus скребёт
-// perum_core:3000/metrics напрямую по внутренней сети) — поэтому здесь не проверяется.

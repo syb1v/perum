@@ -84,6 +84,14 @@ Compose без production `--env-file`: это может подставить �
 templates используют `pull_policy: missing`, чтобы не требовать registry pull,
 если image уже загружен локально.
 
+Version-controlled deploy scripts требуют exact immutable application images. Core
+update запускайте с `--commit <full-sha> --core-image <digest-or-git-tag>
+--web-image <digest-or-git-tag>`; при уже загруженных images добавляйте
+`--pull-never`. Node bootstrap аналогично требует immutable Agent/Tenant/Web refs.
+Скрипты проверяют Compose/images до recreation и используют deploy lock. Node rerun
+сохраняет существующие DB/application secrets; credential rotation выполняется только
+отдельной операторской процедурой. Watchtower не входит в актуальный node template.
+
 Public school и organization A-records в Cloudflare должны иметь `proxied=true`.
 `proxied=false` отправляет клиентов напрямую на node origin и может давать
 `ERR_TIMED_OUT` при VPN/provider path issues. DNS sweep автоматически исправляет
@@ -134,6 +142,14 @@ push или production rollout и не закрывает соответству
 - Backup включает control DB, каждую school DB, school appdata и конфигурационные
   metadata/secrets из approved store.
 - Шифруйте backup, ограничивайте retention/access и проверяйте restore регулярно.
+- Для PostgreSQL restore proof используйте
+  `perum-core/tools/backup_restore_verify.py` только с явно указанными source/target
+  containers и exact `--approve-target-container`. Пароль передавайте через
+  `PERUM_PG_PASSWORD`/`PERUM_TARGET_PG_PASSWORD` или mode-600 password files, не в
+  argv. Tool создаёт custom dump и checksum manifest, восстанавливает в уникальную
+  temporary DB, сравнивает schema/table counts и удаляет target. Target container
+  должен быть disposable/approved; успешный local test не заменяет production restore
+  evidence.
 - Restore школы: остановить writes/app, восстановить DB и appdata в isolated
   volumes, применить совместимые migrations, запустить app, проверить identity,
   auth и sample data до возврата routing.
