@@ -6963,6 +6963,13 @@
             ],
             "title": "Agent Version"
           },
+          "landings": {
+            "items": {
+              "$ref": "#/components/schemas/AgentLandingState"
+            },
+            "type": "array",
+            "title": "Landings"
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
@@ -7216,6 +7223,30 @@
           "domain"
         ],
         "title": "AgentLandingResponse"
+      },
+      "AgentLandingState": {
+        "properties": {
+          "domain": {
+            "type": "string",
+            "title": "Domain"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "routed": {
+            "type": "boolean",
+            "title": "Routed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "domain",
+          "running",
+          "routed"
+        ],
+        "title": "AgentLandingState",
+        "description": "Фактическое состояние лендинга орг на ноде. Ядро сверяет его с\n`Organization.landing_status`, иначе однажды выставленный `failed` остаётся\nнавсегда даже после успешного восстановления маршрута воркером."
       },
       "AgentNodeActionResponse": {
         "properties": {

@@ -11,6 +11,7 @@
 - Multi-school isolation smoke теперь принимает credentials/hosts только через environment, явно проверяет ожидаемые HTTP statuses и опционально distinct Docker silos. k6 pilot ограничен 25 VU/300 секундами и выполняет только read-only health requests.
 - Добавлен scheduled read-only synthetic monitor на основе pilot evidence collector с bounded artifact retention и проверкой конфигурации без вывода токенов.
 - Web обновлён до стабильного Next.js `16.2.12`, а runtime PostCSS закреплён на `8.5.25`; typecheck и production build проходят. Sharp advisory остаётся upstream blocker: Next 16.2.12 требует `sharp 0.34.x`, а npm предлагает только несовместимый downgrade Next.
+- OpenAPI snapshots синхронизированы с landing health contract. Dependency gate использует exact high-severity allowlist для известных tooling chains и несовместимого Next/sharp advisory; любое новое high/critical имя снова блокирует CI.
 
 ## [Unreleased] — 2026-07-28
 

@@ -2137,6 +2137,8 @@ export interface components {
             uptime_seconds?: number | null;
             /** Agent Version */
             agent_version?: string | null;
+            /** Landings */
+            landings?: components["schemas"]["AgentLandingState"][];
             /**
              * Timestamp
              * Format: date-time
@@ -2221,6 +2223,20 @@ export interface components {
             domain: string;
             /** Message */
             message?: string | null;
+        };
+        /**
+         * AgentLandingState
+         * @description Фактическое состояние лендинга орг на ноде. Ядро сверяет его с
+         *     `Organization.landing_status`, иначе однажды выставленный `failed` остаётся
+         *     навсегда даже после успешного восстановления маршрута воркером.
+         */
+        AgentLandingState: {
+            /** Domain */
+            domain: string;
+            /** Running */
+            running: boolean;
+            /** Routed */
+            routed: boolean;
         };
         /** AgentNodeActionResponse */
         AgentNodeActionResponse: {

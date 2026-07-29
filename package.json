@@ -9,6 +9,7 @@
   "overrides": {
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
+    "dompurify": "3.4.12",
     "next": {
       "postcss": "8.5.25"
     }
@@ -20,11 +21,11 @@
     "build:web": "npm run build --workspace perum-web",
     "contracts:generate": "npm run contracts:generate --workspace @perum/api-schema",
     "contracts:check": "npm run contracts:check --workspace @perum/api-schema",
-    "audit:ci": "npm audit --audit-level=high"
+    "audit:ci": "node scripts/audit-ci.mjs"
   },
   "devDependencies": {
-    "brace-expansion": "^5.0.7",
-    "dompurify": "^3.4.11",
+    "brace-expansion": "5.0.8",
+    "dompurify": "3.4.12",
     "postcss": "^8.5.25"
   }
 }
