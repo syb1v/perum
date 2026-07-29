@@ -34,6 +34,8 @@ jobs:
           test -n "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" || { printf '%s\n' 'Missing repository variable PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID' >&2; exit 1; }
       - name: Check public endpoints
         working-directory: perum-core
+        env:
+          PYTHONPATH: .
         run: |
           python tools/pilot_evidence.py \
             --endpoint-synthetic \
