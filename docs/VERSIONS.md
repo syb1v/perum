@@ -334,4 +334,5 @@
 | 331 | 2026-07-28 20:45 | 59d6e39 | fix(node): org Agent восстанавливает apex landing после Caddy restart |
 | 332 | 2026-07-28 20:55 | _______ | docs(node): зафиксирован restart proof landing и school routes |
 | 333 | 2026-07-29 09:00 | f73b5e4 | fix(monitor): status landing синхронизируется с фактом Agent |
-| 334 | 2026-07-29 09:45 | _______ | fix(routes): remote school ownership делегирована node Caddy |
+| 334 | 2026-07-29 09:45 | 8b57259 | fix(routes): remote school ownership делегирована node Caddy |
+| 335 | 2026-07-29 10:00 | _______ | docs(routes): зафиксирован simultaneous production proof |

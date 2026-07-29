@@ -169,6 +169,16 @@ normal updates remain Watchtower-managed, while a verified image can be transfer
 with `docker save | ssh ... docker load` and started with `--pull never` during a
 GHCR egress outage.
 
+Production stabilization proof после `8b57259`: verified Core image digest
+`sha256:e8b139c01aa89b9adff77bb44f0c1e65d249e97e7b4df16f62d3547d1b10fa52`
+доставлен на Core и node через `docker save/load`, оба runtime обновлены с
+`--pull never`. Core startup удалил remote school route; node Agent удалил stale
+punycode landing route и восстановил только canonical org/school routes. Финальная
+проверка одновременно: Core `пэрум.рф` `200` (42123 bytes), org landing
+`grsn-panel.ru` `200` (992 bytes), school `/login` `200` (10831 bytes), school
+`/health` `200`, Agent `schools_count=1`, org `landing_status=active`. Core Caddy
+больше не является TLS owner school hostname.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
