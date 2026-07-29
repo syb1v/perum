@@ -110,6 +110,22 @@ Release registration обязана завершиться `201` и вернут
 добавляйте неизвестные Core capabilities: обновите Core либо используйте явно
 зафиксированную compatibility projection только как временный recovery шаг.
 
+## Synthetic school data
+
+`python -m app.scripts.seed_synthetic_ru` заполняет только явно выбранную существующую
+school. Перед запуском обязательны свежий restore proof и `alembic upgrade head`.
+Сначала выполните `--dry-run`, затем задайте exact `--school-id`, `--scale`,
+`--reference-date` и `--activity-date`. Default создаёт все synthetic accounts
+неактивными; не используйте `--activate-personas` на публичной школе без отдельного
+временного password/rotation плана.
+
+Seed хранит marker `synru:<school_id>` и ownership rows. Повторный запуск без
+`--rebuild` fail closed; rebuild отказывается удалять данные, если unowned rows уже
+ссылаются на synthetic entities. Не удаляйте marker/ownership вручную и не выполняйте
+downgrade ownership migration до controlled cleanup. JSON summary не содержит
+паролей; synthetic logins имеют namespace `synru` и используют только вымышленные
+данные `example.invalid`.
+
 ## Ограниченный demo school stack
 
 `deploy/demo-school/` предназначен только для временного показа одной синтетической

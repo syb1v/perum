@@ -262,6 +262,14 @@ container и Caddy route отсутствовали. Exact transaction удал�
 Agent restart сообщает один canonical landing и `schools_count=1`. Archived `sch1`
 остаётся в canonical organization до отдельной retention/purge policy.
 
+Comprehensive Russian synthetic school dataset реализован как отдельный owned
+contour внутри существующей school: medium profile = 24 classes, 60 teachers,
+624 students, 450 parents, 17,280 occurrences, 94,848 grade/attendance rows,
+59,904 homework states и 92,447 economy transactions. Exchange points вычисляются
+из тех же Grade rows и curriculum, а account population inactive by default.
+Disposable PostgreSQL прошёл initial medium seed и recovery `--rebuild` после
+partial failure; production rollout требует fresh Tenant backup и immutable image.
+
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
 как более широкий legacy `isSchoolAdmin` по-прежнему включает `admin`. Domain

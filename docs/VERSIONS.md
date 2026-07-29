@@ -343,3 +343,4 @@
 | 340 | 2026-07-29 15:20 | e20b93f | fix(monitor): исправлен import path scheduled synthetic check |
 | 341 | 2026-07-29 15:40 | _______ | fix(backup): stdin transport подтверждён real restore proof |
 | 342 | 2026-07-29 15:55 | _______ | chore(node): удалена доказанно orphan legacy organization metadata |
+| 343 | 2026-07-29 18:10 | _______ | feat(tenant): добавлен comprehensive Russian synthetic school seed |

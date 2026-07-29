@@ -26,6 +26,21 @@ class TenantMeta(Base):
     value: Mapped[str] = mapped_column(String(255), nullable=False)
 
 
+class SyntheticSeedRow(Base):
+    __tablename__ = "synthetic_seed_rows"
+    __table_args__ = (
+        UniqueConstraint("namespace", "school_id", "table_name", "row_id", name="uq_synthetic_seed_row"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    namespace: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    school_id: Mapped[int] = mapped_column(
+        ForeignKey("schools.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    table_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    row_id: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
 class Organization(Base):
     """Single meta row for this stack; `slug` mirrors ORG_SLUG."""
 
