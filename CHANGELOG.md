@@ -15,6 +15,7 @@
 - Synthetic monitor запускает operator tool с явным `PYTHONPATH=.`; первый manual run выявил import-path defect до сетевого запроса, endpoint credentials и payload не затрагивались.
 - Real restore proof исправил два transport-дефекта verifier: `pg_restore` и `psql` с `\gexec` теперь получают stdin через interactive Docker exec. Control, node metadata и Tenant dumps восстановлены в disposable tmpfs PostgreSQL с exact per-table row-count equality и обязательной cleanup.
 - Core/Web reconciled на immutable images из clean release checkout без изменения dirty legacy checkout; node Agent/Web переведены на те же immutable images, legacy Watchtower удалён, host-network Caddy topology сохранена. Scheduled public synthetic monitor и bounded 2 VU/30s pilot прошли.
+- После restore proof удалена exact orphan punycode organization row: предварительно подтверждены отсутствие container/route и нулевые ссылки во всех десяти FK-таблицах. Canonical org UUID и active school сохранены; archived `sch1` не удалялась без retention policy.
 
 ## [Unreleased] — 2026-07-28
 

@@ -256,6 +256,12 @@ repository variables в canonical IDNA form. Multi-school production proof ос�
 не заявлен: в production одна школа, создание второй без product decision не
 выполнялось. Scanner remains candidate pending target-node saturation approval.
 
+Legacy shadow cleanup выполнен после restore proof: organization UUID
+`05e71e55-7758-47a6-b74e-f3b6401358d9` не имела ссылок ни в одной из 10 FK-таблиц,
+container и Caddy route отсутствовали. Exact transaction удалила только эту row;
+Agent restart сообщает один canonical landing и `schools_count=1`. Archived `sch1`
+остаётся в canonical organization до отдельной retention/purge policy.
+
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
 как более широкий legacy `isSchoolAdmin` по-прежнему включает `admin`. Domain
