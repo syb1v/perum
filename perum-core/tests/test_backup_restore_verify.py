@@ -78,6 +78,9 @@ def test_verify_streams_backup_records_safe_manifest_and_drops_database(tmp_path
     dump_command = next(command for command in commands if "pg_dump" in command)
     assert dump_command[dump_command.index("--snapshot") + 1] == "00000003-0000001B-1"
     assert any("pg_restore" in command for command in commands)
+    assert "-i" in next(command for command in commands if "pg_restore" in command)
+    facts_call = next(call for call in runner.calls if "psql" in call[0] and call[1] == verify.FACTS_SQL)
+    assert "-i" in facts_call[0]
     assert any("dropdb" in command and "--force" in command for command in commands)
     assert all("source-secret" not in part and "target-secret" not in part for command in commands for part in command)
     assert "source-secret" not in manifest_path.read_text()

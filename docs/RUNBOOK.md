@@ -150,6 +150,12 @@ push или production rollout и не закрывает соответству
   temporary DB, сравнивает schema/table counts и удаляет target. Target container
   должен быть disposable/approved; успешный local test не заменяет production restore
   evidence.
+
+`pg_restore` и facts query используют interactive Docker exec, потому что backup и
+`psql` meta-command `\gexec` передаются через stdin. Если verifier падает, он сообщает
+только safe operation name/exit code; не включайте stderr с SQL/data/secrets в
+operator evidence. После proof сохраните checksum/aggregate counts в approved
+evidence store и удалите временные plaintext dumps либо немедленно зашифруйте их.
 - Restore школы: остановить writes/app, восстановить DB и appdata в isolated
   volumes, применить совместимые migrations, запустить app, проверить identity,
   auth и sample data до возврата routing.

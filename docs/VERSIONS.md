@@ -339,5 +339,6 @@
 | 336 | 2026-07-29 10:15 | 6b1f54f | fix(dns): public org и school records закреплены за Cloudflare proxy |
 | 337 | 2026-07-29 10:20 | _______ | docs(dns): зафиксирован VPN/Cloudflare production proof |
 | 338 | 2026-07-29 13:30 | 0a1ec57 | fix(deploy): immutable fail-closed deploy и resilience verification tooling |
-| 339 | 2026-07-29 15:10 | _______ | fix(ci): синхронизированы contracts и exact dependency audit gate |
-| 340 | 2026-07-29 15:20 | _______ | fix(monitor): исправлен import path scheduled synthetic check |
+| 339 | 2026-07-29 15:10 | ee48275 | fix(ci): синхронизированы contracts и exact dependency audit gate |
+| 340 | 2026-07-29 15:20 | e20b93f | fix(monitor): исправлен import path scheduled synthetic check |
+| 341 | 2026-07-29 15:40 | _______ | fix(backup): stdin transport подтверждён real restore proof |

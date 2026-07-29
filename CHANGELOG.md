@@ -13,6 +13,8 @@
 - Web обновлён до стабильного Next.js `16.2.12`, а runtime PostCSS закреплён на `8.5.25`; typecheck и production build проходят. Sharp advisory остаётся upstream blocker: Next 16.2.12 требует `sharp 0.34.x`, а npm предлагает только несовместимый downgrade Next.
 - OpenAPI snapshots синхронизированы с landing health contract. Dependency gate использует exact high-severity allowlist для известных tooling chains и несовместимого Next/sharp advisory; любое новое high/critical имя снова блокирует CI.
 - Synthetic monitor запускает operator tool с явным `PYTHONPATH=.`; первый manual run выявил import-path defect до сетевого запроса, endpoint credentials и payload не затрагивались.
+- Real restore proof исправил два transport-дефекта verifier: `pg_restore` и `psql` с `\gexec` теперь получают stdin через interactive Docker exec. Control, node metadata и Tenant dumps восстановлены в disposable tmpfs PostgreSQL с exact per-table row-count equality и обязательной cleanup.
+- Core/Web reconciled на immutable images из clean release checkout без изменения dirty legacy checkout; node Agent/Web переведены на те же immutable images, legacy Watchtower удалён, host-network Caddy topology сохранена. Scheduled public synthetic monitor и bounded 2 VU/30s pilot прошли.
 
 ## [Unreleased] — 2026-07-28
 

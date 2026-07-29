@@ -243,6 +243,19 @@ gates: применить новый template к Core/node без compose drift,
 control/Tenant restore proof, минимум двухшкольный isolation/load pilot и настроить
 GitHub Environment variables/secrets для scheduled monitor.
 
+Production resilience proof 2026-07-29: Core работает из clean release checkout на
+Core image `sha256:0d4ace701206c64f0d9be971ab737ae596f6b92e734648eb774c55312fd3ee26`,
+Web — `sha256:5e5c9dead5e4b48bc9248024a9b790c6e6a8a4c12f6aeeb327ce5e86f863b377`;
+node Agent/Web используют те же IDs, Watchtower отсутствует, host-network Caddy и
+school route сохранены. Exact-snapshot restore proof прошёл для control DB
+(`29 tables/14 rows`), node metadata (`29/10`) и Tenant (`78/26`) в disposable
+tmpfs PostgreSQL с per-table equality и cleanup; plaintext temporary artifacts
+удалены после записи checksums. Bounded public pilot: `2 VU`, `30s`, `72/72`,
+`0%` errors, p95 `520.21ms`. Synthetic monitor run `30466621730` зелёный с
+repository variables в canonical IDNA form. Multi-school production proof остаётся
+не заявлен: в production одна школа, создание второй без product decision не
+выполнялось. Scanner remains candidate pending target-node saturation approval.
+
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
 как более широкий legacy `isSchoolAdmin` по-прежнему включает `admin`. Domain

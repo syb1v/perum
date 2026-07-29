@@ -65,7 +65,11 @@ class CommandRunner:
             )
         except (OSError, subprocess.CalledProcessError) as exc:
             code = getattr(exc, "returncode", "unavailable")
-            raise VerifyError(f"command failed: {command[0]} (exit {code})") from exc
+            operation = next(
+                (part for part in ("pg_dump", "createdb", "pg_restore", "psql", "dropdb", "rm") if part in command),
+                command[0],
+            )
+            raise VerifyError(f"command failed: {operation} (exit {code})") from exc
         return "" if output is not None else completed.stdout.decode("utf-8").strip()
 
     def open_session(self, command: list[str]) -> "CommandSession":
@@ -211,7 +215,7 @@ def _parse_fact_rows(lines: list[str]) -> tuple[str | None, dict[str, Any]]:
 
 
 def _facts(runner: CommandRunner, container: str, pgpass_path: str, user: str, database: str) -> dict[str, Any]:
-    output = runner.run([*_psql_command(container, pgpass_path, user, database), "--command", FACTS_SQL])
+    output = runner.run(_psql_command(container, pgpass_path, user, database, interactive=True), input_text=FACTS_SQL)
     _, facts = _parse_fact_rows(output.splitlines())
     return facts
 
@@ -318,7 +322,7 @@ def verify_backup_restore(config: Config, source_password: str, target_password:
         database_created = True
         runner.run(_docker(config.target_container, target_pgpass, ["createdb", "--username", config.target_user, "--template", "template0", temporary_database]))
         with backup_path.open("rb") as backup:
-            command = _docker(config.target_container, target_pgpass, ["pg_restore", "--exit-on-error", "--no-owner", "--no-privileges", "--username", config.target_user, "--dbname", temporary_database])
+            command = _docker(config.target_container, target_pgpass, ["pg_restore", "--exit-on-error", "--no-owner", "--no-privileges", "--username", config.target_user, "--dbname", temporary_database], interactive=True)
             runner.run(command, input_stream=backup)
         restored_facts = _facts(runner, config.target_container, target_pgpass, config.target_user, temporary_database)
         if restored_facts != source_facts:
