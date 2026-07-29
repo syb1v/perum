@@ -104,6 +104,42 @@ async def enroll_on_boot() -> None:
         logger.warning("agent: enroll-on-boot отложен: %s", exc)
 
 
+async def _observe_landings(db: AsyncSession) -> list["AgentLandingState"]:
+    """Снять фактическое состояние лендингов орг на ноде: контейнер запущен и
+    маршрут есть в Caddy. Ошибки не фатальны — health важнее полноты отчёта."""
+    from sqlalchemy import select as _sel
+
+    from app.agent.schemas import AgentLandingState
+    from app.models import Organization as _Org
+    from app.services.caddy_admin import get_caddy_admin
+    from app.services.stack_spec import landing_container_name, landing_label_slug
+
+    docker = DockerClient()
+    caddy = get_caddy_admin()
+    observed: list[AgentLandingState] = []
+    try:
+        orgs = (await db.execute(
+            _sel(_Org).where(_Org.domain.isnot(None), _Org.domain != "")
+        )).scalars().all()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("landing observation skipped: %s", exc)
+        return observed
+
+    for org in orgs:
+        running = False
+        routed = False
+        try:
+            running = await docker.container_is_running(landing_container_name(org.slug))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("landing %s: container probe failed: %s", org.domain, exc)
+        try:
+            routed = await caddy.route_exists(landing_label_slug(org.slug))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("landing %s: route probe failed: %s", org.domain, exc)
+        observed.append(AgentLandingState(domain=org.domain, running=running, routed=routed))
+    return observed
+
+
 async def get_agent_health(db: AsyncSession) -> AgentHealthResponse:
     state = await get_agent_state(db)
     docker = DockerClient()
@@ -126,6 +162,7 @@ async def get_agent_health(db: AsyncSession) -> AgentHealthResponse:
         disk_total_gb=round(disk.total / (1024 ** 3), 2),
         uptime_seconds=int(time.time() - psutil.boot_time()),
         agent_version="1.0.0",
+        landings=await _observe_landings(db),
         timestamp=datetime.now(timezone.utc),
     )
 

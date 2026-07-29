@@ -147,6 +147,11 @@ startup resync успешно восстановил `landing grsn-panel.ru` н�
 login `200`, cache-purge `sw.js` `200`. Legacy punycode shadow row не участвует в
 canonical routes и намеренно не удалена до отдельного backup/restore cleanup proof.
 
+Добавлена status reconciliation: Agent health сообщает для каждого landing domain
+фактические `running` и `routed`, Core `node_monitor` сопоставляет их с
+`Organization.domain` и обновляет `landing_status`. Это устраняет stale `failed`
+в UI после успешного startup resync; пустой health response не меняет состояние.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

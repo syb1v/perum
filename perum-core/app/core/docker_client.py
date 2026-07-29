@@ -343,6 +343,18 @@ class DockerClient:
 
         return await asyncio.to_thread(_container_ip)
 
+    async def container_is_running(self, name: str) -> bool:
+        """Запущен ли контейнер. Отсутствующий контейнер — не ошибка (False)."""
+
+        def _is_running() -> bool:
+            try:
+                container = self.client.containers.get(name)
+            except NotFound:
+                return False
+            return (container.attrs.get("State") or {}).get("Status") == "running"
+
+        return await asyncio.to_thread(_is_running)
+
     async def remove_containers(self, slug: str) -> list[str]:
         """Remove the org's containers but keep its data volume.
 

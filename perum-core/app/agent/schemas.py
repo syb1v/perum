@@ -110,6 +110,16 @@ class AgentSchoolListResponse(BaseModel):
     total: int
 
 
+class AgentLandingState(BaseModel):
+    """Фактическое состояние лендинга орг на ноде. Ядро сверяет его с
+    `Organization.landing_status`, иначе однажды выставленный `failed` остаётся
+    навсегда даже после успешного восстановления маршрута воркером."""
+
+    domain: str
+    running: StrictBool
+    routed: StrictBool
+
+
 class AgentHealthResponse(BaseModel):
     node_name: str | None = None
     status: str
@@ -121,6 +131,7 @@ class AgentHealthResponse(BaseModel):
     disk_total_gb: float | None = None
     uptime_seconds: int | None = None
     agent_version: str | None = None
+    landings: list[AgentLandingState] = Field(default_factory=list)
     timestamp: datetime
 
 
