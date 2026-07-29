@@ -152,6 +152,14 @@ canonical routes и намеренно не удалена до отдельно
 `Organization.domain` и обновляет `landing_status`. Это устраняет stale `failed`
 в UI после успешного startup resync; пустой health response не меняет состояние.
 
+Commit `f73b5e4` прошёл Core tests (220) и Release build, но production Core
+остаётся на предыдущем healthy image: `ghcr.io` из Core VPS недоступен
+(`dial tcp 140.82.121.33:443: i/o timeout`), поэтому безопасный `docker pull`
+не завершился. Рабочий Core не останавливался. Текущая проверка с Core host:
+landing `200`, school health `200`, node Agent `200`, Core DB
+`landing_status=active`. Runtime rollout monitor ожидает восстановления egress к
+GHCR или operator-assisted image transfer.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до
