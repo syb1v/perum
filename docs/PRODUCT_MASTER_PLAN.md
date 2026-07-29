@@ -160,6 +160,15 @@ landing `200`, school health `200`, node Agent `200`, Core DB
 `landing_status=active`. Runtime rollout monitor ожидает восстановления egress к
 GHCR или operator-assisted image transfer.
 
+Production stabilization makes route ownership explicit: Core startup sync never
+creates a proxy/TLS owner for a school assigned to a remote node; it removes legacy
+Core routes and node Caddy owns DNS/TLS/app routing. Agent resync removes landing
+routes whose managed container is absent and health counts actual
+`com.perum.role=app` school containers. Node installer uses `pull_policy: missing`;
+normal updates remain Watchtower-managed, while a verified image can be transferred
+with `docker save | ssh ... docker load` and started with `--pull never` during a
+GHCR egress outage.
+
 Relay admission больше не создаёт unbounded accepted tasks за semaphore:
 `MAX_CONNECTIONS` ограничивает active upstream sessions, отдельный bounded
 `MAX_PENDING_CONNECTIONS` — ожидающие accepted sessions, overflow закрывается до

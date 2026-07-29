@@ -144,8 +144,12 @@ async def get_agent_health(db: AsyncSession) -> AgentHealthResponse:
     state = await get_agent_state(db)
     docker = DockerClient()
     containers = await docker.list_containers(all=True)
-    school_containers = [c for c in containers if c.get("Labels", {}).get("com.perum.type") == "school"]
-    schools_count = len(set(c.get("Labels", {}).get("com.perum.school") for c in school_containers if c.get("Labels", {}).get("com.perum.school")))
+    school_containers = [
+        c for c in containers
+        if c.get("Labels", {}).get("com.perum.role") == "app"
+        and c.get("Labels", {}).get("com.perum.org", "").startswith("sch-")
+    ]
+    schools_count = len(school_containers)
 
     cpu_percent = psutil.cpu_percent(interval=0.1)
     mem = psutil.virtual_memory()
@@ -544,7 +548,12 @@ async def _resync_node_caddy_routes() -> None:
             for org in all_orgs:
                 lbl = landing_label_slug(org.slug)
                 try:
-                    upstream = f"{await docker.container_ip(landing_container_name(org.slug))}:80"
+                    container_name = landing_container_name(org.slug)
+                    if not await docker.container_is_running(container_name):
+                        await caddy.remove_route(lbl)
+                        logger.info("node caddy sync: removed stale landing route %s", org.domain)
+                        continue
+                    upstream = f"{await docker.container_ip(container_name)}:80"
                     await caddy.add_proxy_route(lbl, org.domain, upstream)
                     logger.info("node caddy sync: landing %s", org.domain)
                 except Exception as exc:

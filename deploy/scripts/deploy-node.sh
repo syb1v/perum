@@ -181,7 +181,7 @@ services:
     image: ${AGENT_IMAGE}
     container_name: perum_agent
     restart: unless-stopped
-    pull_policy: always
+    pull_policy: missing
     labels:
       com.centurylinklabs.watchtower.enable: \"true\"
     environment:
@@ -280,7 +280,7 @@ services:
     image: ghcr.io/syb1v/perum-web:latest
     container_name: perum_web
     restart: unless-stopped
-    pull_policy: always
+    pull_policy: missing
     labels:
       com.centurylinklabs.watchtower.enable: "true"
     environment:

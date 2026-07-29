@@ -71,10 +71,18 @@ inspect-derived bridge IP и пересинхронизировать их по�
 между Core и node shadow DB. Slug/domain являются mutable routing metadata и не
 могут определять создание новой identity. Reconciliation не должна удалять school
 DB/volume; ambiguous legacy rows оставляются для отдельной ручной проверки.
-`perum_web` должен иметь Watchtower enable label: иначе `pull_policy: always`
-работает только при compose invocation, и браузеры продолжают получать старый
-PWA worker. После Web rollout проверьте, что `/sw.js` удаляет caches, `/login`
+`perum_web` должен иметь Watchtower enable label: `pull_policy: missing` не
+обновляет уже загруженный image сам по себе, и без Watchtower браузеры продолжат
+получать старый PWA worker. После Web rollout проверьте, что `/sw.js` удаляет caches, `/login`
 отдаёт `200`, а shaped `/api/login` достигает Tenant.
+
+При `ghcr.io ... i/o timeout` не останавливайте рабочий Core/Agent и не запускайте
+Compose без production `--env-file`: это может подставить пустые secrets и начать
+локальный build. Скачайте image на доверенной машине, проверьте digest, передайте
+`docker save IMAGE | ssh root@HOST 'docker load'`, затем выполните
+`docker compose --pull never ... up -d --no-deps --force-recreate SERVICE`. Node
+templates используют `pull_policy: missing`, чтобы не требовать registry pull,
+если image уже загружен локально.
 
 На organization node exact `PUBLIC_BASE_DOMAIN` может быть apex landing этой org.
 Он разрешён только для `add_proxy_route` в `ROLE=org_agent`; school route и

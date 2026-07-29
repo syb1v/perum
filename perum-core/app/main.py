@@ -14,6 +14,10 @@ logger = logging.getLogger("perum.core")
 settings = get_settings()
 
 
+def _school_route_is_owned_by_node(school_id: int, node_map: dict[int, str]) -> bool:
+    return school_id in node_map
+
+
 async def _sync_caddy_routes() -> None:
     """Best-effort: re-add Caddy routes for every active org on startup.
 
@@ -79,17 +83,17 @@ async def _sync_caddy_routes() -> None:
     for domain, school in school_rows:
         try:
             rid = school_label_slug(school.slug) if domain.domain_type == "subdomain" else f"dom-{domain.id}"
-            if school.id in node_map:
-                # Школа на ноде: DNS школы указывает на ноду напрямую, платформенный
-                # Caddy не задействован для основного трафика. Маршрут здесь нужен
-                # только если кастомный домен школы указывает на ядро (редко).
-                # Используем add_proxy_route — нода сама обслуживает весь трафик.
-                upstream = f"{node_map[school.id]}:80"
-                await caddy.add_proxy_route(rid, domain.domain, upstream)
-            else:
-                # Локальная школа на ядре: tenant-образ обслуживает и API и фронтенд.
-                upstream = f"{school_container_name(school.slug, 'app')}:3000"
-                await caddy.add_proxy_route(rid, domain.domain, upstream)
+            if _school_route_is_owned_by_node(school.id, node_map):
+                # DNS remote school указывает прямо на node. Route на Core создавал
+                # второго TLS owner того же hostname: оба Caddy запускали ACME, а
+                # Core проксировал обратно на публичный node. Удаляем legacy route и
+                # полностью делегируем routing/certificates node Agent.
+                await caddy.remove_route(rid)
+                logger.info("route sync (remote school delegated): %s -> node %s", domain.domain, node_map[school.id])
+                continue
+            # Локальная школа на ядре: tenant-образ обслуживает и API и фронтенд.
+            upstream = f"{school_container_name(school.slug, 'app')}:3000"
+            await caddy.add_proxy_route(rid, domain.domain, upstream)
             logger.info("route sync (school): %s -> %s", domain.domain, upstream)
         except Exception as exc:  # noqa: BLE001
             logger.warning("route sync failed for school %s: %s", domain.domain, exc)
@@ -97,6 +101,10 @@ async def _sync_caddy_routes() -> None:
     for domain, school in suspended_rows:
         try:
             rid = school_label_slug(school.slug) if domain.domain_type == "subdomain" else f"dom-{domain.id}"
+            if _school_route_is_owned_by_node(school.id, node_map):
+                await caddy.remove_route(rid)
+                logger.info("route sync (remote suspended school delegated): %s", domain.domain)
+                continue
             await caddy.add_maintenance_route(rid, domain.domain)
             logger.info("route sync (suspended school): %s -> 503", domain.domain)
         except Exception as exc:  # noqa: BLE001
