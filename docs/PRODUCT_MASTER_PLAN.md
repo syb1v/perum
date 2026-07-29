@@ -176,6 +176,13 @@ GHCR egress outage.
 теперь создаёт public A-records proxied и исправляет существующие DNS-only records
 в sweep.
 
+Production rollout `6b1f54f` установлен на Core и Agent digest
+`sha256:c13f7eb5e44e9d32ddce9582613dfd05617d29e34b05debda930502024dfe357`.
+Cloudflare API подтверждает `proxied=true` для apex и school A-record. Одновременный
+proof через client VPN и Core host: `пэрум.рф` `200` (42123 bytes),
+`grsn-panel.ru` `200` (992 bytes), school `/login` `200` (10831 bytes); Agent
+`schools_count=1`, canonical landing `running/routed`, Core DB org/school active.
+
 Production stabilization proof после `8b57259`: verified Core image digest
 `sha256:e8b139c01aa89b9adff77bb44f0c1e65d249e97e7b4df16f62d3547d1b10fa52`
 доставлен на Core и node через `docker save/load`, оба runtime обновлены с

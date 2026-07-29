@@ -335,5 +335,6 @@
 | 332 | 2026-07-28 20:55 | _______ | docs(node): зафиксирован restart proof landing и school routes |
 | 333 | 2026-07-29 09:00 | f73b5e4 | fix(monitor): status landing синхронизируется с фактом Agent |
 | 334 | 2026-07-29 09:45 | 8b57259 | fix(routes): remote school ownership делегирована node Caddy |
-| 335 | 2026-07-29 10:00 | _______ | docs(routes): зафиксирован simultaneous production proof |
-| 336 | 2026-07-29 10:15 | _______ | fix(dns): public org и school records закреплены за Cloudflare proxy |
+| 335 | 2026-07-29 10:00 | 07fa91c | docs(routes): зафиксирован simultaneous production proof |
+| 336 | 2026-07-29 10:15 | 6b1f54f | fix(dns): public org и school records закреплены за Cloudflare proxy |
+| 337 | 2026-07-29 10:20 | _______ | docs(dns): зафиксирован VPN/Cloudflare production proof |
