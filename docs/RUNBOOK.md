@@ -84,6 +84,12 @@ Compose без production `--env-file`: это может подставить �
 templates используют `pull_policy: missing`, чтобы не требовать registry pull,
 если image уже загружен локально.
 
+Public school и organization A-records в Cloudflare должны иметь `proxied=true`.
+`proxied=false` отправляет клиентов напрямую на node origin и может давать
+`ERR_TIMED_OUT` при VPN/provider path issues. DNS sweep автоматически исправляет
+режим; после изменения проверяйте Cloudflare API и authoritative DNS, а с Core
+host проверяйте origin `200`.
+
 На organization node exact `PUBLIC_BASE_DOMAIN` может быть apex landing этой org.
 Он разрешён только для `add_proxy_route` в `ROLE=org_agent`; school route и
 `admin`/`www` не должны обходить reserved-host guard. После Agent restart в логах

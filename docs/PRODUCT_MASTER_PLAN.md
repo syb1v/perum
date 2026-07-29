@@ -169,6 +169,13 @@ normal updates remain Watchtower-managed, while a verified image can be transfer
 with `docker save | ssh ... docker load` and started with `--pull never` during a
 GHCR egress outage.
 
+Последний client timeout был вызван DNS policy defect: `grsn-panel.ru` и
+`school-1.grsn-panel.ru` имели Cloudflare `proxied=false`, поэтому клиенты/VPN
+ходили напрямую на node `87.120.196.143`. Записи переведены в `proxied=true`;
+после propagation client VPN получил landing и school `/login` `200`. DNS manager
+теперь создаёт public A-records proxied и исправляет существующие DNS-only records
+в sweep.
+
 Production stabilization proof после `8b57259`: verified Core image digest
 `sha256:e8b139c01aa89b9adff77bb44f0c1e65d249e97e7b4df16f62d3547d1b10fa52`
 доставлен на Core и node через `docker save/load`, оба runtime обновлены с

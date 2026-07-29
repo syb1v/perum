@@ -5,7 +5,7 @@
   - Каждый орг-домен = отдельная зона в CF (добавляется вручную через CF Dashboard).
   - При создании школы: POST /zones/{zone_id}/dns_records → A-запись на IP ноды.
   - При удалении/заморозке: DELETE /zones/{zone_id}/dns_records/{record_id}.
-  - DNS-only (серые облака) — трафик напрямую на ноду, TLS за Caddy на ноде.
+  - Public A-records are proxied through Cloudflare; the node remains the origin.
 
 Fallback: если CLOUDFLARE_API_TOKEN не задан — ручной режим (подсказки в UI).
 """
@@ -36,6 +36,7 @@ class DnsRecord:
     content: str       # IP ноды
     node_name: str     # имя ноды
     cf_record_id: str | None = None  # ID записи в CF (если авто)
+    proxied: bool = False
     status: str = "ok"  # ok | pending | error
 
 
@@ -119,7 +120,7 @@ class DnsManager:
                     "name": subdomain,
                     "content": ip,
                     "ttl": 1,    # auto-TTL
-                    "proxied": False,  # DNS-only, серое облако
+                    "proxied": True,
                 },
             )
             resp.raise_for_status()
@@ -137,6 +138,22 @@ class DnsManager:
             record.status = "error"
 
         return record
+
+    async def set_proxied(self, zone_id: str, record: DnsRecord, *, proxied: bool = True) -> bool:
+        """Привести существующую A-запись к публичной proxy policy."""
+        if not self._enabled or not record.cf_record_id:
+            return False
+        try:
+            cf = await self._cf()
+            resp = await cf.put(
+                f"/zones/{zone_id}/dns_records/{record.cf_record_id}",
+                json={"type": record.type, "name": record.name, "content": record.content, "ttl": 1, "proxied": proxied},
+            )
+            resp.raise_for_status()
+            return bool(resp.json().get("success"))
+        except Exception as exc:  # noqa: BLE001
+            logger.error("CF: set_proxied(%s) failed: %s", record.fqdn, exc)
+            return False
 
     async def delete_record(self, zone_id: str, cf_record_id: str) -> bool:
         """Удалить DNS-запись по её CF ID."""
@@ -178,6 +195,7 @@ class DnsManager:
                     content=r["content"],
                     node_name="",
                     cf_record_id=r["id"],
+                    proxied=bool(r.get("proxied")),
                 ))
             return records
         except Exception as exc:
@@ -225,12 +243,24 @@ class DnsManager:
                 continue
 
             existing = cf_by_name.pop(school.subdomain, None)
-            if existing and existing.content == node_ip:
+            if existing and existing.content == node_ip and existing.proxied:
                 result.records.append(existing)
             else:
-                record = await self.create_record(org.cf_zone_id, school.subdomain, org.domain, node_ip, node_name)
+                if existing and existing.content == node_ip:
+                    await self.set_proxied(org.cf_zone_id, existing)
+                    existing.proxied = True
+                    record = existing
+                else:
+                    record = await self.create_record(org.cf_zone_id, school.subdomain, org.domain, node_ip, node_name)
                 result.records.append(record)
                 result.synced += 1
+
+        # The organization apex is also public traffic and must not fall back to
+        # direct node routing. Keep its proxy policy aligned with school records.
+        apex = cf_by_name.pop("", None) or cf_by_name.pop(org.domain or "", None)
+        if apex and not apex.proxied:
+            await self.set_proxied(org.cf_zone_id, apex)
+            result.synced += 1
 
         managed_record_ids = {school.cf_record_id for school in schools if school.cf_record_id}
         for record in cf_by_name.values():
