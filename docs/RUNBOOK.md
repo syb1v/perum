@@ -126,6 +126,21 @@ downgrade ownership migration до controlled cleanup. JSON summary не сод�
 паролей; synthetic logins имеют namespace `synru` и используют только вымышленные
 данные `example.invalid`.
 
+## Billing reconciliation
+
+`POST /api/billing/enforce` сохранён как совместимый platform-admin endpoint, но
+не является командой остановки. Он сверяет просроченные active subscriptions,
+создаёт или переиспользует open invoice и переводит subscription в `past_due`.
+Organization, schools, containers и routes не меняются. Поле `suspended` остаётся
+пустым compatibility field; проверяйте `delinquent`, `invoices_created`,
+`invoices_existing` и `subscriptions_marked_past_due`.
+
+Текущая гарантия сериализации payment/reconciliation рассчитана на один Core
+worker/instance. Перед горизонтальным масштабированием Core требуется PostgreSQL
+advisory/row locking и DB-ограничение одного open invoice на organization. Один
+open invoice пока представляет один 30-дневный snapshot; не начисляйте несколько
+пропущенных периодов вручную до утверждения billing/fiscalization ADR.
+
 ## Ограниченный demo school stack
 
 `deploy/demo-school/` предназначен только для временного показа одной синтетической

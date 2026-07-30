@@ -38,6 +38,7 @@ PLANS = list(PLAN_SCHOOL_LIMITS.keys())
 TRIAL_DAYS = 14      # длительность пробного периода новой организации
 GRACE_DAYS = 3       # отсрочка после истечения оплаты, прежде чем считать просроченной
 _MONTH_DAYS = 30     # упрощённый «месяц» для продления подписки
+_BILLING_RECONCILIATION_LOCK = "billing:reconcile"
 
 
 def school_limit(plan: str) -> int:
@@ -60,7 +61,7 @@ def is_delinquent(sub: Subscription | None, now: datetime, grace_days: int = GRA
     if sub is None:
         return False
     if sub.status == "canceled":
-        return True
+        return False
     exp = expires_at(sub)
     if exp is None:
         return False
@@ -112,6 +113,15 @@ async def record_payment(db: AsyncSession, org: Organization, sub: Subscription,
     """Ручная отметка оплаты: продлевает paid_until на months «месяцев», переводит
     подписку в active и создаёт оплаченный счёт (аудит-след). Для провайдера позже
     счёт будет создаваться открытым и закрываться по webhook."""
+    from app.core.locks import keyed_lock
+
+    async with keyed_lock(_BILLING_RECONCILIATION_LOCK):
+        return await _record_payment_unlocked(db, org, sub, months)
+
+
+async def _record_payment_unlocked(
+    db: AsyncSession, org: Organization, sub: Subscription, months: int
+) -> Invoice:
     months = max(1, int(months))
     now = datetime.utcnow()
     base = max(now, sub.paid_until or now)
@@ -212,47 +222,49 @@ async def receivables(db: AsyncSession) -> list[dict]:
     ]
 
 
-async def run_billing_enforcement(db: AsyncSession) -> dict:
-    """Свип просроченных организаций: материализует дебиторку (открытый счёт),
-    замораживает стеки школ и саму орг. Идемпотентно (берёт только active-орг).
-    Используется и ручным /api/billing/enforce, и фоновым планировщиком (#4)."""
-    # Ленивый импорт: school_provisioner не должен затягиваться в граф импорта
-    # биллинг-сервиса (его тянут лёгкие auth-зависимости).
-    from app.core.locks import keyed_lock, school_key
-    from app.services.school_provisioner import suspend_school
+async def run_billing_reconciliation(db: AsyncSession) -> dict:
+    """Сверить просроченные подписки и материализовать дебиторку без изменения
+    lifecycle-состояния организаций и школ. Идемпотентно для открытых счетов."""
+    from app.core.locks import keyed_lock
 
-    # Лок на весь свип: ручной /api/billing/enforce и фоновый планировщик не должны
-    # идти параллельно (иначе оба создадут открытый счёт → дубль дебиторки, и оба
-    # будут морозить одни школы). AUDIT-fix review.
-    async with keyed_lock("billing:enforce"):
+    async with keyed_lock(_BILLING_RECONCILIATION_LOCK):
         now = datetime.utcnow()
         orgs = (await db.execute(select(Organization).where(Organization.status == "active"))).scalars().all()
-        suspended: list[str] = []
+        delinquent: list[str] = []
+        invoices_created: list[str] = []
+        invoices_existing: list[str] = []
+        subscriptions_marked_past_due: list[str] = []
         for org in orgs:
             sub = await get_or_create_subscription(db, org)
             if not is_delinquent(sub, now):
                 continue
-            await open_invoice_for(db, org, sub, now)  # зафиксировать долг
-            schools = (await db.execute(select(School).where(School.org_id == org.id))).scalars().all()
-            for s in schools:
-                if s.status == "active":
-                    try:
-                        # Тот же per-school лок, что и у пользовательских lifecycle-операций
-                        # (reprovision/update/unsuspend) — чтобы docker-мутации не гонялись.
-                        async with keyed_lock(school_key(s.id)):
-                            await suspend_school(s, db, reason="org")
-                    except Exception as exc:  # noqa: BLE001
-                        logger.error("billing enforce: suspend school %s failed: %s", s.slug, exc)
-            org.status = "suspended"
-            org.suspended_at = now
-            sub.status = "past_due"
-            sub.updated_at = now
+            delinquent.append(org.slug)
+            existing = (await db.execute(
+                select(Invoice.id).where(Invoice.org_id == org.id, Invoice.status == "open").limit(1)
+            )).scalar_one_or_none()
+            invoice = await open_invoice_for(db, org, sub, now)
+            if invoice is not None:
+                (invoices_existing if existing is not None else invoices_created).append(org.slug)
+            if sub.status != "past_due":
+                sub.status = "past_due"
+                sub.updated_at = now
+                subscriptions_marked_past_due.append(org.slug)
             await db.commit()
-            suspended.append(org.slug)
-            logger.info("billing enforce: suspended org %s (delinquent)", org.slug)
-    return {"checked": len(orgs), "suspended": suspended}
-
-
+            logger.info(
+                "billing reconcile: org=%s invoice=%s subscription=%s org_status=%s",
+                org.slug,
+                "none" if invoice is None else "existing" if existing is not None else "created",
+                sub.status,
+                org.status,
+            )
+    return {
+        "checked": len(orgs),
+        "delinquent": delinquent,
+        "invoices_created": invoices_created,
+        "invoices_existing": invoices_existing,
+        "subscriptions_marked_past_due": subscriptions_marked_past_due,
+        "suspended": [],
+    }
 async def check_org_limits(db: AsyncSession, org: Organization) -> dict:
     """Полная проверка лимитов организации: школы, ноды, домены, лендинги."""
     schools_count = int(await db.scalar(

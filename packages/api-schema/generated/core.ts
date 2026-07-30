@@ -310,9 +310,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Enforce Billing
-         * @description Приостановить организации с просроченной подпиской вручную (то же делает и
-         *     фоновый планировщик). Идемпотентно: берём только active-орг.
+         * Reconcile Billing
+         * @description Сверить просрочки и дебиторку без приостановки организаций или школ.
+         *     Путь сохранён для обратной совместимости.
          */
         post: operations["enforce_billing_api_billing_enforce_post"];
         delete?: never;
@@ -331,7 +331,7 @@ export interface paths {
         /**
          * List Receivables
          * @description Дебиторка платформы: кто и сколько должен (открытые счета). Материализуется
-         *     планировщиком/enforce при просрочке (AUDIT, billing #5).
+         *     планировщиком и совместимым `/enforce` при просрочке (AUDIT, billing #5).
          */
         get: operations["list_receivables_api_billing_receivables_get"];
         put?: never;

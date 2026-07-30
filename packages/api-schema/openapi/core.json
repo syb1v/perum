@@ -928,8 +928,8 @@
         "tags": [
           "billing"
         ],
-        "summary": "Enforce Billing",
-        "description": "Приостановить организации с просроченной подпиской вручную (то же делает и\nфоновый планировщик). Идемпотентно: берём только active-орг.",
+        "summary": "Reconcile Billing",
+        "description": "Сверить просрочки и дебиторку без приостановки организаций или школ.\nПуть сохранён для обратной совместимости.",
         "operationId": "enforce_billing_api_billing_enforce_post",
         "responses": {
           "200": {
@@ -958,7 +958,7 @@
           "billing"
         ],
         "summary": "List Receivables",
-        "description": "Дебиторка платформы: кто и сколько должен (открытые счета). Материализуется\nпланировщиком/enforce при просрочке (AUDIT, billing #5).",
+        "description": "Дебиторка платформы: кто и сколько должен (открытые счета). Материализуется\nпланировщиком и совместимым `/enforce` при просрочке (AUDIT, billing #5).",
         "operationId": "list_receivables_api_billing_receivables_get",
         "responses": {
           "200": {

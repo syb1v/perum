@@ -224,10 +224,20 @@ export default function PlatformConsole() {
     try { await papi(`/api/organizations/${id}/billing/charge`, { method: "POST", body: JSON.stringify({ months }) }); await reloadBilling(id); load(); }
     catch (e: any) { setErr(e.message); } finally { setBusy(null); }
   }
-  async function enforce() {
-    if (!confirm("Приостановить организации с просроченной подпиской (их школы остановятся)?")) return;
+  async function reconcileBilling() {
+    if (!confirm("Сверить просроченные подписки и открытые счета? Статусы организаций и школ не изменятся.")) return;
     setErr("");
-    try { const r = await papi("/api/billing/enforce", { method: "POST" }); alert(`Проверено: ${r.checked}. Приостановлено: ${r.suspended.length ? r.suspended.join(", ") : "нет"}.`); load(); }
+    try {
+      const r = await papi("/api/billing/enforce", { method: "POST" });
+      alert([
+        `Проверено организаций: ${r.checked}.`,
+        `Просрочено: ${r.delinquent.length ? r.delinquent.join(", ") : "нет"}.`,
+        `Созданы открытые счета: ${r.invoices_created.length ? r.invoices_created.join(", ") : "нет"}.`,
+        `Уже существовали: ${r.invoices_existing.length ? r.invoices_existing.join(", ") : "нет"}.`,
+        `Переведены в past_due: ${r.subscriptions_marked_past_due.length ? r.subscriptions_marked_past_due.join(", ") : "нет"}.`,
+      ].join("\n"));
+      load();
+    }
     catch (e: any) { setErr(e.message); }
   }
 
@@ -353,7 +363,7 @@ export default function PlatformConsole() {
       subtitle="Ядро ПЭРУМ — управление организациями"
       userLabel={getTokenPayload()?.login || "admin"}
       onLogout={() => { clearPlatformToken(); router.push("/platform/login"); }}
-      headerActions={section === "billing" ? <button className={styles.btnSecondary} onClick={enforce}>Проверить просрочки</button> : undefined}
+      headerActions={section === "billing" ? <button className={styles.btnSecondary} onClick={reconcileBilling}>Сверить задолженность</button> : undefined}
     >
       {err && <p className={styles.errorBanner}>{err}</p>}
 
@@ -601,7 +611,7 @@ export default function PlatformConsole() {
               {orgs?.map((o) => <option key={o.id} value={o.id}>{o.name} ({o.domain || o.slug})</option>)}
             </select>
             <span className={c.spacer} />
-            <button className={styles.btnSecondary} onClick={enforce}>Проверить просрочки</button>
+            <button className={styles.btnSecondary} onClick={reconcileBilling}>Сверить задолженность</button>
           </div>
           {receivables && receivables.organizations?.length > 0 && (
             <div className={styles.card}>

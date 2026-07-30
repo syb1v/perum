@@ -16,18 +16,18 @@ logger = logging.getLogger("perum.billing")
 router = APIRouter(dependencies=[Depends(require_platform_admin)])
 
 
-@router.post("/enforce")
+@router.post("/enforce", summary="Reconcile Billing")
 async def enforce_billing(db: AsyncSession = Depends(get_db)) -> dict:
-    """Приостановить организации с просроченной подпиской вручную (то же делает и
-    фоновый планировщик). Идемпотентно: берём только active-орг."""
-    from app.services.billing import run_billing_enforcement
+    """Сверить просрочки и дебиторку без приостановки организаций или школ.
+    Путь сохранён для обратной совместимости."""
+    from app.services.billing import run_billing_reconciliation
 
-    return await run_billing_enforcement(db)
+    return await run_billing_reconciliation(db)
 
 
 @router.get("/receivables")
 async def list_receivables(db: AsyncSession = Depends(get_db)) -> dict:
     """Дебиторка платформы: кто и сколько должен (открытые счета). Материализуется
-    планировщиком/enforce при просрочке (AUDIT, billing #5)."""
+    планировщиком и совместимым `/enforce` при просрочке (AUDIT, billing #5)."""
     rows = await receivables(db)
     return {"total_rub": await outstanding_total(db), "organizations": rows}

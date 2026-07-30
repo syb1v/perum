@@ -174,23 +174,23 @@ async def _dns_sweep_loop() -> None:
         await asyncio.sleep(interval)
 
 
-async def _billing_enforcement_loop() -> None:
+async def _billing_reconciliation_loop() -> None:
     """Фоновый свип просроченных подписок (#4): раз в BILLING_ENFORCE_INTERVAL_S
-    замораживает delinquent-орг и фиксирует дебиторку. Сбой итерации не валит
-    петлю. Раньше enforce был только ручным — просроченные орг работали бессрочно."""
+    сверяет статусы и фиксирует дебиторку без lifecycle-мутаций. Сбой итерации не
+    валит петлю."""
     from app.core.db import SessionLocal
-    from app.services.billing import run_billing_enforcement
+    from app.services.billing import run_billing_reconciliation
 
     interval = settings.BILLING_ENFORCE_INTERVAL_S
     await asyncio.sleep(min(interval, 30))  # дать БД прогреться, не бить сразу на старте
     while True:
         try:
             async with SessionLocal() as db:
-                result = await run_billing_enforcement(db)
-            if result.get("suspended"):
-                logger.info("billing scheduler: suspended %s", result["suspended"])
+                result = await run_billing_reconciliation(db)
+            if result.get("delinquent"):
+                logger.info("billing reconciliation scheduler: delinquent %s", result["delinquent"])
         except Exception as exc:  # noqa: BLE001
-            logger.warning("billing scheduler iteration failed: %s", exc)
+            logger.warning("billing reconciliation scheduler iteration failed: %s", exc)
         await asyncio.sleep(interval)
 
 
@@ -256,7 +256,7 @@ async def lifespan(app: FastAPI):
         await _seed_bootstrap_admin()
         await _sync_caddy_routes()
         if settings.BILLING_ENFORCE_INTERVAL_S > 0:
-            tasks.append(asyncio.create_task(_billing_enforcement_loop()))
+            tasks.append(asyncio.create_task(_billing_reconciliation_loop()))
         if settings.NODE_MONITOR_INTERVAL_S > 0:
             tasks.append(asyncio.create_task(_node_monitor_loop()))
         if settings.DNS_SWEEP_INTERVAL_S > 0:
