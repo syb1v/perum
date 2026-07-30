@@ -11,6 +11,9 @@ production checkout — отдельный read-only deploy key к репози�
 `git fetch`. Это разные направления доступа; входящий `DEPLOY_SSH_KEY` не даёт
 серверу права читать GitHub. Repository variables и production `.env.prod` обязаны
 содержать один и тот же punycode `PUBLIC_BASE_DOMAIN`.
+Canonical GitHub contract хранит `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, optional
+`DEPLOY_SSH_PORT` и required `DEPLOY_PATH` как variables; единственный SSH secret workflow —
+`DEPLOY_SSH_KEY`. Не переносите host или path в secrets.
 
 1. Убедитесь, что CI зелёный для нужного commit. Release публикует immutable
    `git-<sha>` images, а production deploy detached-checkout-ит тот же SHA и
@@ -86,11 +89,38 @@ templates используют `pull_policy: missing`, чтобы не треб�
 
 Version-controlled deploy scripts требуют exact immutable application images. Core
 update запускайте с `--commit <full-sha> --core-image <digest-or-git-tag>
---web-image <digest-or-git-tag>`; при уже загруженных images добавляйте
-`--pull-never`. Node bootstrap аналогично требует immutable Agent/Tenant/Web refs.
-Скрипты проверяют Compose/images до recreation и используют deploy lock. Node rerun
-сохраняет существующие DB/application secrets; credential rotation выполняется только
-отдельной операторской процедурой. Watchtower не входит в актуальный node template.
+--web-image <digest-or-git-tag>`. Exact local runtime ID `sha256:<64>` передаётся
+отдельно через `--core-runtime-image`/`--web-runtime-image`; portable image arguments
+должны оставаться registry refs. Git tag никогда не считается надёжным local-only identity: в обычном
+режиме он всегда pull-ится, затем inspect разрешает его в exact image ID. Registry
+digest переиспользуется локально либо pull-ится при отсутствии. `--pull-never`
+не разрешает cached git tag как runtime proof: для portable git ref одновременно
+передайте `--core-runtime-image`/`--web-runtime-image` с доступным local ID. Registry
+digest может доказать local availability самостоятельно. Historical recovery
+использует portable ref плюс сохранённый runtime ID либо доступный digest, но не
+cached tag без ID.
+Target и rollback Compose используют только resolved IDs и `--pull never`; после
+health script сверяет container `.Image`. IDs передаются только как ephemeral
+`CORE_RUNTIME_IMAGE`/`WEB_RUNTIME_IMAGE` текущему Compose invocation и не сохраняются
+в `.env.prod`: portable `CORE_IMAGE`/`AGENT_IMAGE`/`WEB_IMAGE` остаются registry refs
+для node bootstrap. После completed target checkout rollback, оставаясь на target
+commit, восстанавливает portable env, запускает captured previous runtime IDs через
+runtime-aware target Compose, проверяет health/identity и только затем возвращает
+checkout на previous commit. Если target checkout не завершился, script не трогает
+services и только восстанавливает previous checkout. Runtime override keys в
+`.env.prod` не добавляйте. Node bootstrap аналогично требует immutable Agent/Tenant/Web refs.
+Скрипты используют deploy lock и сохраняют существующие DB/application secrets;
+credential rotation выполняется только отдельной операторской процедурой. Watchtower
+не входит в актуальный node template.
+
+Для первого rollout identity-aware script нельзя полагаться на старый remote
+checkout: workflow вызывает находящийся там script до переключения commit. Безопасный
+bootstrap: получите `deploy/scripts/deploy-core.sh` exact target commit во временный
+путь, проверьте commit/source provenance и запустите этот файл с production
+`--path`, exact `--commit` и registry digest Core/Web refs. Не заменяйте working-tree
+script до запуска и не используйте mutable tags. Target script переключит checkout,
+а при post-checkout failure восстановит services target Compose-ом до возврата Git.
+После успешного bootstrap следующие workflow rollout используют versioned script.
 
 Public school и organization A-records в Cloudflare должны иметь `proxied=true`.
 `proxied=false` отправляет клиентов напрямую на node origin и может давать

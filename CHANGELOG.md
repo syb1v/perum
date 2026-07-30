@@ -21,6 +21,7 @@
 - Real restore proof исправил два transport-дефекта verifier: `pg_restore` и `psql` с `\gexec` теперь получают stdin через interactive Docker exec. Control, node metadata и Tenant dumps восстановлены в disposable tmpfs PostgreSQL с exact per-table row-count equality и обязательной cleanup.
 - Core/Web reconciled на immutable images из clean release checkout без изменения dirty legacy checkout; node Agent/Web переведены на те же immutable images, legacy Watchtower удалён, host-network Caddy topology сохранена. Scheduled public synthetic monitor и bounded 2 VU/30s pilot прошли.
 - После restore proof удалена exact orphan punycode organization row: предварительно подтверждены отсутствие container/route и нулевые ссылки во всех десяти FK-таблицах. Canonical org UUID и active school сохранены; archived `sch1` не удалялась без retention policy.
+- Control-plane update разделяет portable registry refs и ephemeral local runtime IDs: Core/Agent/Web env остаётся переносимым для node bootstrap, а Compose target/rollback используют отдельные runtime overrides без записи IDs в `.env.prod`. Post-checkout rollback восстанавливает previous services через runtime-aware target Compose до возврата Git; failed checkout services не трогает. Install rerun с portable digest env собирает Core/Web в stable local tags, исключая invalid digest build targets. Release deploy получает changed refs из build digest artifacts, сверяет identity и имеет обязательный CI shell gate; безопасный первый bootstrap target script задокументирован.
 
 ## [Unreleased] — 2026-07-28
 

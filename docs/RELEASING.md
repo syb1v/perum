@@ -31,17 +31,22 @@ SBOM и provenance публикуются BuildKit как OCI referrers. GitHub 
 не используется: он недоступен для user-owned private repository. Workflow после
 push отдельно проверяет exact registry digest через `buildx imagetools inspect`.
 
-Текущий automatic control-plane deploy не pin-ит checkout/image к `RELEASE_SHA`:
-он делает `git pull --ff-only` и pull mutable `latest`. До исправления workflow
-это известный release risk; не запускайте параллельные deploy, фиксируйте deployed
-digests/commit и не утверждайте SHA provenance только по trigger workflow.
+Automatic control-plane deploy передаёт exact `RELEASE_SHA` и portable Core/Web refs
+в version-controlled deploy script. Build matrix публикует digest artifact каждого
+изменённого компонента; deploy превращает его в `ghcr.io/...@sha256:<64>`. Для
+неизменённого компонента workflow сохраняет portable ref из `.env.prod` и отдельно
+передаёт текущий container `.Image` как local runtime override. Compose запускается
+с resolved IDs, но Core продолжает получать portable Agent/Web refs для node
+bootstrap; фактические container IDs сверяются после health gate. Manual git tag
+остаётся online-only movable ref и всегда pull-ится перед resolution.
 
 ## Control plane
 
 Если изменён Core/Web и repository variable `DEPLOY_ENABLED` равна `true`, deploy
-job использует configured SSH secrets, делает fast-forward pull на `DEPLOY_PATH`,
-pull images и пересоздаёт `perum_core`/`perum_web`. Tenant schools этот job не
-обновляет. Manual fallback описан в [RUNBOOK.md](RUNBOOK.md).
+job использует configured SSH access, переключает checkout на exact release commit,
+проверяет immutable images, пересоздаёт `perum_core`/`perum_web` и выполняет health
+gate с rollback на предыдущие commit/env/runtime image IDs. Tenant schools этот job
+не обновляет. Manual fallback описан в [RUNBOOK.md](RUNBOOK.md).
 
 ## Tenant release
 
@@ -69,11 +74,24 @@ descriptor manifest и pilot school.
 
 ## Configuration
 
-Не фиксируйте значения в документации. GitHub environment хранит variables
-`PUBLIC_BASE_DOMAIN`, `CORE_URL`, `DEPLOY_ENABLED`, optional `DEPLOY_PATH` и secrets
-`RELEASE_PUBLISH_TOKEN`, `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`,
-optional `DEPLOY_SSH_PORT`. Server-side matching secrets находятся в secret
-manager/production env. Mobile preview workflow имеет отдельные EAS settings.
+Не фиксируйте значения в документации. Canonical GitHub environment contract:
+variables `PUBLIC_BASE_DOMAIN`, `CORE_URL`, `DEPLOY_ENABLED`, `DEPLOY_SSH_HOST`,
+`DEPLOY_SSH_USER`, `DEPLOY_PATH` и optional `DEPLOY_SSH_PORT`; secrets
+`RELEASE_PUBLISH_TOKEN` и `DEPLOY_SSH_KEY`. Host, username, port и path не являются
+секретами и не должны дублироваться в GitHub secrets. Server-side matching secrets
+находятся в secret manager/production env. Mobile preview workflow имеет отдельные
+EAS settings.
+
+Миграция production environment на этот contract выполнена: host/user/path variables
+настроены, SSH key остаётся secret. Workflow preflight выводит имена отсутствующих
+settings без раскрытия значений. Первый rollout имеет bootstrap caveat: удалённый
+host выполняет script из текущего checkout, поэтому старая версия не может сама
+применить новый identity contract. Оператор должен один раз выполнить проверенную
+копию `deploy/scripts/deploy-core.sh` exact target commit из временного пути с exact
+commit и registry digest refs. Script не заменяется в старом checkout заранее:
+post-checkout rollback должен использовать runtime-aware target Compose и вернуть
+Git назад только после service recovery. Последующие rollout выполняются обычным
+exact-commit flow.
 
 `.github/workflows/eas-preview.yml` использует pinned EAS CLI `21.2.0` и до
 project lookup/build запускает mobile preflight. Environment `mobile-preview`

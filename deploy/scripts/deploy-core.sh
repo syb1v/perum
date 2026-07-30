@@ -14,6 +14,8 @@
 #   --commit SHA          Точный 40-символьный commit для --update
 #   --core-image IMG      Образ Core (immutable для --update/--no-build)
 #   --web-image IMG       Образ Web (immutable для --update)
+#   --core-runtime-image  Локальный image ID Core для неизменённого компонента
+#   --web-runtime-image   Локальный image ID Web для неизменённого компонента
 #   --path DIR            Путь      (по умолчанию: /opt/perum)
 #   --no-docker           Пропустить установку Docker (уже есть)
 #   --no-clone            Пропустить клон репо (уже есть)
@@ -57,6 +59,8 @@ COMMIT=""
 CORE_IMAGE="${CORE_IMAGE:-}"
 AGENT_IMAGE="${AGENT_IMAGE:-}"
 WEB_IMAGE="${WEB_IMAGE:-}"
+CORE_RUNTIME_IMAGE=""
+WEB_RUNTIME_IMAGE=""
 DEPLOY_PATH="/opt/perum"
 NO_DOCKER=false
 NO_CLONE=false
@@ -80,6 +84,8 @@ while [[ $# -gt 0 ]]; do
     --commit)       COMMIT="$2"; shift 2 ;;
     --core-image)   CORE_IMAGE="$2"; shift 2 ;;
     --web-image)    WEB_IMAGE="$2"; shift 2 ;;
+    --core-runtime-image) CORE_RUNTIME_IMAGE="$2"; shift 2 ;;
+    --web-runtime-image)  WEB_RUNTIME_IMAGE="$2"; shift 2 ;;
     --path)         DEPLOY_PATH="$2"; shift 2 ;;
     --no-docker)    NO_DOCKER=true; shift ;;
     --no-clone)     NO_CLONE=true; shift ;;
@@ -107,7 +113,12 @@ validate_app_image() {
   [[ -n "$image" ]] || die "$name обязателен"
   validate_image_syntax "$name" "$image"
   [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ ]] \
-    || die "$name должен быть immutable digest или git-<sha> tag длиной не менее 12 символов"
+    || die "$name должен быть portable registry digest или git-<sha> tag длиной не менее 12 символов"
+}
+
+validate_runtime_image_id() {
+  local name="$1" image="$2"
+  [[ "$image" =~ ^sha256:[0-9a-fA-F]{64}$ ]] || die "$name должен быть exact runtime sha256 image ID"
 }
 
 validate_image_syntax() {
@@ -141,8 +152,12 @@ wait_for_app_readiness() {
 }
 
 persist_app_images() {
+  local core_image="${1:-$CORE_IMAGE}" agent_image="${2:-$AGENT_IMAGE}" web_image="${3:-$WEB_IMAGE}"
   local env_file="${DEPLOY_PATH}/deploy/.env.prod"
-  run "env_tmp=\$(mktemp '${env_file}.tmp.XXXXXX') && cp --preserve=mode,ownership '${env_file}' \"\$env_tmp\" && sed -i -e 's|^CORE_IMAGE=.*|CORE_IMAGE=${CORE_IMAGE}|' -e 's|^AGENT_IMAGE=.*|AGENT_IMAGE=${AGENT_IMAGE}|' -e 's|^WEB_IMAGE=.*|WEB_IMAGE=${WEB_IMAGE}|' \"\$env_tmp\" && { grep -q '^CORE_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'CORE_IMAGE=${CORE_IMAGE}' >> \"\$env_tmp\"; } && { grep -q '^AGENT_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'AGENT_IMAGE=${AGENT_IMAGE}' >> \"\$env_tmp\"; } && { grep -q '^WEB_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'WEB_IMAGE=${WEB_IMAGE}' >> \"\$env_tmp\"; } && mv -f \"\$env_tmp\" '${env_file}'"
+  validate_image_syntax "persisted CORE_IMAGE" "$core_image"
+  validate_image_syntax "persisted AGENT_IMAGE" "$agent_image"
+  validate_image_syntax "persisted WEB_IMAGE" "$web_image"
+  run "env_tmp=\$(mktemp '${env_file}.tmp.XXXXXX') && cp --preserve=mode,ownership '${env_file}' \"\$env_tmp\" && sed -i -e 's|^CORE_IMAGE=.*|CORE_IMAGE=${core_image}|' -e 's|^AGENT_IMAGE=.*|AGENT_IMAGE=${agent_image}|' -e 's|^WEB_IMAGE=.*|WEB_IMAGE=${web_image}|' \"\$env_tmp\" && { grep -q '^CORE_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'CORE_IMAGE=${core_image}' >> \"\$env_tmp\"; } && { grep -q '^AGENT_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'AGENT_IMAGE=${agent_image}' >> \"\$env_tmp\"; } && { grep -q '^WEB_IMAGE=' \"\$env_tmp\" || printf '%s\\n' 'WEB_IMAGE=${web_image}' >> \"\$env_tmp\"; } && mv -f \"\$env_tmp\" '${env_file}'"
 }
 
 # ── Авто-режим: если запущено без --domain и без --update — спросить ─────
@@ -207,13 +222,19 @@ if [[ "$UPDATE" == true ]]; then
   validate_app_image "CORE_IMAGE" "$CORE_IMAGE"
   validate_app_image "AGENT_IMAGE" "$AGENT_IMAGE"
   validate_app_image "WEB_IMAGE" "$WEB_IMAGE"
+  [[ -z "$CORE_RUNTIME_IMAGE" ]] || validate_runtime_image_id "CORE_RUNTIME_IMAGE" "$CORE_RUNTIME_IMAGE"
+  [[ -z "$WEB_RUNTIME_IMAGE" ]] || validate_runtime_image_id "WEB_RUNTIME_IMAGE" "$WEB_RUNTIME_IMAGE"
+  if [[ "$PULL_NEVER" == true ]]; then
+    [[ -n "$CORE_RUNTIME_IMAGE" || ! "$CORE_IMAGE" =~ :git-[0-9a-fA-F]{12,}$ ]] || die "--pull-never требует CORE_RUNTIME_IMAGE для portable CORE_IMAGE git tag"
+    [[ -n "$WEB_RUNTIME_IMAGE" || ! "$WEB_IMAGE" =~ :git-[0-9a-fA-F]{12,}$ ]] || die "--pull-never требует WEB_RUNTIME_IMAGE для portable WEB_IMAGE git tag"
+  fi
   [[ -n "$DOMAIN" ]] || DOMAIN=$(env_value PUBLIC_BASE_DOMAIN || true)
 
   if [[ "$DRY_RUN" == true ]]; then
     info "[DRY RUN] PREVIOUS_COMMIT=\$(git -C '${DEPLOY_PATH}' rev-parse HEAD)"
     PREVIOUS_COMMIT="0000000000000000000000000000000000000000"
-    PREVIOUS_CORE_RUNTIME_IMAGE="$PREVIOUS_CORE_IMAGE"
-    PREVIOUS_WEB_RUNTIME_IMAGE="$PREVIOUS_WEB_IMAGE"
+    PREVIOUS_CORE_RUNTIME_IMAGE="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    PREVIOUS_WEB_RUNTIME_IMAGE="sha256:0000000000000000000000000000000000000000000000000000000000000000"
     ROLLBACK_ENV_BACKUP=""
   else
     PREVIOUS_COMMIT=$(git -C "${DEPLOY_PATH}" rev-parse HEAD) \
@@ -234,12 +255,13 @@ if [[ "$UPDATE" == true ]]; then
   validate_image_syntax "предыдущий CORE_IMAGE" "$PREVIOUS_CORE_IMAGE"
   validate_image_syntax "предыдущий AGENT_IMAGE" "$PREVIOUS_AGENT_IMAGE"
   validate_image_syntax "предыдущий WEB_IMAGE" "$PREVIOUS_WEB_IMAGE"
-  validate_image_syntax "предыдущий runtime CORE_IMAGE" "$PREVIOUS_CORE_RUNTIME_IMAGE"
-  validate_image_syntax "предыдущий runtime WEB_IMAGE" "$PREVIOUS_WEB_RUNTIME_IMAGE"
+  validate_runtime_image_id "предыдущий runtime CORE_IMAGE" "$PREVIOUS_CORE_RUNTIME_IMAGE"
+  validate_runtime_image_id "предыдущий runtime WEB_IMAGE" "$PREVIOUS_WEB_RUNTIME_IMAGE"
   run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null"
 
-  COMPOSE_UPDATE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+  COMPOSE_PREFLIGHT="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
   ROLLBACK_ACTIVE=false
+  TARGET_CHECKOUT_COMPLETE=false
 
   rollback_update() {
     local failure_status="${1:-$?}" rollback_failed=false
@@ -250,16 +272,25 @@ if [[ "$UPDATE" == true ]]; then
       exit "$failure_status"
     fi
     ROLLBACK_ACTIVE=false
-    warn "Обновление завершилось ошибкой; восстанавливаю предыдущий commit, конфигурацию и образы"
-    run "cd ${DEPLOY_PATH} && git checkout --detach '${PREVIOUS_COMMIT}'" || rollback_failed=true
+    if [[ "$TARGET_CHECKOUT_COMPLETE" != true ]]; then
+      warn "Переключение на target commit завершилось ошибкой; восстанавливаю предыдущий checkout"
+      run "cd ${DEPLOY_PATH} && git checkout --detach '${PREVIOUS_COMMIT}'" || rollback_failed=true
+      [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
+      [[ "$rollback_failed" != true ]] || err "Не удалось восстановить предыдущий checkout"
+      exit "$failure_status"
+    fi
+    warn "Обновление завершилось ошибкой; восстанавливаю предыдущую конфигурацию и образы"
     if [[ "$DRY_RUN" != true ]]; then
       cp --preserve=mode,ownership,timestamps "$ROLLBACK_ENV_BACKUP" "${DEPLOY_PATH}/deploy/.env.prod" || rollback_failed=true
     fi
-    ROLLBACK_COMPOSE="cd ${DEPLOY_PATH} && CORE_IMAGE=${PREVIOUS_CORE_RUNTIME_IMAGE} AGENT_IMAGE=${PREVIOUS_AGENT_IMAGE} WEB_IMAGE=${PREVIOUS_WEB_RUNTIME_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+    ROLLBACK_COMPOSE="cd ${DEPLOY_PATH} && CORE_RUNTIME_IMAGE=${PREVIOUS_CORE_RUNTIME_IMAGE} WEB_RUNTIME_IMAGE=${PREVIOUS_WEB_RUNTIME_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
     run "${ROLLBACK_COMPOSE} config -q" || rollback_failed=true
     run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null" || rollback_failed=true
     run "${ROLLBACK_COMPOSE} up -d --pull never --force-recreate perum_core perum_web" || rollback_failed=true
     wait_for_app_readiness || rollback_failed=true
+    [[ "$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null)" == "$PREVIOUS_CORE_RUNTIME_IMAGE" ]] || rollback_failed=true
+    [[ "$(docker inspect --format '{{.Image}}' perum_web 2>/dev/null)" == "$PREVIOUS_WEB_RUNTIME_IMAGE" ]] || rollback_failed=true
+    run "cd ${DEPLOY_PATH} && git checkout --detach '${PREVIOUS_COMMIT}'" || rollback_failed=true
     [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
     if [[ "$rollback_failed" == true ]]; then
       err "Обновление и rollback не прошли проверку; проверьте docker compose logs perum_core perum_web"
@@ -273,31 +304,64 @@ if [[ "$UPDATE" == true ]]; then
   trap 'rollback_update 143' TERM
 
   step "1" "Проверка текущей Compose-конфигурации..."
-  run "${COMPOSE_UPDATE} config -q"
+  run "${COMPOSE_PREFLIGHT} config -q"
 
   step "2" "Переключение на commit ${COMMIT}..."
   run "cd ${DEPLOY_PATH} && git diff --quiet && git diff --cached --quiet"
   run "cd ${DEPLOY_PATH} && git fetch --no-tags origin ${COMMIT} && git cat-file -e ${COMMIT}^{commit}"
-  run "cd ${DEPLOY_PATH} && git checkout --detach ${COMMIT}"
   ROLLBACK_ACTIVE=true
-  run "${COMPOSE_UPDATE} config -q"
+  run "cd ${DEPLOY_PATH} && git checkout --detach ${COMMIT}"
+  TARGET_CHECKOUT_COMPLETE=true
+  run "${COMPOSE_PREFLIGHT} config -q"
 
   step "3" "Проверка образов..."
-  for image in "$CORE_IMAGE" "$WEB_IMAGE"; do
-    if [[ "$PULL_NEVER" == true ]]; then
-      run "docker image inspect '${image}' >/dev/null"
-    else
+  for image in ${CORE_RUNTIME_IMAGE:+} "$CORE_IMAGE" ${WEB_RUNTIME_IMAGE:+} "$WEB_IMAGE"; do
+    [[ "$image" == "$CORE_IMAGE" && -n "$CORE_RUNTIME_IMAGE" ]] && continue
+    [[ "$image" == "$WEB_IMAGE" && -n "$WEB_RUNTIME_IMAGE" ]] && continue
+    if [[ "$image" =~ :git-[0-9a-fA-F]{12,}$ ]]; then
       run "docker pull '${image}'"
-      run "docker image inspect '${image}' >/dev/null"
+    elif [[ "$PULL_NEVER" != true ]]; then
+      run "docker image inspect '${image}' >/dev/null 2>&1 || docker pull '${image}'"
     fi
+    run "docker image inspect '${image}' >/dev/null"
   done
+  if [[ "$DRY_RUN" == true ]]; then
+    EXPECTED_CORE_ID="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    EXPECTED_WEB_ID="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    info "[DRY RUN] EXPECTED_CORE_ID/EXPECTED_WEB_ID из docker image inspect --format '{{.Id}}'"
+  else
+    if [[ -n "$CORE_RUNTIME_IMAGE" ]]; then
+      docker image inspect "$CORE_RUNTIME_IMAGE" >/dev/null
+      EXPECTED_CORE_ID="$CORE_RUNTIME_IMAGE"
+    else
+      EXPECTED_CORE_ID=$(docker image inspect --format '{{.Id}}' "$CORE_IMAGE")
+    fi
+    if [[ -n "$WEB_RUNTIME_IMAGE" ]]; then
+      docker image inspect "$WEB_RUNTIME_IMAGE" >/dev/null
+      EXPECTED_WEB_ID="$WEB_RUNTIME_IMAGE"
+    else
+      EXPECTED_WEB_ID=$(docker image inspect --format '{{.Id}}' "$WEB_IMAGE")
+    fi
+  fi
+  [[ "$EXPECTED_CORE_ID" =~ ^sha256:[0-9a-fA-F]{64}$ ]] \
+    || { err "resolved CORE_IMAGE не является exact runtime sha256 image ID"; false; }
+  [[ "$EXPECTED_WEB_ID" =~ ^sha256:[0-9a-fA-F]{64}$ ]] \
+    || { err "resolved WEB_IMAGE не является exact runtime sha256 image ID"; false; }
+  COMPOSE_UPDATE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_RUNTIME_IMAGE=${EXPECTED_CORE_ID} WEB_RUNTIME_IMAGE=${EXPECTED_WEB_ID} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
+  run "${COMPOSE_UPDATE} config -q"
 
   step "4" "docker compose up -d --force-recreate perum_core perum_web..."
   run "${COMPOSE_UPDATE} up -d --pull never --force-recreate perum_core perum_web"
 
   step "5" "Ожидание готовности perum_core и perum_web..."
   wait_for_app_readiness
-  persist_app_images
+  if [[ "$DRY_RUN" != true ]]; then
+    [[ "$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null)" == "$EXPECTED_CORE_ID" ]] \
+      || { err "perum_core запущен не из ожидаемого image ID"; false; }
+    [[ "$(docker inspect --format '{{.Image}}' perum_web 2>/dev/null)" == "$EXPECTED_WEB_ID" ]] \
+      || { err "perum_web запущен не из ожидаемого image ID"; false; }
+  fi
+  persist_app_images "$CORE_IMAGE" "$AGENT_IMAGE" "$WEB_IMAGE"
   ROLLBACK_ACTIVE=false
   trap - ERR INT TERM
   [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
@@ -513,7 +577,12 @@ fi
 # ── [6/7] Сборка или pull образов ─────────────────────────────────────────
 step "6/7" "Получение образов perum-core и perum-web..."
 
-COMPOSE_BASE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file ${ENV_FILE}"
+CORE_RUNTIME_IMAGE="perum-core:local-build"
+WEB_RUNTIME_IMAGE="perum-web:local-build"
+if [[ "$NO_BUILD" == true ]]; then
+  CORE_RUNTIME_IMAGE="$CORE_IMAGE"
+fi
+COMPOSE_BASE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_RUNTIME_IMAGE=${CORE_RUNTIME_IMAGE} WEB_RUNTIME_IMAGE=${WEB_RUNTIME_IMAGE} docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file ${ENV_FILE}"
 
 run "${COMPOSE_BASE} config -q"
 

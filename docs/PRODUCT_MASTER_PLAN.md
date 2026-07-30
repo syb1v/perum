@@ -256,6 +256,27 @@ repository variables в canonical IDNA form. Multi-school production proof ос�
 не заявлен: в production одна школа, создание второй без product decision не
 выполнялось. Scanner remains candidate pending target-node saturation approval.
 
+Deploy recovery iteration 2026-07-30 закрыла registry-retention gap control-plane
+update: git tags всегда проверяются registry pull, digest refs используют local-first
+inspect, а offline recovery требует portable ref вместе с exact local `sha256` runtime
+override либо локально доступный digest.
+Compose и rollback закреплены за ephemeral resolved runtime IDs, тогда как persisted
+env сохраняет portable registry refs для Core/Agent/Web и node bootstrap. Post-health
+identity mismatch запускает rollback и повторную identity/health verification.
+Command-mocking regression выполняет tag/digest/runtime-override paths,
+mutable/offline rejection, portable env preservation и deliberate mismatch rollback.
+Это automated rollback proof script semantics, не новый production rollback event.
+Release build передаёт changed component через uploaded registry digest artifact, а
+unchanged component сохраняет portable env ref и получает отдельный `.Image` override;
+CI запускает shell regression. Workflow имеет actionable config preflight и canonical
+GitHub variables для host/user/port/path; SSH key остаётся secret. Variables уже
+настроены. Первый rollout требует ручного bootstrap target script, потому что старая
+remote script не может self-apply этот contract. Post-checkout rollback использует
+runtime-aware target Compose для previous image IDs и возвращает previous checkout
+только после health/identity; failed checkout не пересоздаёт services. Install rerun
+с portable digest env собирает Core/Web только в stable local runtime tags, не в
+invalid `repository@sha256` build targets.
+
 Legacy shadow cleanup выполнен после restore proof: organization UUID
 `05e71e55-7758-47a6-b74e-f3b6401358d9` не имела ссылок ни в одной из 10 FK-таблиц,
 container и Caddy route отсутствовали. Exact transaction удалила только эту row;

@@ -349,3 +349,4 @@
 | 346 | 2026-07-29 21:15 | _______ | fix(billing): просрочка переведена на non-destructive reconciliation |
 | 347 | 2026-07-30 09:10 | _______ | feat(mobile): добавлены conflict-safe действия школьной модерации |
 | 348 | 2026-07-30 10:05 | _______ | feat(student): добавлена bounded история последних транзакций |
+| 349 | 2026-07-30 12:00 | _______ | fix(deploy): portable refs отделены от verified runtime identity и rollback proof |

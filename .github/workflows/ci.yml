@@ -212,3 +212,5 @@ jobs:
         run: |
           pip install pyyaml
           python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml')]"
+      - name: Run deploy shell regressions
+        run: bash deploy/tests/test_deploy_scripts.sh

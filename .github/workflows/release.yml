@@ -130,6 +130,7 @@ jobs:
 
       - name: Build & push ${{ matrix.image }}
         if: matrix.changed == 'true'
+        id: build-image
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -144,6 +145,21 @@ jobs:
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.meta.outputs.tag }}
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.image }}:latest
 
+      - name: Record published image digest
+        if: matrix.changed == 'true'
+        run: |
+          mkdir -p release-digests
+          printf '%s\n' '${{ steps.build-image.outputs.digest }}' > "release-digests/${{ matrix.image }}"
+
+      - name: Upload published image digest
+        if: matrix.changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.image }}-digest
+          path: release-digests/${{ matrix.image }}
+          if-no-files-found: error
+          retention-days: 1
+
   deploy:
     # Авто-деплой CONTROL PLANE (ядро + веб) на прод-сервер после пуша образов в GHCR.
     # Тенант (школы) НЕ трогаем — у него opt-in OTA по кнопке org_admin (см. ниже).
@@ -156,38 +172,104 @@ jobs:
     environment: production
     runs-on: ubuntu-latest
     steps:
+      - name: Validate production deploy configuration
+        env:
+          DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          missing=()
+          [ -n "$DEPLOY_SSH_HOST" ] || missing+=(DEPLOY_SSH_HOST)
+          [ -n "$DEPLOY_SSH_USER" ] || missing+=(DEPLOY_SSH_USER)
+          [ -n "$DEPLOY_PATH" ] || missing+=(DEPLOY_PATH)
+          [ -n "$DEPLOY_SSH_KEY" ] || missing+=(DEPLOY_SSH_KEY)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing production deploy configuration: %s\n' "${missing[*]}" >&2
+            echo 'Configure host/user/path as production environment variables and only the SSH key as a production environment secret.' >&2
+            exit 1
+          fi
+          [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]] || {
+            echo 'DEPLOY_PATH must be an absolute path containing only letters, digits, dot, underscore, slash, or hyphen.' >&2
+            exit 1
+          }
+
+      - name: Download published control-plane digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: perum-*-digest
+          path: release-digests
+          merge-multiple: true
+
+      - name: Resolve published control-plane refs
+        id: deploy-images
+        env:
+          OWNER: ${{ github.repository_owner }}
+          CORE_CHANGED: ${{ needs.changes.outputs.core }}
+          WEB_CHANGED: ${{ needs.changes.outputs.web }}
+        run: |
+          core_ref=
+          web_ref=
+          if [ "$CORE_CHANGED" = true ]; then
+            digest="$(<release-digests/perum-core)"
+            [[ "$digest" =~ ^sha256:[0-9a-fA-F]{64}$ ]] || { echo 'Invalid perum-core build digest artifact.' >&2; exit 1; }
+            core_ref="ghcr.io/${OWNER}/perum-core@${digest}"
+          fi
+          if [ "$WEB_CHANGED" = true ]; then
+            digest="$(<release-digests/perum-web)"
+            [[ "$digest" =~ ^sha256:[0-9a-fA-F]{64}$ ]] || { echo 'Invalid perum-web build digest artifact.' >&2; exit 1; }
+            web_ref="ghcr.io/${OWNER}/perum-web@${digest}"
+          fi
+          echo "core_ref=$core_ref" >> "$GITHUB_OUTPUT"
+          echo "web_ref=$web_ref" >> "$GITHUB_OUTPUT"
+
       - name: Pull свежие образы и перезапустить control plane по SSH
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.DEPLOY_SSH_HOST }}
-          username: ${{ secrets.DEPLOY_SSH_USER }}
+          host: ${{ vars.DEPLOY_SSH_HOST }}
+          username: ${{ vars.DEPLOY_SSH_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_SSH_PORT || 22 }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
           script: |
             set -euo pipefail
-            DEPLOY_PATH="${{ vars.DEPLOY_PATH || '/opt/perum' }}"
+            DEPLOY_PATH="${{ vars.DEPLOY_PATH }}"
             RELEASE_SHA='${{ env.RELEASE_SHA }}'
             [[ "$RELEASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]
-            CORE_IMAGE="$(docker inspect -f '{{.Config.Image}}' perum_core 2>/dev/null)"
-            WEB_IMAGE="$(docker inspect -f '{{.Config.Image}}' perum_web 2>/dev/null)"
+            env_value() {
+              local key="$1" line
+              while IFS= read -r line || [ -n "$line" ]; do
+                [ "${line%%=*}" = "$key" ] && { printf '%s' "${line#*=}"; return 0; }
+              done < "${DEPLOY_PATH}/deploy/.env.prod"
+              return 1
+            }
+            CORE_IMAGE="$(env_value CORE_IMAGE)"
+            WEB_IMAGE="$(env_value WEB_IMAGE)"
+            CORE_RUNTIME_IMAGE="$(docker inspect -f '{{.Image}}' perum_core 2>/dev/null)"
+            WEB_RUNTIME_IMAGE="$(docker inspect -f '{{.Image}}' perum_web 2>/dev/null)"
             if [ '${{ needs.changes.outputs.core }}' = true ]; then
-              CORE_IMAGE="ghcr.io/${{ github.repository_owner }}/perum-core:git-${RELEASE_SHA:0:12}"
+              CORE_IMAGE='${{ steps.deploy-images.outputs.core_ref }}'
+              CORE_RUNTIME_IMAGE=
             fi
             if [ '${{ needs.changes.outputs.web }}' = true ]; then
-              WEB_IMAGE="ghcr.io/${{ github.repository_owner }}/perum-web:git-${RELEASE_SHA:0:12}"
+              WEB_IMAGE='${{ steps.deploy-images.outputs.web_ref }}'
+              WEB_RUNTIME_IMAGE=
             fi
             for image in "$CORE_IMAGE" "$WEB_IMAGE"; do
-              [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ ]] || {
+              [[ "$image" =~ @sha256:[0-9a-fA-F]{64}$ || "$image" =~ :git-[0-9a-fA-F]{12,}$ || "$image" =~ ^sha256:[0-9a-fA-F]{64}$ ]] || {
                 echo "Refusing mutable production image ref: $image" >&2
                 exit 1
               }
             done
-            bash "${DEPLOY_PATH}/deploy/scripts/deploy-core.sh" \
-              --update \
-              --commit "$RELEASE_SHA" \
-              --core-image "$CORE_IMAGE" \
-              --web-image "$WEB_IMAGE" \
+            deploy_args=(
+              --update
+              --commit "$RELEASE_SHA"
+              --core-image "$CORE_IMAGE"
+              --web-image "$WEB_IMAGE"
               --path "$DEPLOY_PATH"
+            )
+            [ -z "$CORE_RUNTIME_IMAGE" ] || deploy_args+=(--core-runtime-image "$CORE_RUNTIME_IMAGE")
+            [ -z "$WEB_RUNTIME_IMAGE" ] || deploy_args+=(--web-runtime-image "$WEB_RUNTIME_IMAGE")
+            bash "${DEPLOY_PATH}/deploy/scripts/deploy-core.sh" "${deploy_args[@]}"
 
   tenant-release:
     # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.
