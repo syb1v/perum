@@ -33,7 +33,7 @@ export const queryKeys = {
   parentTransactions: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'transactions'] as const,
   teacherDiary: (accountId: string, weekOffset: number) => [...queryKeys.account(accountId), 'academics', 'teacher-diary', weekOffset] as const,
   teacherHomeroom: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'teacher-homeroom'] as const,
-  teacherWorks: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'teacher-works'] as const,
+  teacherWorks: (accountId: string, classId: number | null, subjectId: number | null) => [...queryKeys.account(accountId), 'academics', 'teacher-works', ...(classId === null && subjectId === null ? [] : [classId, subjectId])] as const,
   teacherAnalyticsPicker: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'picker'] as const,
   teacherAnalyticsPeriods: (accountId: string, classId: number) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'periods', classId] as const,
   teacherAnalyticsDashboard: (accountId: string, classId: number, subjectId: number | null, start: string, end: string) => [...queryKeys.account(accountId), 'academics', 'teacher-analytics', 'dashboard', classId, subjectId, start, end] as const,

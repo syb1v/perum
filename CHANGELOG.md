@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-30
 
+- Teacher Mobile works feed получил authoritative class/subject filters через существующий generated `JournalTeacherSubjectsOut`: filter-scoped account query keys изолируют infinite caches и сбрасывают pagination, subjects ограничены выбранным классом, stale selection безопасно нормализуется. Picker `404` скрывает только filters, network/5xx оставляют feed рабочим с retry. Loaded `TeacherWorkOut` открывается в local-only detail card с реальными полями и датами без статистики, mutations, дополнительных detail requests или нового persistence scope.
 - Документация reconciled с production/CI evidence through `671dd87`: live plan больше не считает provisioned school, registered Tenant release и exact restore proof открытыми; automated Stage F отделён от pending signed one-school pilot; support DLQ/exact receipts/manual recovery и latest scanner candidates отражены без переписывания historical handoff-ов.
 
 ## [Unreleased] — 2026-07-29
