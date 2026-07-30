@@ -28,6 +28,7 @@
 - [NODE_DEPLOYMENT.md](NODE_DEPLOYMENT.md) — bootstrap remote node.
 - [RUNBOOK.md](RUNBOOK.md) — deploy, backup, restore, incidents и secrets.
 - [RELEASING.md](RELEASING.md) — CI, images, control-plane deploy и tenant updates.
+- [OPERATOR_EVIDENCE_2026-07-30.md](OPERATOR_EVIDENCE_2026-07-30.md) — non-secret production seed/deploy evidence.
 - [MIGRATION_FROM_LEGACY.md](MIGRATION_FROM_LEGACY.md) — рамки будущей миграции.
 
 ## Product specifications
@@ -35,7 +36,7 @@
 - [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md) — descriptor requirements и Stage F acceptance.
 - [FRIENDS_CHAT_PLAN.md](FRIENDS_CHAT_PLAN.md) — целевые social/chat requirements и текущий implementation gap.
 - [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md) — handoff оставшихся media/support циклов.
-- [SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md) — краткий отчёт последней инженерной сессии.
+- [SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md) — исторический handoff инженерной сессии; текущий статус superseded master plan-ом.
 
 ## История
 

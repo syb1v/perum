@@ -1,7 +1,9 @@
 # План динамического mobile descriptor
 
-**Статус:** Stages A-E выполнены; Stage F pending. Live проценты и текущий
-roadmap ведутся только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+**Статус:** Stages A-E и automated lifecycle/release-gate часть Stage F выполнены.
+Отдельный signed one-school operator pilot pending; реальный pilot не заявлен.
+Live проценты и текущий roadmap ведутся только в
+[PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
 
 **Дата:** 2026-07-17
 
@@ -307,7 +309,7 @@ Acceptance tests:
 - capability `false` не запускает соответствующий background provider;
 - pending mutation сохраняется при временном capability downgrade.
 
-### Этап F. Lifecycle и release gates
+### Этап F. Lifecycle и release gates (automation выполнена, operator pilot pending)
 
 Stage E реализует runtime-механику клиента: persistence descriptor-а, capability
 gating, grace period и fail-closed поведение отдельных providers/routes/outboxes.
@@ -330,7 +332,7 @@ Stage F не дублирует эту реализацию: он проверя
 | Stale deployment snapshot | snapshot старше freshness | только deployment-dependent capabilities false | `test_stale_snapshot_disables_only_runtime_dependent_capabilities` | automated local pass |
 | Refresh rotation failure | descriptor accepted, refresh fails | account не мутируется частично, другой account не затронут | `auth/api.test.ts`, shared client test | automated local pass |
 | Release publication | новый Tenant release | valid manifest и Core/Tenant parity обязательны | `Tenant release descriptor contract gate`, [CI run 29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) | passed |
-| Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | operator record | pending |
+| Pilot rollout | одна opt-in school | проверены unknown-release, grace и incompatible-client telemetry | signed operator record | pending external pilot |
 
 Pilot-readiness foundation автоматизирован: public discovery и scoped operator
 diagnostics используют один resolver, который сохраняет platform grant, org intent,
@@ -341,9 +343,9 @@ public school UUID без перечисления школ и выдаёт `NO-
 и защищённый operator export Mobile ledger не подтверждены внешним record. Эти
 инструменты не являются production evidence и не меняют статус строки.
 
-Строка закрывается только ссылкой на automated test/CI run или recorded manual
-evidence. После закрытия всех строк обновляются DoD ниже и live percentages в
-`PRODUCT_MASTER_PLAN.md`.
+Automated строки закрываются только ссылкой на test/CI run; pilot закрывается только
+recorded manual evidence. Automated lifecycle DoD завершён, но отдельный pilot gate
+и его live percentage остаются открытыми в `PRODUCT_MASTER_PLAN.md`.
 
 #### One-school pilot checklist
 
@@ -439,8 +441,12 @@ unknown release, grace fallback и incompatible client проверяются д
 - [x] Неизвестные schema/capabilities обрабатываются fail-closed.
 - [x] Last-known-good fallback ограничен 24 часами и наблюдаем в UX gate state.
 - [x] Identity mismatch и compatibility failure не допускают fallback.
-- [ ] Проверены cold start, resume, account switch, upgrade и downgrade.
+- [x] Automated tests проверяют cold start, resume, account switch, upgrade и downgrade.
 - [x] Обновлены OpenAPI, generated clients, CHANGELOG и VERSIONS.
+
+Signed one-school operator pilot не входит в repository-controlled 11-пунктовый
+automation DoD и остаётся отдельным обязательным rollout gate. Synthetic collector,
+CI и local lifecycle tests не считаются реальным pilot evidence.
 
 ## 8. Следующий slice
 

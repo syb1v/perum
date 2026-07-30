@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-30
+
+- Документация reconciled с production/CI evidence through `671dd87`: live plan больше не считает provisioned school, registered Tenant release и exact restore proof открытыми; automated Stage F отделён от pending signed one-school pilot; support DLQ/exact receipts/manual recovery и latest scanner candidates отражены без переписывания historical handoff-ов.
+
 ## [Unreleased] — 2026-07-29
 
 - Student Mobile получил privacy-minimized историю последних ливок: новый student-only `GET /api/student/transactions/recent` имеет closed DTO, exact user/school scope, legacy-null ownership, UTC timestamps, deterministic order и cap 50. Home использует account-scoped memory-only availability/data probe: старый Tenant `404` скрывает feature без retry, а network/5xx остаются retryable; legacy `/api/market/transactions` не изменён. Descriptor schema-v1 parser стал forward-compatible fail-closed для missing/unknown capability keys без изменения producer key set.

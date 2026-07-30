@@ -72,8 +72,10 @@
   внешней настройки и дальнейшей реализации.
 - Store, device, accessibility и end-to-end rollout gates ещё не завершены;
   текущий status находится в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
-- Stage F lifecycle gates прошли локальную automation, но successful named CI run
-  и production pilot evidence обязательны до расширения rollout.
+- Named Stage F automation proof complete: lifecycle/release gates прошли локально и
+  в зелёном CI run `29598407038`. Operator Mobile diagnostic ledger export и signed
+  one-school rollback/recovery record не собраны; без них production pilot и
+  расширение rollout не заявляются.
 
 ## Engineering requirements
 

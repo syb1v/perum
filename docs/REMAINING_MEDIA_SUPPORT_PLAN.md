@@ -227,14 +227,15 @@ authoritative versioned response. Повтор одного действия с�
 `client_action_id`; `VERSION_CONFLICT` не применяет локальное значение и вызывает
 refetch server ticket/list/unread.
 
-Delivery observability foundation завершён 2026-07-19 без миграций и расширения
+Delivery observability foundation был завершён 2026-07-19 без миграций и расширения
 privacy boundary. Tenant admin-only endpoint показывает только persisted
 `pending`/`retrying`/`delivered`, attempts, durations и server-calculated SLA;
 Native отображает cached read-only delivery card. Aggregate telemetry содержит
 только counts, breach count и oldest pending age. Core typed endpoint выводит
 `pending`/`delivered` по monotonic ACK cursor. Payload, errors, message content,
-ticket/correlation/user IDs не экспортируются. Terminal `failed` и точный Core
-`delivered_at` не существуют в текущей retry/pull модели и не симулируются.
+ticket/correlation/user IDs не экспортируются. Это датированное состояние было
+superseded: persisted terminal retry/DLQ, authoritative `failed`, exact Core
+delivery receipts и manual recovery теперь реализованы.
 
 Operational dashboard slice завершён 2026-07-19: Core строго принимает только
 четыре non-negative aggregate поля из свежего telemetry snapshot, stale/missing/
@@ -285,13 +286,17 @@ heartbeat старых Tenant images, но arbitrary authenticated payload бо�
    удаления из unread списка, exact `admin_support_ticket` открывает native admin
    ticket, unknown reference fail closed без navigation. Push delivery и tap
    lifecycle остаются отдельным незакрытым slice до реального adapter/credentials.
-2. Спроектировать terminal failure/recovery policy и exact Core delivery receipts,
-   если operations утвердит push/outbox semantics; до этого `failed` запрещён.
+2. Terminal failure/recovery policy и exact Core delivery receipts реализованы:
+   permanent 4xx переходят в `dead_letter`, retryable transport/5xx/408/425/429
+   ограничены 8 попытками, operator видит authoritative `failed` и вручную
+   возвращает тот же privacy-safe payload/correlation identity в очередь. Recovery
+   audit и exact intake/pull/ack/delivery receipts проверяются до local mutation.
 3. Отдельно спроектировать и проверить Alertmanager/Grafana contact-point routing,
    secret-backed receivers, deduplication и test notification delivery.
 
-Не включать attachments до scanner slice, push до delivery adapter, full
-platform/org mobile parity или изменение privacy boundary поддержки.
+Repository support recovery contour завершён. Внешне открыты production scanner и
+attachments, реальный push adapter/credentials/tap evidence и approved external
+alert receiver; не включать эти capabilities только по repository tests.
 
 ## 3. Отложенные этапы
 
@@ -301,8 +306,9 @@ evidence описаны в [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUI
 ## 4. Порядок продолжения
 
 1. Завершить review и production-like scanner pilot по разделу 1.
-2. Native support admin inbox и clickable in-app notification routing завершены;
-   push не включать до delivery adapter и credentials.
+2. Native support admin inbox, exact receipts, terminal retry/DLQ/manual recovery и
+   clickable in-app notification routing завершены; push не включать до delivery
+   adapter и credentials.
 3. После scanner pilot отдельно подключить support/social attachments и UI.
 4. После delivery provider отдельно подключить push.
 5. Каждый цикл отдельно проверять, документировать и коммитить.

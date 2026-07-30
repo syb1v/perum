@@ -350,3 +350,4 @@
 | 347 | 2026-07-30 09:10 | _______ | feat(mobile): добавлены conflict-safe действия школьной модерации |
 | 348 | 2026-07-30 10:05 | _______ | feat(student): добавлена bounded история последних транзакций |
 | 349 | 2026-07-30 12:00 | _______ | fix(deploy): portable refs отделены от verified runtime identity и rollback proof |
+| 350 | 2026-07-30 14:43 | _______ | docs: reconciled live rollout, Stage F, support и scanner evidence through 671dd87 |

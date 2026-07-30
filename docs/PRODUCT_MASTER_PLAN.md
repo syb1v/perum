@@ -2,41 +2,48 @@
 
 > Этот файл — единственный источник текущего продуктового статуса, процентов,
 > handoff и roadmap. Архитектурные и операционные документы не должны дублировать
-> эти оценки. Последнее обновление live-блока: **2026-07-28**.
+> эти оценки. Последнее обновление live-блока: **2026-07-30**.
 
 <!-- LIVE_PROGRESS: edit this block after every completed engineering cycle -->
 ## Live progress
 
 | Срез | Значение | Методика |
 |---|---:|---|
-| Dynamic mobile descriptor | **10/11 = 90.9%** | 11 проверяемых пунктов Definition of Done; закрыты 10, lifecycle matrix Stage F не закрыта |
-| Descriptor stages | **5/6 = 83.3%** | Stages A-E завершены; Stage F pending |
-| Stage F lifecycle matrix | **11/12 = 91.7%** | Automated rows и named CI run `29598407038` прошли; privacy-safe diagnostics/ledger/collector foundation готов, deliberate rollback и operator Mobile export evidence pending |
+| Dynamic mobile descriptor automation | **11/11 = 100%** | Все repository-controlled пункты Definition of Done закрыты, включая lifecycle matrix и named Stage F CI proof |
+| Descriptor automated stages | **6/6 = 100%** | Stages A-E и automated lifecycle/release gates Stage F завершены |
+| Stage F automated lifecycle matrix | **11/11 = 100%** | Все automated rows и named CI run `29598407038` прошли; synthetic collector остаётся `NO-GO` и не подменяет pilot |
+| Stage F operator pilot | **0/1 = 0%** | Signed one-school record с Mobile ledger export, deliberate rollback/recovery и operator/observer signatures не собран |
 | Общая готовность продукта | **28-33%, midpoint 30%** | Консервативная экспертная переоценка полного scope после durable support/social offline slices, Native Friends и controlled rollout foundation; billing, policy, full role parity, scanner/push integrations и production evidence сохраняют большую часть remaining scope |
 | Исторический rewrite | **99% в прежнем scope** | Только завершённость старого rewrite/foundation scope из legacy ledger; не означает готовность текущего полного продукта |
 
-**Текущий этап:** security hardening и production-пилот утверждённого node-local ClamAV
-foundation перед включением social/support attachments. Реализованы один shared
+**Текущий этап:** production foundation одной школы подтверждён: школа provisioned
+на зарегистрированном immutable Tenant release, HTTPS/role smoke и exact-snapshot
+restore proof выполнены. Оставшийся production rollout сужен до multi-school
+isolation/load, утверждённого node-local ClamAV pilot, реальных Mobile/device/push/
+store pilot-ов, security/accessibility hardening и внешних legal/provider/operator
+gates. Для scanner реализованы один shared
 `clamd` на school-hosting node, отдельные per-school relay, `INSTREAM`, durable
 lease/retry queue, freshness/readiness и privacy-safe backlog telemetry. Disposable
 PostgreSQL и real-Docker candidate evidence подтверждены, но operator review,
-target-node inspect/load pilot и production sizing ещё не выполнены, поэтому
+disposable/approved target node с минимум 8 ГиБ RAM, target-node inspect/load pilot
+и production sizing ещё не выполнены, поэтому
 capability flags остаются `false`. Native Friends UI и двухступенчатый
 controlled rollout foundation завершены. Native `school_admin`/`director` inbox
 получил отдельный release capability, cached list/thread, unread summary,
 durable text reply/read и durable conflict-safe metadata/assignment без
-optimistic updates, attachments и push. One-school pilot Stage F и multi-device Homework
-conflict QA явно отложены; их prerequisites вынесены в
-[DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md), незакрытые шкалы
-и remaining scope не изменены.
+optimistic updates, attachments и push. Signed one-school operator pilot Stage F и
+multi-device Homework conflict QA явно отложены; их prerequisites вынесены в
+[DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md). Automated Stage F
+при этом закрыт отдельно; operator pilot и remaining external scope не закрыты.
 
 Per-school scanner relay теперь fail closed ограничивает общий `clamd` exact
 командами `zVERSION\0` и `zINSTREAM\0`: административные, session, malformed и
 unterminated команды отклоняются до upstream connection. Unit contract сохраняет
 первый INSTREAM chunk, а disposable topology gate пытается `SHUTDOWN` и затем
 проверяет доступность daemon. Это закрывает repository cross-school control-command
-gap, но не заменяет новый candidate run, operator digest review или target-node
-evidence; attachment capabilities остаются `false`.
+gap. На этом этапе изменение ещё не заменяло новый candidate run; последующие runs
+ниже закрыли disposable evidence, но не operator digest review или target-node
+evidence. Attachment capabilities остаются `false`.
 Первый hosted run `30373784558` fail closed обнаружил, что общий Web
 `.dockerignore` исключал relay sources из scanner candidate context. Context
 исправлен exact allowlist только для двух relay files; scanner workflow теперь
@@ -66,7 +73,7 @@ descriptor → Core discovery → Mobile fail-closed validation; единств�
 только name/weight. Query остаётся memory-only с loading/error/empty/offline
 states; create/edit/archive/delete, PII и offline persistence вне slice.
 
-Production provisioning школы выявил stale node fallback
+Исторически первый production provisioning школы выявил stale node fallback
 `ghcr.io/syb1v/perum-tenant:1.0.0`: tag отсутствует в GHCR, current release в Core
 не зарегистрирован, школа `sch2` завершилась pull 404 до создания stack. Старый
 доступный image `git-5d07885a7439` имеет descriptor до текущих atomic capabilities,
@@ -222,26 +229,28 @@ preflight `failed`, сохраняет старые app/release tag и возв�
 `пэрум.рф` обслуживает Core/Web, `grsn-panel.ru` — organization landing/Agent.
 После domain swap устранены stale Cloudflare zone binding, удалявший platform
 apex/admin records, и PWA fallback, скрывавший DNS-сбой текстом `Офлайн`.
-Release pipeline переводится на production Docker build contexts, immutable
-commit images, domain consistency, health gate и rollback. Это operational
-foundation, но не production rollout evidence: школа ещё не provisioned,
-tenant image release, backup/restore proof и staged pilot остаются открытыми.
+Release pipeline переводился на production Docker build contexts, immutable
+commit images, domain consistency, health gate и rollback. На этом историческом
+этапе школа ещё не была provisioned, Tenant release, backup/restore proof и staged
+pilot оставались открытыми; последующие evidence выше и ниже закрыли первые три
+пункта, но не multi-school, scanner или Mobile pilot.
 Hosted release также остаётся fail-closed на dependency audit. Stable Next обновлён
 до `16.2.12`, runtime PostCSS override — до `8.5.25`; Web typecheck/build проходят.
 High advisory остаётся в upstream `sharp`: Next `16.2.12` требует `0.34.x`, тогда
 как patched `sharp` начинается с `0.35.0`, а npm предлагает несовместимый downgrade
 Next. Production не получает forced dependency graph; нужен совместимый stable Next.
 
-Declarative resilience tooling реализован, но production evidence намеренно не
-заявляется до operator run. Core update требует exact 40-character commit и immutable
+Исторически после реализации declarative resilience tooling production evidence ещё
+ожидал operator run. Последующий proof ниже закрыл Core/node reconciliation, real
+restore и synthetic monitoring; незакрыты multi-school и внешние pilots. Core update требует exact 40-character commit и immutable
 Core/Web refs; node bootstrap требует immutable Agent/Tenant/Web refs, поддерживает
 offline preflight и больше не ротирует persisted secrets при rerun. Operator-only
 backup verifier создаёт custom PostgreSQL dump, SHA-256 manifest и восстанавливает
 его в явно подтверждённую temporary database с обязательной cleanup. Isolation smoke
-и bounded k6 pilot параметризованы, scheduled synthetic monitor добавлен. Открытые
-gates: применить новый template к Core/node без compose drift, выполнить реальный
-control/Tenant restore proof, минимум двухшкольный isolation/load pilot и настроить
-GitHub Environment variables/secrets для scheduled monitor.
+и bounded k6 pilot параметризованы, scheduled synthetic monitor добавлен. Из
+первоначального списка открытым остаётся минимум двухшкольный isolation/load pilot;
+template reconciliation, real restore proof и monitor variables подтверждены
+последующим evidence.
 
 Production resilience proof 2026-07-29: Core работает из clean release checkout на
 Core image `sha256:0d4ace701206c64f0d9be971ab737ae596f6b92e734648eb774c55312fd3ee26`,
@@ -270,8 +279,8 @@ Release build передаёт changed component через uploaded registry di
 unchanged component сохраняет portable env ref и получает отдельный `.Image` override;
 CI запускает shell regression. Workflow имеет actionable config preflight и canonical
 GitHub variables для host/user/port/path; SSH key остаётся secret. Variables уже
-настроены. Первый rollout требует ручного bootstrap target script, потому что старая
-remote script не может self-apply этот contract. Post-checkout rollback использует
+настроены. Первый rollout выполнен ручным bootstrap target script, потому что старая
+remote script не могла self-apply этот contract. Post-checkout rollback использует
 runtime-aware target Compose для previous image IDs и возвращает previous checkout
 только после health/identity; failed checkout не пересоздаёт services. Install rerun
 с portable digest env собирает Core/Web только в stable local runtime tags, не в
@@ -289,7 +298,35 @@ contour внутри существующей school: medium profile = 24 classe
 59,904 homework states и 92,447 economy transactions. Exchange points вычисляются
 из тех же Grade rows и curriculum, а account population inactive by default.
 Disposable PostgreSQL прошёл initial medium seed и recovery `--rebuild` после
-partial failure; production rollout требует fresh Tenant backup и immutable image.
+partial failure. Перед production seed выполнен exact restore proof Tenant DB:
+78 tables, 31 rows, checksum
+`be243921bc34c25d6590f8a5b9f6c2575e9c9fbba2dd8281583abc90d0a97df0`.
+Production school ID 1 заполнена one-shot из verified image
+`ghcr.io/syb1v/perum-tenant:git-94f3676b309d` digest
+`sha256:7ee554431628830e24cfd4975359f28e910d2e5e8023cfd35c0e9ee866890450`:
+marker `synru:1` имеет status `complete`, ownership registry = 297,455 rows, все
+1,134 synthetic accounts остались inactive по умолчанию. После отдельного запроса
+активированы и через production login/user-me проверены ровно teacher/student/parent
+personas; existing school admin не менялся. Temporary dump, password files и operator
+scripts удалены. Последующий Tenant publication proof: CI/release на commit
+`bc96c77141efe887de8d1d4dea1d2f1c4e4c6fbb` опубликовал и зарегистрировал release
+`1.1.4` image `git-bc96c77141ef` с exact OCI digest
+`sha256:9871aa97ae5bcf4d029a838c7e61c3fb8046a52c21076abe5a0dd1f1745c6855`;
+этот source содержит synthetic seed и новый Student transactions contract. Durable
+non-secret operator record: [OPERATOR_EVIDENCE_2026-07-30.md](OPERATOR_EVIDENCE_2026-07-30.md).
+
+Deploy bootstrap evidence через commit `671dd87255038dfd5b5152530c4084b1317c0bf3`
+закрепляет exact digest handoff для changed images и exact local `sha256:<64>`
+runtime IDs для unchanged images; CI run `30538272557` и release runs
+`30538451772`/`30538661456` зелёные. Первый production bootstrap completed exact
+target script: checkout `671dd87255038dfd5b5152530c4084b1317c0bf3`, unchanged
+Core runtime ID
+`sha256:0d4ace701206c64f0d9be971ab737ae596f6b92e734648eb774c55312fd3ee26`,
+changed Web registry/runtime digest
+`sha256:09f54e446e5b5d88d240cff1bbc930a2d960f020f50fd7190151d3ccac53b21d`.
+Post-bootstrap Core, landing и school health вернули 200; `.env.prod` сохранил только
+portable refs и не содержит runtime override keys. Ошибочный SHA preflight до этого
+безопасно доказал checkout-failure branch: services не пересоздавались.
 
 Shared domain policy для school support operator теперь один для Web и Mobile:
 exact роли `school_admin`/`director` проверяются `isSchoolSupportOperator`, тогда
@@ -425,10 +462,11 @@ Student-owned summary/analytics schemas переиспользуются parent 
 `current_period=null`. Parent page удалил ручные DTO. Diary/grades/finals,
 Promise.all/Abort/rendering и любые mutations не менялись.
 
-Consumer-driven Shared Contracts P0 теперь закрыт: оставшиеся student/parent diary,
+Consumer-driven Shared Contracts P0 был закрыт на этом milestone: оставшиеся student/parent diary,
 grades/finals, quests, main journal aggregate, final/template receipts, import DTO и
-teacher bulk-balance/works boundaries используют closed generated schemas. Все 96
-curated paths имеют drift gate; live Web consumers больше не держат manual wire DTO,
+teacher bulk-balance/works boundaries используют closed generated schemas. Тогда 96
+curated paths имели drift gate; последующие slices расширили текущий manifest до 108.
+Live Web consumers больше не держат manual wire DTO,
 `unknown[]`, response `any` или raw JSON casts. Internal/unconsumed routes не входят
 в acceptance criterion до появления tracked consumer.
 
@@ -773,29 +811,20 @@ service после contention rollback возвращает winner exact retry/p
 identity mismatch вместо raw `IntegrityError`. Локальный disposable PostgreSQL 15
 gate подтвердил same-direction, reverse-direction и conflicting identity races.
 
-**Следующий roadmap:** Tenant scanner worker hardening, Core fail-closed Docker
-resource verification/bounded relay и обязательный disposable PostgreSQL 15 CI
-gate для `SKIP LOCKED`, stale-worker fencing и destructive migration round-trip
-подтверждены зелёным CI run `29691375244`. Добавлен purpose-built relay candidate
-gate с constrained Docker check, immutable digest, SBOM/provenance без auto-approval.
-Relay candidate evidence: run `29693030308`, digest `sha256:0193187f...92c830`;
-это не approval. Для clamd реализована isolated updater topology: updater только в
-egress network с RW signature volume, clamd только в internal backend с RO mount;
-cold-volume/freshness/EICAR candidate evidence подтверждено run `29695347053`;
-disposable recreation persistence и outage/recovery подтверждены run
-`29695993596`. Production Tenant freshness parser/gating добавлен в real-Docker
-candidate scenario и подтверждён run `29700311274`. Остаются
-Bounded 5-school fairness/load подтверждена candidate run `29700812844`. Остаются
-approved images и production-like pilot по
-[SCANNER_OPERATIONS.md](SCANNER_OPERATIONS.md): собрать digest-pinned images,
-проверить PostgreSQL migration, EICAR, network isolation, outage/recovery,
-signature updates и node capacity. Только после evidence отдельно проектировать
-attachment UI и включение capabilities. Stage F
-возобновляется после предоставления
-opt-in школы и operator access, Homework conflict QA — после выделения PostgreSQL
-concurrency environment и mobile preview QA window. После этого приоритеты
-продолжаются по workstream table ниже: Friends/media, учебный hardening, support
-escalation, chats/moderation, billing, role parity и production rollout.
+**Следующий roadmap:** provisioning, registered Tenant release и exact-snapshot
+restore proof одной production школы закрыты. Следующие production gates:
+multi-school isolation/load; scanner review и pilot на disposable/approved target
+node с минимум 8 ГиБ RAM; signed one-school Mobile Stage F с real device/ledger/
+rollback evidence; реальные push, link, EAS/signing и store pilots; затем security,
+accessibility и внешние legal/provider approvals. Последний scanner candidate run
+`30463303285` (source `0a1ec57b6553afd295bb1aa79e48f29236f5fb28`)
+зафиксировал clamd
+`sha256:a82549f87e2f9789badc61ae89ffd75ffc3491a8a27aadb665271647e24c5e1e`
+и relay
+`sha256:f576ec36fe84d317665929453fd0c0cb6a04bef4ce653e99d851ad7ea1f3985f`;
+это candidate, не operator approval или production sizing. Attachment capabilities
+остаются выключены. Homework conflict QA ждёт PostgreSQL concurrency environment
+и mobile preview QA window.
 
 **Handoff readiness:** код Stages A-E, automated Stage F gates, durable
 support/social read cursors, offline support ticket creation, Friends hardening,
@@ -803,17 +832,17 @@ Native Friends UI и двухступенчатый controlled rollout нахо�
 [29598407038](https://github.com/syb1v/perum/actions/runs/29598407038) зелёный для
 Stage F automation, а последние social/support slices, shared exact support-role,
 social/support query plans, versioned telemetry/deployment fixtures/sanitizer и
-все 96 consumer-driven curated OpenAPI paths, включая student/parent academic family, main journal aggregate, receipts/import и прежние Friends/Homework/preferences/push/social/support/moderation/teacher/analytics contracts, прошли Core/Tenant full
+все 108 consumer-driven curated OpenAPI paths, включая student/parent academic family, main journal aggregate, receipts/import и прежние Friends/Homework/preferences/push/social/support/moderation/teacher/analytics contracts, прошли Core/Tenant full
 pytest, mobile/shared/domain tests, contract gates, typecheck и web production build.
 Pilot checklist и обязательные поля operator record описаны в
-[DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Нельзя
-закрывать Stage F без operator evidence или Homework hardening без concurrency и
-restart/conflict evidence.
+[DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md). Automated
+Stage F закрыт; operator pilot нельзя считать выполненным без signed evidence.
+Homework hardening нельзя закрывать без concurrency и restart/conflict evidence.
 
 **Handoff остатка:** stop gates и порядок media scanner/native support admin
 зафиксированы в [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md),
-итоги последней сессии — в
-[SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md).
+исторический handoff сессии 2026-07-18 — в
+[SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md); он не является live status.
 
 **Следующие независимые циклы:**
 
@@ -837,8 +866,9 @@ restart/conflict evidence.
    account-scoped SQLite queues с неизменными
    `client_action_id`/`expected_version`, bounded retry и terminal conflict без
    stale offline chains. Privacy-safe delivery cards/SLA готовы для Tenant outbox
-   и typed Core relay endpoint; остаются
-   terminal failure policy/exact Core receipts; push ждёт реального delivery adapter.
+   и typed Core relay endpoint. Terminal retry/DLQ, exact Core receipts и manual
+   recovery реализованы; push ждёт
+   реального delivery adapter, attachments — production scanner pilot.
 6. Отложено до назначения профильного владельца: юридические ADR по
    minors/social/parent, retention, offline conflicts, ЮKassa/fiscalization и
    OS/store matrix. Billing, parent observer policy и store rollout не начинаются
@@ -1425,7 +1455,7 @@ Flow:
 | P2 | Billing/ЮKassa | Частично | legacy receivables reconciliation сделан non-destructive и не останавливает учебный контур; target catalog, checkout/webhooks, refunds/provider reconciliation, entitlements и полноценный org/platform UI не начаты. До multi-instance Core нужны DB serialization/unique open-invoice invariant; staged enforcement только после отдельного ADR |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
 | P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals, grade analytics и bounded recent livki history готовы; Parent получил child-scoped diary/grades/finals, analytics и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, paginated works feed и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, online conflict-safe moderation queue/detail/actions, academic calendar, class/teacher directories, расписание звонков и справочник видов работ. Остаются student market/inventory/exchange и прочие economy functions, Parent charts/exports/full transaction history и mutations, Teacher works filters/details/mutations, analytics reports/drill-down и полноценный offline journal, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
-| P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, DNS-only TLS, Agent heartbeat и domain routing подтверждены; CI получает production Docker contexts и immutable health-gated deploy. Остаются tenant image release и provisioning школы, backup/restore proof, security/accessibility/device matrix, stores, реальные pilots, staged flags, metrics и rollback evidence |
+| P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, Cloudflare-fronted routing/TLS, Agent heartbeat, provisioned production school, registered Tenant release, exact restore proof, synthetic monitoring и immutable identity-checked deploy bootstrap подтверждены. Остаются two-school isolation/load, scanner target-node approval, security/accessibility/device matrix, stores, signed Mobile/push pilots, staged external flags/metrics и workstream-specific rollback evidence |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке
 `Live progress` в начале файла. Таблица выше хранит evidence и remaining scope по

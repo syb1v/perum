@@ -2,9 +2,9 @@
 
 ## Status
 
-This foundation is fail-closed and does not enable attachment capabilities. Production activation remains blocked on a real EICAR and network-isolation pilot plus the attachment UI rollout.
+This foundation is fail-closed and does not enable attachment capabilities. Disposable CI has completed EICAR, network-isolation, recreation, freshness and bounded-fairness gates. Production activation remains blocked on security/operator approval and a disposable approved target-node pilot with at least 8 GiB RAM, including inspect, EICAR, isolation, outage/recovery and saturation evidence, followed by attachment UI rollout.
 
-Handoff status on 2026-07-19: Tenant worker/protocol and Core Docker drift/bounded relay hardening are complete. Disposable PostgreSQL 15 CI run `29691375244` confirms migration round-trip and real two-session lease/fencing. Approved images, real Docker inspect and EICAR/network pilot remain open. See `REMAINING_MEDIA_SUPPORT_PLAN.md` for the exact continuation order. Do not set `SCANNER_NODE_ENABLED=true` on production nodes and do not change attachment capability flags until all pilot gates have recorded evidence.
+Historical handoff status on 2026-07-19: Tenant worker/protocol and Core Docker drift/bounded relay hardening were complete. Disposable PostgreSQL 15 CI run `29691375244` confirmed migration round-trip and real two-session lease/fencing. Later disposable candidate runs below supersede the then-open Docker/EICAR evidence, but approved images, operator review and target-node pilot remain open. See `REMAINING_MEDIA_SUPPORT_PLAN.md` for the continuation order. Do not set `SCANNER_NODE_ENABLED=true` on production nodes and do not change attachment capability flags until all target-node pilot gates have recorded evidence.
 
 Image lifecycle разделяет CI-published `candidate`, explicitly reviewed `approved`
 digest и `pilot-approved`. Workflow не повышает статус и не меняет deployment
@@ -20,12 +20,12 @@ school/backend connectivity, clamd не имеет egress. Core запускае
 48 часов, а aggregate directory должен проходить `clamscan` validation. Empty,
 partial, stale или malformed signature set fail closed оставляет clamd незапущенным.
 
-Recorded relay candidate: run `29693030308`, source `1e6929d`, exact OCI digest
+Historical relay-only candidate: run `29693030308`, source `1e6929d`, exact OCI digest
 `sha256:0193187f6d3af2d8a4f443ad341668e3c52d48d44f926970d3e6a8b62592c830`.
 Он прошёл CI runtime/image/digest checks, но остаётся `candidate`; не переносить его
 в production settings до explicit review и полного test-node pilot.
 
-Recorded paired candidate run `29695347053`, source `6e37fff`: clamd
+Historical paired candidate run `29695347053`, source `6e37fff`: clamd
 `sha256:48251e249021a5d36fa420d172b0bd4e319e4e1ceb01544f50d85b58d54044e8`,
 relay `sha256:d36e7d760c26f38f8b416d65300b7e6749ad04581bb0579581fb1d1141745c27`.
 Cold signatures, isolation и EICAR пройдены в disposable CI. Это не доказывает
@@ -36,7 +36,7 @@ signature databases после удаления/пересоздания clamd, 
 остановленном updater, fail-closed request при остановленном clamd и clean/EICAR
 recovery после recreation. Этот CI evidence не заменяет target-node outage pilot.
 
-Recorded recreation candidate run `29695993596`, source `99c3110`: clamd
+Historical recreation candidate run `29695993596`, source `99c3110`: clamd
 `sha256:61b2d06a30dff6891345d3002b9e5b8eaa7952344ddf7d58656a46b9498087b2`,
 relay `sha256:c26731987bfe7ead0eb1d86f6d1fea2d553f50890a7b361cc7b2ce692949c7d7`.
 Status остаётся `candidate`; target-node coordinates и approval отсутствуют.
@@ -46,7 +46,7 @@ Stale-signature gate должен использовать дату из реа�
 signature freshness evidence. Strict test policy `0h` проверяет fail-closed
 `stale_signatures`; штатная `48h` policy на той же DB проверяет recovery.
 
-Recorded freshness candidate run `29700311274`, source `e68f7f1`: clamd
+Historical freshness candidate run `29700311274`, source `e68f7f1`: clamd
 `sha256:ac2643c21d7f43e6dc65be76333c4a804553dc09340dafe050189910ca813002`,
 relay `sha256:8d6af74ba6ce8d75203b82dcbce208bb0707b8761c9aab36f8bb9ed6e6566117`.
 Production Tenant parser/gating пройдены; status остаётся `candidate`.
@@ -56,11 +56,11 @@ Disposable fairness gate использует 5 isolated school networks/relays,
 остальных. Он доказывает bounded non-starvation и resource contract только на
 GitHub runner; абсолютные latency/throughput не переносятся на production sizing.
 
-Recorded fairness candidate run `29700812844`, source `380be3e`: clamd
+Historical fairness candidate run `29700812844`, source `380be3e`: clamd
 `sha256:7bae7c5ad91408183d3e6813359ef9dfb231bd3f836aacaf7834db75e171863a`,
 relay `sha256:2c9dc02e827a7878288cbe9f7674549b9bf601a28abf022b07635c0943f2d553`.
 
-Protocol-restricted candidate run
+Historical protocol-restricted candidate run
 `https://github.com/syb1v/perum/actions/runs/30375275580` зелёный. Он дополнительно
 проверяет, что relay отклоняет `zSHUTDOWN\0` до upstream connection, после чего
 общий daemon отвечает на direct `VERSION`, а relay продолжает clean/EICAR scans.
@@ -69,14 +69,17 @@ Source `0fde735`; clamd candidate
 candidate `sha256:52cc6c19340a7210f2007c50847245d67f01a3c29079b1498503219b6f4fe6a0`.
 Оба digest остаются candidate до operator review и target-node evidence.
 
-Bounded-admission candidate run
-`https://github.com/syb1v/perum/actions/runs/30377208978` зелёный. Source
-`71a532e`; clamd candidate
-`sha256:04684c8725a6bb77abb41a9ab2e501c09ca6c73a3e6776ed245e96b901a3967e`, relay
-candidate `sha256:f35804972f4137f146774fbbd6b9785b1e87ee2292a892ffd90aa7848f87427a`.
-Topology/recovery/fairness и immutable digest verification прошли; это не
-target-node saturation evidence и не production sizing.
-Status `candidate`; target-node load profile и operator approval отсутствуют.
+Bounded-admission run `30377208978` остаётся historical topology/recovery/fairness
+evidence. Latest recorded candidate run
+`https://github.com/syb1v/perum/actions/runs/30463303285` зелёный. Source
+`0a1ec57b6553afd295bb1aa79e48f29236f5fb28`; clamd candidate
+`sha256:a82549f87e2f9789badc61ae89ffd75ffc3491a8a27aadb665271647e24c5e1e`, relay
+candidate `sha256:f576ec36fe84d317665929453fd0c0cb6a04bef4ce653e99d851ad7ea1f3985f`.
+Candidate handoff artifact подтвердил exact digests; это не target-node saturation
+evidence и не production sizing.
+Status `candidate`; target-node load profile и operator approval отсутствуют. These
+are the latest recorded scanner candidate digests; preceding digests remain dated
+historical evidence and must not be selected as if they were current.
 
 ## Node topology
 
