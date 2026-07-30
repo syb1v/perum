@@ -4,7 +4,7 @@ plus per-teacher schedule editing."""
 from __future__ import annotations
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.roles import TEACHER
@@ -17,6 +17,10 @@ def _teacher_name(t: User | None) -> str:
     if not t:
         return ""
     return f"{t.last_name or ''} {t.first_name or ''}".strip() or t.login
+
+
+def _schedule_teacher_name(t: User) -> str:
+    return f"{t.last_name or ''} {t.first_name or ''}".strip() or f"Учитель {t.id}"
 
 
 async def list_teachers(db: AsyncSession, school_id: int) -> list[dict]:
@@ -250,29 +254,35 @@ async def sync_assignments(
 
 
 async def get_teacher_schedule(db: AsyncSession, school_id: int, teacher_id: int) -> dict:
-    teacher = await db.get(User, teacher_id)
-    if not teacher or (teacher.school_id is not None and teacher.school_id != school_id):
+    teacher = await db.scalar(select(User).where(
+        User.id == teacher_id,
+        User.school_id == school_id,
+        User.role == TEACHER,
+        User.is_active.is_(True),
+    ))
+    if not teacher:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Учитель не найден")
     rows = (
         await db.execute(
-            select(Schedule).where(Schedule.school_id == school_id, Schedule.teacher_id == teacher_id)
-            .order_by(Schedule.day_of_week, Schedule.lesson_number)
+            select(Schedule, Subject.name, Class.name)
+            .outerjoin(Subject, and_(Subject.id == Schedule.subject_id, Subject.school_id == school_id))
+            .outerjoin(Class, and_(Class.id == Schedule.class_id, Class.school_id == school_id))
+            .where(Schedule.school_id == school_id, Schedule.teacher_id == teacher_id)
+            .order_by(Schedule.day_of_week, Schedule.lesson_number, Schedule.id)
         )
-    ).scalars().all()
+    ).all()
     days: dict[int, list[dict]] = {d: [] for d in range(6)}
-    for s in rows:
-        subj = await db.get(Subject, s.subject_id)
-        c = await db.get(Class, s.class_id)
-        days.setdefault(s.day_of_week, []).append({
+    for s, subject_name, class_name in rows:
+        days[s.day_of_week].append({
             "id": s.id,
             "lesson_number": s.lesson_number,
             "subject_id": s.subject_id,
-            "subject_name": subj.name if subj else None,
+            "subject_name": subject_name,
             "class_id": s.class_id,
-            "class_name": c.name if c else None,
+            "class_name": class_name,
             "room": s.room,
         })
-    return {"teacher_id": teacher.id, "teacher_name": _teacher_name(teacher), "schedule": days}
+    return {"teacher_id": teacher.id, "teacher_name": _schedule_teacher_name(teacher), "schedule": days}
 
 
 async def update_teacher_schedule(db: AsyncSession, school_id: int, teacher_id: int, items: list[dict]) -> dict:

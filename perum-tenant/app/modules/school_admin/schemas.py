@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 
 class AdminDashboardKpiOut(BaseModel):
@@ -175,6 +175,41 @@ class AdminTeacherDirectoryOut(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     teachers: list[AdminTeacherDirectoryTeacherOut]
+
+
+class AdminTeacherScheduleLessonOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: int
+    lesson_number: int
+    subject_id: int
+    subject_name: str | None
+    class_id: int
+    class_name: str | None
+    room: str | None
+
+
+class AdminTeacherScheduleDayOut(RootModel[list[AdminTeacherScheduleLessonOut]]):
+    pass
+
+
+class AdminTeacherScheduleOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    teacher_id: int
+    teacher_name: str
+    schedule: dict[Literal[0, 1, 2, 3, 4, 5], AdminTeacherScheduleDayOut]
+
+    @field_validator("schedule")
+    @classmethod
+    def validate_schedule(cls, value):
+        if set(value) != set(range(6)):
+            raise ValueError("schedule must contain all six weekdays")
+        for lessons in value.values():
+            numbers = [lesson.lesson_number for lesson in lessons.root]
+            if numbers != sorted(numbers):
+                raise ValueError("lessons must be ordered by lesson number")
+        return value
 
 
 class AdminBellScheduleItemOut(BaseModel):

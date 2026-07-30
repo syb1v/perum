@@ -25,6 +25,7 @@ from app.modules.school_admin.schemas import (
     AdminDashboardOverviewOut,
     AdminSchoolPeriodsOut,
     AdminTeacherDirectoryOut,
+    AdminTeacherScheduleOut,
     BellScheduleCreate,
     BellScheduleUpdate,
     ClassCreate,
@@ -481,7 +482,7 @@ async def teacher_subjects(
     return await tch.teacher_subjects(db, await _school(user, db), teacher_id)
 
 
-@router.get("/teachers/{teacher_id}/schedule")
+@router.get("/teachers/{teacher_id}/schedule", response_model=AdminTeacherScheduleOut)
 async def teacher_schedule(
     teacher_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
 ) -> dict:

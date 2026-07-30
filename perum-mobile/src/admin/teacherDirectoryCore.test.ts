@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { teacherAssignmentLabel, teacherDirectoryPath, type AdminTeacherDirectoryTeacher } from './teacherDirectoryCore';
+import { teacherAssignmentLabel, teacherDirectoryPath, teacherDisplayName, type AdminTeacherDirectoryTeacher } from './teacherDirectoryCore';
 
 const teacher = (assignments: AdminTeacherDirectoryTeacher['assignments'] = []): AdminTeacherDirectoryTeacher => ({ id: 1, name: 'Учитель', assignments });
 
@@ -8,4 +8,8 @@ test('builds the exact teacher directory path', () => assert.equal(teacherDirect
 test('renders assignment count without exposing legacy ids or contact data', () => {
   assert.equal(teacherAssignmentLabel(teacher()), 'Назначений нет');
   assert.equal(teacherAssignmentLabel(teacher([{ subject: { id: 1, name: 'Математика' }, class: { id: 2, name: '7 А' } }])), '1 назнач.');
+});
+test('uses the same neutral teacher display fallback for blank names', () => {
+  assert.equal(teacherDisplayName(teacher()), 'Учитель');
+  assert.equal(teacherDisplayName({ id: 7, name: '  ' }), 'Учитель 7');
 });

@@ -3886,6 +3886,36 @@ export interface components {
             /** Assignments */
             assignments: components["schemas"]["AdminTeacherDirectoryAssignmentOut"][];
         };
+        /** AdminTeacherScheduleDayOut */
+        AdminTeacherScheduleDayOut: components["schemas"]["AdminTeacherScheduleLessonOut"][];
+        /** AdminTeacherScheduleLessonOut */
+        AdminTeacherScheduleLessonOut: {
+            /** Id */
+            id: number;
+            /** Lesson Number */
+            lesson_number: number;
+            /** Subject Id */
+            subject_id: number;
+            /** Subject Name */
+            subject_name: string | null;
+            /** Class Id */
+            class_id: number;
+            /** Class Name */
+            class_name: string | null;
+            /** Room */
+            room: string | null;
+        };
+        /** AdminTeacherScheduleOut */
+        AdminTeacherScheduleOut: {
+            /** Teacher Id */
+            teacher_id: number;
+            /** Teacher Name */
+            teacher_name: string;
+            /** Schedule */
+            schedule: {
+                [key: string]: components["schemas"]["AdminTeacherScheduleDayOut"];
+            };
+        };
         /** AdminUnreadOut */
         AdminUnreadOut: {
             /** Tickets */
@@ -9232,9 +9262,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AdminTeacherScheduleOut"];
                 };
             };
             /** @description Validation Error */

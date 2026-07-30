@@ -353,3 +353,4 @@
 | 350 | 2026-07-30 14:43 | _______ | docs: reconciled live rollout, Stage F, support и scanner evidence through 671dd87 |
 | 351 | 2026-07-30 15:30 | _______ | feat(mobile): добавлены filters и local detail для Teacher Works |
 | 352 | 2026-07-30 16:30 | _______ | feat(mobile): добавлены accessible charts в Parent analytics |
+| 353 | 2026-07-30 17:30 | _______ | feat(mobile): добавлено read-only расписание учителя для администрации школы |

@@ -3509,9 +3509,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Teacher Schedule Api Admin Teachers  Teacher Id  Schedule Get"
+                  "$ref": "#/components/schemas/AdminTeacherScheduleOut"
                 }
               }
             }
@@ -13528,6 +13526,105 @@
           "assignments"
         ],
         "title": "AdminTeacherDirectoryTeacherOut"
+      },
+      "AdminTeacherScheduleDayOut": {
+        "items": {
+          "$ref": "#/components/schemas/AdminTeacherScheduleLessonOut"
+        },
+        "type": "array",
+        "title": "AdminTeacherScheduleDayOut"
+      },
+      "AdminTeacherScheduleLessonOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "lesson_number": {
+            "type": "integer",
+            "title": "Lesson Number"
+          },
+          "subject_id": {
+            "type": "integer",
+            "title": "Subject Id"
+          },
+          "subject_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Name"
+          },
+          "class_id": {
+            "type": "integer",
+            "title": "Class Id"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "lesson_number",
+          "subject_id",
+          "subject_name",
+          "class_id",
+          "class_name",
+          "room"
+        ],
+        "title": "AdminTeacherScheduleLessonOut"
+      },
+      "AdminTeacherScheduleOut": {
+        "properties": {
+          "teacher_id": {
+            "type": "integer",
+            "title": "Teacher Id"
+          },
+          "teacher_name": {
+            "type": "string",
+            "title": "Teacher Name"
+          },
+          "schedule": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AdminTeacherScheduleDayOut"
+            },
+            "type": "object",
+            "title": "Schedule"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "teacher_id",
+          "teacher_name",
+          "schedule"
+        ],
+        "title": "AdminTeacherScheduleOut"
       },
       "AdminUnreadOut": {
         "properties": {

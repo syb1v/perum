@@ -632,8 +632,20 @@ names and subject/class metadata through closed `AdminTeacherDirectoryOut`, whil
 legacy login/email/phone and assignment IDs remain outside the Mobile contract.
 Atomic `school_admin_teacher_directory` enforces exact roles, memory-only query and
 no mutation surface; contract gate = 106 paths, Android/iOS exports и 134 Mobile
-tests прошли. Assignments/sync, schedules, profiles and contact actions remain
-separate scope.
+tests прошли. Assignments/sync, profiles and contact actions remain separate scope.
+
+Teacher directory теперь открывает read-only расписание выбранного учителя без нового
+descriptor key для rolling compatibility. Existing `GET /admin/teachers/{teacher_id}/schedule`
+закрыт generated `AdminTeacherScheduleOut`: exact current-school active teacher lookup,
+school-scoped rows, deterministic six-day/lesson order, empty-day shape и nullable display
+metadata; Web-required schedule/subject/class IDs сохранены, user contact/auth/student data
+исключены. Mobile использует exact `school_admin|director`, account+teacher scoped memory-only
+query и endpoint `404` availability fallback, network/5xx retry; показывает 6 дней без
+invented bell time и без mutations. Availability ограничена exact generic router
+`{detail: "Not Found"}`; domain teacher absence получает отдельное neutral состояние, malformed
+404 остаётся обычной ошибкой, а retry разрешён только для network/408/425/429/5xx. Nameless
+teacher не раскрывает login и получает fallback `Учитель {id}`. Contract gate = 109 paths,
+Tenant unit suite, Web typecheck/build, 165 Mobile tests и Android/iOS exports прошли.
 
 Mobile school admin/director parity получил read-only расписание звонков: existing
 `GET /admin/bell-schedules` закрыт generated `AdminBellSchedulesOut` с exact
