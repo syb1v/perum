@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-30
 
+- Parent Mobile analytics получил accessible visual charts только из уже загруженных child-scoped summary/period data: средние по предметам отображаются горизонтальными барами на фиксированной шкале 1–5, а отсутствующие, malformed или out-of-range scalar grade values не создают бар; dynamics сохраняет authoritative порядок и не интерполирует пропуски. Числа, подписи, count/points в subject accessibility labels, non-color marks, wrapping и horizontal scroll заложены для доступного чтения и узких экранов; role/capability, contracts, backend, transactions, persistence, exports данных и mutations не менялись.
 - Teacher Mobile works feed получил authoritative class/subject filters через существующий generated `JournalTeacherSubjectsOut`: filter-scoped account query keys изолируют infinite caches и сбрасывают pagination, subjects ограничены выбранным классом, stale selection безопасно нормализуется. Picker `404` скрывает только filters, network/5xx оставляют feed рабочим с retry. Loaded `TeacherWorkOut` открывается в local-only detail card с реальными полями и датами без статистики, mutations, дополнительных detail requests или нового persistence scope.
 - Документация reconciled с production/CI evidence through `671dd87`: live plan больше не считает provisioned school, registered Tenant release и exact restore proof открытыми; automated Stage F отделён от pending signed one-school pilot; support DLQ/exact receipts/manual recovery и latest scanner candidates отражены без переписывания historical handoff-ов.
 
