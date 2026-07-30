@@ -1961,6 +1961,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/student/transactions/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent Transactions */
+        get: operations["recent_transactions_api_student_transactions_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/student/diary": {
         parameters: {
             query?: never;
@@ -6088,6 +6105,26 @@ export interface components {
             /** Reward Claimed */
             reward_claimed: boolean;
         };
+        /** StudentRecentTransactionOut */
+        StudentRecentTransactionOut: {
+            /** Id */
+            id: number;
+            /** Type */
+            type: string;
+            /** Amount */
+            amount: number;
+            /** Balance After */
+            balance_after: number;
+            /** Reason */
+            reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** StudentRecentTransactionsOut */
+        StudentRecentTransactionsOut: components["schemas"]["StudentRecentTransactionOut"][];
         /** SubjectCreate */
         SubjectCreate: {
             /** Name */
@@ -11539,6 +11576,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JournalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recent_transactions_api_student_transactions_recent_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentRecentTransactionsOut"];
                 };
             };
             /** @description Validation Error */

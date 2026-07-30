@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Subject, User
+from app.models import Subject, Transaction, User
 from app.models.academic import (
     BellScheduleItem,
     Class,
@@ -32,6 +32,33 @@ from app.modules.journal.service import _list_periods
 from app.services.points_calculator import grade_color
 
 DAY_NAMES = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота"]
+
+
+async def get_recent_transactions(
+    db: AsyncSession, school_id: int, user: User, limit: int = 30
+) -> list[dict]:
+    rows = (
+        await db.execute(
+            select(Transaction)
+            .where(
+                Transaction.user_id == user.id,
+                or_(Transaction.school_id == school_id, Transaction.school_id.is_(None)),
+            )
+            .order_by(Transaction.created_at.desc(), Transaction.id.desc())
+            .limit(limit)
+        )
+    ).scalars().all()
+    return [
+        {
+            "id": row.id,
+            "type": row.type,
+            "amount": row.amount,
+            "balance_after": row.balance_after,
+            "reason": row.reason,
+            "created_at": row.created_at,
+        }
+        for row in rows
+    ]
 
 
 # ---- shared helpers ----

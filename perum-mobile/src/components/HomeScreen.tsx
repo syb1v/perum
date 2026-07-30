@@ -12,6 +12,7 @@ import type { Preferences, PreferencesSnapshot } from '../preferences/types';
 import { usePush } from '../push/PushProvider';
 import { useCapabilities } from '../auth/CapabilityProvider';
 import { isSchoolSupportOperator } from '@perum/domain';
+import { useStudentTransactionsQuery } from '../transactions/studentTransactionsCore';
 
 const roleNames: Record<string, string> = { student: 'Ученик', parent: 'Родитель', teacher: 'Учитель', admin: 'Администратор', school_admin: 'Администратор школы', director: 'Директор' };
 
@@ -39,6 +40,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     enabled: has('offline_preferences'),
   });
   const notifications = useQuery({ queryKey: queryKeys.notifications(account.id), enabled: supportOperator, queryFn: () => apiClient.get<import('../notifications/core').NotificationList>('/user/notifications'), refetchInterval: 30_000 });
+  const studentTransactions = useStudentTransactionsQuery(account.id, apiClient, user.role === 'student');
   const server = preferences.data as PreferencesSnapshot | undefined;
   const desired = sync.mutation?.desired ?? server?.data.push_preview_enabled ?? false;
   const syncLabels = { pending: 'Ожидает синхронизации', sending: 'Синхронизация…', retry_wait: 'Повторим автоматически', conflict: 'Конфликт версии', blocked_auth: 'Требуется авторизация', failed_permanent: 'Не удалось синхронизировать' };
@@ -73,6 +75,7 @@ function AccountHome({ account, apiClient, signOut, busy }: { account: NonNullab
     {user.role === 'student' && has('offline_homework_state') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/homework')}><Text style={styles.primaryText}>Домашние задания</Text></Pressable> : null}
     {user.role === 'student' && has('student_academics') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/academics' as never)}><Text style={styles.primaryText}>Дневник и оценки</Text></Pressable> : null}
     {user.role === 'student' && has('student_analytics') ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/analytics' as never)}><Text style={styles.primaryText}>Аналитика оценок</Text></Pressable> : null}
+    {user.role === 'student' && studentTransactions.isSuccess ? <Pressable style={styles.primary} onPress={() => router.push('/(student)/transactions' as never)}><Text style={styles.primaryText}>История ливок</Text></Pressable> : null}
     {user.role === 'parent' && has('parent_academics') ? <Pressable style={styles.primary} onPress={() => router.push('/(parent)/academics' as never)}><Text style={styles.primaryText}>Успеваемость детей</Text></Pressable> : null}
     {user.role === 'parent' && has('parent_analytics') ? <Pressable style={styles.primary} onPress={() => router.push('/(parent)/analytics' as never)}><Text style={styles.primaryText}>Аналитика и баланс</Text></Pressable> : null}
     {user.role === 'teacher' && has('teacher_diary') ? <Pressable style={styles.primary} onPress={() => router.push('/(teacher)/diary' as never)}><Text style={styles.primaryText}>Расписание учителя</Text></Pressable> : null}

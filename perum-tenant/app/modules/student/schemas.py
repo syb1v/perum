@@ -1,7 +1,7 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, RootModel, field_validator
 
 
 class GradeSummarySubjectOut(BaseModel):
@@ -20,6 +20,28 @@ class GradesSummaryOut(BaseModel):
     subjects: list[GradeSummarySubjectOut]
     total_points: int
     total_grades: int
+
+
+class StudentRecentTransactionOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    type: str
+    amount: int
+    balance_after: int
+    reason: str | None
+    created_at: datetime
+
+    @field_validator("created_at")
+    @classmethod
+    def normalize_created_at(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+
+class StudentRecentTransactionsOut(RootModel[list[StudentRecentTransactionOut]]):
+    root: list[StudentRecentTransactionOut] = Field(max_length=50)
 
 
 class GradeAnalyticsPeriodOut(BaseModel):

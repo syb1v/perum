@@ -6,7 +6,7 @@ import { loadRegistry, saveRegistry } from './storage';
 import type { Registry, TenantAccount, TenantRole, TenantUser } from './types';
 import { removeAccountLocalData } from '../query/persistence';
 import type { ApiClient } from '@perum/api-client';
-import { assertDiscoveryDescriptor, DescriptorGateError, resolveAccountDescriptor, type DescriptorReason, type InternalDescriptorReason } from './descriptorCore';
+import { assertDiscoveryDescriptor, DescriptorGateError, normalizeCapabilities, resolveAccountDescriptor, type DescriptorReason, type InternalDescriptorReason } from './descriptorCore';
 import { createTenantTrafficGate } from './trafficCore';
 import { recordDescriptorEvent } from './descriptorLedger';
 
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         descriptorLastVerifiedAt: new Date().toISOString(),
         descriptorSchemaVersion: discovery.schema_version,
         descriptorCompatibility: discovery.compatibility,
-        descriptorCapabilities: discovery.capabilities,
+        descriptorCapabilities: normalizeCapabilities(discovery.capabilities),
         user,
         refreshToken: response.refresh_token,
       };

@@ -7370,6 +7370,56 @@
         }
       }
     },
+    "/api/student/transactions/recent": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Recent Transactions",
+        "operationId": "recent_transactions_api_student_transactions_recent_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentRecentTransactionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/student/diary": {
       "get": {
         "tags": [
@@ -20535,6 +20585,61 @@
           "reward_claimed"
         ],
         "title": "StudentQuestOut"
+      },
+      "StudentRecentTransactionOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "balance_after": {
+            "type": "integer",
+            "title": "Balance After"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "amount",
+          "balance_after",
+          "reason",
+          "created_at"
+        ],
+        "title": "StudentRecentTransactionOut"
+      },
+      "StudentRecentTransactionsOut": {
+        "items": {
+          "$ref": "#/components/schemas/StudentRecentTransactionOut"
+        },
+        "type": "array",
+        "maxItems": 50,
+        "title": "StudentRecentTransactionsOut"
       },
       "SubjectCreate": {
         "properties": {

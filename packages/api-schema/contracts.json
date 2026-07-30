@@ -45,6 +45,7 @@
     "/api/student/grades/analytics",
     "/api/student/grades/finals",
     "/api/student/grades/summary",
+    "/api/student/transactions/recent",
     "/api/student/quests",
     "/api/teacher/classes",
     "/api/teacher/diary",

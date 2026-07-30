@@ -81,11 +81,16 @@ export function assertDiscoveryCompatibility(compatibility: TenantCompatibility,
 
 export function assertCapabilities(value: unknown): asserts value is TenantCapabilities {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new DescriptorGateError('malformed', 'Core вернул некорректные capabilities');
-  const keys = Object.keys(value).sort();
-  const expected = [...capabilityNames].sort();
-  if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index]) || expected.some((key) => typeof (value as Record<string, unknown>)[key] !== 'boolean')) {
+  const capabilities = value as Record<string, unknown>;
+  if (capabilityNames.some((key) => key in capabilities && typeof capabilities[key] !== 'boolean')) {
     throw new DescriptorGateError('malformed', 'Core вернул некорректные capabilities');
   }
+}
+
+export function normalizeCapabilities(value: unknown): TenantCapabilities {
+  assertCapabilities(value);
+  const source = value as unknown as Record<string, boolean | undefined>;
+  return Object.fromEntries(capabilityNames.map((key) => [key, source[key] === true])) as TenantCapabilities;
 }
 
 export function isDescriptorComplete(account: TenantAccount) {
@@ -134,7 +139,7 @@ export function applyDiscovery(account: TenantAccount, discovery: Discovery, app
     descriptorLastVerifiedAt: new Date(now).toISOString(),
     descriptorSchemaVersion: discovery.schema_version,
     descriptorCompatibility: discovery.compatibility,
-    descriptorCapabilities: discovery.capabilities,
+    descriptorCapabilities: normalizeCapabilities(discovery.capabilities),
   };
 }
 

@@ -6,7 +6,7 @@ caller's own id — a student cannot read another student's diary or grades.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_db
@@ -22,6 +22,7 @@ from app.modules.student.schemas import (
     StudentFinalGradesOut,
     StudentGradesOut,
     StudentQuestOut,
+    StudentRecentTransactionsOut,
 )
 
 router = APIRouter()
@@ -29,6 +30,17 @@ router = APIRouter()
 
 async def _school(user: User, db: AsyncSession) -> int:
     return await resolve_school_id(user, db)
+
+
+@router.get("/transactions/recent", response_model=StudentRecentTransactionsOut)
+async def recent_transactions(
+    limit: int = Query(default=30, ge=1, le=50),
+    user: User = Depends(require_student),
+    db: AsyncSession = Depends(get_db),
+) -> StudentRecentTransactionsOut:
+    return StudentRecentTransactionsOut(
+        await service.get_recent_transactions(db, await _school(user, db), user, limit)
+    )
 
 
 @router.get("/diary", response_model=StudentDiaryOut)

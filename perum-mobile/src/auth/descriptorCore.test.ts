@@ -8,6 +8,7 @@ import {
   applyDiscovery,
   assertDiscoveryCompatibility,
   isDescriptorFresh,
+  normalizeCapabilities,
   resolveAccountDescriptor,
 } from './descriptorCore';
 import type { Discovery, TenantAccount } from './types';
@@ -217,11 +218,30 @@ test('malformed cached routing and timestamps are never fallback eligible', asyn
   }
 });
 
-test('schema, malformed capabilities and minimum app incompatibility never fallback', async () => {
+test('schema, malformed known capabilities and minimum app incompatibility never fallback', async () => {
   const expired = account({ descriptorExpiresAt: new Date(now - 1).toISOString() });
   for (const value of [
     discovery({ schema_version: 2 as 1 }),
-    discovery({ capabilities: { ...discovery().capabilities, unknown: true } as Discovery['capabilities'] }),
+    discovery({ capabilities: { ...discovery().capabilities, student_analytics: 'true' } as unknown as Discovery['capabilities'] }),
     discovery({ compatibility: { ...discovery().compatibility, minimum_app_version: '2.0.0' } }),
   ]) await assert.rejects(resolveAccountDescriptor(expired, { discoverById: async () => value, discoverByHost: async () => value, appVersion: '1.0.0', now: () => now }));
+});
+
+test('schema v1 capability evolution ignores unknown keys and defaults missing known keys to false', async () => {
+  const saved = account({ descriptorExpiresAt: new Date(now - 1).toISOString() });
+  const capabilities = { ...discovery().capabilities, future_student_feature: true } as Record<string, unknown>;
+  delete capabilities.student_analytics;
+  const value = discovery({ capabilities: capabilities as Discovery['capabilities'] });
+  const result = await resolveAccountDescriptor(saved, { discoverById: async () => value, discoverByHost: async () => value, appVersion: '1.0.0', now: () => now });
+  assert.equal(result.account.descriptorCapabilities?.student_analytics, false);
+  assert.equal('future_student_feature' in (result.account.descriptorCapabilities as unknown as Record<string, unknown>), false);
+});
+
+test('fresh sign-in capability normalization discards unknown keys and fails closed on missing keys', () => {
+  const source = { ...discovery().capabilities, future_market: true } as Record<string, unknown>;
+  delete source.student_analytics;
+  const normalized = normalizeCapabilities(source);
+  assert.equal(normalized.student_analytics, false);
+  assert.equal(normalized.student_academics, true);
+  assert.equal('future_market' in (normalized as unknown as Record<string, unknown>), false);
 });
