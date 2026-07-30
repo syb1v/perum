@@ -347,3 +347,4 @@
 | 344 | 2026-07-29 19:45 | _______ | chore(tenant): повышена release version до 1.1.4 |
 | 345 | 2026-07-29 19:50 | _______ | chore(contracts): синхронизирована Tenant OpenAPI version 1.1.4 |
 | 346 | 2026-07-29 21:15 | _______ | fix(billing): просрочка переведена на non-destructive reconciliation |
+| 347 | 2026-07-30 09:10 | _______ | feat(mobile): добавлены conflict-safe действия школьной модерации |

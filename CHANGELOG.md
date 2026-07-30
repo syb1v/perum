@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-07-29
 
+- Native school moderation расширена online authoritative actions для `school_admin|director`: dismiss, hide message и lock/unlock conversation используют generated payload, current optimistic version и стабильный `client_action_id`; double submit блокируется, HTTP 409 выполняет authoritative refetch без silent retry, ambiguous retry в рамках screen session повторяет exact payload, а sensitive evidence/action state не персистятся offline.
 - Billing delinquency sweep переведён с destructive enforcement на non-destructive reconciliation: просрочка создаёт или переиспользует один open invoice и помечает подписку `past_due`, но не меняет статусы организации/школ и не останавливает school stack. Payment и reconciliation сериализованы в текущей single-worker topology; canceled subscriptions не считаются задолженностью, а Platform UI показывает accounting counters вместо обещания остановки школ.
 - Добавлен production-safe synthetic seed типичной российской школы: deterministic medium profile создаёт 24 класса, 60 учителей, 624 ученика, 450 родителей, 17 280 уроков, 94 848 строк журнала, 59 904 homework states, 92 447 ledger transactions, grade-derived exchange analytics, новости, квесты и активность. Все synthetic accounts inactive по умолчанию; ownership registry, full-run advisory lock, run token, fail-closed rebuild/downgrade и FK preflight защищают существующие данные.
 - Tenant release повышен до `1.1.4`, чтобы immutable synthetic-seed image регистрировался отдельной версией без конфликта с production `1.1.3`.
