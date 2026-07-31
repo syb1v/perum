@@ -44,6 +44,29 @@ class StudentRecentTransactionsOut(RootModel[list[StudentRecentTransactionOut]])
     root: list[StudentRecentTransactionOut] = Field(max_length=50)
 
 
+class StudentInventoryItemOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: int
+    name: str
+    item_type: str
+    rarity: str
+    quantity: int
+    equipped: bool
+    purchased_at: datetime
+
+    @field_validator("purchased_at")
+    @classmethod
+    def normalize_purchased_at(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+
+
+class StudentInventoryOut(RootModel[list[StudentInventoryItemOut]]):
+    root: list[StudentInventoryItemOut] = Field(max_length=50)
+
+
 class GradeAnalyticsPeriodOut(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

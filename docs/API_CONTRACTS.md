@@ -95,6 +95,19 @@ parent-owned projections; parent и student summary/analytics routes испол�
 averages nullable, current period required nullable. Family не включает parent
 diary/grades/finals, mutations или UI request lifecycle.
 
+Student inventory read slice использует отдельный GET
+`/api/student/inventory/recent`, не legacy market endpoint. Closed root list
+`StudentInventoryOut` ограничен 50 `StudentInventoryItemOut`; item содержит только
+stable inventory `id`, item `name`/`item_type`/`rarity`, `quantity`, `equipped` и
+`purchased_at` date-time. Повторные покупки остаются отдельными inventory rows.
+Image/storage path, item ID, delivery/issue, price/stock, admin и upgrade fields не
+входят в curated contract; equip/purchase/delivery mutations им не определяются.
+Home availability probe намеренно выполняет тот же bounded GET максимум на 50 closed
+rows и переиспользует результат в memory-only account query, а не получает отдельную
+availability metadata. Новый availability endpoint или descriptor key не добавляется, чтобы old
+Tenant в rolling deployment определялся по exact generic router
+`404 {"detail":"Not Found"}`; прочие 404 не означают отсутствие feature.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`

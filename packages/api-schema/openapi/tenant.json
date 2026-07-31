@@ -7418,6 +7418,56 @@
         }
       }
     },
+    "/api/student/inventory/recent": {
+      "get": {
+        "tags": [
+          "student"
+        ],
+        "summary": "Recent Inventory",
+        "operationId": "recent_inventory_api_student_inventory_recent_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StudentInventoryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/student/diary": {
       "get": {
         "tags": [
@@ -20543,6 +20593,59 @@
           "grades"
         ],
         "title": "StudentGradesOut"
+      },
+      "StudentInventoryItemOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "item_type": {
+            "type": "string",
+            "title": "Item Type"
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity"
+          },
+          "quantity": {
+            "type": "integer",
+            "title": "Quantity"
+          },
+          "equipped": {
+            "type": "boolean",
+            "title": "Equipped"
+          },
+          "purchased_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Purchased At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "item_type",
+          "rarity",
+          "quantity",
+          "equipped",
+          "purchased_at"
+        ],
+        "title": "StudentInventoryItemOut"
+      },
+      "StudentInventoryOut": {
+        "items": {
+          "$ref": "#/components/schemas/StudentInventoryItemOut"
+        },
+        "type": "array",
+        "maxItems": 50,
+        "title": "StudentInventoryOut"
       },
       "StudentPage": {
         "properties": {

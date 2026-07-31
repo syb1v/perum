@@ -585,6 +585,24 @@ known keys в false и отбрасывает unknown future keys, сохран�
 Contract gate = 108 paths, Android/iOS exports, 288 Tenant, 253 Core и 150 Mobile
 tests прошли; physical-device UI и full economy parity остаются открыты.
 
+Mobile Student parity расширен privacy-minimized read-only инвентарём. Dedicated
+student-only `GET /api/student/inventory/recent` возвращает максимум 50 отдельных
+purchase rows: stable inventory ID, item name/type/rarity, quantity, equipped и UTC
+purchase date. Exact authenticated user и current/legacy-null item-school ownership,
+deterministic `purchased_at DESC, id DESC` order и closed generated DTO исключают
+cross-user/school data, delivery/issue fields, prices/stock, item/admin IDs, upgrade
+internals и storage image path; legacy `/api/market/inventory` не менялся. Mobile
+использует exact student role и общий с Home account-scoped memory-only data probe
+без нового descriptor key: кнопка появляется только после success, old-Tenant 404
+с exact generic router detail `Not Found` даёт FeatureUnavailable без retry, тогда
+как domain/malformed 404 остаются обычной ошибкой. Probe загружает ту же bounded
+50-row closed projection, а не availability-only metadata: отдельный endpoint или
+descriptor key не добавлен ради совместимости rolling Tenant releases. Экран не
+кэширует данные на диск, локализует known type/rarity с безопасными fallback без raw
+unknown codes и не добавляет images, actions или mutations; loading/error/empty/offline
+states truthful. Contract gate = 110 paths, 289 Tenant и 168 Mobile tests, Android/iOS exports прошли;
+physical-device UI, inventory mutations и full market parity остаются открыты.
+
 Mobile school admin/director parity получил read-only school overview: существующий
 `/api/admin/dashboard/overview` закрыт generated `AdminDashboardOverviewOut`, Web
 удалил ручной wire DTO, а atomic `school_admin_overview` capability открывает только
@@ -1476,7 +1494,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Mobile send/read/report payloads и moderation inbox/detail/action receipt используют curated generated schemas; Web использует generated moderation types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Частично | legacy receivables reconciliation сделан non-destructive и не останавливает учебный контур; target catalog, checkout/webhooks, refunds/provider reconciliation, entitlements и полноценный org/platform UI не начаты. До multi-instance Core нужны DB serialization/unique open-invoice invariant; staged enforcement только после отдельного ADR |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals, grade analytics и bounded recent livki history готовы; Parent получил child-scoped diary/grades/finals, accessible subject/period analytics charts и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, filterable paginated works feed с local detail и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, online conflict-safe moderation queue/detail/actions, academic calendar, class/teacher directories, расписание звонков и справочник видов работ. Остаются student market/inventory/exchange и прочие economy functions, Parent exports/full transaction history и mutations, Teacher works mutations, analytics reports/drill-down и полноценный offline journal, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals, grade analytics, bounded recent livki history и privacy-minimized inventory готовы; Parent получил child-scoped diary/grades/finals, accessible subject/period analytics charts и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, filterable paginated works feed с local detail и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, online conflict-safe moderation queue/detail/actions, academic calendar, class/teacher directories, расписание звонков и справочник видов работ. Остаются student market purchases/equipment/exchange и прочие economy functions, Parent exports/full transaction history и mutations, Teacher works mutations, analytics reports/drill-down и полноценный offline journal, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
 | P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, Cloudflare-fronted routing/TLS, Agent heartbeat, provisioned production school, registered Tenant release, exact restore proof, synthetic monitoring и immutable identity-checked deploy bootstrap подтверждены. Остаются two-school isolation/load, scanner target-node approval, security/accessibility/device matrix, stores, signed Mobile/push pilots, staged external flags/metrics и workstream-specific rollback evidence |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Subject, Transaction, User
+from app.models import ShopItem, Subject, Transaction, User, UserInventory
 from app.models.academic import (
     BellScheduleItem,
     Class,
@@ -58,6 +58,35 @@ async def get_recent_transactions(
             "created_at": row.created_at,
         }
         for row in rows
+    ]
+
+
+async def get_recent_inventory(
+    db: AsyncSession, school_id: int, user: User, limit: int = 50
+) -> list[dict]:
+    rows = (
+        await db.execute(
+            select(UserInventory, ShopItem)
+            .join(ShopItem, ShopItem.id == UserInventory.item_id)
+            .where(
+                UserInventory.user_id == user.id,
+                or_(ShopItem.school_id == school_id, ShopItem.school_id.is_(None)),
+            )
+            .order_by(UserInventory.purchased_at.desc(), UserInventory.id.desc())
+            .limit(limit)
+        )
+    ).all()
+    return [
+        {
+            "id": entry.id,
+            "name": item.name,
+            "item_type": item.item_type,
+            "rarity": item.rarity,
+            "quantity": entry.quantity,
+            "equipped": entry.is_equipped,
+            "purchased_at": entry.purchased_at,
+        }
+        for entry, item in rows
     ]
 
 

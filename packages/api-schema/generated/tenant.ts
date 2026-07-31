@@ -1978,6 +1978,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/student/inventory/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent Inventory */
+        get: operations["recent_inventory_api_student_inventory_recent_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/student/diary": {
         parameters: {
             query?: never;
@@ -6093,6 +6110,28 @@ export interface components {
             /** Grades */
             grades: components["schemas"]["StudentGradeOut"][];
         };
+        /** StudentInventoryItemOut */
+        StudentInventoryItemOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Item Type */
+            item_type: string;
+            /** Rarity */
+            rarity: string;
+            /** Quantity */
+            quantity: number;
+            /** Equipped */
+            equipped: boolean;
+            /**
+             * Purchased At
+             * Format: date-time
+             */
+            purchased_at: string;
+        };
+        /** StudentInventoryOut */
+        StudentInventoryOut: components["schemas"]["StudentInventoryItemOut"][];
         /** StudentPage */
         StudentPage: {
             /** Items */
@@ -11635,6 +11674,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StudentRecentTransactionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    recent_inventory_api_student_inventory_recent_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudentInventoryOut"];
                 };
             };
             /** @description Validation Error */

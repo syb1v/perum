@@ -24,6 +24,7 @@ export const queryKeys = {
   studentSummary: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'summary'] as const,
   studentAnalytics: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'analytics'] as const,
   studentRecentTransactions: (accountId: string) => [...queryKeys.account(accountId), 'student-transactions', 'recent'] as const,
+  studentRecentInventory: (accountId: string) => [...queryKeys.account(accountId), 'student-inventory', 'recent'] as const,
   parentChildren: (accountId: string) => [...queryKeys.account(accountId), 'academics', 'children'] as const,
   parentDiary: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'diary'] as const,
   parentGrades: (accountId: string, childId: number) => [...queryKeys.account(accountId), 'academics', 'child', childId, 'grades'] as const,

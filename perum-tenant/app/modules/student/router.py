@@ -21,6 +21,7 @@ from app.modules.student.schemas import (
     StudentDiaryOut,
     StudentFinalGradesOut,
     StudentGradesOut,
+    StudentInventoryOut,
     StudentQuestOut,
     StudentRecentTransactionsOut,
 )
@@ -40,6 +41,17 @@ async def recent_transactions(
 ) -> StudentRecentTransactionsOut:
     return StudentRecentTransactionsOut(
         await service.get_recent_transactions(db, await _school(user, db), user, limit)
+    )
+
+
+@router.get("/inventory/recent", response_model=StudentInventoryOut)
+async def recent_inventory(
+    limit: int = Query(default=50, ge=1, le=50),
+    user: User = Depends(require_student),
+    db: AsyncSession = Depends(get_db),
+) -> StudentInventoryOut:
+    return StudentInventoryOut(
+        await service.get_recent_inventory(db, await _school(user, db), user, limit)
     )
 
 
