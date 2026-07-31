@@ -729,6 +729,22 @@ const transactionCreatedAt = parentTransaction.created_at.anyOf ?? [];
 if (!transactionCreatedAt.some(schema => schema.type === 'string' && schema.format === 'date-time') || !transactionCreatedAt.some(schema => schema.type === 'null')) {
   throw new Error('ParentTransactionOut created_at must be nullable date-time');
 }
+if (responseSchemaRef(tenantOpenapi, '/api/student/inventory/recent', 'get') !== '#/components/schemas/StudentInventoryOut') {
+  throw new Error('GET /api/student/inventory/recent must return StudentInventoryOut');
+}
+const studentInventory = tenantOpenapi.components.schemas.StudentInventoryOut;
+if (studentInventory.type !== 'array' || studentInventory.items?.$ref !== '#/components/schemas/StudentInventoryItemOut' || studentInventory.maxItems !== 50) {
+  throw new Error('StudentInventoryOut must remain a bounded 50-item StudentInventoryItemOut array');
+}
+const studentInventoryFields = ['id', 'name', 'item_type', 'rarity', 'quantity', 'equipped', 'purchased_at'];
+const studentInventoryItem = assertExactClosedObject('StudentInventoryItemOut', studentInventoryFields);
+if (studentInventoryItem.purchased_at.type !== 'string' || studentInventoryItem.purchased_at.format !== 'date-time') {
+  throw new Error('StudentInventoryItemOut purchased_at must be date-time');
+}
+const forbiddenInventoryFields = ['user_id', 'school_id', 'item_id', 'delivery_code', 'is_issued', 'issued_at', 'price', 'stock', 'admin_id', 'image_path', 'upgrade_price'];
+if (forbiddenInventoryFields.some(field => field in studentInventoryItem)) {
+  throw new Error('StudentInventoryItemOut exposes an internal inventory field');
+}
 if (responseSchemaRef(tenantOpenapi, '/api/journal/work-types', 'get') !== '#/components/schemas/JournalWorkTypesOut') {
   throw new Error('GET /api/journal/work-types must return JournalWorkTypesOut');
 }
