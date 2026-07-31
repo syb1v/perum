@@ -10,6 +10,7 @@
 
 ## [Unreleased] — 2026-07-30
 
+- Tenant release повышен до `1.1.7` для регистрации privacy-minimized class schedule read projection.
 - Tenant release повышен до `1.1.6` для регистрации privacy-minimized Student inventory contract.
 - Student Mobile получил privacy-minimized read-only инвентарь без нового descriptor key: dedicated student-only `GET /api/student/inventory/recent` возвращает максимум 50 отдельных purchase rows с closed DTO (`id`, name/type/rarity, quantity, equipped, UTC purchase date), exact user и current/legacy-null item-school scope, deterministic `purchased_at,id` order; внутренний image path, delivery/issue, цены, stock, item/admin IDs и upgrade fields исключены, legacy `/api/market/inventory` не изменён. Home показывает кнопку только после успешного account-scoped memory-only data probe; probe загружает bounded 50-row closed projection, а не отдельную availability metadata, чтобы не добавлять endpoint/descriptor key при rolling Tenant compatibility. Только generic router `404 {detail: "Not Found"}` старого Tenant становится FeatureUnavailable без retry; domain/malformed 404 остаются обычной ошибкой. Экран exact student role локализует известные type/rarity и безопасно скрывает неизвестные codes, показывает truthful loading/error/empty/offline states без изображений, codes, actions и mutations.
 - Tenant release повышен до `1.1.5` для отдельной регистрации teacher-schedule contract; production deploy host/user/port перенесены в GitHub variables согласно digest-based workflow contract, SSH key остаётся secret.
