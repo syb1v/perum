@@ -357,3 +357,4 @@
 | 354 | 2026-07-30 17:45 | _______ | chore(release): повышена Tenant version до 1.1.5 |
 | 355 | 2026-07-30 18:30 | _______ | feat(mobile): добавлен privacy-minimized read-only инвентарь ученика |
 | 356 | 2026-07-30 18:35 | _______ | test(contracts): закреплён closed Student inventory response |
+| 357 | 2026-07-30 18:40 | _______ | chore(release): повышена Tenant version до 1.1.6 |
