@@ -358,3 +358,4 @@
 | 355 | 2026-07-30 18:30 | _______ | feat(mobile): добавлен privacy-minimized read-only инвентарь ученика |
 | 356 | 2026-07-30 18:35 | _______ | test(contracts): закреплён closed Student inventory response |
 | 357 | 2026-07-30 18:40 | _______ | chore(release): повышена Tenant version до 1.1.6 |
+| 358 | 2026-07-31 20:43 | _______ | feat(mobile): добавлено privacy-minimized read-only расписание класса |

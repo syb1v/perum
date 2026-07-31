@@ -2633,6 +2633,53 @@
         }
       }
     },
+    "/api/admin/classes/{class_id}/schedule/read": {
+      "get": {
+        "tags": [
+          "school_admin"
+        ],
+        "summary": "Class Schedule Read",
+        "operationId": "class_schedule_read_api_admin_classes__class_id__schedule_read_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "class_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Class Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminClassScheduleReadOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/admin/academic-years": {
       "get": {
         "tags": [
@@ -13077,6 +13124,87 @@
           "created_at"
         ],
         "title": "AdminClassOut"
+      },
+      "AdminClassScheduleReadDayOut": {
+        "items": {
+          "$ref": "#/components/schemas/AdminClassScheduleReadLessonOut"
+        },
+        "type": "array",
+        "title": "AdminClassScheduleReadDayOut"
+      },
+      "AdminClassScheduleReadLessonOut": {
+        "properties": {
+          "lesson_number": {
+            "type": "integer",
+            "maximum": 8.0,
+            "minimum": 1.0,
+            "title": "Lesson Number"
+          },
+          "subject_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject Display"
+          },
+          "teacher_display": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Teacher Display"
+          },
+          "room": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Room"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "lesson_number",
+          "subject_display",
+          "teacher_display",
+          "room"
+        ],
+        "title": "AdminClassScheduleReadLessonOut"
+      },
+      "AdminClassScheduleReadOut": {
+        "properties": {
+          "class_name": {
+            "type": "string",
+            "title": "Class Name"
+          },
+          "schedule": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AdminClassScheduleReadDayOut"
+            },
+            "type": "object",
+            "title": "Schedule"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "class_name",
+          "schedule"
+        ],
+        "title": "AdminClassScheduleReadOut"
       },
       "AdminClassTeacherOut": {
         "properties": {

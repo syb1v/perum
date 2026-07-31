@@ -29,6 +29,7 @@
     "/api/admin/academic-years",
     "/api/admin/school-periods",
     "/api/admin/classes",
+    "/api/admin/classes/{class_id}/schedule/read",
     "/api/admin/teacher-directory",
     "/api/admin/teachers/{teacher_id}/schedule",
     "/api/admin/bell-schedules",

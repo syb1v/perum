@@ -159,6 +159,24 @@ assertExactCoreClosedObject('EscalationOutboundOut', ['approval_status', 'status
 assertExactCoreClosedObject('EscalationOutboundMessageOut', ['id', 'public_id', 'client_message_id', 'sender_type', 'body', 'created_at']);
 assertExactCoreClosedObject('EscalationOutboundAckOut', ['ok', 'cursor']);
 
+if (responseSchemaRef(tenantOpenapi, '/api/admin/classes/{class_id}/schedule/read', 'get') !== '#/components/schemas/AdminClassScheduleReadOut') {
+  throw new Error('class schedule read must return AdminClassScheduleReadOut');
+}
+assertExactClosedObject('AdminClassScheduleReadOut', ['class_name', 'schedule']);
+assertExactClosedObject('AdminClassScheduleReadLessonOut', ['lesson_number', 'subject_display', 'teacher_display', 'room']);
+const classSchedule = tenantOpenapi.components.schemas.AdminClassScheduleReadOut.properties.schedule;
+if (classSchedule.type !== 'object' || classSchedule.additionalProperties?.$ref !== '#/components/schemas/AdminClassScheduleReadDayOut') {
+  throw new Error('AdminClassScheduleReadOut schedule must be a string-keyed map of AdminClassScheduleReadDayOut');
+}
+const classScheduleDay = tenantOpenapi.components.schemas.AdminClassScheduleReadDayOut;
+if (classScheduleDay.type !== 'array' || classScheduleDay.items?.$ref !== '#/components/schemas/AdminClassScheduleReadLessonOut') {
+  throw new Error('AdminClassScheduleReadDayOut items must reference AdminClassScheduleReadLessonOut');
+}
+const classScheduleLessonNumber = tenantOpenapi.components.schemas.AdminClassScheduleReadLessonOut.properties.lesson_number;
+if (classScheduleLessonNumber.type !== 'integer' || classScheduleLessonNumber.minimum !== 1 || classScheduleLessonNumber.maximum !== 8) {
+  throw new Error('AdminClassScheduleReadLessonOut lesson_number must be an integer from 1 through 8');
+}
+
 for (const path of ['/api/social/students', '/api/social/friends']) {
   if (responseSchemaRef(tenantOpenapi, path, 'get') !== '#/components/schemas/StudentPage') {
     throw new Error(`${path} must return StudentPage`);

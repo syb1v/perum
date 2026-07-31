@@ -642,7 +642,27 @@ Mobile school admin/director parity получил read-only class directory: ex
 а atomic `school_admin_class_directory` показывает exact-role class name, grade,
 homeroom teacher и student count с memory-only account-scoped query. Contract gate =
 105 paths, Android/iOS exports и 132 Mobile tests прошли; roster/student PII,
-schedules, balance/login/membership data и mutations не включены.
+balance/login/membership data и mutations не включены.
+
+Class directory теперь открывает privacy-minimized read-only расписание выбранного
+класса без нового descriptor key. Dedicated
+`GET /admin/classes/{class_id}/schedule/read` не меняет legacy Web GET/PUT schedule
+route/service shape и возвращает closed generated projection: neutral class name,
+exact шесть date-independent дней, strictly increasing unique lesson number `1..8`
+и nullable subject/teacher/room; blank active teacher получает neutral `Учитель`
+без ID fallback. Exact day keys/order являются server-enforced producer invariant,
+поскольку generated OpenAPI shape остаётся string-keyed map.
+Schedule/class/subject/teacher IDs, groups, roster, bell time и actions исключены.
+Mobile требует exact `school_admin|director` и existing
+`school_admin_class_directory`, использует account+class scoped memory-only query,
+44pt controls, accessible labels и fail-closed runtime normalization malformed,
+duplicate и out-of-range rows с stable lesson order. Только generic router
+`404 {detail: "Not Found"}` означает old Tenant/FeatureUnavailable; domain
+`Класс не найден` получает neutral stale-class card, malformed 404 остаётся normal
+error, retry разрешён для network/408/425/429/5xx и ограничен тремя попытками.
+Contract gate = 111 paths, focused Tenant = 19 tests, Tenant unit = 322 tests,
+Mobile = 176 tests; Android/iOS exports прошли. Physical-device UI, roster,
+bell-time composition и schedule mutations остаются открыты.
 
 Mobile school admin/director parity получил privacy-minimized read-only teacher
 directory: new `GET /admin/teacher-directory` returns only active teacher display
@@ -1494,7 +1514,7 @@ Flow:
 | P2 | Chats/moderation | Частично | 1:1 student text chats, durable read state, offline outbox, reports, evidence-scoped moderation/audit, operational shutdown, retention и foreground WebSocket realtime с polling fallback готовы. Mobile send/read/report payloads и moderation inbox/detail/action receipt используют curated generated schemas; Web использует generated moderation types и optimistic version receipt. Остаются groups, parent observer policy, attachments и расширенный anti-abuse |
 | P2 | Billing/ЮKassa | Частично | legacy receivables reconciliation сделан non-destructive и не останавливает учебный контур; target catalog, checkout/webhooks, refunds/provider reconciliation, entitlements и полноценный org/platform UI не начаты. До multi-instance Core нужны DB serialization/unique open-invoice invariant; staged enforcement только после отдельного ADR |
 | P2 | Push/deep links | Частично | deep-link parser/rediscovery/routing/association routes, proof-of-possession installation, encrypted account registration, session revoke integration, privacy-safe suppressed outbox, Expo permission/token rotation/tap lifecycle готовы; остаются link DNS/signing identifiers, server encryption keys, EAS credentials и реальные Expo/APNs/FCM/RuStore/Huawei delivery adapters |
-| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals, grade analytics, bounded recent livki history и privacy-minimized inventory готовы; Parent получил child-scoped diary/grades/finals, accessible subject/period analytics charts и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, filterable paginated works feed с local detail и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, online conflict-safe moderation queue/detail/actions, academic calendar, class/teacher directories, расписание звонков и справочник видов работ. Остаются student market purchases/equipment/exchange и прочие economy functions, Parent exports/full transaction history и mutations, Teacher works mutations, analytics reports/drill-down и полноценный offline journal, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, class/teacher schedules, contact actions и остальные school admin/org/platform admin workflows |
+| P2 | Mobile role parity | Частично | student vertical slices Homework, Friends, Messages, Support requester, read-only diary/grades/finals, grade analytics, bounded recent livki history и privacy-minimized inventory готовы; Parent получил child-scoped diary/grades/finals, accessible subject/period analytics charts и recent balance operations; Teacher получил read-only weekly diary, homeroom overview, filterable paginated works feed с local detail и class analytics dashboard; school admin/director получили support inbox/escalation, memory-only school overview, online conflict-safe moderation queue/detail/actions, academic calendar, class/teacher directories, read-only class/teacher schedules, расписание звонков и справочник видов работ. Остаются student market purchases/equipment/exchange и прочие economy functions, Parent exports/full transaction history и mutations, Teacher works mutations, analytics reports/drill-down и полноценный offline journal, sensitive admin offline policy, calendar/class/teacher/bell-schedule/work-type CRUD, rosters, schedule mutations, contact actions и остальные school admin/org/platform admin workflows |
 | P3 | Production rollout | Foundation частично | двухсерверный Core/organization contour, Cloudflare-fronted routing/TLS, Agent heartbeat, provisioned production school, registered Tenant release, exact restore proof, synthetic monitoring и immutable identity-checked deploy bootstrap подтверждены. Остаются two-school isolation/load, scanner target-node approval, security/accessibility/device matrix, stores, signed Mobile/push pilots, staged external flags/metrics и workstream-specific rollback evidence |
 
 Live sequence и handoff не дублируются здесь: они редактируются только в блоке

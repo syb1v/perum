@@ -108,6 +108,22 @@ availability metadata. Новый availability endpoint или descriptor key н
 Tenant в rolling deployment определялся по exact generic router
 `404 {"detail":"Not Found"}`; прочие 404 не означают отсутствие feature.
 
+School Admin class schedule read использует отдельный GET
+`/api/admin/classes/{class_id}/schedule/read`, не меняя legacy Web GET/PUT
+`/api/admin/classes/{class_id}/schedule`. Closed `AdminClassScheduleReadOut`
+содержит только neutral `class_name` и exact six-day map; каждый closed
+`AdminClassScheduleReadLessonOut` требует `lesson_number` и nullable
+`subject_display`, `teacher_display`, `room`. Schedule/class/subject/teacher IDs,
+groups, roster, bell time и actions не входят в contract. Endpoint использует
+existing `school_admin_class_directory` capability: новый descriptor key не
+добавляется. Rolling old Tenant определяется только по exact generic router
+`404 {"detail":"Not Found"}`; domain `Класс не найден` и malformed 404 не
+означают отсутствие feature. OpenAPI описывает `schedule` как string-keyed map на
+`AdminClassScheduleReadDayOut` и не может выразить exact keys/order: producer
+validator server-enforced требует ровно ключи `0..5`, `lesson_number` integer
+`1..8` и строго возрастающие уникальные номера внутри каждого дня. Blank active
+teacher получает neutral `Учитель` без ID fallback.
+
 Journal work types являются отдельным curated reference-data contract: GET
 `/api/journal/work-types` возвращает `JournalWorkTypesOut` с
 `JournalWorkTypeOut[]`. Envelope `success`/`work_types` и item `id`/`name`/`weight`
@@ -196,7 +212,7 @@ diary, grades и finals aliases, student quests, основной journal aggreg
 final-grade и lesson-template receipts, journal import preview/execute и teacher
 bulk-balance. Empty branches имеют тот же required shape, nullable producer fields
 явны, а все live Web consumers используют generated DTO. Curated manifest содержит
-96 paths; internal/unconsumed routes добавляются только при появлении tracked client.
+111 paths; internal/unconsumed routes добавляются только при появлении tracked client.
 
 Checked-in `perum-tenant/mobile-descriptor.json` валидируется authoritative Core
 schema, а nested Core/Tenant OpenAPI shapes сравниваются в

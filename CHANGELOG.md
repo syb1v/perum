@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-07-31
+
+- School Admin/Director Mobile получил privacy-minimized read-only расписание выбранного класса из существующего каталога без нового descriptor key. Новый `GET /api/admin/classes/{class_id}/schedule/read` возвращает closed generated DTO с neutral class display, шестью date-independent днями, строго возрастающим lesson number `1..8` и nullable subject/teacher/room; blank active teacher отображается как `Учитель` без ID fallback. IDs, группы, roster, время и actions исключены, legacy Web route/service shape не изменён. Query account+class scoped и memory-only; exact generic router `404 {detail: "Not Found"}` означает old Tenant/FeatureUnavailable, domain `Класс не найден` показывает neutral stale-class card, malformed 404 остаётся normal error, а network/408/425/429/5xx retry ограничен тремя попытками. Mobile fail-closed фильтрует malformed/out-of-range rows, deterministic first duplicate и defensively сортирует допустимые уроки. Contract gate = 111 paths, focused Tenant = 19 tests, Tenant unit = 322 tests, Mobile = 176 tests; Android/iOS exports прошли.
+
 ## [Unreleased] — 2026-07-30
 
 - Tenant release повышен до `1.1.6` для регистрации privacy-minimized Student inventory contract.

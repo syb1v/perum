@@ -212,6 +212,37 @@ class AdminTeacherScheduleOut(BaseModel):
         return value
 
 
+class AdminClassScheduleReadLessonOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    lesson_number: int = Field(ge=1, le=8)
+    subject_display: str | None
+    teacher_display: str | None
+    room: str | None
+
+
+class AdminClassScheduleReadDayOut(RootModel[list[AdminClassScheduleReadLessonOut]]):
+    pass
+
+
+class AdminClassScheduleReadOut(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    class_name: str
+    schedule: dict[Literal[0, 1, 2, 3, 4, 5], AdminClassScheduleReadDayOut]
+
+    @field_validator("schedule")
+    @classmethod
+    def validate_schedule(cls, value):
+        if set(value) != set(range(6)):
+            raise ValueError("schedule must contain all six weekdays")
+        for lessons in value.values():
+            numbers = [lesson.lesson_number for lesson in lessons.root]
+            if any(current >= following for current, following in zip(numbers, numbers[1:])):
+                raise ValueError("lesson numbers must be strictly increasing")
+        return value
+
+
 class AdminBellScheduleItemOut(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 

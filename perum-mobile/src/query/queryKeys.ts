@@ -43,6 +43,7 @@ export const queryKeys = {
   schoolAdminModerationCase: (accountId: string, caseId: number) => [...queryKeys.schoolAdminModeration(accountId), 'case', caseId] as const,
   schoolAdminAcademicCalendar: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-academic-calendar'] as const,
   schoolAdminClassDirectory: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-class-directory'] as const,
+  schoolAdminClassSchedule: (accountId: string, classId: number) => [...queryKeys.account(accountId), 'school-admin-class-schedule', classId] as const,
   schoolAdminTeacherDirectory: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-teacher-directory'] as const,
   schoolAdminTeacherSchedule: (accountId: string, teacherId: number) => [...queryKeys.account(accountId), 'school-admin-teacher-schedule', teacherId] as const,
   schoolAdminBellSchedules: (accountId: string) => [...queryKeys.account(accountId), 'school-admin-bell-schedules'] as const,

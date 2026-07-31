@@ -21,6 +21,7 @@ from app.modules.school_admin.schemas import (
     AddStudentRequest,
     AdminAcademicYearsOut,
     AdminBellSchedulesOut,
+    AdminClassScheduleReadOut,
     AdminClassesOut,
     AdminDashboardOverviewOut,
     AdminSchoolPeriodsOut,
@@ -317,6 +318,13 @@ async def class_schedule(
     class_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
 ) -> dict:
     return await cls.get_class_schedule(db, await _school(user, db), class_id)
+
+
+@router.get("/classes/{class_id}/schedule/read", response_model=AdminClassScheduleReadOut)
+async def class_schedule_read(
+    class_id: int, user: User = Depends(require_admin), db: AsyncSession = Depends(get_db)
+) -> AdminClassScheduleReadOut:
+    return await cls.get_class_schedule_read(db, await _school(user, db), class_id)
 
 
 @router.put("/classes/{class_id}/schedule")

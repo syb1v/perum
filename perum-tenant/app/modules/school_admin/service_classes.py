@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
@@ -201,6 +201,50 @@ async def get_class_schedule(db: AsyncSession, school_id: int, class_id: int) ->
             }
         )
     return {"class": {"id": c.id, "name": c.name}, "schedule": schedule}
+
+
+async def get_class_schedule_read(db: AsyncSession, school_id: int, class_id: int) -> dict:
+    c = await get_class(db, school_id, class_id)
+    rows = (
+        await db.execute(
+            select(Schedule, Subject.name, User)
+            .outerjoin(
+                Subject,
+                and_(
+                    Subject.id == Schedule.subject_id,
+                    Subject.school_id == school_id,
+                    Subject.is_archived.is_(False),
+                ),
+            )
+            .outerjoin(
+                User,
+                and_(
+                    User.id == Schedule.teacher_id,
+                    User.school_id == school_id,
+                    User.role == "teacher",
+                    User.is_active.is_(True),
+                ),
+            )
+            .where(Schedule.school_id == school_id, Schedule.class_id == class_id)
+            .order_by(Schedule.day_of_week, Schedule.lesson_number, Schedule.id)
+        )
+    ).all()
+    days: dict[int, list[dict]] = {day: [] for day in range(6)}
+    for schedule, subject_name, teacher in rows:
+        days[schedule.day_of_week].append(
+            {
+                "lesson_number": schedule.lesson_number,
+                "subject_display": subject_name,
+                "teacher_display": (
+                    f"{teacher.last_name or ''} {teacher.first_name or ''}".strip()
+                    or "Учитель"
+                )
+                if teacher
+                else None,
+                "room": schedule.room,
+            }
+        )
+    return {"class_name": c.name, "schedule": days}
 
 
 async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int, items: list[dict]) -> dict:

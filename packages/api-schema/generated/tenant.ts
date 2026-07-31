@@ -698,6 +698,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/classes/{class_id}/schedule/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Class Schedule Read */
+        get: operations["class_schedule_read_api_admin_classes__class_id__schedule_read_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/academic-years": {
         parameters: {
             query?: never;
@@ -3733,6 +3750,28 @@ export interface components {
             parent_id: null;
             /** Created At */
             created_at: string | null;
+        };
+        /** AdminClassScheduleReadDayOut */
+        AdminClassScheduleReadDayOut: components["schemas"]["AdminClassScheduleReadLessonOut"][];
+        /** AdminClassScheduleReadLessonOut */
+        AdminClassScheduleReadLessonOut: {
+            /** Lesson Number */
+            lesson_number: number;
+            /** Subject Display */
+            subject_display: string | null;
+            /** Teacher Display */
+            teacher_display: string | null;
+            /** Room */
+            room: string | null;
+        };
+        /** AdminClassScheduleReadOut */
+        AdminClassScheduleReadOut: {
+            /** Class Name */
+            class_name: string;
+            /** Schedule */
+            schedule: {
+                [key: string]: components["schemas"]["AdminClassScheduleReadDayOut"];
+            };
         };
         /** AdminClassTeacherOut */
         AdminClassTeacherOut: {
@@ -8683,6 +8722,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    class_schedule_read_api_admin_classes__class_id__schedule_read_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminClassScheduleReadOut"];
                 };
             };
             /** @description Validation Error */
