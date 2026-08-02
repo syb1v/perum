@@ -365,3 +365,4 @@
 | 362 | 2026-07-31 22:10 | _______ | chore(release): повышена Tenant version до 1.1.8 |
 | 363 | 2026-07-31 22:25 | _______ | docs(plan): roadmap упрощён до Web-first Launch V1 и post-launch backlog |
 | 364 | 2026-08-02 12:35 | _______ | fix(ci): audit allowlist допускает исчезновение исправленных findings |
+| 365 | 2026-08-02 13:15 | _______ | test(launch): добавлен PostgreSQL academic role journey gate |

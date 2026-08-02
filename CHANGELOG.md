@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-02
 
+- Добавлен обязательный PostgreSQL Launch E2E через реальные Alembic migrations, FastAPI routes, auth и RBAC: School Admin создаёт class/users/subjects/work type/teacher assignment, Teacher выставляет оценку, Student и linked Parent читают один authoritative grade; negative checks закрывают unauthenticated, wrong-role, unassigned-subject и unlinked-child access. Gate подключён к последовательному PostgreSQL CI job. M2 = `5/8`, общий launch progress = `45%`; browser Web acceptance остаётся отдельным открытым критерием.
 - CI dependency audit больше не требует сохранения уже исчезнувших advisory findings: каждый фактический high/critical пакет по-прежнему обязан входить в exact allowlist, а любое новое имя блокирует build. Это устраняет ложный отказ release после сокращения npm advisory graph без расширения разрешённого множества.
 
 ## [Unreleased] — 2026-07-31

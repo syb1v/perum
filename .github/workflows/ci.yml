@@ -79,9 +79,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
-      - name: PostgreSQL scanner and Friends concurrency gates
+      - name: PostgreSQL integration gates
         working-directory: perum-tenant
-        run: python -m pytest tests/integration/test_scanner_postgresql.py tests/integration/test_social_friends_postgresql.py -q
+        run: python -m pytest tests/integration/test_scanner_postgresql.py tests/integration/test_social_friends_postgresql.py tests/integration/test_academic_role_journey_postgresql.py -q
 
   web-typecheck:
     name: perum-web (tsc + build)
