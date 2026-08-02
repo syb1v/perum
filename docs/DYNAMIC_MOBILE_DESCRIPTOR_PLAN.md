@@ -1,9 +1,10 @@
 # План динамического mobile descriptor
 
 **Статус:** Stages A-E и automated lifecycle/release-gate часть Stage F выполнены.
-Отдельный signed one-school operator pilot pending; реальный pilot не заявлен.
-Live проценты и текущий roadmap ведутся только в
-[PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+Отдельный signed one-school operator pilot перенесён в post-launch backlog и не
+блокирует Web-first Launch V1. Реальный pilot не заявлен. Live launch progress и
+текущий roadmap ведутся только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md),
+условия возврата — в [POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md).
 
 **Дата:** 2026-07-17
 

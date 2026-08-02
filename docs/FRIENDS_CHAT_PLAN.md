@@ -1,8 +1,10 @@
 # Утверждённый план друзей и личных чатов
 
 > Это целевая спецификация требований, а не утверждение, что каждый пункт уже
-> реализован. Live status и roadmap ведутся только в
-> [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+> реализован. Незавершённое расширение social/chat является post-launch scope и не
+> блокирует Web-first Launch V1. Live status ведётся только в
+> [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md), очередь — в
+> [POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md).
 
 ## Текущее состояние и requirement gap
 

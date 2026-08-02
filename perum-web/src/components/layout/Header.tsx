@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import api from '@/lib/apiClient';
+import api, { ApiClientError } from '@/lib/apiClient';
 import type { UnreadCount } from '@/types/messages';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -95,7 +95,15 @@ export default function Header() {
 
     useEffect(() => {
         if (role !== 'student') return;
-        const loadUnread = () => api.get<UnreadCount>('/social/unread-count').then(data => setUnreadMessages(data.unread_count)).catch(() => undefined);
+        let socialUnavailable = false;
+        const loadUnread = () => {
+            if (socialUnavailable) return;
+            void api.get<UnreadCount>('/social/unread-count')
+                .then(data => setUnreadMessages(data.unread_count))
+                .catch(error => {
+                    if (error instanceof ApiClientError && error.status === 503) socialUnavailable = true;
+                });
+        };
         void loadUnread();
         const interval = window.setInterval(loadUnread, 15000);
         window.addEventListener('focus', loadUnread);

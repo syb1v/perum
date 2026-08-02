@@ -360,3 +360,7 @@
 | 357 | 2026-07-30 18:40 | _______ | chore(release): повышена Tenant version до 1.1.6 |
 | 358 | 2026-07-31 20:43 | _______ | feat(mobile): добавлено privacy-minimized read-only расписание класса |
 | 359 | 2026-07-31 20:50 | _______ | chore(release): повышена Tenant version до 1.1.7 |
+| 360 | 2026-07-31 21:56 | _______ | fix(student): исправлена сериализация ключей дней дневника и social polling при rollout 503 |
+| 361 | 2026-07-31 22:05 | _______ | docs(plan): master plan очищен и переведён на измеримый live progress |
+| 362 | 2026-07-31 22:10 | _______ | chore(release): повышена Tenant version до 1.1.8 |
+| 363 | 2026-07-31 22:25 | _______ | docs(plan): roadmap упрощён до Web-first Launch V1 и post-launch backlog |

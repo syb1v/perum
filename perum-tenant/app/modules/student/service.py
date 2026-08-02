@@ -336,7 +336,7 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
         if p_start <= today <= p_end:
             current_period = p_data
 
-    diary: dict[int, dict] = {}
+    diary: dict[str, dict] = {}
     for day in range(6):
         day_date = week_start + timedelta(days=day)
         date_str = day_date.strftime("%Y-%m-%d")
@@ -390,7 +390,7 @@ async def get_diary(db: AsyncSession, school_id: int, user: User, week_offset: i
                 lesson["group_name"] = group_name
             lessons.append(lesson)
 
-        diary[day] = {
+        diary[str(day)] = {
             "date": date_str,
             "day_name": DAY_NAMES[day],
             "is_today": day_date == today,

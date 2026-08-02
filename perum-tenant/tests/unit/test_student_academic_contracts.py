@@ -1,6 +1,11 @@
+import asyncio
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
 import pytest
 from pydantic import ValidationError
 
+from app.modules.student import service
 from app.modules.student.schemas import (
     StudentDiaryOut,
     StudentFinalGradesOut,
@@ -26,6 +31,28 @@ def test_no_class_diary_has_normalized_closed_shape() -> None:
     assert response.diary == {}
     with pytest.raises(ValidationError):
         StudentDiaryOut.model_validate({"class_id": None, "class_name": None, "diary": {}})
+
+
+def test_diary_service_returns_string_day_keys(monkeypatch) -> None:
+    empty_scalars = SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: []))
+    empty_rows = SimpleNamespace(all=lambda: [])
+    db = SimpleNamespace(
+        execute=AsyncMock(
+            side_effect=[empty_scalars, empty_scalars, empty_rows, empty_scalars, empty_scalars, empty_scalars]
+        )
+    )
+    monkeypatch.setattr(
+        service,
+        "_student_class",
+        AsyncMock(return_value=SimpleNamespace(id=1, name="5А", bell_schedule_id=None, grade_level=5)),
+    )
+    monkeypatch.setattr(service, "_work_type_names", AsyncMock(return_value={}))
+    monkeypatch.setattr(service, "_list_periods", AsyncMock(return_value=[]))
+
+    payload = asyncio.run(service.get_diary(db, 1, SimpleNamespace(id=2), 0))
+    response = StudentDiaryOut.model_validate(payload)
+
+    assert list(response.diary) == ["0", "1", "2", "3", "4", "5"]
 
 
 def test_student_grades_and_finals_are_closed() -> None:

@@ -1,8 +1,9 @@
 # Остаток плана: media scanner и native support admin
 
-Документ передаёт следующие независимые циклы после завершения Friends hardening,
-Native Friends UI и controlled social rollout. Live status и проценты ведутся
-только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+Документ сохраняет post-launch requirements media scanner, attachments и Native
+support integrations. Они не блокируют Web-first Launch V1. Live status ведётся
+только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md), условия возврата — в
+[POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md).
 
 ## 1. Production media scanner
 

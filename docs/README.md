@@ -7,7 +7,8 @@
 
 ## Начало работы
 
-- [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md) — live progress, handoff и roadmap.
+- [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md) — Web-first Launch V1 scope, progress и критический roadmap.
+- [POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md) — сохранённый scope, который не блокирует первый запуск.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — границы Core, school tenant, web, mobile и packages.
 - [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md) — локальный запуск.
 - [TESTING.md](TESTING.md) — локальные и CI-проверки.
@@ -31,11 +32,12 @@
 - [OPERATOR_EVIDENCE_2026-07-30.md](OPERATOR_EVIDENCE_2026-07-30.md) — non-secret production seed/deploy evidence.
 - [MIGRATION_FROM_LEGACY.md](MIGRATION_FROM_LEGACY.md) — рамки будущей миграции.
 
-## Product specifications
+## Post-launch specifications
 
-- [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md) — descriptor requirements и Stage F acceptance.
-- [FRIENDS_CHAT_PLAN.md](FRIENDS_CHAT_PLAN.md) — целевые social/chat requirements и текущий implementation gap.
-- [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md) — handoff оставшихся media/support циклов.
+- [DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md](DYNAMIC_MOBILE_DESCRIPTOR_PLAN.md) — отложенные Mobile descriptor и Stage F requirements.
+- [FRIENDS_CHAT_PLAN.md](FRIENDS_CHAT_PLAN.md) — отложенное расширение social/chat.
+- [REMAINING_MEDIA_SUPPORT_PLAN.md](REMAINING_MEDIA_SUPPORT_PLAN.md) — отложенные media/attachments и support integrations.
+- [DEFERRED_STAGE_REQUIREMENTS.md](DEFERRED_STAGE_REQUIREMENTS.md) — prerequisites отложенных Mobile/offline этапов.
 - [SESSION_REPORT_2026-07-18.md](SESSION_REPORT_2026-07-18.md) — исторический handoff инженерной сессии; текущий статус superseded master plan-ом.
 
 ## История

@@ -1,8 +1,9 @@
 # Требования для возобновления отложенных этапов
 
-Документ хранит prerequisites и evidence для двух отложенных этапов текущего
-roadmap. Live status и проценты ведутся только в
-[PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
+Документ хранит prerequisites и evidence для двух post-launch этапов. Они не
+блокируют Web-first Launch V1 и перечислены в
+[POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md). Live status и launch progress
+ведутся только в [PRODUCT_MASTER_PLAN.md](PRODUCT_MASTER_PLAN.md).
 
 ## Этап 2. Stage F one-school pilot
 
