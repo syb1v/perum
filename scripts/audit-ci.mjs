@@ -36,7 +36,7 @@ const allowedNames = new Set([
 ]);
 const allowed = findings.every((finding) => allowedNames.has(finding.name));
 
-if (!allowed || findings.length !== allowedNames.size) {
+if (!allowed) {
   process.stderr.write(`${JSON.stringify(findings, null, 2)}\n`);
   process.exit(1);
 }

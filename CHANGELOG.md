@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-02
+
+- CI dependency audit больше не требует сохранения уже исчезнувших advisory findings: каждый фактический high/critical пакет по-прежнему обязан входить в exact allowlist, а любое новое имя блокирует build. Это устраняет ложный отказ release после сокращения npm advisory graph без расширения разрешённого множества.
+
 ## [Unreleased] — 2026-07-31
 
 - Product roadmap переведён на Web-first Launch V1: единственная активная метрика теперь равна `43%` и считается по пяти exit-driven milestones — scope lock, Core Web journeys, commercial readiness, production proof и pilot acceptance. Full Mobile parity, stores, push, attachments/scanner activation, advanced social/offline, billing automation и infrastructure expansion сохранены в `docs/POST_LAUNCH_BACKLOG.md`, но больше не блокируют первый коммерческий запуск. До launch действует feature freeze: новые задачи обязаны закрывать конкретный Launch criterion либо уходят в backlog.
