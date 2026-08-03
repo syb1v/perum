@@ -55,3 +55,19 @@
 - No two-school production isolation proof: only one active production school exists.
 - Scanner images remain candidates; attachments stay disabled.
 - No signed physical-device Stage F pilot, push-provider delivery proof or store proof.
+
+## Tenant 1.1.8 incident rollout — 2026-08-02
+
+- Authoritative CI `30743974661` passed, including the PostgreSQL academic role
+  journey; release run `30744066259` built and registered Tenant `1.1.8` from
+  source commit `78e41bc583e871688da62f8f8119d26271a64259`.
+- Published and node-loaded image:
+  `ghcr.io/syb1v/perum-tenant:git-78e41bc583e8`, digest
+  `sha256:e0f882826cde6ca84e46d502005c44f67cbb7fa46701f7826e8ead46e3c4d5e7`.
+- The normal orchestrated school update completed with `status=success` from
+  historical `git-c145d93ad070`; school status returned to `active`.
+- Running container image ID equals the published digest, health is `healthy`, and
+  application version is `1.1.8`.
+- An authenticated local student smoke returned HTTP `200` for
+  `/api/student/diary?week_offset=0`; diary keys were exactly `0..5` as strings.
+- No passwords, JWT values or PII are stored in this record.

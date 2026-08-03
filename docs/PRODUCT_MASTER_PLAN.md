@@ -18,13 +18,13 @@
 | Milestone | Вес | Выполнено | Вклад | Состояние |
 |---|---:|---:|---:|---|
 | M1. Scope Lock | 10% | 4/4 | **10.0%** | Готово |
-| M2. Core Web Journeys | 35% | 5/8 | **21.9%** | API E2E готов, Web acceptance открыт |
+| M2. Core Web Journeys | 35% | 6/8 | **26.3%** | Incident закрыт, Web acceptance открыт |
 | M3. Commercial Readiness | 20% | 1/5 | **4.0%** | Требует решений |
 | M4. Production Proof | 25% | 3/8 | **9.4%** | Частично доказано |
 | M5. Pilot and Launch | 10% | 0/4 | **0.0%** | Не начато |
-| **Итого** | **100%** | | **45.3%** | `█████████░░░░░░░░░░░` |
+| **Итого** | **100%** | | **49.6%** | `██████████░░░░░░░░░░` |
 
-Общий launch progress: **45%**. Процент меняется только при закрытии критериев
+Общий launch progress: **50%**. Процент меняется только при закрытии критериев
 ниже, а не от количества endpoint, экранов, commits или tests.
 
 ## 3. Launch V1 Scope
@@ -68,7 +68,7 @@
 - [x] Feature freeze принят: до launch допускаются только launch criteria,
   P0/P1 defects, security/privacy и обязательные commercial tasks.
 
-### M2. Core Web Journeys: 5/8
+### M2. Core Web Journeys: 6/8
 
 - [x] School Admin academic setup реализован в Web.
 - [x] Teacher journal/grade/attendance/homework flow реализован в Web.
@@ -79,7 +79,8 @@
 - [ ] Browser E2E на release candidate подтверждает Teacher mutation и тот же
   Student/Parent result через Web.
 - [ ] Role acceptance matrix пройдена на release candidate без открытых P0/P1.
-- [ ] Production incident fix Student diary выпущен и подтверждён HTTP 200 smoke.
+- [x] Production Student diary работает на Tenant `1.1.8`: immutable OTA, healthy
+  runtime identity и authenticated HTTP 200 smoke подтверждены.
 
 ### M3. Commercial Readiness: 1/5
 
@@ -116,9 +117,7 @@
 
 ### P0. Стабилизировать текущий production
 
-1. Выпустить Tenant `1.1.8` с исправлением Student diary.
-2. Подтвердить `/api/student/diary?week_offset=0` через student smoke.
-3. Устранить telemetry contract drift и оставить social rollout fail-closed без
+1. Устранить telemetry contract drift и оставить social rollout fail-closed без
    повторного Web polling.
 
 ### P0. Закрыть Core Web acceptance
@@ -175,7 +174,7 @@
 
 Текущий расчёт:
 
-`10 × 4/4 + 35 × 5/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 45.3%`
+`10 × 4/4 + 35 × 6/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 49.6%`
 
 После каждой итерации обязательно обновляются checkbox затронутого milestone,
 формула, общий процент, критический план, `CHANGELOG.md` и `docs/VERSIONS.md`.
