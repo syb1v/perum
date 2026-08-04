@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -28,6 +29,12 @@ from app.modules.school_admin.schemas import (
 
 def _iso(dt):
     return dt.isoformat() if dt else None
+
+
+def _db_datetime(value):
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 # ---- Academic years ----
@@ -63,14 +70,16 @@ async def _get_year(db, school_id, year_id) -> AcademicYear:
 
 
 async def create_academic_year(db, school_id, data: AcademicYearCreate) -> AcademicYear:
-    _validate_dates(data.start_date, data.end_date)
+    start_date = _db_datetime(data.start_date)
+    end_date = _db_datetime(data.end_date)
+    _validate_dates(start_date, end_date)
     if data.is_current:
         await _clear_current_year(db, school_id)
     y = AcademicYear(
         school_id=school_id,
         name=data.name,
-        start_date=data.start_date,
-        end_date=data.end_date,
+        start_date=start_date,
+        end_date=end_date,
         is_current=data.is_current,
     )
     db.add(y)
@@ -93,13 +102,15 @@ async def _clear_current_year(db, school_id):
 
 async def update_academic_year(db, school_id, year_id, data: AcademicYearUpdate) -> AcademicYear:
     y = await _get_year(db, school_id, year_id)
-    _validate_dates(data.start_date, data.end_date)
+    start_date = _db_datetime(data.start_date)
+    end_date = _db_datetime(data.end_date)
+    _validate_dates(start_date, end_date)
     if data.is_current and not y.is_current:
         await _clear_current_year(db, school_id)
     y.name, y.start_date, y.end_date, y.is_current = (
         data.name,
-        data.start_date,
-        data.end_date,
+        start_date,
+        end_date,
         data.is_current,
     )
     await db.commit()
@@ -168,13 +179,15 @@ async def _get_period(db, school_id, period_id) -> SchoolPeriod:
 
 
 async def create_school_period(db, school_id, data: SchoolPeriodCreate) -> SchoolPeriod:
-    await _validate_period(db, school_id, data.academic_year_id, data.start_date, data.end_date)
+    start_date = _db_datetime(data.start_date)
+    end_date = _db_datetime(data.end_date)
+    await _validate_period(db, school_id, data.academic_year_id, start_date, end_date)
     p = SchoolPeriod(
         academic_year_id=data.academic_year_id,
         name=data.name,
         period_type=data.period_type,
-        start_date=data.start_date,
-        end_date=data.end_date,
+        start_date=start_date,
+        end_date=end_date,
         is_active=data.is_active,
         target_grades=data.target_grades,
     )
@@ -186,12 +199,14 @@ async def create_school_period(db, school_id, data: SchoolPeriodCreate) -> Schoo
 
 async def update_school_period(db, school_id, period_id, data: SchoolPeriodUpdate) -> SchoolPeriod:
     p = await _get_period(db, school_id, period_id)
-    await _validate_period(db, school_id, data.academic_year_id, data.start_date, data.end_date)
+    start_date = _db_datetime(data.start_date)
+    end_date = _db_datetime(data.end_date)
+    await _validate_period(db, school_id, data.academic_year_id, start_date, end_date)
     p.academic_year_id = data.academic_year_id
     p.name = data.name
     p.period_type = data.period_type
-    p.start_date = data.start_date
-    p.end_date = data.end_date
+    p.start_date = start_date
+    p.end_date = end_date
     p.is_active = data.is_active
     p.target_grades = data.target_grades
     await db.commit()

@@ -11,7 +11,7 @@
 | CI run | заполняется после успешного CI |
 | Release run | заполняется после успешного release workflow |
 | Web | `2.3.6`, immutable image identity заполняется после публикации |
-| Tenant | `1.1.9`, release зарегистрирован; disposable acceptance runtime собирается из exact RC source |
+| Tenant | `1.1.10` candidate: исправляет P1 academic datetime persistence; identity заполняется после публикации |
 | Contour | disposable PostgreSQL, production Web build, Chromium `ru-RU`, timezone `Europe/Moscow` |
 | Data | synthetic users и academic/support records, созданные только внутри disposable contour |
 
@@ -49,6 +49,10 @@
 
 ## Result
 
+- Исправлен P1 `ACC-001`: Web отправлял UTC-aware academic year/period dates,
+  которые PostgreSQL `TIMESTAMP WITHOUT TIME ZONE` отклонял с HTTP `500`.
+  Tenant boundary теперь нормализует aware timestamps в naive UTC; regression
+  проходит с фактическим Web-shaped `...Z` payload на PostgreSQL.
 - Open P0: pending
 - Open P1: pending
 - M2 acceptance: pending

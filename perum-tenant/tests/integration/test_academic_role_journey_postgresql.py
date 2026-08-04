@@ -78,6 +78,40 @@ def test_academic_role_journey_postgresql(monkeypatch):
                 assert (await client.get("/api/admin/classes")).status_code == 401
 
                 response = await client.post(
+                    "/api/admin/academic-years",
+                    headers=admin_headers,
+                    json={
+                        "name": "2026-2027",
+                        "start_date": "2026-07-28T00:00:00.000Z",
+                        "end_date": "2027-05-31T00:00:00.000Z",
+                        "is_current": True,
+                    },
+                )
+                assert response.status_code == 200, response.text
+                academic_year_id = response.json()["id"]
+                response = await client.get("/api/admin/academic-years", headers=admin_headers)
+                assert response.status_code == 200, response.text
+                assert response.json()["academic_years"][0]["start_date"] == "2026-07-28T00:00:00"
+
+                response = await client.post(
+                    "/api/admin/school-periods",
+                    headers=admin_headers,
+                    json={
+                        "name": "I quarter",
+                        "period_type": "quarter",
+                        "start_date": "2026-07-28T00:00:00.000Z",
+                        "end_date": "2026-10-30T00:00:00.000Z",
+                        "is_active": True,
+                        "academic_year_id": academic_year_id,
+                        "target_grades": "[7]",
+                    },
+                )
+                assert response.status_code == 200, response.text
+                response = await client.get("/api/admin/school-periods", headers=admin_headers)
+                assert response.status_code == 200, response.text
+                assert response.json()["periods"][0]["start_date"] == "2026-07-28T00:00:00"
+
+                response = await client.post(
                     "/api/admin/subjects",
                     headers=admin_headers,
                     json={"name": "Mathematics", "short_name": "Math"},
