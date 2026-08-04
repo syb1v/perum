@@ -106,6 +106,81 @@ jobs:
       - name: Audit production dependencies
         run: npm run audit:ci
 
+  web-academic-e2e:
+    name: perum-web (academic role E2E)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: perum_test
+          POSTGRES_PASSWORD: perum_test
+          POSTGRES_DB: perum_web_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U perum_test -d perum_web_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://perum_test:perum_test@127.0.0.1:5432/perum_web_e2e
+      E2E_BASE_URL: http://school.localhost:4173
+      E2E_INTERNAL_TOKEN: e2e-internal-token
+      E2E_TENANT_ORIGIN: http://127.0.0.1:3000
+      E2E_WEB_ORIGIN: http://127.0.0.1:3001
+      E2E_PROXY_PORT: 4173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: |
+          pip install -r perum-tenant/requirements.txt
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Prepare Tenant database
+        working-directory: perum-tenant
+        run: |
+          alembic upgrade head
+          python -m app.scripts.seed_defaults
+      - name: Build Web
+        run: npm run build:web
+      - name: Start E2E contour
+        env:
+          ORG_SLUG: e2e
+          ORG_NAME: E2E School
+          SECRET_KEY: e2e-only-secret
+          INTERNAL_RPC_TOKEN: e2e-internal-token
+          TELEMETRY_INTERVAL_S: "0"
+          SOCIAL_ROLLOUT_ENABLED: "false"
+          MEDIA_ENABLED: "false"
+          PUSH_DELIVERY_ENABLED: "false"
+        run: |
+          (cd perum-tenant && uvicorn app.main:app --host 127.0.0.1 --port 3000) > /tmp/perum-e2e-tenant.log 2>&1 &
+          npm run start --workspace perum-web -- --hostname 127.0.0.1 --port 3001 > /tmp/perum-e2e-web.log 2>&1 &
+          node perum-web/e2e/proxy.mjs > /tmp/perum-e2e-proxy.log 2>&1 &
+      - name: Run academic role journey
+        run: npm run test:e2e --workspace perum-web
+      - name: Upload E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-academic-e2e-diagnostics
+          path: |
+            perum-web/test-results/
+            /tmp/perum-e2e-tenant.log
+            /tmp/perum-e2e-web.log
+            /tmp/perum-e2e-proxy.log
+          if-no-files-found: ignore
+          retention-days: 7
+
   docker-builds:
     name: Production Docker build contexts
     runs-on: ubuntu-latest

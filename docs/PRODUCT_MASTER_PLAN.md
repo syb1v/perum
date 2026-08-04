@@ -18,13 +18,13 @@
 | Milestone | Вес | Выполнено | Вклад | Состояние |
 |---|---:|---:|---:|---|
 | M1. Scope Lock | 10% | 4/4 | **10.0%** | Готово |
-| M2. Core Web Journeys | 35% | 6/8 | **26.3%** | Incident закрыт, Web acceptance открыт |
+| M2. Core Web Journeys | 35% | 7/8 | **30.6%** | Browser E2E закрыт, role acceptance открыт |
 | M3. Commercial Readiness | 20% | 1/5 | **4.0%** | Требует решений |
 | M4. Production Proof | 25% | 3/8 | **9.4%** | Частично доказано |
 | M5. Pilot and Launch | 10% | 0/4 | **0.0%** | Не начато |
-| **Итого** | **100%** | | **49.6%** | `██████████░░░░░░░░░░` |
+| **Итого** | **100%** | | **54.0%** | `███████████░░░░░░░░░` |
 
-Общий launch progress: **50%**. Процент меняется только при закрытии критериев
+Общий launch progress: **54%**. Процент меняется только при закрытии критериев
 ниже, а не от количества endpoint, экранов, commits или tests.
 
 ## 3. Launch V1 Scope
@@ -68,7 +68,7 @@
 - [x] Feature freeze принят: до launch допускаются только launch criteria,
   P0/P1 defects, security/privacy и обязательные commercial tasks.
 
-### M2. Core Web Journeys: 6/8
+### M2. Core Web Journeys: 7/8
 
 - [x] School Admin academic setup реализован в Web.
 - [x] Teacher journal/grade/attendance/homework flow реализован в Web.
@@ -76,7 +76,7 @@
 - [x] Parent child academics flow реализован в Web.
 - [x] Deterministic PostgreSQL API E2E проходит School Admin setup → Teacher grade
   mutation → Student и linked Parent academic reads с реальными auth/RBAC/routes.
-- [ ] Browser E2E на release candidate подтверждает Teacher mutation и тот же
+- [x] Browser E2E на release candidate подтверждает Teacher mutation и тот же
   Student/Parent result через Web.
 - [ ] Role acceptance matrix пройдена на release candidate без открытых P0/P1.
 - [x] Production Student diary работает на Tenant `1.1.8`: immutable OTA, healthy
@@ -124,9 +124,8 @@
 
 1. School Admin parent↔student linking закрыт vertical release (`1.1.9`): atomic
    full-set replacement через Web, без seed/SQL backdoor.
-2. Добавить browser layer поверх deterministic API fixture без повторения setup UI.
-3. Пройти ручную role matrix на одном release candidate.
-4. Исправить найденные P0/P1 одним vertical release, без нового feature scope.
+2. Пройти ручную role matrix на одном release candidate.
+3. Исправить найденные P0/P1 одним vertical release, без нового feature scope.
 
 ### P0. Принять минимальную коммерцию
 
@@ -176,7 +175,7 @@
 
 Текущий расчёт:
 
-`10 × 4/4 + 35 × 6/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 49.6%`
+`10 × 4/4 + 35 × 7/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 54.0%`
 
 После каждой итерации обязательно обновляются checkbox затронутого milestone,
 формула, общий процент, критический план, `CHANGELOG.md` и `docs/VERSIONS.md`.

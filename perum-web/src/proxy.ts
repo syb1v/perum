@@ -44,21 +44,6 @@ const TEACHER_PAGES: Record<string, string> = {
     '/homeroom': '/teacher/homeroom',
 };
 
-const LEGACY_REDIRECTS: Record<string, string> = {
-    '/student': '/dashboard',
-    '/student/profile': '/profile',
-    '/student/exchange': '/exchange',
-    '/student/market': '/market',
-    '/student/schedule': '/schedule',
-    '/student/friends': '/friends',
-    '/student/messages': '/messages',
-    '/teacher': '/dashboard',
-    '/teacher/profile': '/profile',
-    '/teacher/journal': '/journal',
-    '/teacher/analytics': '/analytics',
-    '/teacher/topics': '/topics',
-};
-
 function decodeJwtRole(cookieValue: string | undefined): string | null {
     if (!cookieValue) return null;
     try {
@@ -96,6 +81,8 @@ function redirectTo(request: NextRequest, pathname: string) {
 
 function rewriteTo(request: NextRequest, pathname: string) {
     const url = request.nextUrl.clone();
+    const publicHost = request.headers.get('host') || request.headers.get('x-forwarded-host');
+    if (publicHost) url.host = publicHost;
     url.pathname = pathname;
     return NextResponse.rewrite(url);
 }
@@ -154,9 +141,6 @@ export function proxy(request: NextRequest) {
         return redirectTo(request, '/login');
     }
 
-    const cleanPath = LEGACY_REDIRECTS[pathname];
-    if (cleanPath) return redirectTo(request, cleanPath);
-
     if (SHARED_PAGES[pathname]) {
         if (!role) return redirectToLogin(request);
         const target = SHARED_PAGES[pathname][role];
@@ -184,18 +168,6 @@ export function proxy(request: NextRequest) {
             return redirectTo(request, ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard');
         }
         return rewriteTo(request, TEACHER_PAGES[pathname]);
-    }
-
-    if (pathname.startsWith('/student') || pathname.startsWith('/teacher')) {
-        const referer = request.headers.get('referer') ?? '';
-        const isInternalNav = [
-            '/dashboard', '/profile', '/exchange', '/market',
-            '/schedule', '/friends', '/messages', '/journal', '/analytics', '/topics',
-        ].some(p => referer.includes(p));
-        if (!isInternalNav) {
-            const cleanUrl = LEGACY_REDIRECTS[pathname];
-            if (cleanUrl) return redirectTo(request, cleanUrl);
-        }
     }
 
     if (pathname.startsWith('/admin')) {

@@ -416,6 +416,7 @@ export default function TeacherGradesTab({
                                                         {!isHoliday && !journal?.readonly && (
                                                             <button
                                                                 className={styles.addGradeBtn}
+                                                                aria-label={`Добавить оценку: ${student.last_name} ${student.first_name}, ${date}`}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleAddGradeClick(student, date);
