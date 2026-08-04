@@ -370,3 +370,4 @@
 | 367 | 2026-08-04 15:45 | _______ | feat(admin): добавлена штатная привязка родителей к ученикам |
 | 368 | 2026-08-04 21:30 | _______ | test(web): добавлен browser academic role journey gate |
 | 369 | 2026-08-04 21:45 | _______ | fix(ci): Playwright запускается из Web workspace |
+| 370 | 2026-08-04 22:15 | _______ | chore(web): сформирован role-acceptance release candidate 2.3.6 |
