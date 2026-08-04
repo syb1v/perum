@@ -174,6 +174,23 @@ def test_academic_role_journey_postgresql(monkeypatch):
                 assert response.status_code == 200, response.text
 
                 response = await client.put(
+                    f"/api/admin/classes/{class_id}/schedule",
+                    headers=admin_headers,
+                    json={
+                        "items": [
+                            {
+                                "subject_id": subject_id,
+                                "day_of_week": 0,
+                                "lesson_number": 1,
+                                "room": "101",
+                            }
+                        ]
+                    },
+                )
+                assert response.status_code == 200, response.text
+                assert response.json()["warnings"] == []
+
+                response = await client.put(
                     f"/api/admin/users/{parent_id}/students",
                     headers=admin_headers,
                     json={"student_ids": [student_id]},
@@ -190,6 +207,13 @@ def test_academic_role_journey_postgresql(monkeypatch):
                 parent_headers = await login("launch-parent", "parent-password")
 
                 assert (await client.get("/api/admin/classes", headers=teacher_headers)).status_code == 403
+                response = await client.get("/api/teacher/diary", headers=teacher_headers)
+                assert response.status_code == 200, response.text
+                assert any(
+                    lesson["subject_name"] == "Mathematics"
+                    for day in response.json()["diary"].values()
+                    for lesson in day["lessons"]
+                )
                 assert (await client.get("/api/journal/teacher/subjects", headers=student_headers)).status_code == 403
                 assert (await client.get("/api/student/grades", headers=parent_headers)).status_code == 403
 

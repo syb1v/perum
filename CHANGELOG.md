@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-04
 
+- Role acceptance выявил P1 в связке Admin schedule → Teacher diary: обычный урок из Web сохранялся без `teacher_id`, хотя exact class+subject assignment уже существовал, и Teacher видел `Нет уроков`. Tenant теперь автоматически подставляет только единственного active exact assigned Teacher; отсутствие или неоднозначность остаются fail-closed с warning. PostgreSQL journey закрепляет Web-shaped schedule payload без `teacher_id` и видимость урока Teacher. Tenant release повышен до `1.1.11`.
 - Role acceptance выявил P1 в School Admin academic setup: Web date inputs отправляли UTC-aware ISO timestamps, а PostgreSQL `TIMESTAMP WITHOUT TIME ZONE` отклонял academic year/period insert с HTTP `500`. Tenant persistence boundary нормализует aware timestamps в naive UTC перед validation/write для create/update year и period, сохраняя совместимость naive clients; PostgreSQL journey закрепляет реальные Web-shaped `...Z` payload и повторное чтение. Tenant release повышен до `1.1.10`.
 - Web version повышена до `2.3.6` для immutable role-acceptance release candidate; добавлен non-secret M2 evidence record с exact role matrix и P0/P1 severity gate. Criterion остаётся открытым до фактического прохождения всех строк на опубликованном candidate.
 - Browser E2E CI installation теперь запускает Playwright через его фактический npm workspace `perum-web`; root `npx` не видел workspace-local binary и останавливал job до подготовки БД и запуска journey.

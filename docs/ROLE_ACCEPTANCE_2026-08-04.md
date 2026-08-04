@@ -11,7 +11,7 @@
 | CI run | заполняется после успешного CI |
 | Release run | заполняется после успешного release workflow |
 | Web | `2.3.6`, immutable image identity заполняется после публикации |
-| Tenant | `1.1.10` candidate: исправляет P1 academic datetime persistence; identity заполняется после публикации |
+| Tenant | `1.1.11` candidate: исправляет P1 academic dates и Teacher schedule projection; identity заполняется после публикации |
 | Contour | disposable PostgreSQL, production Web build, Chromium `ru-RU`, timezone `Europe/Moscow` |
 | Data | synthetic users и academic/support records, созданные только внутри disposable contour |
 
@@ -53,6 +53,12 @@
   которые PostgreSQL `TIMESTAMP WITHOUT TIME ZONE` отклонял с HTTP `500`.
   Tenant boundary теперь нормализует aware timestamps в naive UTC; regression
   проходит с фактическим Web-shaped `...Z` payload на PostgreSQL.
+- Исправлен P1 `ACC-002`: обычный урок, созданный School Admin через Web, не
+  содержал `teacher_id`, поэтому назначенный Teacher видел `Нет уроков`. Tenant
+  теперь подставляет teacher только при единственном active exact
+  class+subject assignment; нулевой или неоднозначный набор остаётся fail-closed
+  с warning. PostgreSQL journey закрепляет Web-shaped schedule payload без
+  `teacher_id` и появление урока в Teacher diary.
 - Open P0: pending
 - Open P1: pending
 - M2 acceptance: pending

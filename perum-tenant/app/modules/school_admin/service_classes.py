@@ -273,6 +273,24 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
         if not await db.scalar(select(Subject.id).where(Subject.id == subject_id, Subject.school_id == school_id, Subject.is_archived.is_(False))):
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"Предмет {subject_id} не найден")
         tid = it.get("teacher_id")
+        if not tid and not (it.get("groups") or []):
+            candidates = (await db.execute(
+                select(TeacherSubject.teacher_id)
+                .join(User, User.id == TeacherSubject.teacher_id)
+                .where(
+                    TeacherSubject.school_id == school_id,
+                    TeacherSubject.class_id == class_id,
+                    TeacherSubject.subject_id == subject_id,
+                    User.school_id == school_id,
+                    User.role == "teacher",
+                    User.is_active.is_(True),
+                )
+                .distinct()
+                .limit(2)
+            )).scalars().all()
+            if len(candidates) == 1:
+                tid = candidates[0]
+                it["teacher_id"] = tid
         if tid:
             teacher = await db.get(User, tid)
             if not teacher or teacher.school_id != school_id or teacher.role != "teacher" or not teacher.is_active:
@@ -309,6 +327,8 @@ async def update_class_schedule(db: AsyncSession, school_id: int, class_id: int,
 
     warnings: list[str] = []
     for it, d, ln, subject_id in validated:
+        if not it.get("teacher_id") and not (it.get("groups") or []):
+            warnings.append(f"День {d}, урок {ln}: нет однозначно назначенного учителя")
         db.add(Schedule(
             school_id=school_id, class_id=class_id, subject_id=subject_id,
             teacher_id=it.get("teacher_id"), day_of_week=d, lesson_number=ln, room=it.get("room"),
