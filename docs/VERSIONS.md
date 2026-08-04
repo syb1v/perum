@@ -369,3 +369,4 @@
 | 366 | 2026-08-02 13:50 | _______ | docs(prod): зафиксирован успешный Tenant 1.1.8 diary incident rollout |
 | 367 | 2026-08-04 15:45 | _______ | feat(admin): добавлена штатная привязка родителей к ученикам |
 | 368 | 2026-08-04 21:30 | _______ | test(web): добавлен browser academic role journey gate |
+| 369 | 2026-08-04 21:45 | _______ | fix(ci): Playwright запускается из Web workspace |

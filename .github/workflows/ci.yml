@@ -144,7 +144,7 @@ jobs:
         run: |
           pip install -r perum-tenant/requirements.txt
           npm ci
-          npx playwright install --with-deps chromium
+          npm exec --workspace perum-web -- playwright install --with-deps chromium
       - name: Prepare Tenant database
         working-directory: perum-tenant
         run: |

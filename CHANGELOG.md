@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-04
 
+- Browser E2E CI installation теперь запускает Playwright через его фактический npm workspace `perum-web`; root `npx` не видел workspace-local binary и останавливал job до подготовки БД и запуска journey.
 - Добавлен blocking Playwright browser journey на production build и disposable PostgreSQL contour: School Admin fixture создаётся через реальные API, Teacher выставляет authoritative grade через Web, Student и linked Parent видят тот же `grade_id` и значение через свои Web/API projections. CI самостоятельно применяет Alembic migrations, запускает Tenant/Web/same-origin proxy и сохраняет diagnostics только при failure. E2E выявил и устранил redirect loop clean `/dashboard`/`/journal` routes за reverse proxy: middleware rewrite теперь сохраняет public host и не канонизирует внутренние role routes повторным redirect. M2 = `7/8`, общий launch progress = `54%`.
 - School Admin получил закрывающий launch gap vertical: `GET/PUT /api/admin/users/{parent_id}/students` заменяет полный набор детей атомарно, пустой список отвязывает всех без удаления пользователей. Сервис требует active same-school exact parent/student roles, скрывает foreign/wrong-role/inactive IDs как generic `404`, валидирует весь набор до любой mutation и сохраняет `created_at` неизменённых связей. Web User Management получил parent-only action `Дети` с searchable multi-select modal; PostgreSQL journey теперь использует реальный endpoint вместо fixture-вставки. Contract gate = 112 paths, Tenant unit = 328 tests; Tenant release повышен до `1.1.9`.
 
