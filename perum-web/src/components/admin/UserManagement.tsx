@@ -9,6 +9,7 @@ import { User } from '@/types';
 import BalanceModal from './modals/BalanceModal';
 import AdminWalletModal from './modals/AdminWalletModal';
 import EditUserModal from './modals/EditUserModal';
+import ParentStudentsModal from './modals/ParentStudentsModal';
 
 interface UsersResponse {
     users: User[];
@@ -37,6 +38,7 @@ export default function UserManagement() {
     const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
     const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
     const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+    const [isParentStudentsModalOpen, setIsParentStudentsModalOpen] = useState(false);
 
     // Debounce search
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -256,6 +258,14 @@ export default function UserManagement() {
                                                     </>
                                                 )}
 
+                                                {role === 'parent' && (
+                                                    <button
+                                                        className={styles.actionBtn}
+                                                        onClick={() => { setSelectedUser(u); setIsParentStudentsModalOpen(true); }}
+                                                    >
+                                                        Дети
+                                                    </button>
+                                                )}
                                                 <button
                                                     className={styles.actionBtn}
                                                     onClick={() => { setSelectedUser(u); setIsEditUserModalOpen(true); }}
@@ -366,6 +376,13 @@ export default function UserManagement() {
                 isOpen={isEditUserModalOpen}
                 onClose={() => setIsEditUserModalOpen(false)}
                 user={selectedUser}
+                onSuccess={() => fetchUsers(false, false, 0)}
+            />
+
+            <ParentStudentsModal
+                isOpen={isParentStudentsModalOpen}
+                onClose={() => setIsParentStudentsModalOpen(false)}
+                parent={selectedUser}
                 onSuccess={() => fetchUsers(false, false, 0)}
             />
         </div>

@@ -1,7 +1,7 @@
 # PERUM Launch Master Plan
 
 > Единственный live-источник launch scope, прогресса и порядка работ.
-> Обновлено: 2026-08-02. Всё, что не блокирует первый коммерческий запуск,
+> Обновлено: 2026-08-04. Всё, что не блокирует первый коммерческий запуск,
 > находится в [POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md).
 
 ## 1. Цель
@@ -122,9 +122,11 @@
 
 ### P0. Закрыть Core Web acceptance
 
-1. Добавить browser layer поверх deterministic API fixture без повторения setup UI.
-2. Пройти ручную role matrix на одном release candidate.
-3. Исправить найденные P0/P1 одним vertical release, без нового feature scope.
+1. School Admin parent↔student linking закрыт vertical release (`1.1.9`): atomic
+   full-set replacement через Web, без seed/SQL backdoor.
+2. Добавить browser layer поверх deterministic API fixture без повторения setup UI.
+3. Пройти ручную role matrix на одном release candidate.
+4. Исправить найденные P0/P1 одним vertical release, без нового feature scope.
 
 ### P0. Принять минимальную коммерцию
 

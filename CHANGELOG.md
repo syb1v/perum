@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-04
+
+- School Admin получил закрывающий launch gap vertical: `GET/PUT /api/admin/users/{parent_id}/students` заменяет полный набор детей атомарно, пустой список отвязывает всех без удаления пользователей. Сервис требует active same-school exact parent/student roles, скрывает foreign/wrong-role/inactive IDs как generic `404`, валидирует весь набор до любой mutation и сохраняет `created_at` неизменённых связей. Web User Management получил parent-only action `Дети` с searchable multi-select modal; PostgreSQL journey теперь использует реальный endpoint вместо fixture-вставки. Contract gate = 112 paths, Tenant unit = 328 tests; Tenant release повышен до `1.1.9`.
+
 ## [Unreleased] — 2026-08-02
 
 - Tenant `1.1.8` развёрнут штатным orchestrated OTA на production school с exact digest identity, healthy runtime и successful update history. Authenticated Student diary smoke вернул HTTP `200` и строковые day keys `0..5`; incident criterion M2 закрыт, M2 = `6/8`, общий launch progress = `50%`.

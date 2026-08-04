@@ -367,3 +367,4 @@
 | 364 | 2026-08-02 12:35 | _______ | fix(ci): audit allowlist допускает исчезновение исправленных findings |
 | 365 | 2026-08-02 13:15 | _______ | test(launch): добавлен PostgreSQL academic role journey gate |
 | 366 | 2026-08-02 13:50 | _______ | docs(prod): зафиксирован успешный Tenant 1.1.8 diary incident rollout |
+| 367 | 2026-08-04 15:45 | _______ | feat(admin): добавлена штатная привязка родителей к ученикам |

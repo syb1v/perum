@@ -139,9 +139,17 @@ def test_academic_role_journey_postgresql(monkeypatch):
                 )
                 assert response.status_code == 200, response.text
 
-                async with sessions() as db:
-                    db.add(ParentStudent(parent_id=parent_id, student_id=student_id))
-                    await db.commit()
+                response = await client.put(
+                    f"/api/admin/users/{parent_id}/students",
+                    headers=admin_headers,
+                    json={"student_ids": [student_id]},
+                )
+                assert response.status_code == 200, response.text
+                assert response.json() == {"parent_id": parent_id, "student_ids": [student_id]}
+
+                response = await client.get(f"/api/admin/users/{parent_id}/students", headers=admin_headers)
+                assert response.status_code == 200, response.text
+                assert response.json() == {"parent_id": parent_id, "student_ids": [student_id]}
 
                 teacher_headers = await login("launch-teacher", "teacher-password")
                 student_headers = await login("launch-student", "student-password")

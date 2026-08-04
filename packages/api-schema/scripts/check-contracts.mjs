@@ -177,6 +177,23 @@ if (classScheduleLessonNumber.type !== 'integer' || classScheduleLessonNumber.mi
   throw new Error('AdminClassScheduleReadLessonOut lesson_number must be an integer from 1 through 8');
 }
 
+const parentStudentsPath = '/api/admin/users/{parent_id}/students';
+if (responseSchemaRef(tenantOpenapi, parentStudentsPath, 'get') !== '#/components/schemas/AdminParentStudentsOut') {
+  throw new Error('GET admin parent students must return AdminParentStudentsOut');
+}
+if (responseSchemaRef(tenantOpenapi, parentStudentsPath, 'put') !== '#/components/schemas/AdminParentStudentsOut') {
+  throw new Error('PUT admin parent students must return AdminParentStudentsOut');
+}
+const parentStudentsRequest = tenantOpenapi.paths[parentStudentsPath].put.requestBody.content['application/json'].schema;
+if (parentStudentsRequest.$ref !== '#/components/schemas/ReplaceParentStudentsRequest') {
+  throw new Error('PUT admin parent students must accept ReplaceParentStudentsRequest');
+}
+assertExactClosedObject('AdminParentStudentsOut', ['parent_id', 'student_ids']);
+const replaceParentStudentsFields = assertExactClosedObject('ReplaceParentStudentsRequest', ['student_ids']);
+if (replaceParentStudentsFields.student_ids.type !== 'array' || replaceParentStudentsFields.student_ids.items?.type !== 'integer' || replaceParentStudentsFields.student_ids.maxItems !== 100) {
+  throw new Error('ReplaceParentStudentsRequest student_ids must be an integer array with maxItems 100');
+}
+
 for (const path of ['/api/social/students', '/api/social/friends']) {
   if (responseSchemaRef(tenantOpenapi, path, 'get') !== '#/components/schemas/StudentPage') {
     throw new Error(`${path} must return StudentPage`);

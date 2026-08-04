@@ -15,10 +15,12 @@ from fastapi import HTTPException, status
 from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.roles import PARENT, STUDENT
 from app.core.security import hash_password
 from app.models import User
 from app.models.academic import Class, ClassStudent
 from app.models.journal import Transaction
+from app.models.parent import ParentStudent
 
 
 def _gen_login() -> str:
@@ -56,6 +58,75 @@ async def _get_scoped(db: AsyncSession, school_id: int, user_id: int) -> User:
     if not u or u.school_id != school_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Пользователь не найден")
     return u
+
+
+async def _get_scoped_parent(db: AsyncSession, school_id: int, parent_id: int, *, for_update: bool = False) -> User:
+    stmt = select(User).where(
+        User.id == parent_id,
+        User.school_id == school_id,
+        User.role == PARENT,
+        User.is_active.is_(True),
+    )
+    if for_update and db.bind is not None and db.bind.dialect.name == "postgresql":
+        stmt = stmt.with_for_update()
+    parent = (await db.execute(stmt)).scalar_one_or_none()
+    if parent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Родитель не найден")
+    return parent
+
+
+async def _valid_student_ids(db: AsyncSession, school_id: int, parent_id: int) -> list[int]:
+    rows = (
+        await db.execute(
+            select(ParentStudent.student_id)
+            .join(User, User.id == ParentStudent.student_id)
+            .where(
+                ParentStudent.parent_id == parent_id,
+                User.school_id == school_id,
+                User.role == STUDENT,
+                User.is_active.is_(True),
+            )
+            .order_by(ParentStudent.student_id)
+        )
+    ).scalars().all()
+    return list(rows)
+
+
+async def get_parent_students(db: AsyncSession, school_id: int, parent_id: int) -> dict:
+    parent = await _get_scoped_parent(db, school_id, parent_id)
+    return {"parent_id": parent.id, "student_ids": await _valid_student_ids(db, school_id, parent.id)}
+
+
+async def replace_parent_students(db: AsyncSession, school_id: int, parent_id: int, student_ids: list[int]) -> dict:
+    parent = await _get_scoped_parent(db, school_id, parent_id, for_update=True)
+    requested = set(student_ids)
+    if requested:
+        valid_rows = (
+            await db.execute(
+                select(User.id).where(
+                    User.id.in_(requested),
+                    User.school_id == school_id,
+                    User.role == STUDENT,
+                    User.is_active.is_(True),
+                )
+            )
+        ).scalars().all()
+        if set(valid_rows) != requested:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Один или несколько учеников не найдены")
+    existing_ids = {
+        row.student_id
+        for row in (
+            await db.execute(select(ParentStudent).where(ParentStudent.parent_id == parent.id))
+        ).scalars().all()
+    }
+    to_insert = requested - existing_ids
+    to_delete = existing_ids - requested
+    if to_delete:
+        await db.execute(delete(ParentStudent).where(ParentStudent.parent_id == parent.id, ParentStudent.student_id.in_(to_delete)))
+    for student_id in sorted(to_insert):
+        db.add(ParentStudent(parent_id=parent.id, student_id=student_id))
+    await db.commit()
+    return {"parent_id": parent.id, "student_ids": sorted(requested)}
 
 
 async def list_users(db: AsyncSession, admin: User, school_id: int, role: str | None) -> dict:

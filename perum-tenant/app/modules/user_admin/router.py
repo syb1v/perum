@@ -11,6 +11,7 @@ from app.core.deps import require_admin
 from app.models import User
 from app.modules.school_admin.service import resolve_school_id
 from app.modules.user_admin import service
+from app.modules.user_admin.schemas import AdminParentStudentsOut, ReplaceParentStudentsRequest
 
 router = APIRouter()
 
@@ -84,6 +85,25 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     return await service.update_user(db, admin, await resolve_school_id(admin, db), user_id, payload.model_dump())
+
+
+@router.get("/users/{parent_id}/students", response_model=AdminParentStudentsOut)
+async def get_parent_students(
+    parent_id: int,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.get_parent_students(db, await resolve_school_id(admin, db), parent_id)
+
+
+@router.put("/users/{parent_id}/students", response_model=AdminParentStudentsOut)
+async def replace_parent_students(
+    parent_id: int,
+    payload: ReplaceParentStudentsRequest,
+    admin: User = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await service.replace_parent_students(db, await resolve_school_id(admin, db), parent_id, payload.student_ids)
 
 
 @router.delete("/users/{user_id}")

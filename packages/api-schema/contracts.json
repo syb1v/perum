@@ -42,6 +42,7 @@
     "/api/admin/support/tickets/{ticket_id}/escalation-delivery/retry",
     "/api/admin/support/assignees",
     "/api/admin/support/unread-count",
+    "/api/admin/users/{parent_id}/students",
     "/api/student/diary",
     "/api/student/grades",
     "/api/student/grades/analytics",

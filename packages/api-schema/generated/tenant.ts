@@ -1667,6 +1667,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/users/{parent_id}/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Parent Students */
+        get: operations["get_parent_students_api_admin_users__parent_id__students_get"];
+        /** Replace Parent Students */
+        put: operations["replace_parent_students_api_admin_users__parent_id__students_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/users/{user_id}/balance": {
         parameters: {
             query?: never;
@@ -3876,6 +3894,13 @@ export interface components {
             /** Grades Given */
             grades_given: number;
         };
+        /** AdminParentStudentsOut */
+        AdminParentStudentsOut: {
+            /** Parent Id */
+            parent_id: number;
+            /** Student Ids */
+            student_ids: number[];
+        };
         /** AdminSchoolPeriodOut */
         AdminSchoolPeriodOut: {
             /** Id */
@@ -5647,6 +5672,11 @@ export interface components {
             app_version?: string | null;
             /** Device Name */
             device_name?: string | null;
+        };
+        /** ReplaceParentStudentsRequest */
+        ReplaceParentStudentsRequest: {
+            /** Student Ids */
+            student_ids: number[];
         };
         /** ReportCreate */
         ReportCreate: {
@@ -10968,6 +10998,72 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_parent_students_api_admin_users__parent_id__students_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parent_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminParentStudentsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_parent_students_api_admin_users__parent_id__students_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                parent_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplaceParentStudentsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminParentStudentsOut"];
                 };
             };
             /** @description Validation Error */

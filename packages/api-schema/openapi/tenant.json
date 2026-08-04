@@ -3,7 +3,7 @@
   "info": {
     "title": "PERUM Tenant — unknown",
     "description": "Per-organization tenant application.",
-    "version": "1.1.8"
+    "version": "1.1.9"
   },
   "paths": {
     "/api/login": {
@@ -6161,6 +6161,108 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Delete User Api Admin Users  User Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/users/{parent_id}/students": {
+      "get": {
+        "tags": [
+          "user-admin"
+        ],
+        "summary": "Get Parent Students",
+        "operationId": "get_parent_students_api_admin_users__parent_id__students_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "parent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Parent Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminParentStudentsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "user-admin"
+        ],
+        "summary": "Replace Parent Students",
+        "operationId": "replace_parent_students_api_admin_users__parent_id__students_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "parent_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Parent Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplaceParentStudentsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminParentStudentsOut"
                 }
               }
             }
@@ -13522,6 +13624,28 @@
         ],
         "title": "AdminDashboardTeacherActivityOut"
       },
+      "AdminParentStudentsOut": {
+        "properties": {
+          "parent_id": {
+            "type": "integer",
+            "title": "Parent Id"
+          },
+          "student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Student Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "parent_id",
+          "student_ids"
+        ],
+        "title": "AdminParentStudentsOut"
+      },
       "AdminSchoolPeriodOut": {
         "properties": {
           "id": {
@@ -19063,6 +19187,24 @@
           "app_id"
         ],
         "title": "RegistrationPut"
+      },
+      "ReplaceParentStudentsRequest": {
+        "properties": {
+          "student_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Student Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "student_ids"
+        ],
+        "title": "ReplaceParentStudentsRequest"
       },
       "ReportCreate": {
         "properties": {
