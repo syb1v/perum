@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.models import EnrollmentToken, Node, Organization, Release
+from app.services.node_agent_auth import derive_node_agent_token
 
 logger = logging.getLogger("perum.node_bootstrap")
 
@@ -224,7 +225,7 @@ env_value() {
 }
 
 ENROLLMENT_TOKEN=$(env_value ENROLLMENT_TOKEN || printf '%s' {{ enrollment_token_shell }})
-AGENT_TOKEN=$(env_value AGENT_TOKEN || printf '%s' {{ agent_token_shell }})
+AGENT_TOKEN={{ agent_token_shell }}
 NODE_DB_PW=$(env_value NODE_DB_PW || openssl rand -hex 16)
 SECRET_KEY=$(env_value SECRET_KEY || openssl rand -hex 24)
 umask 077
@@ -331,7 +332,10 @@ async def generate_bootstrap_script(
     script = script.replace("{{ org_slug }}", org.slug if org else "pool")
     script = script.replace("{{ filename }}", filename)
     script = script.replace("{{ enrollment_token_shell }}", shlex.quote(raw_token))
-    script = script.replace("{{ agent_token_shell }}", shlex.quote(settings.AGENT_TOKEN))
+    script = script.replace(
+        "{{ agent_token_shell }}",
+        shlex.quote(derive_node_agent_token(settings.AGENT_TOKEN, node.hostname)),
+    )
     script = script.replace("{{ tenant_image }}", tenant_image)
     script = script.replace("{{ web_image }}", web_image)
     script = script.replace("{{ required_images }}", " ".join(f"'{image}'" for image in required_images))

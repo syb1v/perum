@@ -279,8 +279,9 @@ async def _get_homework(db: AsyncSession, school_id: int, hw_id: int, user: User
     ).scalar_one_or_none()
     if hw is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Задание не найдено")
-    if not _is_admin(user) and hw.teacher_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Только автор задания или администратор")
+    if not _is_admin(user):
+        if hw.teacher_id != user.id or not await _assigned(db, user, hw.class_id, hw.subject_id):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет текущего назначения на класс и предмет")
     return hw
 
 
@@ -468,8 +469,9 @@ async def delete_attachment(db: AsyncSession, school_id: int, att_id: int, user:
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Вложение не найдено")
     att, hw = row
-    if not _is_admin(user) and hw.teacher_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Только автор задания или администратор")
+    if not _is_admin(user):
+        if hw.teacher_id != user.id or not await _assigned(db, user, hw.class_id, hw.subject_id):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет текущего назначения на класс и предмет")
     if att.file_path and os.path.exists(att.file_path):
         try:
             os.remove(att.file_path)
@@ -484,6 +486,16 @@ async def get_attachment_file(
     db: AsyncSession, school_id: int, att_id: int, user: User
 ) -> HomeworkAttachment:
     class_ids = await _allowed_class_ids(db, school_id, user)
+    visibility = True
+    if user.role in {"student", "parent"}:
+        now = utc_now()
+        visibility = or_(
+            Homework.published_at <= now,
+            Homework.published_at.is_(None)
+            & Homework.assigned_occurrence_id.is_(None)
+            & Homework.target_occurrence_id.is_(None)
+            & Homework.deadline_at.is_(None),
+        )
     row = (
         await db.execute(
             select(HomeworkAttachment)
@@ -492,6 +504,7 @@ async def get_attachment_file(
                 HomeworkAttachment.id == att_id,
                 Homework.school_id == school_id,
                 Homework.class_id.in_(class_ids),
+                visibility,
             )
         )
     ).scalar_one_or_none()
@@ -615,8 +628,9 @@ async def delete_control_work(db: AsyncSession, school_id: int, work_id: int, us
     ).scalar_one_or_none()
     if cw is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Работа не найдена")
-    if not _is_admin(user) and cw.teacher_id != user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Только автор работы или администратор")
+    if not _is_admin(user):
+        if cw.teacher_id != user.id or not await _assigned(db, user, cw.class_id, cw.subject_id):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет текущего назначения на класс и предмет")
     await db.delete(cw)
     await db.commit()
     return {"success": True, "message": "Работа удалена"}

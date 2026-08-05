@@ -91,7 +91,9 @@ def parse_period(period: str | None) -> tuple[datetime, datetime]:
 
 # ---- Teacher: access + filters -----------------------------------------
 
-async def get_accessible_class(db: AsyncSession, class_id: int, teacher: User, school_id: int) -> Class:
+async def get_accessible_class(
+    db: AsyncSession, class_id: int, teacher: User, school_id: int, subject_id: int | None,
+) -> Class:
     """Класс доступен учителю как классруку либо при наличии назначения (teacher_subjects)."""
     from app.models.academic import TeacherSubject
 
@@ -102,9 +104,14 @@ async def get_accessible_class(db: AsyncSession, class_id: int, teacher: User, s
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Нет доступа к этому классу или класс не найден")
     if class_.teacher_id == teacher.id:
         return class_
+    if subject_id is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Для предметного учителя обязателен предмет")
     has_assignment = await db.scalar(
         select(TeacherSubject.id).where(
-            TeacherSubject.teacher_id == teacher.id, TeacherSubject.class_id == class_id
+            TeacherSubject.school_id == school_id,
+            TeacherSubject.teacher_id == teacher.id,
+            TeacherSubject.class_id == class_id,
+            TeacherSubject.subject_id == subject_id,
         )
     )
     if not has_assignment:
@@ -207,7 +214,7 @@ async def _attention_students(db: AsyncSession, gf, limit: int = 5) -> list[dict
 
 
 async def dashboard(db: AsyncSession, school_id: int, teacher: User, class_id: int, subject_id: int | None, period: str | None) -> dict:
-    class_ = await get_accessible_class(db, class_id, teacher, school_id)
+    class_ = await get_accessible_class(db, class_id, teacher, school_id, subject_id)
     start, end = parse_period(period)
     gf = _grade_filter(class_id, school_id, start, end, subject_id)
 
@@ -235,7 +242,7 @@ async def dashboard(db: AsyncSession, school_id: int, teacher: User, class_id: i
 
 
 async def topics(db: AsyncSession, school_id: int, teacher: User, class_id: int, subject_id: int | None, period: str | None) -> dict:
-    await get_accessible_class(db, class_id, teacher, school_id)
+    await get_accessible_class(db, class_id, teacher, school_id, subject_id)
     start, end = parse_period(period)
     gf = _grade_filter(class_id, school_id, start, end, subject_id)
     class_avg = await db.scalar(select(_WEIGHTED_AVG).where(gf, Grade.grade_value.isnot(None)))
@@ -247,7 +254,7 @@ async def topics(db: AsyncSession, school_id: int, teacher: User, class_id: int,
 
 
 async def works(db: AsyncSession, school_id: int, teacher: User, class_id: int, subject_id: int | None, period: str | None) -> dict:
-    await get_accessible_class(db, class_id, teacher, school_id)
+    await get_accessible_class(db, class_id, teacher, school_id, subject_id)
     start, end = parse_period(period)
     gf = and_(_grade_filter(class_id, school_id, start, end, subject_id), Grade.work_type_id.isnot(None))
     day = func.date(func.coalesce(Grade.lesson_date, Grade.created_at))
@@ -285,7 +292,7 @@ async def works(db: AsyncSession, school_id: int, teacher: User, class_id: int, 
 
 
 async def problem_students(db: AsyncSession, school_id: int, teacher: User, class_id: int, subject_id: int | None, period: str | None) -> dict:
-    await get_accessible_class(db, class_id, teacher, school_id)
+    await get_accessible_class(db, class_id, teacher, school_id, subject_id)
     start, end = parse_period(period)
     gf = _grade_filter(class_id, school_id, start, end, subject_id)
     twos = func.sum(case((Grade.grade_value == 2, 1), else_=0))

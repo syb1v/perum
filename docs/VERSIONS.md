@@ -376,3 +376,4 @@
 | 373 | 2026-08-05 00:25 | _______ | fix(web): опубликованное ДЗ видно ученику в дневнике |
 | 374 | 2026-08-05 09:05 | _______ | docs(launch): закрыта M2 role acceptance matrix |
 | 375 | 2026-08-05 12:35 | _______ | docs(incident): зафиксирована недоступность production Core |
+| 376 | 2026-08-05 13:25 | _______ | fix(security): изолированы node и academic authorization boundaries |

@@ -69,7 +69,7 @@ def test_generated_bootstrap_is_fail_closed_and_offline_capable(monkeypatch, tmp
         is_current=True,
     )
     monkeypatch.setattr(node_bootstrap, "get_settings", lambda: settings)
-    node = SimpleNamespace(name="node-one", enrollment_token_id=None)
+    node = SimpleNamespace(name="node-one", hostname="node-one.example.com", enrollment_token_id=None)
 
     result = asyncio.run(node_bootstrap.generate_bootstrap_script(FakeSession(release), node))
 
@@ -85,6 +85,8 @@ def test_generated_bootstrap_is_fail_closed_and_offline_capable(monkeypatch, tmp
     assert "--pull-never" in result.script
     assert "mktemp \"$DIR/.env.tmp.XXXXXX\"" in result.script
     assert "env_value ENROLLMENT_TOKEN" in result.script
+    assert "env_value AGENT_TOKEN" not in result.script
+    assert "AGENT_TOKEN=agent-secret" not in result.script
     assert "WEB_IMAGE=ghcr.io/syb1v/perum-web:git-fedcba654321" in result.script
 
     script_path = tmp_path / "bootstrap.sh"
@@ -104,7 +106,7 @@ def test_generated_bootstrap_rejects_mutable_web_image_before_db_changes(monkeyp
     with pytest.raises(ValueError, match="WEB_IMAGE"):
         asyncio.run(
             node_bootstrap.generate_bootstrap_script(
-                session, SimpleNamespace(name="node-one", enrollment_token_id=None)
+                session, SimpleNamespace(name="node-one", hostname="node-one.example.com", enrollment_token_id=None)
             )
         )
 

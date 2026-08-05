@@ -140,6 +140,10 @@
 4. Провести focused authorization/privacy review критических Launch API.
 5. Принять RTO/RPO, ownership и incident runbook.
 
+Security review выполнен, но criterion остаётся OPEN из-за plaintext node agent
+transport и pending production credential rotation; evidence:
+`SECURITY_REVIEW_2026-08-05.md`.
+
 ### P1. Pilot and launch
 
 1. Подключить одну внешнюю pilot school.

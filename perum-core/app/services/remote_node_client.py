@@ -8,6 +8,7 @@ import httpx
 
 from app.core.config import get_settings
 from app.models import Node
+from app.services.node_agent_auth import derive_node_agent_token
 
 logger = logging.getLogger("perum.remote_node")
 
@@ -22,7 +23,7 @@ class RemoteNodeClient:
         self.timeout = timeout
         s = get_settings()
         self.port = s.AGENT_PORT
-        self.token = s.AGENT_TOKEN
+        self.master_token = s.AGENT_TOKEN
 
     def _get_agent_url(self, node: Node, path: str) -> str:
         return f"http://{node.hostname}:{self.port}/api/agent/{path.lstrip('/')}"
@@ -35,7 +36,8 @@ class RemoteNodeClient:
         json: dict | None = None,
     ) -> dict:
         url = self._get_agent_url(node, path)
-        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        token = derive_node_agent_token(self.master_token, node.hostname)
+        headers = {"Authorization": f"Bearer {token}"}
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             resp = await client.request(method, url, json=json, headers=headers)
             if resp.status_code >= 300:

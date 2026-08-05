@@ -3,7 +3,7 @@
   "info": {
     "title": "PERUM Control Plane",
     "description": "Manages organizations, provisioning, billing and observability for PERUM tenant stacks.",
-    "version": "0.5.3"
+    "version": "0.5.4"
   },
   "paths": {
     "/health": {
