@@ -1,7 +1,7 @@
 # PERUM Launch Master Plan
 
 > Единственный live-источник launch scope, прогресса и порядка работ.
-> Обновлено: 2026-08-04. Всё, что не блокирует первый коммерческий запуск,
+> Обновлено: 2026-08-05. Всё, что не блокирует первый коммерческий запуск,
 > находится в [POST_LAUNCH_BACKLOG.md](POST_LAUNCH_BACKLOG.md).
 
 ## 1. Цель
@@ -18,13 +18,13 @@
 | Milestone | Вес | Выполнено | Вклад | Состояние |
 |---|---:|---:|---:|---|
 | M1. Scope Lock | 10% | 4/4 | **10.0%** | Готово |
-| M2. Core Web Journeys | 35% | 7/8 | **30.6%** | Browser E2E закрыт, role acceptance открыт |
+| M2. Core Web Journeys | 35% | 8/8 | **35.0%** | Готово |
 | M3. Commercial Readiness | 20% | 1/5 | **4.0%** | Требует решений |
 | M4. Production Proof | 25% | 3/8 | **9.4%** | Частично доказано |
 | M5. Pilot and Launch | 10% | 0/4 | **0.0%** | Не начато |
-| **Итого** | **100%** | | **54.0%** | `███████████░░░░░░░░░` |
+| **Итого** | **100%** | | **58.4%** | `████████████░░░░░░░░` |
 
-Общий launch progress: **54%**. Процент меняется только при закрытии критериев
+Общий launch progress: **58%**. Процент меняется только при закрытии критериев
 ниже, а не от количества endpoint, экранов, commits или tests.
 
 ## 3. Launch V1 Scope
@@ -68,7 +68,7 @@
 - [x] Feature freeze принят: до launch допускаются только launch criteria,
   P0/P1 defects, security/privacy и обязательные commercial tasks.
 
-### M2. Core Web Journeys: 7/8
+### M2. Core Web Journeys: 8/8
 
 - [x] School Admin academic setup реализован в Web.
 - [x] Teacher journal/grade/attendance/homework flow реализован в Web.
@@ -78,7 +78,8 @@
   mutation → Student и linked Parent academic reads с реальными auth/RBAC/routes.
 - [x] Browser E2E на release candidate подтверждает Teacher mutation и тот же
   Student/Parent result через Web.
-- [ ] Role acceptance matrix пройдена на release candidate без открытых P0/P1.
+- [x] Role acceptance matrix пройдена на immutable Web `2.3.7` / Tenant `1.1.11`
+  candidate без открытых P0/P1; evidence: `ROLE_ACCEPTANCE_2026-08-04.md`.
 - [x] Production Student diary работает на Tenant `1.1.8`: immutable OTA, healthy
   runtime identity и authenticated HTTP 200 smoke подтверждены.
 
@@ -119,13 +120,6 @@
 
 1. Устранить telemetry contract drift и оставить social rollout fail-closed без
    повторного Web polling.
-
-### P0. Закрыть Core Web acceptance
-
-1. School Admin parent↔student linking закрыт vertical release (`1.1.9`): atomic
-   full-set replacement через Web, без seed/SQL backdoor.
-2. Пройти ручную role matrix на одном release candidate.
-3. Исправить найденные P0/P1 одним vertical release, без нового feature scope.
 
 ### P0. Принять минимальную коммерцию
 
@@ -175,7 +169,7 @@
 
 Текущий расчёт:
 
-`10 × 4/4 + 35 × 7/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 54.0%`
+`10 × 4/4 + 35 × 8/8 + 20 × 1/5 + 25 × 3/8 + 10 × 0/4 = 58.4%`
 
 После каждой итерации обязательно обновляются checkbox затронутого milestone,
 формула, общий процент, критический план, `CHANGELOG.md` и `docs/VERSIONS.md`.

@@ -7,11 +7,11 @@
 
 | Поле | Значение |
 |---|---|
-| Source commit | заполняется после RC commit |
-| CI run | заполняется после успешного CI |
-| Release run | заполняется после успешного release workflow |
-| Web | `2.3.7` candidate: исправляет P1 homework propagation; identity заполняется после публикации |
-| Tenant | `1.1.11` candidate: исправляет P1 academic dates и Teacher schedule projection; identity заполняется после публикации |
+| Source commit | `930bb1f7d1cbfe9d1aada2aed6ed6c220a070473` |
+| CI run | `30988476961`, success |
+| Release run | `30988669533`, success |
+| Web | `2.3.7`, `ghcr.io/syb1v/perum-web:git-930bb1f7d1cb`, digest `sha256:18c76cb02916e8ed3014f3d6f66ebcc8d40d17452ab9939155043d93dc0bf181` |
+| Tenant | `1.1.11`, `ghcr.io/syb1v/perum-tenant:git-103e1f585536`, digest `sha256:9dcda32d51a6443bc8ef27f366331d8616cf0ad414fc4e351525b35aea0c2562` |
 | Contour | disposable PostgreSQL, production Web build, Chromium `ru-RU`, timezone `Europe/Moscow` |
 | Data | synthetic users и academic/support records, созданные только внутри disposable contour |
 
@@ -28,15 +28,15 @@
 
 | ID | Роль | Проверка | Ожидаемый результат | Статус | Evidence/defect |
 |---|---|---|---|---|---|
-| A1 | School Admin | Учебный год, период, звонки, класс и предмет | Настройки создаются и повторно читаются через Web | PENDING | — |
-| A2 | School Admin | Teacher, Student, Parent, назначение и связь ребёнка | Пользователи и связи сохраняются без SQL/seed backdoor | PENDING | — |
-| A3 | School Admin | Расписание класса | Урок с назначенным Teacher виден после сохранения | PENDING | — |
-| T1 | Teacher | Свои классы, расписание и журнал | Teacher видит только назначенный academic scope | PENDING | — |
-| T2 | Teacher | Посещаемость, оценка и домашнее задание | Все три mutation завершаются и отображаются в журнале | PENDING | — |
-| S1 | Student | Расписание, дневник, оценка и домашнее задание | Student видит связанные authoritative academic records | PENDING | — |
-| P1 | Parent | Выбор ребёнка, дневник, оценка и основные итоги | Parent видит только linked child и те же academic records | PENDING | — |
-| U1 | School user | Создание text-only support ticket | Ticket появляется в requester thread | PENDING | — |
-| O1 | School Admin | Support inbox, ответ и изменение состояния | Operator видит ticket; requester видит ответ и состояние | PENDING | — |
+| A1 | School Admin | Учебный год, период, звонки, класс и предмет | Настройки создаются и повторно читаются через Web | PASS | ACC-001 исправлен, clean rerun |
+| A2 | School Admin | Teacher, Student, Parent, назначение и связь ребёнка | Пользователи и связи сохраняются без SQL/seed backdoor | PASS | Web mutations и authoritative reads |
+| A3 | School Admin | Расписание класса | Урок с назначенным Teacher виден после сохранения | PASS | ACC-002 исправлен, clean rerun |
+| T1 | Teacher | Свои классы, расписание и журнал | Teacher видит только назначенный academic scope | PASS | Exact assignment и personal diary |
+| T2 | Teacher | Посещаемость, оценка и домашнее задание | Все три mutation завершаются и отображаются в журнале | PASS | Grade/attendance/homework Web responses |
+| S1 | Student | Расписание, дневник, оценка и домашнее задание | Student видит связанные authoritative academic records | PASS | Тот же grade и homework lesson detail |
+| P1 | Parent | Выбор ребёнка, дневник, оценка и основные итоги | Parent видит только linked child и те же academic records | PASS | Linked-child grade/diary/finals tabs |
+| U1 | School user | Создание text-only support ticket | Ticket появляется в requester thread | PASS | Student requester Web flow |
+| O1 | School Admin | Support inbox, ответ и изменение состояния | Operator видит ticket; requester видит ответ и состояние | PASS | Reply виден requester; `waiting_requester` |
 
 ## Automated Preconditions
 
@@ -65,6 +65,6 @@
   date как legacy-compatible `due_date`, сохраняя optional exact deadline только
   для occurrence. Blocking Playwright journey проверяет visible `ДЗ` и заголовок
   задания в Student lesson detail.
-- Open P0: pending
-- Open P1: pending
-- M2 acceptance: pending
+- Open P0: 0
+- Open P1: 0
+- M2 acceptance: PASS
