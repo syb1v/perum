@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-05
 
+- Открыт P0 incident production Core: три scheduled и один manual Synthetic monitor подтверждают одновременную недоступность `/health` и public tenant discovery; independent probe также получает HTTPS/SSH timeout, при этом school data plane health отвечает `200`. Добавлены immutable timeline, blast radius и provider/host recovery gate без destructive действий или вывода credentials.
 - M2 Core Web Journeys закрыт `8/8`: role acceptance matrix пройдена на immutable Web `2.3.7` / Tenant `1.1.11` candidate через School Admin setup, Teacher schedule/journal/attendance/grade/homework, Student и linked Parent academic projections и requester↔school operator support round trip. Исправленные ACC-001/002/003 перепроверены; открытых P0/P1 нет. Общий launch progress = `58%`.
 - Role acceptance выявил P1 Teacher homework → Student diary: Web успешно создавал опубликованное задание без `due_date`, поскольку exact deadline был disabled до появления occurrence, но Student projection не могла привязать его к дню и показывала пустое ДЗ. Journal flow теперь передаёт выбранную дату как legacy-compatible `due_date`, не ослабляя occurrence-bound exact deadline. Blocking Playwright journey расширен созданием homework и проверкой visible `ДЗ`/заголовка у Student. Web version повышена до `2.3.7`.
 

@@ -118,8 +118,11 @@
 
 ### P0. Стабилизировать текущий production
 
-1. Устранить telemetry contract drift и оставить social rollout fail-closed без
-   повторного Web polling.
+1. Восстановить production Core edge: HTTPS/SSH origin недоступен с
+   `2026-08-04 23:27 UTC`, тогда как school data plane отвечает. Incident evidence
+   и resolution gate: `INCIDENT_2026-08-05_CORE_OUTAGE.md`.
+2. После provider/host recovery получить successful manual и scheduled Synthetic
+   monitor; до этого production contour имеет открытый P0.
 
 ### P0. Принять минимальную коммерцию
 
