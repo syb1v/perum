@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-05
+
+- Role acceptance выявил P1 Teacher homework → Student diary: Web успешно создавал опубликованное задание без `due_date`, поскольку exact deadline был disabled до появления occurrence, но Student projection не могла привязать его к дню и показывала пустое ДЗ. Journal flow теперь передаёт выбранную дату как legacy-compatible `due_date`, не ослабляя occurrence-bound exact deadline. Blocking Playwright journey расширен созданием homework и проверкой visible `ДЗ`/заголовка у Student. Web version повышена до `2.3.7`.
+
 ## [Unreleased] — 2026-08-04
 
 - Role acceptance выявил P1 в связке Admin schedule → Teacher diary: обычный урок из Web сохранялся без `teacher_id`, хотя exact class+subject assignment уже существовал, и Teacher видел `Нет уроков`. Tenant теперь автоматически подставляет только единственного active exact assigned Teacher; отсутствие или неоднозначность остаются fail-closed с warning. PostgreSQL journey закрепляет Web-shaped schedule payload без `teacher_id` и видимость урока Teacher. Tenant release повышен до `1.1.11`.

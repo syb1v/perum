@@ -506,6 +506,7 @@ export default function TeacherGradesTab({
                     subjectId={selectedSubjectId}
                     classNameStr={currentClass?.name}
                     subjectName={currentSubject?.name}
+                    defaultDueDate={selectedDate}
                     onClose={() => setHomeworkModalOpen(false)}
                 />
             )}

@@ -65,6 +65,15 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
 
     await expect(teacherPage.getByText('Оценка выставлена', { exact: true })).toBeVisible();
     await expect(teacherRow.getByText('5', { exact: true }).first()).toBeVisible();
+
+    await teacherPage.getByRole('button', { name: 'Добавить Д/З' }).first().click();
+    await teacherPage.getByPlaceholder('Например: Параграф 15').fill('E2E домашнее задание');
+    const homeworkPromise = teacherPage.waitForResponse(response =>
+        response.url().endsWith('/api/homework') && response.request().method() === 'POST',
+    );
+    await teacherPage.getByRole('button', { name: 'Создать задание' }).click();
+    const homeworkResponse = await homeworkPromise;
+    expect(homeworkResponse.ok()).toBe(true);
     await teacherContext.close();
 
     const studentContext = await browser.newContext();
@@ -90,6 +99,11 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
     });
     await expect(studentSubjectRow.getByText('5', { exact: true }).first()).toBeVisible();
     await expect(studentSubjectRow.getByText('5.00', { exact: true })).toBeVisible();
+    await studentPage.getByRole('button', { name: 'Дневник' }).click();
+    const homeworkIndicator = studentPage.getByText('ДЗ', { exact: true });
+    await expect(homeworkIndicator).toBeVisible();
+    await homeworkIndicator.click();
+    await expect(studentPage.getByText('E2E домашнее задание', { exact: true })).toBeVisible();
     await studentContext.close();
 
     const parentContext = await browser.newContext();

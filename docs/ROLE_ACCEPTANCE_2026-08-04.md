@@ -10,7 +10,7 @@
 | Source commit | заполняется после RC commit |
 | CI run | заполняется после успешного CI |
 | Release run | заполняется после успешного release workflow |
-| Web | `2.3.6`, immutable image identity заполняется после публикации |
+| Web | `2.3.7` candidate: исправляет P1 homework propagation; identity заполняется после публикации |
 | Tenant | `1.1.11` candidate: исправляет P1 academic dates и Teacher schedule projection; identity заполняется после публикации |
 | Contour | disposable PostgreSQL, production Web build, Chromium `ru-RU`, timezone `Europe/Moscow` |
 | Data | synthetic users и academic/support records, созданные только внутри disposable contour |
@@ -59,6 +59,12 @@
   class+subject assignment; нулевой или неоднозначный набор остаётся fail-closed
   с warning. PostgreSQL journey закрепляет Web-shaped schedule payload без
   `teacher_id` и появление урока в Teacher diary.
+- Исправлен P1 `ACC-003`: journal homework создавался опубликованным, но без
+  `due_date`, потому что exact deadline disabled до появления occurrence;
+  Student diary показывал пустой homework. Web теперь передаёт выбранную journal
+  date как legacy-compatible `due_date`, сохраняя optional exact deadline только
+  для occurrence. Blocking Playwright journey проверяет visible `ДЗ` и заголовок
+  задания в Student lesson detail.
 - Open P0: pending
 - Open P1: pending
 - M2 acceptance: pending

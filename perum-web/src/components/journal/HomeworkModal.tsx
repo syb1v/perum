@@ -150,6 +150,7 @@ export default function HomeworkModal({
                     subject_id: subjectId,
                     title,
                     description: description || null,
+                    due_date: defaultDueDate ? `${defaultDueDate}T00:00:00` : null,
                     target_occurrence_id: effectiveTargetOccurrenceId,
                     deadline_at: deadline ? new Date(deadline).toISOString() : null,
                     published_at: published ? new Date().toISOString() : null
