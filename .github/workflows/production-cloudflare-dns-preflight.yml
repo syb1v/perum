@@ -1,0 +1,52 @@
+name: Production Cloudflare DNS preflight
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Inspect approved public A records
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_SSH_HOST }}
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            docker exec -i perum_core python - <<'PY'
+            import asyncio
+            import httpx
+            from sqlalchemy import select
+            from app.core.config import get_settings
+            from app.core.db import SessionLocal
+            from app.models import Organization
+
+            async def main():
+                settings = get_settings()
+                async with SessionLocal() as db:
+                    org = await db.scalar(select(Organization).where(Organization.domain == "grsn-panel.ru"))
+                    if not org or not org.cf_zone_id:
+                        raise SystemExit("Stored Cloudflare zone is unavailable")
+                    zone_id = org.cf_zone_id
+                headers = {"Authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}"}
+                async with httpx.AsyncClient(base_url="https://api.cloudflare.com/client/v4", headers=headers, timeout=20) as client:
+                    response = await client.get(f"/zones/{zone_id}/dns_records", params={"type": "A", "per_page": 100})
+                    if response.status_code >= 300:
+                        raise SystemExit(f"cloudflare_dns_list_http={response.status_code}")
+                    records = response.json().get("result") or []
+                approved = {"grsn-panel.ru", "school-1.grsn-panel.ru"}
+                selected = [record for record in records if record.get("name") in approved]
+                if {record.get("name") for record in selected} != approved:
+                    raise SystemExit("Approved A record set is incomplete")
+                for record in sorted(selected, key=lambda item: item["name"]):
+                    print(f"record={record['name']} proxied={bool(record.get('proxied'))} origin_match={record.get('content') == '87.120.196.143'}")
+
+            asyncio.run(main())
+            PY

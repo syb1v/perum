@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Добавлен read-only Cloudflare DNS preflight через stored zone ID и DNS-scoped token: он проверяет только approved apex/school A-record set, proxied flag и совпадение с organization origin, не выводя record IDs или credential.
 - Cloudflare recovery больше не скрывает failure в command substitution: выводятся только безопасные HTTP status codes zone lookup/update, без token и API payload.
 - Control-plane diagnostics выводит только boolean Cloudflare token/feature configuration без значения token, чтобы отличить disabled integration от отсутствующего approved credential.
 - Organization-node diagnostics собирает bounded error-only Tenant/Web logs за последние 10 минут (`ERROR`, traceback, status 500) без request bodies/env для расследования school `Internal Server Error`.

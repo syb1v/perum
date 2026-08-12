@@ -286,6 +286,6 @@ jobs:
       - name: Parse workflow YAML
         run: |
           pip install pyyaml
-          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml', '.github/workflows/production-diagnostics.yml', '.github/workflows/production-disk-recovery.yml', '.github/workflows/production-school-route-recovery.yml', '.github/workflows/production-cloudflare-ipv6-recovery.yml')]"
+          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml', '.github/workflows/production-diagnostics.yml', '.github/workflows/production-disk-recovery.yml', '.github/workflows/production-school-route-recovery.yml', '.github/workflows/production-cloudflare-ipv6-recovery.yml', '.github/workflows/production-cloudflare-dns-preflight.yml')]"
       - name: Run deploy shell regressions
         run: bash deploy/tests/test_deploy_scripts.sh

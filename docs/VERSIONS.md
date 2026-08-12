@@ -400,3 +400,4 @@
 | 397 | 2026-08-12 20:10 | _______ | chore(prod): добавлены bounded school 500 diagnostics |
 | 398 | 2026-08-12 20:25 | _______ | chore(prod): различается Cloudflare token и feature flag |
 | 399 | 2026-08-12 20:35 | _______ | fix(prod): Cloudflare recovery выводит безопасный status |
+| 400 | 2026-08-12 20:45 | _______ | chore(prod): добавлен Cloudflare DNS-only preflight |
