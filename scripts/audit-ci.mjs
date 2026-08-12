@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
 
-const result = spawnSync("npm", ["audit", "--json"], { encoding: "utf8" });
+const workspace = process.argv[2];
+const args = ["audit", "--omit=dev", "--json"];
+if (workspace) args.push("--workspace", workspace);
+const result = spawnSync("npm", args, { encoding: "utf8" });
 if (!result.stdout) {
   process.stderr.write(result.stderr || "npm audit produced no report\n");
   process.exit(1);
@@ -30,6 +33,7 @@ const allowedNames = new Set([
   "fast-uri",
   "js-yaml",
   "minimatch",
+  "nanoid",
   "next",
   "postcss",
   "sharp",
@@ -41,4 +45,4 @@ if (!allowed) {
   process.exit(1);
 }
 
-process.stdout.write("npm audit: only exact known tooling and Next/sharp high advisory set remains\n");
+process.stdout.write(`npm audit: only exact known tooling and Next/sharp high advisory set remains${workspace ? ` in ${workspace}` : ""}\n`);

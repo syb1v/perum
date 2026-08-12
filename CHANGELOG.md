@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-12
+
+- Web production dependency audit теперь scoped к `perum-web`, поэтому Expo/React Native runtime/toolchain advisories не маскируются и не ломают нерелевантный Web job; fail-closed allowlist расширен только новым exact `nanoid` advisory из Web graph, остальные новые high/critical packages по-прежнему блокируют CI.
+
 ## [Unreleased] — 2026-08-05
 
 - Core node-agent authorization regression использует штатный `asyncio.run`, поэтому воспроизводится в минимальном CI test environment без незафиксированного `pytest-asyncio` plugin.

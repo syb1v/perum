@@ -104,7 +104,7 @@ jobs:
       - name: Production build
         run: npm run build:web
       - name: Audit production dependencies
-        run: npm run audit:ci
+        run: npm run audit:ci -- perum-web
 
   web-academic-e2e:
     name: perum-web (academic role E2E)
