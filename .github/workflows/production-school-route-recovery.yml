@@ -36,6 +36,5 @@ jobs:
               curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health >/dev/null && break
               sleep 2
             done
-            response=$(curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health)
-            [ "$response" = '{"status":"ok"}' ]
+            curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health | python3 -c "import json,sys; assert json.load(sys.stdin).get('status') == 'ok'"
             echo 'school_origin=healthy route=reconciled'
