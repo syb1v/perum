@@ -1,6 +1,6 @@
 # P0: недоступен production Core
 
-Статус: **MONITORING**
+Статус: **OPEN**
 Severity: **P0**
 Начало по внешнему monitor evidence: **2026-08-04 23:27 UTC**
 
@@ -58,7 +58,7 @@ Core не стартовал, rollback также не прошёл health gate.
 
 ## Resolution Gate
 
-Incident остаётся MONITORING, пока одновременно не выполнены условия:
+Incident остаётся OPEN, пока одновременно не выполнены условия:
 
 - Core HTTPS `/health` возвращает exact `200 {"status":"ok"}`;
 - tenant discovery возвращает валидный descriptor approved school;
@@ -67,3 +67,10 @@ Incident остаётся MONITORING, пока одновременно не в�
 
 Первые три технических условия выполнены. Owner confirmation и preventive disk
 capacity/retention decision остаются pending, поэтому статус не RESOLVED.
+
+2026-08-12 user/browser recheck выявил отдельный региональный edge defect:
+обычный Chromium не загружает `grsn-panel.ru` и `school-1.grsn-panel.ru`, тогда как
+тот же Chromium с direct IPv4 origin получает `200`. Cloudflare публикует generated
+AAAA, а IPv6 requests с affected contour timeout. Попытка изменить zone setting
+через production Core fail-closed: Cloudflare integration в текущем rollback runtime
+не включена. Требуется действие владельца Cloudflare zone; incident не закрыт.

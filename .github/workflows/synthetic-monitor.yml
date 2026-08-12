@@ -19,6 +19,8 @@ jobs:
     env:
       PERUM_SYNTHETIC_BASE_URL: ${{ vars.PERUM_SYNTHETIC_BASE_URL }}
       PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID: ${{ vars.PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID }}
+      PERUM_SYNTHETIC_LANDING_URL: https://grsn-panel.ru
+      PERUM_SYNTHETIC_SCHOOL_URL: https://school-1.grsn-panel.ru
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,6 +44,25 @@ jobs:
             --base-url "$PERUM_SYNTHETIC_BASE_URL" \
             --school-public-id "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" \
             --output synthetic-monitor
+      - name: Check organization and school public surfaces
+        run: |
+          python - <<'PY'
+          import json
+          import urllib.request
+
+          checks = (
+              ("landing", "${{ env.PERUM_SYNTHETIC_LANDING_URL }}/", "организация тест"),
+              ("school_health", "${{ env.PERUM_SYNTHETIC_SCHOOL_URL }}/health", '"status":"ok"'),
+              ("school_login", "${{ env.PERUM_SYNTHETIC_SCHOOL_URL }}/login", "ПЭРУМ"),
+          )
+          for name, url, marker in checks:
+              request = urllib.request.Request(url, headers={"User-Agent": "PERUM-Synthetic/1.0"})
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  body = response.read(512 * 1024).decode("utf-8")
+                  if response.status != 200 or marker not in body:
+                      raise SystemExit(f"{name} failed")
+              print(f"{name}=ok")
+          PY
       - name: Upload monitor result
         if: always()
         uses: actions/upload-artifact@v4
