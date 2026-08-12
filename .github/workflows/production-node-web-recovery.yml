@@ -1,0 +1,117 @@
+name: Production organization-node Web recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      web_digest:
+        description: Immutable perum-web sha256 digest
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  organization-node:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Roll out Web only with automatic rollback
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 87.120.196.143
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          proxy_host: ${{ vars.DEPLOY_SSH_HOST }}
+          proxy_username: ${{ vars.DEPLOY_SSH_USER }}
+          proxy_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          proxy_port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            dir=/opt/perum-node
+            digest='${{ inputs.web_digest }}'
+            [[ "$digest" =~ ^sha256:[0-9a-fA-F]{64}$ ]]
+            new_web="ghcr.io/${{ github.repository_owner }}/perum-web@${digest}"
+            test -f "$dir/.env"
+            test -f "$dir/docker-compose.yml"
+            exec 9>"$dir/.deploy.lock"
+            flock -n 9
+            docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" config -q
+            old_web_id=$(docker inspect --format '{{.Image}}' perum_web)
+            [[ "$old_web_id" =~ ^sha256:[0-9a-fA-F]{64}$ ]]
+            docker image inspect "$old_web_id" >/dev/null
+            protected_before=$(docker inspect --format '{{.Id}}' caddy perum_agent perum_node_db $(docker ps --filter 'name=school_.*' --format '{{.Names}}') | sort | sha256sum)
+            backup=$(mktemp "$dir/.env.web-rollback.XXXXXX")
+            cp --preserve=mode,ownership,timestamps "$dir/.env" "$backup"
+            completed=false
+            rollback() {
+              if [ "$completed" != true ]; then
+                cp --preserve=mode,ownership,timestamps "$backup" "$dir/.env"
+                WEB_IMAGE="$old_web_id" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" up -d --no-deps --pull never --force-recreate perum_web || true
+                for attempt in $(seq 1 30); do
+                  [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' perum_web 2>/dev/null || true)" = healthy ] && break
+                  sleep 5
+                done
+                docker exec perum_agent python -c "import asyncio; from app.agent.service import _resync_node_caddy_routes; asyncio.run(_resync_node_caddy_routes())" || true
+              fi
+              rm -f "$backup"
+            }
+            trap rollback EXIT
+            docker pull "$new_web"
+            new_web_id=$(docker image inspect --format '{{.Id}}' "$new_web")
+            [[ "$new_web_id" =~ ^sha256:[0-9a-fA-F]{64}$ ]]
+            python3 - "$dir/.env" "$new_web" <<'PY'
+            import os
+            import sys
+            import tempfile
+
+            path, value = sys.argv[1:]
+            stat = os.stat(path)
+            with open(path, encoding="utf-8") as source:
+                lines = source.readlines()
+            output = []
+            replaced = False
+            for line in lines:
+                if line.startswith("WEB_IMAGE="):
+                    if not replaced:
+                        output.append(f"WEB_IMAGE={value}\n")
+                        replaced = True
+                else:
+                    output.append(line)
+            if not replaced:
+                output.append(f"WEB_IMAGE={value}\n")
+            fd, temporary = tempfile.mkstemp(prefix=".env.tmp.", dir=os.path.dirname(path))
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as target:
+                    target.writelines(output)
+                    target.flush()
+                    os.fsync(target.fileno())
+                os.chmod(temporary, stat.st_mode)
+                os.chown(temporary, stat.st_uid, stat.st_gid)
+                os.replace(temporary, path)
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+            PY
+            docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" config -q
+            docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" up -d --no-deps --pull never --force-recreate perum_web
+            for attempt in $(seq 1 30); do
+              [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' perum_web 2>/dev/null || true)" = healthy ] && break
+              sleep 5
+            done
+            [ "$(docker inspect --format '{{.State.Health.Status}}' perum_web)" = healthy ]
+            [ "$(docker inspect --format '{{.Image}}' perum_web)" = "$new_web_id" ]
+            protected_after=$(docker inspect --format '{{.Id}}' caddy perum_agent perum_node_db $(docker ps --filter 'name=school_.*' --format '{{.Names}}') | sort | sha256sum)
+            [ "$protected_before" = "$protected_after" ]
+            docker exec perum_agent python -c "import asyncio; from app.agent.service import _resync_node_caddy_routes; asyncio.run(_resync_node_caddy_routes())"
+            for attempt in $(seq 1 15); do
+              curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/login >/dev/null && break
+              sleep 2
+            done
+            curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/login >/dev/null
+            status=$(curl -sS -o /dev/null -w '%{http_code}' --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/dashboard)
+            [ "$status" = 307 ]
+            completed=true
+            echo 'organization_node_web=healthy route=reconciled protected_services=unchanged'

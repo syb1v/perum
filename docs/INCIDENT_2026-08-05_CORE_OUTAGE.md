@@ -84,3 +84,9 @@ journey: `GET /dashboard` возвращал `500`, хотя unauthenticated pro
 приоритет над canonical `X-Forwarded-Host`. Web `2.3.8` меняет приоритет и E2E
 proxy теперь воспроизводит production topology; production rollout и
 authenticated browser receipt остаются обязательными до закрытия incident.
+
+Release `31645857619` успешно опубликовал Web `2.3.8`, но штатный control-plane
+deploy обновляет только Core host. Существующий organization node сохранил прежний
+общий `perum_web`, поэтому school продолжила возвращать authenticated `500`.
+Добавлен отдельный Web-only node rollout с immutable digest, protected-container
+identity gate, route resync и автоматическим rollback; production receipt pending.

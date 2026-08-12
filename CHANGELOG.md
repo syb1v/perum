@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Добавлен fail-closed rollout общего Web на существующий organization node: workflow принимает только immutable digest, пересоздаёт исключительно `perum_web`, проверяет неизменность Tenant/DB/Caddy/Agent containers, пересинхронизирует school route и автоматически возвращает прежний image/env при любом failure. Это закрывает operational gap, из-за которого control-plane Web обновлялся, а school продолжала исполнять старый authenticated `/dashboard` rewrite.
 - Исправлен authenticated `500` clean `/dashboard` за production reverse proxy: Web теперь предпочитает canonical `X-Forwarded-Host` внутреннему upstream `Host`, а E2E proxy намеренно моделирует несовпадающие authorities. `director` и `org_admin` добавлены в shared dashboard/profile routing; Web version повышена до `2.3.8`.
 - Добавлен read-only Cloudflare DNS preflight через stored zone ID и DNS-scoped token: он проверяет только approved apex/school A-record set, proxied flag и совпадение с organization origin, не выводя record IDs или credential.
 - Cloudflare recovery больше не скрывает failure в command substitution: выводятся только безопасные HTTP status codes zone lookup/update, без token и API payload.
