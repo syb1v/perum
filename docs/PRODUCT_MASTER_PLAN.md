@@ -124,6 +124,10 @@
 2. После provider/host recovery получить successful manual и scheduled Synthetic
    monitor; до этого production contour имеет открытый P0.
 
+Технический service recovery выполнен 2026-08-12: disk cleanup без volumes,
+DB/Core health, successful Synthetic monitor и school route reconciliation.
+Incident остаётся MONITORING до owner confirmation и preventive capacity policy.
+
 ### P0. Принять минимальную коммерцию
 
 1. Владелец выбирает manual invoice или YooKassa для Launch V1.

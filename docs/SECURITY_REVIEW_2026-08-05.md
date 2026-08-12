@@ -56,3 +56,18 @@ M4 security criterion остаётся незакрытым до выполне�
 3. Agent transport переведён на approved confidential, server-authenticated path;
    plaintext public management port закрыт.
 4. Core/Tenant security suites и production read-only authorization smoke зелёные.
+
+## Published Candidates
+
+- CI `31600514380`: success.
+- Recovery publication `31601089314`:
+  - Core `0.5.4`: `sha256:0601e6f7cd03e8937877e2ea9c708eafb98f7bf73b740ba1e222216a9f6da1d2`;
+  - Tenant `1.1.12`: `sha256:0e72f35cc27336a8b1c58f7b4e2a55bbbe645ff8d10fd8ddaee98e33548fefbe`;
+  - Tenant release registration succeeded.
+- Durable Caddy network fix candidate: Core digest
+  `sha256:24e188cdf1fc941f15ada99572b7ab52386be299fba248dabf719618cdc7c1be`,
+  release `31603915570`.
+
+Candidates are published, not accepted as production security rollout. Core
+deploy rolled back after disk exhaustion; Tenant remains opt-in and was not rolled
+out. Per-node credential rotation and confidential transport remain mandatory.

@@ -391,3 +391,4 @@
 | 388 | 2026-08-12 18:25 | _______ | chore(prod): диагностируется Docker network membership drift |
 | 389 | 2026-08-12 18:35 | _______ | fix(prod): Caddy подключается к school networks при resync |
 | 390 | 2026-08-12 18:45 | _______ | fix(prod): school recovery проверяет фактический health contract |
+| 391 | 2026-08-12 19:00 | _______ | docs(incident): production P0 переведён в monitoring |

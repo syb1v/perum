@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Production P0 переведён в MONITORING: bounded cleanup освободил Core disk `100% → 38%` без volumes, восстановил PostgreSQL/Core и Synthetic monitor; organization-node outage локализован до отсутствия общей Caddy/tenant Docker network и устранён idempotent route reconciliation. Owner data-loss confirmation и preventive disk policy остаются pending.
 - School route recovery verification приведён к фактическому privacy-safe Tenant contract: JSON обязан содержать `status=ok`, а допустимое дополнительное поле `org` не делает recovery false-negative.
 - Исправлен root cause school `502` после Caddy recreate: provisioning и agent route resync теперь fail-closed подключают Caddy к каждой school Docker network до публикации route. Bounded production recovery подключает только обнаруженную healthy tenant network и затем запускает штатный route reconciliation.
 - Route reconciliation не устранил school `502`; diagnostics теперь выводит только tenant/Caddy Docker network names и IPs, чтобы доказать network-membership drift перед recovery.
