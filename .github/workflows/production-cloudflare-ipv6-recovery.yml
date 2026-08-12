@@ -20,7 +20,7 @@ jobs:
           port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
           script: |
             set -euo pipefail
-            docker exec perum_core python - <<'PY'
+            result=$(docker exec -i perum_core python - <<'PY'
             import asyncio
             import httpx
             from app.core.config import get_settings
@@ -46,3 +46,6 @@ jobs:
 
             asyncio.run(main())
             PY
+            )
+            [ "$result" = 'cloudflare_ipv6=off' ]
+            printf '%s\n' "$result"

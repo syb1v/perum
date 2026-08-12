@@ -394,3 +394,4 @@
 | 391 | 2026-08-12 19:00 | _______ | docs(incident): production P0 переведён в monitoring |
 | 392 | 2026-08-12 19:10 | _______ | fix(deploy): добавлен disk-capacity preflight перед pull |
 | 393 | 2026-08-12 19:25 | _______ | fix(prod): добавлен Cloudflare IPv6 edge recovery |
+| 394 | 2026-08-12 19:35 | _______ | fix(prod): Cloudflare recovery требует execution receipt |
