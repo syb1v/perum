@@ -74,3 +74,5 @@ capacity/retention decision остаются pending, поэтому стату�
 AAAA, а IPv6 requests с affected contour timeout. Попытка изменить zone setting
 через production Core fail-closed: Cloudflare integration в текущем rollback runtime
 не включена. Требуется действие владельца Cloudflare zone; incident не закрыт.
+Synthetic monitor теперь fail-closed отклоняет generated AAAA для landing/school,
+пока IPv6 Compatibility не отключена или отдельный IPv6 browser contour не доказан.

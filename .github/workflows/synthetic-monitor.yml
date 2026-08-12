@@ -48,6 +48,7 @@ jobs:
         run: |
           python - <<'PY'
           import json
+          import socket
           import urllib.request
 
           checks = (
@@ -62,6 +63,11 @@ jobs:
                   if response.status != 200 or marker not in body:
                       raise SystemExit(f"{name} failed")
               print(f"{name}=ok")
+          for host in ("grsn-panel.ru", "school-1.grsn-panel.ru"):
+              ipv6 = sorted({item[4][0] for item in socket.getaddrinfo(host, 443, socket.AF_INET6)})
+              if ipv6:
+                  raise SystemExit(f"{host} publishes unverified IPv6 edge addresses")
+              print(f"{host}_ipv6=disabled")
           PY
       - name: Upload monitor result
         if: always()

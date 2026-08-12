@@ -396,3 +396,4 @@
 | 393 | 2026-08-12 19:25 | _______ | fix(prod): добавлен Cloudflare IPv6 edge recovery |
 | 394 | 2026-08-12 19:35 | _______ | fix(prod): Cloudflare recovery требует execution receipt |
 | 395 | 2026-08-12 19:45 | _______ | fix(monitor): landing и school добавлены в public checks |
+| 396 | 2026-08-12 19:55 | _______ | fix(monitor): unverified Cloudflare IPv6 блокирует green |

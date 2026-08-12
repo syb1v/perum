@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Public-surface monitor теперь fail-closed отклоняет generated Cloudflare AAAA для landing/school: affected Chromium contour зависает при default resolution, тогда как оба Cloudflare IPv4 адреса и direct origin стабильно возвращают `200`.
 - Synthetic monitor теперь блокируется не только на Core health/discovery, но и на organization landing HTML, school health и school login HTML; Core-only green больше не скрывает пользовательский outage. Cloudflare IPv6 recovery fail-closed остановился, поскольку integration в rollback Core runtime не включена; zone-owner action остаётся обязательным.
 - Cloudflare recovery передаёт Python script в container через `docker exec -i` и требует exact `cloudflare_ipv6=off` receipt; успешный job без фактического выполнения script больше невозможен.
 - Добавлен fail-closed Cloudflare IPv6 recovery для `grsn-panel.ru`: через существующий production Core token отключается только zone IPv6 Compatibility, чтобы убрать blackholed generated AAAA path; proxied A records и origin TLS не изменяются, token не выводится.
