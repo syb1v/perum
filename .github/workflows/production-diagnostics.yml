@@ -24,6 +24,10 @@ jobs:
             df -h --output=source,size,used,avail,pcent,target / /var/lib/docker
             printf '%s\n' '=== memory ==='
             free -m
+            printf '%s\n' '=== docker disk usage ==='
+            docker system df
+            printf '%s\n' '=== top-level disk usage ==='
+            du -x -h --max-depth=1 /var/lib/docker /var/log 2>/dev/null | sort -h
             printf '%s\n' '=== containers ==='
             docker ps -a --format '{{.Names}}|{{.Status}}|{{.Image}}'
             printf '%s\n' '=== health ==='
