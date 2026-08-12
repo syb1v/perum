@@ -377,3 +377,4 @@
 | 374 | 2026-08-05 09:05 | _______ | docs(launch): закрыта M2 role acceptance matrix |
 | 375 | 2026-08-05 12:35 | _______ | docs(incident): зафиксирована недоступность production Core |
 | 376 | 2026-08-05 13:25 | _______ | fix(security): изолированы node и academic authorization boundaries |
+| 377 | 2026-08-05 13:50 | _______ | test(core): node auth regression не требует pytest-asyncio |
