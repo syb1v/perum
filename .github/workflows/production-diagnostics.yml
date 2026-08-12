@@ -83,3 +83,7 @@ jobs:
               elif isinstance(value,list):
                 for child in value: walk(child)
             walk(root); print('school_route=' + json.dumps(matches[-1] if matches else None, ensure_ascii=True)[:1200])"
+            printf '%s\n' '=== bounded application errors ==='
+            for container in "$tenant_container" perum_web; do
+              docker logs --since 10m --tail 300 "$container" 2>&1 | grep -E 'ERROR|Traceback|Internal Server Error|status.?500| 500 ' | tail -80 || true
+            done
