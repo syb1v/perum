@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Release workflow получил explicit `force_core`/`force_tenant`/`force_web` dispatch inputs для восстановления пропущенной публикации после failed CI: default path filtering сохранён, а оператор может опубликовать exact successful-CI SHA без фиктивного component version bump.
 - Web production dependency audit теперь scoped к `perum-web`, поэтому Expo/React Native runtime/toolchain advisories не маскируются и не ломают нерелевантный Web job; fail-closed allowlist расширен только новым exact `nanoid` advisory из Web graph, остальные новые high/critical packages по-прежнему блокируют CI.
 
 ## [Unreleased] — 2026-08-05

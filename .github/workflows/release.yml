@@ -16,7 +16,23 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_core:
+        description: Publish Core at the selected ref after a skipped release
+        required: false
+        type: boolean
+        default: false
+      force_tenant:
+        description: Publish Tenant at the selected ref after a skipped release
+        required: false
+        type: boolean
+        default: false
+      force_web:
+        description: Publish Web at the selected ref after a skipped release
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: release-${{ github.event.workflow_run.head_sha || github.sha }}
@@ -31,9 +47,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
-      core: ${{ steps.filter.outputs.core }}
-      tenant: ${{ steps.filter.outputs.tenant }}
-      web: ${{ steps.filter.outputs.web }}
+      core: ${{ steps.filter.outputs.core == 'true' || inputs.force_core == true }}
+      tenant: ${{ steps.filter.outputs.tenant == 'true' || inputs.force_tenant == true }}
+      web: ${{ steps.filter.outputs.web == 'true' || inputs.force_web == true }}
     steps:
       - uses: actions/checkout@v4
         with:

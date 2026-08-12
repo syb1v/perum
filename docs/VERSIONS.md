@@ -379,3 +379,4 @@
 | 376 | 2026-08-05 13:25 | _______ | fix(security): изолированы node и academic authorization boundaries |
 | 377 | 2026-08-05 13:50 | _______ | test(core): node auth regression не требует pytest-asyncio |
 | 378 | 2026-08-12 16:30 | _______ | fix(ci): Web audit изолирован от Mobile dependency graph |
+| 379 | 2026-08-12 16:45 | _______ | fix(release): добавлена recovery-публикация пропущенных компонентов |
