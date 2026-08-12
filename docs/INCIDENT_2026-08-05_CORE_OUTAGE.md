@@ -90,3 +90,10 @@ deploy обновляет только Core host. Существующий organ
 общий `perum_web`, поэтому school продолжила возвращать authenticated `500`.
 Добавлен отдельный Web-only node rollout с immutable digest, protected-container
 identity gate, route resync и автоматическим rollback; production receipt pending.
+
+Web-only recovery `31652235744` успешно установил immutable Web `2.3.8`
+(`sha256:d7ff5cbcf0e3a107ff22925ebb6a04cc8aea55bdbc34be130b75f9b05249d3de`)
+на organization node. Workflow подтвердил healthy Web, неизменные Tenant/DB/Caddy/Agent
+container identities и reconciled route. Edge и direct origin возвращают
+`/login=200`, unauthenticated `/dashboard=307` и `/health=200`; authenticated
+browser receipt владельца остаётся последним gate для этого application defect.
