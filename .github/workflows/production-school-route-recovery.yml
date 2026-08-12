@@ -1,0 +1,38 @@
+name: Production school route recovery
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  organization-node:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Reconcile routes from node state and verify school origin
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 87.120.196.143
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          proxy_host: ${{ vars.DEPLOY_SSH_HOST }}
+          proxy_username: ${{ vars.DEPLOY_SSH_USER }}
+          proxy_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          proxy_port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            [ "$(docker inspect --format '{{.State.Health.Status}}' perum_agent)" = healthy ]
+            tenant_container=$(docker ps --filter 'name=school_.*_app' --format '{{.Names}}' | head -1)
+            [ -n "$tenant_container" ]
+            [ "$(docker inspect --format '{{.State.Health.Status}}' "$tenant_container")" = healthy ]
+            docker exec perum_agent python -c "import asyncio; from app.agent.service import _resync_node_caddy_routes; asyncio.run(_resync_node_caddy_routes())"
+            for attempt in $(seq 1 15); do
+              curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health >/dev/null && break
+              sleep 2
+            done
+            response=$(curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health)
+            [ "$response" = '{"status":"ok"}' ]
+            echo 'school_origin=healthy route=reconciled'
