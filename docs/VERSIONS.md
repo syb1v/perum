@@ -388,3 +388,4 @@
 | 385 | 2026-08-12 17:55 | _______ | chore(prod): добавлена read-only диагностика organization node |
 | 386 | 2026-08-12 18:05 | _______ | chore(prod): диагностируется Caddy-to-Tenant route drift |
 | 387 | 2026-08-12 18:15 | _______ | fix(prod): добавлено bounded school route recovery |
+| 388 | 2026-08-12 18:25 | _______ | chore(prod): диагностируется Docker network membership drift |

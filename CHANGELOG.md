@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Route reconciliation не устранил school `502`; diagnostics теперь выводит только tenant/Caddy Docker network names и IPs, чтобы доказать network-membership drift перед recovery.
 - Добавлен bounded school route recovery: при healthy agent и tenant вызывается существующий idempotent `_resync_node_caddy_routes()` из node state, затем direct-origin school health обязан вернуть exact `{"status":"ok"}`; ручное редактирование Caddy и restart tenant не используются.
 - Organization-node diagnostics подтвердил healthy agent/tenant/DB и теперь bounded-проверяет tenant local health, Caddy→tenant connectivity и active canonical-host route upstream для локализации `502` без изменения route config.
 - Production diagnostics пытается получить bounded organization-node health через approved Core jump и тот же GitHub Environment SSH key; при отсутствии node authorization job fail-closed и не выполняет изменений.

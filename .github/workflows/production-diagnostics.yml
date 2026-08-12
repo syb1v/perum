@@ -72,6 +72,8 @@ jobs:
             [ -n "$tenant_container" ] || { echo 'No running tenant app container found'; exit 0; }
             docker exec "$tenant_container" python -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=2)); print('tenant_local_health=' + str(data == {'status': 'ok'}).lower())"
             tenant_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$tenant_container")
+            docker inspect --format 'tenant_networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}}={{$network.IPAddress}} {{end}}' "$tenant_container"
+            docker inspect --format 'caddy_networks={{range $name, $network := .NetworkSettings.Networks}}{{$name}}={{$network.IPAddress}} {{end}}' caddy
             timeout 5 docker exec caddy wget -qO- "http://${tenant_ip}:3000/health" >/dev/null && echo 'caddy_to_tenant=true' || echo 'caddy_to_tenant=false'
             docker exec caddy wget -qO- http://127.0.0.1:2019/config/ | python3 -c "import json,sys; root=json.load(sys.stdin); matches=[]
             def walk(value):
