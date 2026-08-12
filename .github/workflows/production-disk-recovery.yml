@@ -1,0 +1,40 @@
+name: Production disk recovery
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Reclaim unused Docker data and restore rollback Core
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_SSH_HOST }}
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            before=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+            [ "$before" -ge 95 ] || { echo "Refusing recovery: root usage is ${before}%, expected at least 95%" >&2; exit 1; }
+            docker builder prune -af
+            docker image prune -af
+            after=$(df --output=pcent / | tail -1 | tr -dc '0-9')
+            [ "$after" -lt "$before" ] || { echo "Recovery did not free disk: ${before}% -> ${after}%" >&2; exit 1; }
+            for attempt in $(seq 1 30); do
+              [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' perum_control_db)" = healthy ] && break
+              sleep 2
+            done
+            [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' perum_control_db)" = healthy ] || { echo 'Database did not recover after disk cleanup' >&2; exit 1; }
+            docker start perum_core >/dev/null
+            for attempt in $(seq 1 30); do
+              docker exec perum_core python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=2)" >/dev/null 2>&1 && break
+              sleep 2
+            done
+            docker exec perum_core python -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=2)); assert data == {'status': 'ok'}"
+            printf 'root_usage_before=%s%% root_usage_after=%s%% db=healthy core=healthy\n' "$before" "$after"

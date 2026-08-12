@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Добавлен fail-closed production disk recovery: только при root usage `>=95%` удаляются unused Docker build cache/images без volumes, затем workflow требует healthy PostgreSQL, запускает уже созданный rollback Core и проверяет exact local health payload.
 - Production diagnostics подтвердил root cause текущего outage: Core host filesystem заполнен на `100%`, PostgreSQL healthcheck сообщает `rejecting connections`, Core не стартует. Read-only evidence расширен bounded Docker/top-level disk usage перед любым cleanup.
 - Добавлен manual read-only production diagnostics workflow: при недоступном control plane через approved GitHub Environment SSH он собирает только filesystem/memory/container health и bounded DB healthcheck evidence, без env, payloads, credentials или application logs.
 - Release workflow получил explicit `force_core`/`force_tenant`/`force_web` dispatch inputs для восстановления пропущенной публикации после failed CI: default path filtering сохранён, а оператор может опубликовать exact successful-CI SHA без фиктивного component version bump.
