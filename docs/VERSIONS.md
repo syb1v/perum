@@ -384,3 +384,4 @@
 | 381 | 2026-08-12 17:10 | _______ | chore(prod): диагностировано заполнение диска Core host |
 | 382 | 2026-08-12 17:20 | _______ | fix(prod): добавлено bounded disk recovery без удаления volumes |
 | 383 | 2026-08-12 17:35 | _______ | chore(prod): локализуется оставшийся school edge outage |
+| 384 | 2026-08-12 17:45 | _______ | chore(prod): разделены Cloudflare и organization-node probes |

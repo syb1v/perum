@@ -38,6 +38,8 @@ jobs:
             docker inspect --format '{{range .State.Health.Log}}{{.Start}}|exit={{.ExitCode}}|{{printf "%.240s" .Output}}{{println}}{{end}}' perum_control_db 2>/dev/null || true
             printf '%s\n' '=== school edge reachability ==='
             timeout 10 curl -sS -o /dev/null -w 'school_https=%{http_code} connect=%{time_connect} total=%{time_total}\n' https://school-1.grsn-panel.ru/health || true
+            timeout 10 curl -sS --resolve school-1.grsn-panel.ru:443:87.120.196.143 -o /dev/null -w 'school_origin_https=%{http_code} connect=%{time_connect} total=%{time_total}\n' https://school-1.grsn-panel.ru/health || true
+            timeout 10 curl -sS -H 'Host: school-1.grsn-panel.ru' -o /dev/null -w 'school_origin_http=%{http_code} connect=%{time_connect} total=%{time_total}\n' http://87.120.196.143/health || true
             for port in 22 80 443; do
               timeout 5 bash -c "</dev/tcp/87.120.196.143/$port" >/dev/null 2>&1 && result=open || result=closed_or_timeout
               printf 'organization_node_port_%s=%s\n' "$port" "$result"

@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- School outage диагностика разделяет Cloudflare path и direct organization-node HTTPS/HTTP с canonical Host/SNI; probes остаются read-only и не обходят authentication.
 - После восстановления Core read-only diagnostics дополнен school edge и organization-node TCP reachability, чтобы локализовать оставшийся school outage без node login или изменения tenant stack.
 - Добавлен fail-closed production disk recovery: только при root usage `>=95%` удаляются unused Docker build cache/images без volumes, затем workflow требует healthy PostgreSQL, запускает уже созданный rollback Core и проверяет exact local health payload.
 - Production diagnostics подтвердил root cause текущего outage: Core host filesystem заполнен на `100%`, PostgreSQL healthcheck сообщает `rejecting connections`, Core не стартует. Read-only evidence расширен bounded Docker/top-level disk usage перед любым cleanup.
