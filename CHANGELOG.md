@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Organization-node diagnostics подтвердил healthy agent/tenant/DB и теперь bounded-проверяет tenant local health, Caddy→tenant connectivity и active canonical-host route upstream для локализации `502` без изменения route config.
 - Production diagnostics пытается получить bounded organization-node health через approved Core jump и тот же GitHub Environment SSH key; при отсутствии node authorization job fail-closed и не выполняет изменений.
 - School outage диагностика разделяет Cloudflare path и direct organization-node HTTPS/HTTP с canonical Host/SNI; probes остаются read-only и не обходят authentication.
 - После восстановления Core read-only diagnostics дополнен school edge и organization-node TCP reachability, чтобы локализовать оставшийся school outage без node login или изменения tenant stack.

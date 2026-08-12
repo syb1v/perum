@@ -386,3 +386,4 @@
 | 383 | 2026-08-12 17:35 | _______ | chore(prod): локализуется оставшийся school edge outage |
 | 384 | 2026-08-12 17:45 | _______ | chore(prod): разделены Cloudflare и organization-node probes |
 | 385 | 2026-08-12 17:55 | _______ | chore(prod): добавлена read-only диагностика organization node |
+| 386 | 2026-08-12 18:05 | _______ | chore(prod): диагностируется Caddy-to-Tenant route drift |

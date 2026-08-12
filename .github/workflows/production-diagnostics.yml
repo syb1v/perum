@@ -68,3 +68,16 @@ jobs:
             for container in perum_agent caddy school_sch1_app school_school-1_app; do
               docker inspect --format '{{.Name}}|status={{.State.Status}}|health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|exit={{.State.ExitCode}}|oom={{.State.OOMKilled}}|error={{.State.Error}}' "$container" 2>/dev/null || true
             done
+            tenant_container=$(docker ps --filter 'name=school_.*_app' --format '{{.Names}}' | head -1)
+            [ -n "$tenant_container" ] || { echo 'No running tenant app container found'; exit 0; }
+            docker exec "$tenant_container" python -c "import json, urllib.request; data=json.load(urllib.request.urlopen('http://127.0.0.1:3000/health', timeout=2)); print('tenant_local_health=' + str(data == {'status': 'ok'}).lower())"
+            tenant_ip=$(docker inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$tenant_container")
+            timeout 5 docker exec caddy wget -qO- "http://${tenant_ip}:3000/health" >/dev/null && echo 'caddy_to_tenant=true' || echo 'caddy_to_tenant=false'
+            docker exec caddy wget -qO- http://127.0.0.1:2019/config/ | python3 -c "import json,sys; root=json.load(sys.stdin); matches=[]
+            def walk(value):
+              if isinstance(value,dict):
+                if 'school-1.grsn-panel.ru' in json.dumps(value) and ('reverse_proxy' in json.dumps(value) or 'upstreams' in value): matches.append(value)
+                for child in value.values(): walk(child)
+              elif isinstance(value,list):
+                for child in value: walk(child)
+            walk(root); print('school_route=' + json.dumps(matches[-1] if matches else None, ensure_ascii=True)[:1200])"
