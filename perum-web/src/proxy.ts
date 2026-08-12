@@ -18,6 +18,8 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
         teacher: '/teacher',
         admin: '/admin',
         school_admin: '/admin',
+        org_admin: '/admin',
+        director: '/admin',
         parent: '/parent',
     },
     '/profile': {
@@ -25,6 +27,8 @@ const SHARED_PAGES: Record<string, Record<string, string>> = {
         teacher: '/teacher/profile',
         admin: '/admin',
         school_admin: '/admin',
+        org_admin: '/admin',
+        director: '/admin',
         parent: '/parent',
     },
 };
@@ -81,7 +85,7 @@ function redirectTo(request: NextRequest, pathname: string) {
 
 function rewriteTo(request: NextRequest, pathname: string) {
     const url = request.nextUrl.clone();
-    const publicHost = request.headers.get('host') || request.headers.get('x-forwarded-host');
+    const publicHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() || request.headers.get('host');
     if (publicHost) url.host = publicHost;
     url.pathname = pathname;
     return NextResponse.rewrite(url);

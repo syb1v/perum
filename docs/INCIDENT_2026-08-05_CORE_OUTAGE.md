@@ -76,3 +76,11 @@ AAAA, а IPv6 requests с affected contour timeout. Попытка измени�
 не включена. Требуется действие владельца Cloudflare zone; incident не закрыт.
 Synthetic monitor теперь fail-closed отклоняет generated AAAA для landing/school,
 пока IPv6 Compatibility не отключена или отдельный IPv6 browser contour не доказан.
+
+Повторная пользовательская проверка выявила ещё один P0 на authenticated school
+journey: `GET /dashboard` возвращал `500`, хотя unauthenticated probe корректно
+получал `307 /login?auth=required`. Root cause находится в clean-route Web rewrite:
+при различающихся reverse-proxy authorities внутренний upstream `Host` имел
+приоритет над canonical `X-Forwarded-Host`. Web `2.3.8` меняет приоритет и E2E
+proxy теперь воспроизводит production topology; production rollout и
+authenticated browser receipt остаются обязательными до закрытия incident.

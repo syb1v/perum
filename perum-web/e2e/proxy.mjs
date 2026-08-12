@@ -16,6 +16,7 @@ function forward(req, res, target) {
         ...req.headers,
         'x-forwarded-host': req.headers.host,
         'x-forwarded-proto': 'http',
+        host: new URL(target).host,
     };
     const proxyReq = http.request(
         {
