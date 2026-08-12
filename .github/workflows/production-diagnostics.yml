@@ -44,3 +44,27 @@ jobs:
               timeout 5 bash -c "</dev/tcp/87.120.196.143/$port" >/dev/null 2>&1 && result=open || result=closed_or_timeout
               printf 'organization_node_port_%s=%s\n' "$port" "$result"
             done
+  organization-node:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Collect bounded read-only node diagnostics through Core jump
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 87.120.196.143
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          proxy_host: ${{ vars.DEPLOY_SSH_HOST }}
+          proxy_username: ${{ vars.DEPLOY_SSH_USER }}
+          proxy_key: ${{ secrets.DEPLOY_SSH_KEY }}
+          proxy_port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            df -h --output=source,size,used,avail,pcent,target / /var/lib/docker
+            free -m
+            docker system df
+            docker ps -a --format '{{.Names}}|{{.Status}}|{{.Image}}'
+            for container in perum_agent caddy school_sch1_app school_school-1_app; do
+              docker inspect --format '{{.Name}}|status={{.State.Status}}|health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|exit={{.State.ExitCode}}|oom={{.State.OOMKilled}}|error={{.State.Error}}' "$container" 2>/dev/null || true
+            done
