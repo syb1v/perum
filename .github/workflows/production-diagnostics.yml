@@ -1,0 +1,34 @@
+name: Production diagnostics
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Collect bounded read-only host diagnostics
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_SSH_HOST }}
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            printf '%s\n' '=== filesystem ==='
+            df -h --output=source,size,used,avail,pcent,target / /var/lib/docker
+            printf '%s\n' '=== memory ==='
+            free -m
+            printf '%s\n' '=== containers ==='
+            docker ps -a --format '{{.Names}}|{{.Status}}|{{.Image}}'
+            printf '%s\n' '=== health ==='
+            for container in perum_control_db perum_core perum_web; do
+              docker inspect --format '{{.Name}}|status={{.State.Status}}|health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|exit={{.State.ExitCode}}|oom={{.State.OOMKilled}}|error={{.State.Error}}' "$container" 2>/dev/null || true
+            done
+            printf '%s\n' '=== database healthcheck evidence ==='
+            docker inspect --format '{{range .State.Health.Log}}{{.Start}}|exit={{.ExitCode}}|{{printf "%.240s" .Output}}{{println}}{{end}}' perum_control_db 2>/dev/null || true
