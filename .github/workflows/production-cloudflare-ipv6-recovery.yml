@@ -1,0 +1,48 @@
+name: Production Cloudflare IPv6 recovery
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Disable broken public IPv6 edge path
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.DEPLOY_SSH_HOST }}
+          username: ${{ vars.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            docker exec perum_core python - <<'PY'
+            import asyncio
+            import httpx
+            from app.core.config import get_settings
+
+            async def main():
+                settings = get_settings()
+                if not settings.CLOUDFLARE_DNS_ENABLED or not settings.CLOUDFLARE_API_TOKEN:
+                    raise SystemExit("Cloudflare DNS integration is not enabled")
+                headers = {"Authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}"}
+                async with httpx.AsyncClient(base_url="https://api.cloudflare.com/client/v4", headers=headers, timeout=20) as client:
+                    zones = await client.get("/zones", params={"name": "grsn-panel.ru"})
+                    zones.raise_for_status()
+                    results = zones.json().get("result") or []
+                    if len(results) != 1:
+                        raise SystemExit("Expected exactly one Cloudflare zone")
+                    zone_id = results[0]["id"]
+                    response = await client.patch(f"/zones/{zone_id}/settings/ipv6", json={"value": "off"})
+                    response.raise_for_status()
+                    payload = response.json()
+                    if not payload.get("success") or payload.get("result", {}).get("value") != "off":
+                        raise SystemExit("Cloudflare did not confirm IPv6 compatibility off")
+                print("cloudflare_ipv6=off")
+
+            asyncio.run(main())
+            PY

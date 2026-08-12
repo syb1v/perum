@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Добавлен fail-closed Cloudflare IPv6 recovery для `grsn-panel.ru`: через существующий production Core token отключается только zone IPv6 Compatibility, чтобы убрать blackholed generated AAAA path; proxied A records и origin TLS не изменяются, token не выводится.
 - Core deploy теперь до checkout/pull требует минимум `5 GiB` свободного root disk; при нехватке workflow останавливается до изменения runtime и сохраняет rollback headroom, не выполняя автоматический prune.
 - Production P0 переведён в MONITORING: bounded cleanup освободил Core disk `100% → 38%` без volumes, восстановил PostgreSQL/Core и Synthetic monitor; organization-node outage локализован до отсутствия общей Caddy/tenant Docker network и устранён idempotent route reconciliation. Owner data-loss confirmation и preventive disk policy остаются pending.
 - School route recovery verification приведён к фактическому privacy-safe Tenant contract: JSON обязан содержать `status=ok`, а допустимое дополнительное поле `org` не делает recovery false-negative.
