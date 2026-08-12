@@ -20,7 +20,7 @@ jobs:
           port: ${{ vars.DEPLOY_SSH_PORT || 22 }}
           script: |
             set -euo pipefail
-            result=$(docker exec -i perum_core python - <<'PY'
+            docker exec -i perum_core python - <<'PY'
             import asyncio
             import httpx
             from app.core.config import get_settings
@@ -32,13 +32,15 @@ jobs:
                 headers = {"Authorization": f"Bearer {settings.CLOUDFLARE_API_TOKEN}"}
                 async with httpx.AsyncClient(base_url="https://api.cloudflare.com/client/v4", headers=headers, timeout=20) as client:
                     zones = await client.get("/zones", params={"name": "grsn-panel.ru"})
-                    zones.raise_for_status()
+                    if zones.status_code >= 300:
+                        raise SystemExit(f"cloudflare_zone_lookup_http={zones.status_code}")
                     results = zones.json().get("result") or []
                     if len(results) != 1:
                         raise SystemExit("Expected exactly one Cloudflare zone")
                     zone_id = results[0]["id"]
                     response = await client.patch(f"/zones/{zone_id}/settings/ipv6", json={"value": "off"})
-                    response.raise_for_status()
+                    if response.status_code >= 300:
+                        raise SystemExit(f"cloudflare_ipv6_update_http={response.status_code}")
                     payload = response.json()
                     if not payload.get("success") or payload.get("result", {}).get("value") != "off":
                         raise SystemExit("Cloudflare did not confirm IPv6 compatibility off")
@@ -46,6 +48,3 @@ jobs:
 
             asyncio.run(main())
             PY
-            )
-            [ "$result" = 'cloudflare_ipv6=off' ]
-            printf '%s\n' "$result"

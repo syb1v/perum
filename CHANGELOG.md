@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-12
 
+- Cloudflare recovery больше не скрывает failure в command substitution: выводятся только безопасные HTTP status codes zone lookup/update, без token и API payload.
 - Control-plane diagnostics выводит только boolean Cloudflare token/feature configuration без значения token, чтобы отличить disabled integration от отсутствующего approved credential.
 - Organization-node diagnostics собирает bounded error-only Tenant/Web logs за последние 10 минут (`ERROR`, traceback, status 500) без request bodies/env для расследования school `Internal Server Error`.
 - Public-surface monitor теперь fail-closed отклоняет generated Cloudflare AAAA для landing/school: affected Chromium contour зависает при default resolution, тогда как оба Cloudflare IPv4 адреса и direct origin стабильно возвращают `200`.

@@ -399,3 +399,4 @@
 | 396 | 2026-08-12 19:55 | _______ | fix(monitor): unverified Cloudflare IPv6 блокирует green |
 | 397 | 2026-08-12 20:10 | _______ | chore(prod): добавлены bounded school 500 diagnostics |
 | 398 | 2026-08-12 20:25 | _______ | chore(prod): различается Cloudflare token и feature flag |
+| 399 | 2026-08-12 20:35 | _______ | fix(prod): Cloudflare recovery выводит безопасный status |
