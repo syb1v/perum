@@ -529,7 +529,7 @@ async def _resync_node_caddy_routes() -> None:
     from app.services.caddy_admin import get_caddy_admin
     from app.services.stack_spec import (
         landing_container_name, landing_label_slug,
-        school_container_name, school_label_slug,
+        school_container_name, school_label_slug, school_network_name,
     )
 
     caddy = get_caddy_admin()

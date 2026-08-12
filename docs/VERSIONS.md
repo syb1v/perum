@@ -389,3 +389,4 @@
 | 386 | 2026-08-12 18:05 | _______ | chore(prod): диагностируется Caddy-to-Tenant route drift |
 | 387 | 2026-08-12 18:15 | _______ | fix(prod): добавлено bounded school route recovery |
 | 388 | 2026-08-12 18:25 | _______ | chore(prod): диагностируется Docker network membership drift |
+| 389 | 2026-08-12 18:35 | _______ | fix(prod): Caddy подключается к school networks при resync |

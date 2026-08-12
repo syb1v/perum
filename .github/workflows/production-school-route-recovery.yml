@@ -28,6 +28,9 @@ jobs:
             tenant_container=$(docker ps --filter 'name=school_.*_app' --format '{{.Names}}' | head -1)
             [ -n "$tenant_container" ]
             [ "$(docker inspect --format '{{.State.Health.Status}}' "$tenant_container")" = healthy ]
+            tenant_network=$(docker inspect --format '{{range $name, $network := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}' "$tenant_container" | head -1)
+            [ -n "$tenant_network" ]
+            docker network connect "$tenant_network" caddy 2>/dev/null || [ -n "$(docker inspect --format "{{with index .NetworkSettings.Networks \"$tenant_network\"}}{{.IPAddress}}{{end}}" caddy)" ]
             docker exec perum_agent python -c "import asyncio; from app.agent.service import _resync_node_caddy_routes; asyncio.run(_resync_node_caddy_routes())"
             for attempt in $(seq 1 15); do
               curl -fsS --resolve school-1.grsn-panel.ru:443:127.0.0.1 https://school-1.grsn-panel.ru/health >/dev/null && break

@@ -201,8 +201,7 @@ async def _bring_up(spec: StackSpec, label_slug: str, settings: Settings, docker
         await docker.run_container(**_app_run_kwargs(spec, label_slug))
         await docker.wait_for_healthy(spec.app_container, timeout_s=settings.APP_HEALTH_TIMEOUT_S)
 
-        if settings.ROLE != "org_agent":
-            await docker.connect_to_network("caddy", spec.network)
+        await docker.connect_to_network("caddy", spec.network, required=True)
 
         code, out = await docker.exec(spec.app_container, ["alembic", "upgrade", "head"], workdir="/app")
         if code != 0:
