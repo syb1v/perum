@@ -69,6 +69,7 @@ SKIP_SECRETS=false
 DRY_RUN=false
 UPDATE=false
 PULL_NEVER=false
+MIN_DEPLOY_FREE_KB=$((5 * 1024 * 1024))
 
 usage() {
   sed -n '3,26p' "$0" | grep -E '^(# |#$)' | sed 's/^# \?//'
@@ -124,6 +125,17 @@ validate_runtime_image_id() {
 validate_image_syntax() {
   local name="$1" image="$2"
   [[ "$image" =~ ^[A-Za-z0-9][A-Za-z0-9._:/@-]*$ ]] || die "$name содержит недопустимые символы"
+}
+
+require_deploy_disk_headroom() {
+  local available_kb
+  if [[ "$DRY_RUN" == true ]]; then
+    info "[DRY RUN] Требуется минимум 5 GiB свободного места перед pull"
+    return 0
+  fi
+  available_kb=$(df -Pk / | awk 'NR == 2 {print $4}')
+  [[ "$available_kb" =~ ^[0-9]+$ ]] || die "Не удалось определить свободное место на root filesystem"
+  (( available_kb >= MIN_DEPLOY_FREE_KB )) || die "Недостаточно места для безопасного deploy: требуется минимум 5 GiB до pull"
 }
 
 env_value() {
@@ -305,6 +317,7 @@ if [[ "$UPDATE" == true ]]; then
 
   step "1" "Проверка текущей Compose-конфигурации..."
   run "${COMPOSE_PREFLIGHT} config -q"
+  require_deploy_disk_headroom
 
   step "2" "Переключение на commit ${COMMIT}..."
   run "cd ${DEPLOY_PATH} && git diff --quiet && git diff --cached --quiet"

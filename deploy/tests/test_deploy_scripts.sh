@@ -132,6 +132,8 @@ assert_contains "$CORE_SCRIPT" "trap 'rollback_update 143' TERM"
 assert_contains "$CORE_SCRIPT" 'trap - ERR INT TERM'
 assert_contains "$CORE_SCRIPT" 'cp --preserve=mode,ownership,timestamps "$ROLLBACK_ENV_BACKUP" "${DEPLOY_PATH}/deploy/.env.prod"'
 assert_contains "$CORE_SCRIPT" 'wait_for_app_readiness || rollback_failed=true'
+assert_contains "$CORE_SCRIPT" 'require_deploy_disk_headroom'
+assert_contains "$CORE_SCRIPT" 'MIN_DEPLOY_FREE_KB=$((5 * 1024 * 1024))'
 
 checkout_line=$(grep -nF "git checkout --detach '\${PREVIOUS_COMMIT}'" "$CORE_SCRIPT" | tail -1 | cut -d: -f1)
 rollback_line=$(grep -nF 'ROLLBACK_COMPOSE=' "$CORE_SCRIPT" | cut -d: -f1)
