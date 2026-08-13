@@ -405,3 +405,4 @@
 | 402 | 2026-08-13 01:40 | _______ | fix(prod): добавлен Web-only rollout organization node |
 | 403 | 2026-08-13 02:00 | _______ | docs(incident): зафиксирован успешный school Web rollout |
 | 404 | 2026-08-13 21:15 | _______ | fix(web): устранён post-login recursive dashboard hang |
+| 405 | 2026-08-13 21:35 | _______ | fix(dns): organization и school records закреплены DNS-only |

@@ -662,10 +662,9 @@ async def _refresh_org_landing(org_id: int, db: AsyncSession) -> None:
 
 
 async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession) -> None:
-    """Создать/обновить A-запись поддомена школы в Cloudflare (если включено).
-    Если запись уже существует (school.cf_record_id) — удаляет старую перед созданием новой."""
+    """Создать/обновить DNS-only A-запись школы в Cloudflare (если включено)."""
     from app.models import Organization
-    from app.services.dns_manager import get_dns_manager
+    from app.services.dns_manager import DnsRecord, get_dns_manager
 
     if not school.subdomain:
         return
@@ -682,8 +681,19 @@ async def _sync_school_dns(school: School, node: "Node | None", db: AsyncSession
         return
 
     if school.cf_record_id:
-        await dns.delete_record(org.cf_zone_id, school.cf_record_id)
-        school.cf_record_id = None
+        existing = DnsRecord(
+            name=school.subdomain,
+            fqdn=f"{school.subdomain}.{org.domain}",
+            type="A",
+            content=node_ip,
+            node_name=node.name if node else "",
+            cf_record_id=school.cf_record_id,
+        )
+        if await dns.update_record(org.cf_zone_id, existing, content=node_ip):
+            logger.info("school %s: DNS A-record updated to DNS-only", school.slug)
+        else:
+            logger.error("school %s: DNS A-record update failed", school.slug)
+        return
 
     record = await dns.create_record(org.cf_zone_id, school.subdomain, org.domain or "", node_ip)
     if record.cf_record_id:
@@ -711,9 +721,9 @@ async def _delete_school_dns(school: School, db: AsyncSession) -> None:
     if not dns.is_auto:
         return
 
-    await dns.delete_record(org.cf_zone_id, school.cf_record_id)
-    school.cf_record_id = None
-    await db.commit()
+    if await dns.delete_record(org.cf_zone_id, school.cf_record_id):
+        school.cf_record_id = None
+        await db.commit()
 
 
 async def provision_school_orchestrated(school: School, db: AsyncSession, settings: Settings | None = None) -> None:

@@ -10,6 +10,13 @@ school stack: локально либо через remote node. Core на ста
 восстанавливает маршруты active/suspended schools. DNS automation доступна при
 настроенном provider token; без неё DNS остаётся операционной задачей.
 
+Platform/Core DNS и organization DNS имеют разные policies. Platform/Core edge
+может быть Cloudflare `Proxied`. Для каждой organization zone Core управляет apex
+landing и school hosts как exact IPv4 `A` records с `DNS only`: трафик идёт прямо
+на organization node Caddy, который обслуживает TLS и разделяет Web/Tenant paths.
+Provisioning выполняет immediate reconciliation, а periodic sweep исправляет IP и
+proxy drift. Cloudflare Workers в этом routing contour не используются.
+
 Не публикуйте здесь реальные domains/IP. Production records берутся из approved
 DNS console и operator runbook.
 

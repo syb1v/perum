@@ -46,7 +46,9 @@ jobs:
                 if {record.get("name") for record in selected} != approved:
                     raise SystemExit("Approved A record set is incomplete")
                 for record in sorted(selected, key=lambda item: item["name"]):
-                    print(f"record={record['name']} proxied={bool(record.get('proxied'))} origin_match={record.get('content') == '87.120.196.143'}")
+                    if record.get("type") != "A" or record.get("content") != "87.120.196.143" or record.get("proxied") is not False:
+                        raise SystemExit(f"record_policy_mismatch={record['name']}")
+                    print(f"record={record['name']} dns_only=true origin_match=true")
 
             asyncio.run(main())
             PY

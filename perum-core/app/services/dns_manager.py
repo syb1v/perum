@@ -5,7 +5,7 @@
   - Каждый орг-домен = отдельная зона в CF (добавляется вручную через CF Dashboard).
   - При создании школы: POST /zones/{zone_id}/dns_records → A-запись на IP ноды.
   - При удалении/заморозке: DELETE /zones/{zone_id}/dns_records/{record_id}.
-  - Public A-records are proxied through Cloudflare; the node remains the origin.
+  - Organization and school A-records are DNS-only IPv4 records to the node origin.
 
 Fallback: если CLOUDFLARE_API_TOKEN не задан — ручной режим (подсказки в UI).
 """
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from ipaddress import IPv4Address
 from typing import Any
 
 import httpx
@@ -25,6 +26,14 @@ from app.core.config import get_settings
 logger = logging.getLogger("perum.dns")
 
 CF_API_BASE = "https://api.cloudflare.com/client/v4"
+
+
+def _is_ipv4(value: str) -> bool:
+    try:
+        IPv4Address(value)
+        return True
+    except ValueError:
+        return False
 
 
 @dataclass
@@ -104,8 +113,13 @@ class DnsManager:
         self, zone_id: str, subdomain: str, domain: str, ip: str, node_name: str = "",
     ) -> DnsRecord:
         """Создать A-запись <subdomain>.<domain> → <ip>."""
-        fqdn = f"{subdomain}.{domain}"
+        fqdn = f"{subdomain}.{domain}" if subdomain else domain
         record = DnsRecord(name=subdomain, fqdn=fqdn, type="A", content=ip, node_name=node_name)
+
+        if not _is_ipv4(ip):
+            record.status = "error"
+            logger.error("DNS: %s has non-IPv4 A-record target", fqdn)
+            return record
 
         if not self._enabled:
             logger.info("DNS: manual mode — запись %s → %s (добавь вручную)", fqdn, ip)
@@ -117,10 +131,10 @@ class DnsManager:
                 f"/zones/{zone_id}/dns_records",
                 json={
                     "type": "A",
-                    "name": subdomain,
+                    "name": fqdn,
                     "content": ip,
                     "ttl": 1,    # auto-TTL
-                    "proxied": True,
+                    "proxied": False,
                 },
             )
             resp.raise_for_status()
@@ -139,20 +153,22 @@ class DnsManager:
 
         return record
 
-    async def set_proxied(self, zone_id: str, record: DnsRecord, *, proxied: bool = True) -> bool:
-        """Привести существующую A-запись к публичной proxy policy."""
+    async def update_record(self, zone_id: str, record: DnsRecord, *, content: str) -> bool:
+        """Обновить существующую A-запись и закрепить DNS-only policy."""
         if not self._enabled or not record.cf_record_id:
+            return False
+        if not _is_ipv4(content):
             return False
         try:
             cf = await self._cf()
             resp = await cf.put(
                 f"/zones/{zone_id}/dns_records/{record.cf_record_id}",
-                json={"type": record.type, "name": record.name, "content": record.content, "ttl": 1, "proxied": proxied},
+                json={"type": "A", "name": record.fqdn, "content": content, "ttl": 1, "proxied": False},
             )
             resp.raise_for_status()
             return bool(resp.json().get("success"))
         except Exception as exc:  # noqa: BLE001
-            logger.error("CF: set_proxied(%s) failed: %s", record.fqdn, exc)
+            logger.error("CF: update_record(%s) failed: %s", record.fqdn, exc)
             return False
 
     async def delete_record(self, zone_id: str, cf_record_id: str) -> bool:
@@ -239,34 +255,62 @@ class DnsManager:
                     node_ip = node.hostname
                     node_name = node.name
 
-            if not node_ip:
+            if not node_ip or not _is_ipv4(node_ip):
+                if node_ip:
+                    result.errors.append(f"{school.subdomain}: node target is not IPv4")
                 continue
 
             existing = cf_by_name.pop(school.subdomain, None)
-            if existing and existing.content == node_ip and existing.proxied:
+            if existing and existing.content == node_ip and not existing.proxied:
                 result.records.append(existing)
             else:
-                if existing and existing.content == node_ip:
-                    await self.set_proxied(org.cf_zone_id, existing)
-                    existing.proxied = True
+                if existing:
+                    updated = await self.update_record(org.cf_zone_id, existing, content=node_ip)
+                    if updated:
+                        existing.content = node_ip
+                        existing.proxied = False
+                        school.cf_record_id = existing.cf_record_id
+                    else:
+                        existing.status = "error"
+                        result.errors.append(f"{school.subdomain}: Cloudflare update failed")
                     record = existing
                 else:
                     record = await self.create_record(org.cf_zone_id, school.subdomain, org.domain, node_ip, node_name)
+                    if record.cf_record_id:
+                        school.cf_record_id = record.cf_record_id
                 result.records.append(record)
-                result.synced += 1
+                if record.status != "error":
+                    result.synced += 1
 
-        # The organization apex is also public traffic and must not fall back to
-        # direct node routing. Keep its proxy policy aligned with school records.
+        # The organization apex follows the same IPv4 DNS-only policy as schools.
         apex = cf_by_name.pop("", None) or cf_by_name.pop(org.domain or "", None)
-        if apex and not apex.proxied:
-            await self.set_proxied(org.cf_zone_id, apex)
-            result.synced += 1
+        node = await db.get(Node, org.node_id) if getattr(org, "node_id", None) else None
+        node_ip = node.hostname if node else None
+        if node_ip and _is_ipv4(node_ip):
+            if apex and (apex.content != node_ip or apex.proxied):
+                if await self.update_record(org.cf_zone_id, apex, content=node_ip):
+                    apex.content = node_ip
+                    apex.proxied = False
+                    result.synced += 1
+                else:
+                    result.errors.append("apex: Cloudflare update failed")
+            elif not apex:
+                apex = await self.create_record(org.cf_zone_id, "", org.domain, node_ip, node.name)
+                if apex.status != "error":
+                    result.synced += 1
+            if apex:
+                result.records.append(apex)
+        elif node_ip:
+            result.errors.append("apex: node target is not IPv4")
 
         managed_record_ids = {school.cf_record_id for school in schools if school.cf_record_id}
         for record in cf_by_name.values():
             if record.cf_record_id in managed_record_ids:
-                await self.delete_record(org.cf_zone_id, record.cf_record_id)
-                result.deleted += 1
+                if await self.delete_record(org.cf_zone_id, record.cf_record_id):
+                    result.deleted += 1
+
+        if result.synced or result.deleted:
+            await db.commit()
 
         return result
 

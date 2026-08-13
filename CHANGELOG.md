@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-13
 
+- Organization DNS policy закреплена в Core как fail-safe IPv4 `A` + `DNS only`: apex landing и school records создаются при provisioning, существующие IP/proxy drift исправляются PUT-ом без duplicate records, school record ownership ID сохраняется, а background sweep поддерживает desired state. Platform/Core Cloudflare proxy остаётся независимой policy; Worker для school routing не используется. Production DNS preflight теперь fail-closed требует exact origin и `proxied=false`.
 - Исправлен post-login hang Student/Teacher и других ролей: authenticated clean `/dashboard` больше не выполняет recursive public-host rewrite через Caddy. Login и clean aliases используют обычный redirect на реальные role routes (`/student`, `/teacher`, `/parent`, `/admin`), а AuthContext не отправляет внутренние role pages обратно на `/dashboard`. Blocking browser E2E теперь требует завершённый `200` dashboard document и видимый role dashboard до дальнейшей навигации; Web version повышена до `2.3.9`.
 
 ## [Unreleased] — 2026-08-12

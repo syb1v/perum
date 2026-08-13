@@ -169,6 +169,10 @@ async def reprovision_organization(org_id: int, db: AsyncSession = Depends(get_d
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"не удалось поднять лендинг: {exc}")
     await db.commit()
     await db.refresh(org)
+    if org.cf_zone_id:
+        from app.services.dns_manager import get_dns_manager
+
+        await get_dns_manager().sync_org_dns(org, db)
     return ProvisionResult(organization=OrganizationRead.model_validate(org))
 
 
@@ -640,4 +644,5 @@ async def _auto_detect_cf_zone(org: Organization, db: AsyncSession) -> None:
         org.dns_provider = "cloudflare"
         org.cf_zone_id = zone["id"]
         await db.commit()
+        await dns.sync_org_dns(org, db)
         logger.info("org %s: CF zone found — %s (id=%s)", org.slug, zone["name"], zone["id"])

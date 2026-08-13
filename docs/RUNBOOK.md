@@ -122,11 +122,14 @@ script до запуска и не используйте mutable tags. Target s
 а при post-checkout failure восстановит services target Compose-ом до возврата Git.
 После успешного bootstrap следующие workflow rollout используют versioned script.
 
-Public school и organization A-records в Cloudflare должны иметь `proxied=true`.
-`proxied=false` отправляет клиентов напрямую на node origin и может давать
-`ERR_TIMED_OUT` при VPN/provider path issues. DNS sweep автоматически исправляет
-режим; после изменения проверяйте Cloudflare API и authoritative DNS, а с Core
-host проверяйте origin `200`.
+Public organization apex и school hosts должны быть IPv4 `A` records на назначенную
+organization node с `proxied=false` (`DNS only`). Node Caddy завершает публичный TLS;
+Core DNS manager создаёт apex/school records сразу при provisioning и затем
+reconcile-ит target/proxy drift background sweep-ом. Наличие generated AAAA или
+orange-cloud proxy у этих records является incident, а не допустимым fallback.
+Platform/Core zone управляется независимо и может оставаться Cloudflare `Proxied`,
+если её IPv4/IPv6/VPN browser contours доказаны. Cloudflare Worker для organization
+или school routing не используется: Worker config в репозитории отсутствует.
 
 На organization node exact `PUBLIC_BASE_DOMAIN` может быть apex landing этой org.
 Он разрешён только для `add_proxy_route` в `ROLE=org_agent`; school route и
