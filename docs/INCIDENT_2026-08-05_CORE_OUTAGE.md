@@ -97,3 +97,10 @@ Web-only recovery `31652235744` успешно установил immutable Web 
 container identities и reconciled route. Edge и direct origin возвращают
 `/login=200`, unauthenticated `/dashboard=307` и `/health=200`; authenticated
 browser receipt владельца остаётся последним gate для этого application defect.
+
+2026-08-13 authenticated production probe с JWT-shaped routing cookie доказал,
+что direct `/student` возвращает `200`, а clean `/dashboard` не возвращает ни
+одного байта: Web `2.3.8` превращал rewrite в recursive request через public Caddy.
+Web `2.3.9` удаляет authority-dependent rewrites: login и clean aliases выполняют
+redirect на реальные role routes, а E2E требует завершённый dashboard document.
+Production rollout и owner browser receipt pending.

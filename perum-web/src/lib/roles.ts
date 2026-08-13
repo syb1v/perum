@@ -32,15 +32,14 @@ export const STAFF_ROLES: readonly Role[] = [...ADMIN_ROLES, ...TEACHER_ROLES];
 
 /**
  * Куда отправить пользователя после логина / по /dashboard.
- * Возвращает clean-URL, middleware перепишет на внутренний роут.
  */
 export const ROLE_DASHBOARDS: Record<Role, string> = {
     [ROLES.ORG_ADMIN]: '/admin',
     [ROLES.ADMIN]: '/admin',
     [ROLES.SCHOOL_ADMIN]: '/admin',
     [ROLES.DIRECTOR]: '/admin',
-    [ROLES.TEACHER]: '/dashboard',
-    [ROLES.STUDENT]: '/dashboard',
+    [ROLES.TEACHER]: '/teacher',
+    [ROLES.STUDENT]: '/student',
     [ROLES.PARENT]: '/parent',
 };
 

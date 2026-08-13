@@ -404,3 +404,4 @@
 | 401 | 2026-08-12 21:05 | _______ | fix(web): исправлен authenticated dashboard за reverse proxy |
 | 402 | 2026-08-13 01:40 | _______ | fix(prod): добавлен Web-only rollout organization node |
 | 403 | 2026-08-13 02:00 | _______ | docs(incident): зафиксирован успешный school Web rollout |
+| 404 | 2026-08-13 21:15 | _______ | fix(web): устранён post-login recursive dashboard hang |

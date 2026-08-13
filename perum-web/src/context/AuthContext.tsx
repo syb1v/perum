@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/apiClient';
-import { getDashboardPath, ROLES, isAdmin } from '@/lib/roles';
+import { getDashboardPath, ROLES } from '@/lib/roles';
 import { isPlatformHostname } from '@/lib/host';
 import type { User, LoginRequest, LoginResponse } from '@/types';
 import { useToast } from './ToastContext';
@@ -92,17 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 if (PUBLIC_PATHS.includes(currentPath)) {
                     const dashboardPath = getDashboardPath(userData.role);
                     router.replace(dashboardPath);
-                } else {
-                    const rolePrefixes = ['/student', '/teacher'];
-                    if (rolePrefixes.some(p => currentPath.startsWith(p))) {
-                        router.replace('/dashboard');
-                    }
-
-                    if (currentPath === '/dashboard') {
-                        if (isAdmin(userData.role)) {
-                            router.replace('/admin');
-                        }
-                    }
                 }
             } catch {
                 setUser(null);
@@ -194,4 +183,3 @@ export function useAuth(): AuthContextType {
     if (!ctx) throw new Error('useAuth must be used within AuthProvider');
     return ctx;
 }
-

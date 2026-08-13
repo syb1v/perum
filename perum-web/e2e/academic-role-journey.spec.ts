@@ -22,7 +22,11 @@ function fixture(): Fixture {
     return JSON.parse(raw) as Fixture;
 }
 
-async function login(page: Page, credentials: { login: string; password: string }): Promise<void> {
+async function login(
+    page: Page,
+    credentials: { login: string; password: string },
+    dashboardPath: string,
+): Promise<void> {
     await page.goto('/login');
     await page.getByLabel('Логин').fill(credentials.login);
     await page.locator('#password').fill(credentials.password);
@@ -30,9 +34,14 @@ async function login(page: Page, credentials: { login: string; password: string 
         page.waitForResponse(response =>
             response.url().endsWith('/api/login') && response.request().method() === 'POST' && response.ok(),
         ),
+        page.waitForResponse(response =>
+            new URL(response.url()).pathname === dashboardPath
+            && response.request().resourceType() === 'document'
+            && response.status() === 200,
+        ),
         page.getByRole('button', { name: 'Войти' }).click(),
     ]);
-    await page.waitForURL(url => url.pathname !== '/login');
+    await expect(page).toHaveURL(new RegExp(`${dashboardPath}$`));
 }
 
 test('teacher grade is visible to student and linked parent', async ({ browser }) => {
@@ -41,7 +50,8 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
 
     const teacherContext = await browser.newContext();
     const teacherPage = await teacherContext.newPage();
-    await login(teacherPage, { login: fx.teacherLogin, password: fx.teacherPassword });
+    await login(teacherPage, { login: fx.teacherLogin, password: fx.teacherPassword }, '/teacher');
+    await expect(teacherPage.getByText('Главная', { exact: true }).first()).toBeVisible();
     await teacherPage.goto(`/journal?view=grades&classId=${fx.classId}&subjectId=${fx.subjectId}`);
 
     const teacherRow = teacherPage.getByRole('row').filter({ hasText: studentFullName });
@@ -78,7 +88,8 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
 
     const studentContext = await browser.newContext();
     const studentPage = await studentContext.newPage();
-    await login(studentPage, { login: fx.studentLogin, password: fx.studentPassword });
+    await login(studentPage, { login: fx.studentLogin, password: fx.studentPassword }, '/student');
+    await expect(studentPage.getByText('Главная', { exact: true }).first()).toBeVisible();
     await studentPage.goto('/schedule');
 
     const studentReadPromise = studentPage.waitForResponse(response =>
@@ -108,7 +119,7 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
 
     const parentContext = await browser.newContext();
     const parentPage = await parentContext.newPage();
-    await login(parentPage, { login: fx.parentLogin, password: fx.parentPassword });
+    await login(parentPage, { login: fx.parentLogin, password: fx.parentPassword }, '/parent');
 
     await expect(parentPage.getByRole('heading', { name: studentFullName })).toBeVisible();
 

@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-13
+
+- Исправлен post-login hang Student/Teacher и других ролей: authenticated clean `/dashboard` больше не выполняет recursive public-host rewrite через Caddy. Login и clean aliases используют обычный redirect на реальные role routes (`/student`, `/teacher`, `/parent`, `/admin`), а AuthContext не отправляет внутренние role pages обратно на `/dashboard`. Blocking browser E2E теперь требует завершённый `200` dashboard document и видимый role dashboard до дальнейшей навигации; Web version повышена до `2.3.9`.
+
 ## [Unreleased] — 2026-08-12
 
 - Добавлен fail-closed rollout общего Web на существующий organization node: workflow принимает только immutable digest, пересоздаёт исключительно `perum_web`, проверяет неизменность Tenant/DB/Caddy/Agent containers, пересинхронизирует school route и автоматически возвращает прежний image/env при любом failure. Recovery `31652235744` успешно установил Web `2.3.8` на единственную production school без recreation Tenant/DB/Caddy/Agent; edge и origin проверки `/login`, `/dashboard` и `/health` прошли.

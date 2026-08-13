@@ -83,14 +83,6 @@ function redirectTo(request: NextRequest, pathname: string) {
     return NextResponse.redirect(url);
 }
 
-function rewriteTo(request: NextRequest, pathname: string) {
-    const url = request.nextUrl.clone();
-    const publicHost = request.headers.get('x-forwarded-host')?.split(',')[0]?.trim() || request.headers.get('host');
-    if (publicHost) url.host = publicHost;
-    url.pathname = pathname;
-    return NextResponse.rewrite(url);
-}
-
 export function proxy(request: NextRequest) {
     // Platform host (admin.*) → serve /platform/*; skip the school role-routing.
     const host = request.headers.get('host') || '';
@@ -148,8 +140,8 @@ export function proxy(request: NextRequest) {
     if (SHARED_PAGES[pathname]) {
         if (!role) return redirectToLogin(request);
         const target = SHARED_PAGES[pathname][role];
-        if (target) return rewriteTo(request, target);
-        return rewriteTo(request, '/login');
+        if (target) return redirectTo(request, target);
+        return redirectTo(request, '/login');
     }
 
     if (STUDENT_PAGES[pathname]) {
@@ -157,13 +149,13 @@ export function proxy(request: NextRequest) {
         if (role !== ROLES.STUDENT) {
             return redirectTo(request, ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard');
         }
-        return rewriteTo(request, STUDENT_PAGES[pathname]);
+        return redirectTo(request, STUDENT_PAGES[pathname]);
     }
 
     if (pathname.startsWith('/messages/')) {
         if (!role) return redirectToLogin(request);
         if (role !== ROLES.STUDENT) return redirectTo(request, ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard');
-        return rewriteTo(request, `/student${pathname}`);
+        return redirectTo(request, `/student${pathname}`);
     }
 
     if (TEACHER_PAGES[pathname]) {
@@ -171,7 +163,7 @@ export function proxy(request: NextRequest) {
         if (!isTeacher(role)) {
             return redirectTo(request, ROLE_DASHBOARDS[role as keyof typeof ROLE_DASHBOARDS] ?? '/dashboard');
         }
-        return rewriteTo(request, TEACHER_PAGES[pathname]);
+        return redirectTo(request, TEACHER_PAGES[pathname]);
     }
 
     if (pathname.startsWith('/admin')) {
