@@ -6,6 +6,7 @@
 
 ## [Unreleased] — 2026-08-16
 
+- Blocking academic browser E2E больше не зависит от дня недели: journal открывается на authoritative fixture date, а homework request обязан отправить тот же `due_date`. Sunday CI больше не создаёт ДЗ на текущую воскресную дату и не получает корректный backend `400`; failed response теперь выводит status/body в assertion.
 - Synthetic monitor разделяет hourly observation и operator remediation gate: scheduled NO-GO сохраняет evidence artifact и warning в Job Summary без повторяющегося workflow-failure email каждый час, а manual dispatch остаётся fail-closed. Текущий discovery NO-GO не скрыт: единственная школа и организация suspended (`suspended_by=org`, subscription `past_due`), тогда как data plane продолжает отвечать `200` по non-destructive billing policy.
 
 ## [Unreleased] — 2026-08-13

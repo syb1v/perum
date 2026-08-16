@@ -52,7 +52,7 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
     const teacherPage = await teacherContext.newPage();
     await login(teacherPage, { login: fx.teacherLogin, password: fx.teacherPassword }, '/teacher');
     await expect(teacherPage.getByText('Главная', { exact: true }).first()).toBeVisible();
-    await teacherPage.goto(`/journal?view=grades&classId=${fx.classId}&subjectId=${fx.subjectId}`);
+    await teacherPage.goto(`/journal?view=grades&classId=${fx.classId}&subjectId=${fx.subjectId}&date=${fx.gradeDate}`);
 
     const teacherRow = teacherPage.getByRole('row').filter({ hasText: studentFullName });
     await expect(teacherRow).toBeVisible();
@@ -83,7 +83,14 @@ test('teacher grade is visible to student and linked parent', async ({ browser }
     );
     await teacherPage.getByRole('button', { name: 'Создать задание' }).click();
     const homeworkResponse = await homeworkPromise;
-    expect(homeworkResponse.ok()).toBe(true);
+    const homeworkBody = await homeworkResponse.text();
+    expect(
+        homeworkResponse.ok(),
+        `POST /api/homework returned ${homeworkResponse.status()}: ${homeworkBody}`,
+    ).toBe(true);
+    expect(
+        (homeworkResponse.request().postDataJSON() as { due_date: string }).due_date,
+    ).toBe(`${fx.gradeDate}T00:00:00`);
     await teacherContext.close();
 
     const studentContext = await browser.newContext();
