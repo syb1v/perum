@@ -4,6 +4,10 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-08-16
+
+- Synthetic monitor разделяет hourly observation и operator remediation gate: scheduled NO-GO сохраняет evidence artifact и warning в Job Summary без повторяющегося workflow-failure email каждый час, а manual dispatch остаётся fail-closed. Текущий discovery NO-GO не скрыт: единственная школа и организация suspended (`suspended_by=org`, subscription `past_due`), тогда как data plane продолжает отвечать `200` по non-destructive billing policy.
+
 ## [Unreleased] — 2026-08-13
 
 - Organization DNS policy закреплена в Core как fail-safe IPv4 `A` + `DNS only`: apex landing и school records создаются при provisioning, существующие IP/proxy drift исправляются PUT-ом без duplicate records, school record ownership ID сохраняется, а background sweep поддерживает desired state. Platform/Core Cloudflare proxy остаётся независимой policy; Worker для school routing не используется. Production DNS preflight теперь fail-closed требует exact origin и `proxied=false`.

@@ -35,6 +35,8 @@ jobs:
           test -n "$PERUM_SYNTHETIC_BASE_URL" || { printf '%s\n' 'Missing repository variable PERUM_SYNTHETIC_BASE_URL' >&2; exit 1; }
           test -n "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" || { printf '%s\n' 'Missing repository variable PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID' >&2; exit 1; }
       - name: Check public endpoints
+        id: core-surfaces
+        continue-on-error: true
         working-directory: perum-core
         env:
           PYTHONPATH: .
@@ -45,6 +47,9 @@ jobs:
             --school-public-id "$PERUM_SYNTHETIC_SCHOOL_PUBLIC_ID" \
             --output synthetic-monitor
       - name: Check organization and school public surfaces
+        id: organization-surfaces
+        if: always()
+        continue-on-error: true
         run: |
           python - <<'PY'
           import json
@@ -69,6 +74,31 @@ jobs:
                   raise SystemExit(f"{host} publishes unverified IPv6 edge addresses")
               print(f"{host}_ipv6=disabled")
           PY
+      - name: Publish scheduled monitor decision
+        if: always() && github.event_name == 'schedule'
+        env:
+          CORE_OUTCOME: ${{ steps.core-surfaces.outcome }}
+          ORGANIZATION_OUTCOME: ${{ steps.organization-surfaces.outcome }}
+        run: |
+          {
+            printf '## Synthetic monitor\n\n'
+            printf '| Контур | Результат |\n'
+            printf '|---|---|\n'
+            printf '| Core health и discovery | `%s` |\n' "$CORE_OUTCOME"
+            printf '| Organization и school surfaces | `%s` |\n' "$ORGANIZATION_OUTCOME"
+            if [ "$CORE_OUTCOME" != success ] || [ "$ORGANIZATION_OUTCOME" != success ]; then
+              printf '\n> Scheduled observation remains NO-GO. Evidence is retained without repeating hourly workflow-failure email; run the monitor manually for a fail-closed remediation gate.\n'
+              printf '::warning::Synthetic monitor remains NO-GO; inspect the retained evidence artifact.\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Enforce manual monitor gate
+        if: always() && github.event_name == 'workflow_dispatch'
+        env:
+          CORE_OUTCOME: ${{ steps.core-surfaces.outcome }}
+          ORGANIZATION_OUTCOME: ${{ steps.organization-surfaces.outcome }}
+        run: |
+          [ "$CORE_OUTCOME" = success ]
+          [ "$ORGANIZATION_OUTCOME" = success ]
       - name: Upload monitor result
         if: always()
         uses: actions/upload-artifact@v4

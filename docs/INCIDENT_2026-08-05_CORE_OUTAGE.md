@@ -104,3 +104,10 @@ browser receipt владельца остаётся последним gate дл
 Web `2.3.9` удаляет authority-dependent rewrites: login и clean aliases выполняют
 redirect на реальные role routes, а E2E требует завершённый dashboard document.
 Production rollout и owner browser receipt pending.
+
+2026-08-16 повторяющиеся hourly Synthetic failures локализованы не до public
+availability: Core health и school surfaces работают, но discovery возвращает
+ожидаемый `404`, поскольку единственная organization/school остаётся suspended,
+`suspended_by=org`, subscription `past_due`. Scheduled monitor продолжает хранить
+NO-GO evidence и warning без повторного hourly failure email; manual dispatch
+остаётся fail-closed remediation gate. Lifecycle status автоматически не менялся.
