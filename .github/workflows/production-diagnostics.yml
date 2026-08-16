@@ -40,7 +40,7 @@ jobs:
             docker exec perum_core python -c "import asyncio
             from sqlalchemy import select
             from app.core.db import SessionLocal
-            from app.models import Organization, School, SchoolDomain
+            from app.models import Organization, School, SchoolDomain, Subscription
             async def main():
               async with SessionLocal() as db:
                 rows=(await db.execute(select(School, Organization).join(Organization, School.org_id == Organization.id).where(School.subdomain == 'school-1'))).all()
@@ -49,7 +49,9 @@ jobs:
                   domains=(await db.execute(select(SchoolDomain).where(SchoolDomain.school_id == school.id))).scalars().all()
                   primary=[d for d in domains if d.is_primary and d.status == 'active']
                   canonical=any(d.domain == 'school-1.grsn-panel.ru' for d in domains)
-                  print(f'discovery_school_id={school.id} public_id={school.public_id} school_status={school.status} org_status={org.status} domains={len(domains)} primary_active={len(primary)} canonical_present={canonical}')
+                  subscription=await db.scalar(select(Subscription).where(Subscription.org_id == org.id))
+                  subscription_status=subscription.status if subscription else 'missing'
+                  print(f'discovery_school_id={school.id} public_id={school.public_id} school_status={school.status} suspended_by={school.suspended_by} org_status={org.status} subscription_status={subscription_status} domains={len(domains)} primary_active={len(primary)} canonical_present={canonical}')
             asyncio.run(main())"
             printf '%s\n' '=== school edge reachability ==='
             timeout 10 curl -sS -o /dev/null -w 'school_https=%{http_code} connect=%{time_connect} total=%{time_total}\n' https://school-1.grsn-panel.ru/health || true
