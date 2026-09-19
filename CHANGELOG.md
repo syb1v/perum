@@ -6,6 +6,8 @@
 
 ## [Unreleased] — 2026-09-19
 
+- Web dependency audit hardened: Next.js обновлён до `16.3.5`, а vulnerable transitive OpenAPI, parser, URI, browserlist, nanoid, sharp и brace-expansion versions закреплены на безопасных версиях; `audit:ci`, Web typecheck и production build проходят.
+- Full workspace dependency audit дополнительно очищен от high vulnerabilities в Metro, image-size, xmldom, postcss, humanfs и fflate; Expo SDK 57 сохранён, поскольку registry auto-fix предлагает несовместимый downgrade до Expo 46.
 - Mobile visual language выровнен с Web: shared design tokens теперь задают dark surfaces, cyan/blue accent, typography, borders, radii и shadows; native shell, login, home и ключевые states переведены на эту систему без изменения API, cache или backend semantics.
 
 ## [Unreleased] — 2026-09-19
