@@ -45,6 +45,13 @@ environment `production` с теми же public-переменными и produ
 Этот IPA не устанавливается на физический iPhone без последующей Apple-подписи и не
 заменяет signed EAS preview или production build.
 
+## Временный Mobile Release
+
+Для публикации APK и unsigned IPA вместе откройте GitHub Actions → `Mobile release
+(temporary APK + unsigned IPA)` → `Run workflow`. Укажите tag вида `mobile-v1.0.0`
+и выберите `preview` или `production`. Workflow создаст GitHub Release с файлами
+`PERUM-android-preview.apk` и `PERUM-ios-unsigned.ipa`.
+
 ## Диагностика
 
 ```bash
