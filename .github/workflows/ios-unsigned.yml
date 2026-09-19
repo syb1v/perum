@@ -40,6 +40,11 @@ jobs:
           test -n "$EXPO_PUBLIC_CORE_API_URL" || { echo "EXPO_PUBLIC_CORE_API_URL is not configured"; exit 1; }
           test -n "$EXPO_PUBLIC_LINK_HOST" || { echo "EXPO_PUBLIC_LINK_HOST is not configured"; exit 1; }
           test -n "$EXPO_PUBLIC_PROJECT_ID" || { echo "EXPO_PROJECT_ID is not configured"; exit 1; }
+      - name: Select compatible Xcode
+        run: |
+          test -d /Applications/Xcode_26.3.app || { echo "Xcode 26.3 is not installed on this runner"; exit 1; }
+          echo "DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer" >> "$GITHUB_ENV"
+          /Applications/Xcode_26.3.app/Contents/Developer/usr/bin/xcodebuild -version
       - name: Install dependencies
         working-directory: .
         run: npm ci
