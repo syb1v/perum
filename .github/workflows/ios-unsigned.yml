@@ -68,27 +68,16 @@ jobs:
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$GITHUB_WORKSPACE/PERUM.xcarchive" \
+            SKIP_INSTALL=NO \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             archive
-          xcodebuild \
-            -workspace "$workspace" \
-            -scheme "$scheme" \
-            -configuration Release \
-            -sdk iphoneos \
-            CONFIGURATION_BUILD_DIR="$GITHUB_WORKSPACE/unsigned-build" \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            build
       - name: Package unsigned IPA
         run: |
           set -euo pipefail
           rm -rf "$GITHUB_WORKSPACE/Payload" "$GITHUB_WORKSPACE/PERUM-unsigned.ipa"
           mkdir -p "$GITHUB_WORKSPACE/Payload"
           app="$(find "$GITHUB_WORKSPACE/PERUM.xcarchive" -type d -name '*.app' -print -quit)"
-          if [[ -z "$app" ]]; then
-            app="$(find "$GITHUB_WORKSPACE/unsigned-build" -maxdepth 1 -type d -name '*.app' -print -quit)"
-          fi
           test -n "$app" || { echo "No archived iOS app found"; exit 1; }
           cp -R "$app" "$GITHUB_WORKSPACE/Payload/"
           cd "$GITHUB_WORKSPACE"
