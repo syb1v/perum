@@ -32,6 +32,19 @@ Production требует явного подтверждения. Эта ком
 его автоматически в App Store или Google Play. Для этого профиля также настройте
 environment `production` с теми же public-переменными и production-значениями.
 
+## Unsigned IPA через GitHub Actions
+
+Откройте GitHub Actions → `iOS unsigned IPA` → `Run workflow` и выберите `preview`
+или `production`. Workflow запускается на macOS runner, генерирует iOS-проект,
+выполняет native Release archive без code signing и загружает `PERUM-unsigned.ipa`
+как artifact.
+
+В variables GitHub environment должны быть настроены `EXPO_PUBLIC_CORE_API_URL`,
+`EXPO_PUBLIC_LINK_HOST` и `EXPO_PROJECT_ID`.
+
+Этот IPA не устанавливается на физический iPhone без последующей Apple-подписи и не
+заменяет signed EAS preview или production build.
+
 ## Диагностика
 
 ```bash

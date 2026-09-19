@@ -4,6 +4,18 @@
 
 > Проект на стадии активной разработки (`0.0.x`) — закладываем фундамент новой архитектуры (silo-per-SCHOOL: каждая школа — отдельный стек, школы — дети организации; + control plane). Учебные, социальные и мобильные вертикали активно реализуются по [docs/PRODUCT_MASTER_PLAN.md](docs/PRODUCT_MASTER_PLAN.md).
 
+## [Unreleased] — 2026-09-19
+
+- Добавлен ручной GitHub Actions workflow на macOS для native iOS Release archive без code signing и упаковки результата в `PERUM-unsigned.ipa` artifact.
+
+## [Unreleased] — 2026-08-17
+
+- Добавлен append-only pilot entitlement с обязательными approval/reason/idempotency evidence, сроком действия и central effective-entitlement gate. Grant не записывает фиктивную оплату, не изменяет долг и не снимает manual/security suspension; repeated suspension сохраняет provenance.
+- Web rollout переведён с одноразового recovery workflow на authenticated Core→Agent orchestration по immutable digest. Rollout сериализован, проверяет canonical runtime/health/routes, сохраняет durable transaction и восстанавливается после crash без изменения Tenant/DB/Caddy; standard release больше не допускает CI bypass и fail-closed проверяет production prerequisites.
+- SEC-002 устранён в коде для новых/переведённых nodes: production management transport требует HTTPS с private CA и hostname/SAN verification, optional mTLS задаётся только полной cert/key парой, direct Agent port отсутствует. Existing nodes переводятся отдельным environment-approved transactional workflow с exact-SHA CI provenance, persisted capability receipt, idempotent resume и verified schema/image rollback. Production gate остаётся NO-GO до выдачи approved certificates, controlled node transition, credential rotation и smoke evidence.
+- Control-plane deploy и Agent transition теперь возвращают Alembic schema к exact pre-change revision через candidate tooling до запуска historical image; ambiguous receipt/SSH/schema state остаётся fail-closed recovery hold. Legacy transport и Web capability windows требуют явных будущих UTC deadlines и DB-aware preflight.
+- Core OpenAPI snapshots и generated TypeScript contracts синхронизированы с pilot entitlement, Web rollout и node transition APIs. Полный Core suite: `311 passed`; Alembic: single head `0040_node_transport_receipts`; contract gate: `117 paths`; deploy smoke пройден.
+
 ## [Unreleased] — 2026-08-16
 
 - Blocking academic browser E2E больше не зависит от дня недели: journal открывается на authoritative fixture date, а homework request обязан отправить тот же `due_date`. Sunday CI больше не создаёт ДЗ на текущую воскресную дату и не получает корректный backend `400`; failed response теперь выводит status/body в assertion.

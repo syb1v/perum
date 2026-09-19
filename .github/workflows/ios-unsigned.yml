@@ -1,0 +1,84 @@
+name: iOS unsigned IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_environment:
+        description: Runtime environment embedded in the app
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build unsigned iOS IPA
+    runs-on: macos-15
+    environment: mobile-preview
+    defaults:
+      run:
+        working-directory: perum-mobile
+    env:
+      EXPO_PUBLIC_BUILD_ENV: ${{ inputs.build_environment }}
+      EXPO_PUBLIC_CORE_API_URL: ${{ vars.EXPO_PUBLIC_CORE_API_URL }}
+      EXPO_PUBLIC_LINK_HOST: ${{ vars.EXPO_PUBLIC_LINK_HOST }}
+      EXPO_PUBLIC_PROJECT_ID: ${{ vars.EXPO_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Check public build configuration
+        run: |
+          test -n "$EXPO_PUBLIC_CORE_API_URL" || { echo "EXPO_PUBLIC_CORE_API_URL is not configured"; exit 1; }
+          test -n "$EXPO_PUBLIC_LINK_HOST" || { echo "EXPO_PUBLIC_LINK_HOST is not configured"; exit 1; }
+          test -n "$EXPO_PUBLIC_PROJECT_ID" || { echo "EXPO_PROJECT_ID is not configured"; exit 1; }
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci
+      - name: Run mobile preflight
+        working-directory: .
+        run: npm run preflight --workspace perum-mobile
+      - name: Generate iOS project
+        run: npx expo prebuild --platform ios --clean --non-interactive
+      - name: Install CocoaPods
+        run: pod install --project-directory=ios
+      - name: Build unsigned archive
+        run: |
+          set -euo pipefail
+          workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$workspace" || { echo "No iOS workspace found"; exit 1; }
+          scheme="$(xcodebuild -list -json -workspace "$workspace" | jq -r '[.workspace.schemes[] | select(startswith("Pods-") | not)][0] // empty')"
+          test -n "$scheme" || { echo "No application Xcode scheme found"; exit 1; }
+          xcodebuild \
+            -workspace "$workspace" \
+            -scheme "$scheme" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$GITHUB_WORKSPACE/PERUM.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            archive
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          rm -rf "$GITHUB_WORKSPACE/Payload" "$GITHUB_WORKSPACE/PERUM-unsigned.ipa"
+          mkdir -p "$GITHUB_WORKSPACE/Payload"
+          app="$(find "$GITHUB_WORKSPACE/PERUM.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -print -quit)"
+          test -n "$app" || { echo "No archived iOS app found"; exit 1; }
+          cp -R "$app" "$GITHUB_WORKSPACE/Payload/"
+          cd "$GITHUB_WORKSPACE"
+          ditto -c -k --sequesterRsrc --keepParent Payload PERUM-unsigned.ipa
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: perum-ios-unsigned-${{ inputs.build_environment }}
+          path: PERUM-unsigned.ipa
+          if-no-files-found: error
