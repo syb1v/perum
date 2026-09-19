@@ -32,7 +32,6 @@ jobs:
       run:
         working-directory: perum-mobile
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_BUILD_ENV: ${{ inputs.build_environment }}
       EXPO_PUBLIC_CORE_API_URL: ${{ vars.EXPO_PUBLIC_CORE_API_URL }}
       EXPO_PUBLIC_LINK_HOST: ${{ vars.EXPO_PUBLIC_LINK_HOST }}
@@ -44,9 +43,8 @@ jobs:
           node-version: "22.13"
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: Check EAS configuration
+      - name: Check public build configuration
         run: |
-          test -n "$EXPO_TOKEN" || { echo "EXPO_TOKEN is not configured in mobile-preview"; exit 1; }
           test -n "$EXPO_PUBLIC_PROJECT_ID" || { echo "EXPO_PROJECT_ID is not configured"; exit 1; }
           test -n "$EXPO_PUBLIC_CORE_API_URL" || { echo "EXPO_PUBLIC_CORE_API_URL is not configured"; exit 1; }
           test -n "$EXPO_PUBLIC_LINK_HOST" || { echo "EXPO_PUBLIC_LINK_HOST is not configured"; exit 1; }
@@ -56,15 +54,12 @@ jobs:
       - name: Run mobile preflight
         working-directory: .
         run: npm run preflight --workspace perum-mobile
-      - name: Setup Expo and EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: 21.2.0
-          token: ${{ secrets.EXPO_TOKEN }}
-      - name: Build Android preview
-        run: eas build --platform android --profile preview --non-interactive --wait
-      - name: Download Android artifact
-        run: eas build:download --platform android --profile preview --latest --output "$GITHUB_WORKSPACE/PERUM-android-preview.apk"
+      - name: Generate Android project
+        run: CI=1 npx expo prebuild --platform android --clean
+      - name: Build installable debug APK
+        run: ./android/gradlew --no-daemon --stacktrace assembleDebug
+      - name: Copy Android artifact
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/PERUM-android-preview.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: mobile-release-android-${{ inputs.release_tag }}
@@ -106,7 +101,7 @@ jobs:
         working-directory: .
         run: npm run preflight --workspace perum-mobile
       - name: Generate iOS project
-        run: npx expo prebuild --platform ios --clean --non-interactive
+        run: CI=1 npx expo prebuild --platform ios --clean
       - name: Install CocoaPods
         run: pod install --project-directory=ios
       - name: Build unsigned archive
