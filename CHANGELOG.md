@@ -6,6 +6,8 @@
 
 ## [Unreleased] — 2026-09-19
 
+- Mobile builds используют Xcode 26.4.1/macOS 26 для ExpoModulesJSI; Android собирает standalone universal Release APK через `:app:assembleRelease` с ограничением workers, подробными логами и timeout вместо debug APK, требующего Metro.
+
 - Web dependency audit hardened: Next.js обновлён до `16.3.5`, а vulnerable transitive OpenAPI, parser, URI, browserlist, nanoid, sharp и brace-expansion versions закреплены на безопасных версиях; `audit:ci`, Web typecheck и production build проходят.
 - Full workspace dependency audit дополнительно очищен от high vulnerabilities в Metro, image-size, xmldom, postcss, humanfs и fflate; Expo SDK 57 сохранён, поскольку registry auto-fix предлагает несовместимый downgrade до Expo 46.
 - Исправлена совместимость `openapi-typescript@7.13.0`: Redocly pinned to the supported `1.34.17` line, contract generation and 117-path parity check проходят.

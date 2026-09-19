@@ -415,3 +415,4 @@
 | 412 | 2026-09-19 | _______ | fix(deps): очищен workspace audit без downgrade Expo SDK 57 |
 | 413 | 2026-09-19 | _______ | fix(contracts): восстановлена совместимость openapi-typescript и Redocly |
 | 414 | 2026-09-19 | _______ | chore(mobile): временный GitHub Release с APK и unsigned IPA |
+| 415 | 2026-09-19 | _______ | fix(mobile): совместимый Xcode и standalone universal APK |

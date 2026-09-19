@@ -28,6 +28,7 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     environment: mobile-preview
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: perum-mobile
@@ -56,10 +57,15 @@ jobs:
         run: npm run preflight --workspace perum-mobile
       - name: Generate Android project
         run: CI=1 npx expo prebuild --platform android --clean
-      - name: Build installable debug APK
-        run: cd android && ./gradlew --no-daemon --stacktrace assembleDebug
+      - name: Build standalone release APK
+        working-directory: perum-mobile/android
+        timeout-minutes: 50
+        run: ./gradlew --no-daemon --console=plain --info --stacktrace --max-workers=2 :app:assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64
       - name: Copy Android artifact
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk "$GITHUB_WORKSPACE/PERUM-android-preview.apk"
+        run: |
+          test -s android/app/build/outputs/apk/release/app-release.apk
+          unzip -l android/app/build/outputs/apk/release/app-release.apk | grep 'assets/index.android.bundle'
+          cp android/app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/PERUM-android-preview.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: mobile-release-android-${{ inputs.release_tag }}
@@ -68,7 +74,8 @@ jobs:
 
   ios:
     name: Build unsigned iOS IPA
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 45
     environment: mobile-preview
     defaults:
       run:
@@ -92,8 +99,10 @@ jobs:
           test -n "$EXPO_PUBLIC_LINK_HOST" || { echo "EXPO_PUBLIC_LINK_HOST is not configured"; exit 1; }
       - name: Select compatible Xcode
         run: |
-          test -d /Applications/Xcode_26.3.app || { echo "Xcode 26.3 is not installed on this runner"; exit 1; }
-          echo "DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer" >> "$GITHUB_ENV"
+          xcode_app="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26.4*.app' -print -quit)"
+          test -n "$xcode_app" || { echo "Xcode 26.4+ is not installed on this runner"; ls -d /Applications/Xcode*.app 2>/dev/null || true; exit 1; }
+          echo "DEVELOPER_DIR=$xcode_app/Contents/Developer" >> "$GITHUB_ENV"
+          "$xcode_app/Contents/Developer/usr/bin/xcodebuild" -version
       - name: Install dependencies
         working-directory: .
         run: npm ci
@@ -101,7 +110,7 @@ jobs:
         working-directory: .
         run: npm run preflight --workspace perum-mobile
       - name: Generate iOS project
-        run: CI=1 npx expo prebuild --platform ios --clean
+        run: CI=1 npx expo prebuild --platform ios --clean --no-install
       - name: Install CocoaPods
         run: pod install --project-directory=ios
       - name: Build unsigned archive
@@ -164,4 +173,5 @@ jobs:
             release-assets/PERUM-ios-unsigned.ipa \
             --target "$GITHUB_SHA" \
             --title "PERUM Mobile $RELEASE_TAG" \
-            --notes "Temporary mobile release ($BUILD_ENVIRONMENT). Android is a normal EAS internal APK. iOS is an unsigned IPA and requires Apple signing before device installation."
+            --prerelease \
+            --notes "Temporary mobile release ($BUILD_ENVIRONMENT). Android is a standalone universal Release APK signed with the Expo template test key, not a store release. iOS is an unsigned IPA and requires signing before device installation. Source: $GITHUB_SHA."

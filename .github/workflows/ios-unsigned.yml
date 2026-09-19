@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     name: Build unsigned iOS IPA
-    runs-on: macos-15
+    runs-on: macos-26
     environment: mobile-preview
     defaults:
       run:
@@ -42,9 +42,9 @@ jobs:
           test -n "$EXPO_PUBLIC_PROJECT_ID" || { echo "EXPO_PROJECT_ID is not configured"; exit 1; }
       - name: Select compatible Xcode
         run: |
-          test -d /Applications/Xcode_26.3.app || { echo "Xcode 26.3 is not installed on this runner"; exit 1; }
-          echo "DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer" >> "$GITHUB_ENV"
-          /Applications/Xcode_26.3.app/Contents/Developer/usr/bin/xcodebuild -version
+          test -d /Applications/Xcode_26.4.1.app || { echo "Xcode 26.4.1 is not installed on this runner"; exit 1; }
+          echo "DEVELOPER_DIR=/Applications/Xcode_26.4.1.app/Contents/Developer" >> "$GITHUB_ENV"
+          /Applications/Xcode_26.4.1.app/Contents/Developer/usr/bin/xcodebuild -version
       - name: Install dependencies
         working-directory: .
         run: npm ci
@@ -52,7 +52,7 @@ jobs:
         working-directory: .
         run: npm run preflight --workspace perum-mobile
       - name: Generate iOS project
-        run: npx expo prebuild --platform ios --clean --non-interactive
+        run: CI=1 npx expo prebuild --platform ios --clean --no-install
       - name: Install CocoaPods
         run: pod install --project-directory=ios
       - name: Build unsigned archive
