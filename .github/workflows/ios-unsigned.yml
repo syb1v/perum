@@ -76,7 +76,7 @@ jobs:
           set -euo pipefail
           rm -rf "$GITHUB_WORKSPACE/Payload" "$GITHUB_WORKSPACE/PERUM-unsigned.ipa"
           mkdir -p "$GITHUB_WORKSPACE/Payload"
-          app="$(find "$GITHUB_WORKSPACE/PERUM.xcarchive/Products/Applications" -maxdepth 1 -name '*.app' -print -quit)"
+          app="$(find "$GITHUB_WORKSPACE/PERUM.xcarchive" -type d -name '*.app' -print -quit)"
           test -n "$app" || { echo "No archived iOS app found"; exit 1; }
           cp -R "$app" "$GITHUB_WORKSPACE/Payload/"
           cd "$GITHUB_WORKSPACE"
