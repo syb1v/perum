@@ -11,5 +11,5 @@ import { CapabilityProvider } from '../src/auth/CapabilityProvider';
 import { RootShell } from '../src/components/RootShell';
 
 export default function RootLayout() {
-  return <SafeAreaProvider><AuthProvider><RootShell><CapabilityProvider><TenantDescriptorProvider /><LinkProvider /><PushProvider><AccountQueryProvider><StatusBar style="dark" /><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} /></AccountQueryProvider></PushProvider></CapabilityProvider></RootShell></AuthProvider></SafeAreaProvider>;
+  return <SafeAreaProvider><AuthProvider><RootShell><CapabilityProvider><TenantDescriptorProvider /><LinkProvider /><PushProvider><AccountQueryProvider><StatusBar style="light" /><Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} /></AccountQueryProvider></PushProvider></CapabilityProvider></RootShell></AuthProvider></SafeAreaProvider>;
 }

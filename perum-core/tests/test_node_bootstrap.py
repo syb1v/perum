@@ -76,6 +76,12 @@ def test_generated_bootstrap_is_fail_closed_and_offline_capable(monkeypatch, tmp
     assert "watchtower" not in result.docker_compose.lower()
     assert "latest" not in result.docker_compose
     assert "image: ${WEB_IMAGE}" in result.docker_compose
+    assert "3001:3000" not in result.docker_compose
+    assert "3001:3001" in result.docker_compose
+    assert "@agent path /api/agent/*" in result.script
+    assert "reverse_proxy perum_agent:3000" in result.script
+    assert "/etc/perum/node-tls/server.crt" in result.script
+    assert "PRIVATE KEY" not in result.script
     assert result.docker_compose.count("pull_policy: missing") == 6
     assert "flock -n 9" in result.script
     assert "docker compose config -q" in result.script
@@ -92,6 +98,15 @@ def test_generated_bootstrap_is_fail_closed_and_offline_capable(monkeypatch, tmp
     script_path = tmp_path / "bootstrap.sh"
     script_path.write_text(result.script)
     subprocess.run(["bash", "-n", str(script_path)], check=True)
+
+
+def test_generated_caddy_requires_client_ca_when_mtls_enabled():
+    settings = Settings(AGENT_MTLS_REQUIRED=True, AGENT_CLIENT_CERT="/client.crt", AGENT_CLIENT_KEY="/client.key")
+
+    caddyfile = node_bootstrap._render_caddyfile(settings)
+
+    assert "mode require_and_verify" in caddyfile
+    assert "trust_pool file /etc/perum/node-tls/client-ca.crt" in caddyfile
 
 
 def test_generated_bootstrap_rejects_mutable_web_image_before_db_changes(monkeypatch):

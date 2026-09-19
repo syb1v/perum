@@ -93,6 +93,23 @@ class AgentNodeActionResponse(BaseModel):
     message: str | None = None
 
 
+class AgentWebRolloutRequest(BaseModel):
+    image: str = Field(
+        pattern=r"^ghcr\.io/[a-z0-9][a-z0-9._-]*/perum-web@sha256:[0-9a-f]{64}$"
+    )
+
+
+class AgentWebRolloutResponse(BaseModel):
+    success: bool
+    image: str
+    previous_image_id: str | None = None
+    deployed_image_id: str | None = None
+    rolled_back: bool = False
+    protected_containers_unchanged: bool = False
+    routes_resynced: bool = False
+    message: str | None = None
+
+
 class AgentDeprovisionSchoolRequest(BaseModel):
     school_slug: str
     mode: str = Field(default="archive", pattern="^(archive|purge)$")

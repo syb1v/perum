@@ -410,3 +410,4 @@
 | 407 | 2026-08-16 14:30 | _______ | test(web): academic E2E использует fixture date в воскресенье |
 | 408 | 2026-08-17 18:00 | _______ | feat(core): защищены commercial entitlement, Web rollout и Agent TLS transition |
 | 409 | 2026-09-19 | _______ | chore(mobile): добавлена unsigned iOS IPA сборка через macOS workflow |
+| 410 | 2026-09-19 | _______ | feat(mobile): выровнен native visual language с Web design system |

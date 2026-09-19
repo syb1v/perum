@@ -56,6 +56,7 @@ services:
       ROLE: "org_agent"
       ENROLLMENT_TOKEN: "${ENROLLMENT_TOKEN}"
       AGENT_TOKEN: "${AGENT_TOKEN}"
+      AGENT_IMAGE: "{{ agent_image }}"
       CORE_URL: "{{ core_url }}"
       CONTROL_PLANE_URL: "{{ core_url }}"
       DATABASE_URL: "postgresql+asyncpg://perum:${NODE_DB_PW}@perum_node_db:5432/perum_node"
@@ -67,8 +68,6 @@ services:
       DOCKER_NETWORK: "perum_internal"
       IMAGE_REGISTRY: "{{ image_registry }}"
       TENANT_IMAGE: "${TENANT_IMAGE}"
-    ports:
-      - "{{ agent_port }}:3000"
     depends_on:
       perum_node_db:
         condition: service_healthy
@@ -138,8 +137,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "{{ agent_port }}:{{ agent_port }}"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /etc/perum/node-tls:/etc/perum/node-tls:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -186,6 +187,17 @@ CADDYFILE = """\
 \t}
 \trespond "PERUM node OK" 200
 }
+
+:{{ agent_port }} {
+\ttls /etc/perum/node-tls/server.crt /etc/perum/node-tls/server.key{{ client_auth }}
+\t@agent path /api/agent/*
+\thandle @agent {
+\t\treverse_proxy perum_agent:3000
+\t}
+\thandle {
+\t\trespond 404
+\t}
+}
 """
 
 SCRIPT_TEMPLATE = """\
@@ -214,6 +226,13 @@ mkdir -p "$DIR/caddy"
 cd "$DIR"
 exec 9>"$DIR/.deploy.lock"
 flock -n 9 || { echo "Другое развёртывание уже выполняется в $DIR" >&2; exit 1; }
+
+TLS_DIR=/etc/perum/node-tls
+for tls_file in server.crt server.key{{ client_ca_file }}; do
+  [[ -r "$TLS_DIR/$tls_file" ]] || { echo "Отсутствует TLS-файл $TLS_DIR/$tls_file" >&2; exit 1; }
+done
+KEY_MODE=$(stat -c '%a' "$TLS_DIR/server.key")
+[[ $((8#$KEY_MODE & 8#077)) -eq 0 ]] || { echo "$TLS_DIR/server.key должен быть недоступен group/other" >&2; exit 1; }
 
 env_value() {
   local key="$1" line
@@ -283,6 +302,22 @@ def _render_compose(settings, agent_image: str | None = None) -> str:
     return out
 
 
+def _render_caddyfile(settings) -> str:
+    client_auth = ""
+    if settings.AGENT_MTLS_REQUIRED:
+        client_auth = """ {
+\t\tclient_auth {
+\t\t\tmode require_and_verify
+\t\t\ttrust_pool file /etc/perum/node-tls/client-ca.crt
+\t\t}
+\t}"""
+    return (
+        CADDYFILE.replace("{{ core_url }}", _public_core_url(settings))
+        .replace("{{ agent_port }}", str(settings.AGENT_PORT))
+        .replace("{{ client_auth }}", client_auth)
+    )
+
+
 async def generate_bootstrap_script(
     db: AsyncSession,
     node: Node,
@@ -340,7 +375,8 @@ async def generate_bootstrap_script(
     script = script.replace("{{ web_image }}", web_image)
     script = script.replace("{{ required_images }}", " ".join(f"'{image}'" for image in required_images))
     script = script.replace("{{ compose }}", compose)
-    script = script.replace("{{ caddyfile }}", CADDYFILE.replace("{{ core_url }}", _public_core_url(settings)))
+    script = script.replace("{{ caddyfile }}", _render_caddyfile(settings))
+    script = script.replace("{{ client_ca_file }}", " client-ca.crt" if settings.AGENT_MTLS_REQUIRED else "")
 
     logger.info("Generated bootstrap for node %s (org=%s)", node.name, org.slug if org else None)
     return BootstrapResult(script=script, docker_compose=compose, enrollment_token=raw_token)

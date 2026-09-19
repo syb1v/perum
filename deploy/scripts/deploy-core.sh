@@ -147,6 +147,19 @@ env_value() {
   return 1
 }
 
+validate_legacy_deadlines() {
+  local name value epoch now
+  now=$(date -u +%s)
+  for name in AGENT_LEGACY_HTTP_DEADLINE WEB_ROLLOUT_LEGACY_DEADLINE; do
+    value=$(env_value "$name" || true)
+    [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] \
+      || die "$name должен быть задан как будущий UTC timestamp (YYYY-MM-DDTHH:MM:SSZ)"
+    epoch=$(date -u -d "$value" +%s 2>/dev/null) \
+      || die "$name содержит некорректную UTC дату"
+    (( epoch > now )) || die "$name истёк; задайте новое ограниченное окно перехода"
+  done
+}
+
 wait_for_app_readiness() {
   local attempt
   if [[ "$DRY_RUN" == true ]]; then
@@ -224,6 +237,7 @@ if [[ "$UPDATE" == true ]]; then
 
   [[ "$COMMIT" =~ ^[0-9a-fA-F]{40}$ ]] || die "Для --update обязателен точный 40-символьный --commit"
   [[ -f "${DEPLOY_PATH}/deploy/.env.prod" ]] || die "Не найден ${DEPLOY_PATH}/deploy/.env.prod"
+  validate_legacy_deadlines
   PREVIOUS_CORE_IMAGE=$(env_value CORE_IMAGE || true)
   PREVIOUS_AGENT_IMAGE=$(env_value AGENT_IMAGE || true)
   PREVIOUS_WEB_IMAGE=$(env_value WEB_IMAGE || true)
@@ -274,6 +288,30 @@ if [[ "$UPDATE" == true ]]; then
   COMPOSE_PREFLIGHT="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
   ROLLBACK_ACTIVE=false
   TARGET_CHECKOUT_COMPLETE=false
+  MIGRATION_STATE_CAPTURED=false
+  MIGRATION_ADVANCED=false
+
+  read_core_revision() {
+    local compose="$1" output output_file command_status
+    local -a lines
+    output_file=$(mktemp) || return 1
+    if run "${compose} run --rm --no-deps perum_core alembic current" >"$output_file" 2>/dev/null; then
+      command_status=0
+    else
+      command_status=$?
+    fi
+    output=$(<"$output_file")
+    mapfile -t lines < "$output_file"
+    rm -f "$output_file"
+    [[ "$command_status" -eq 0 ]] || return 1
+    if [[ "$output" =~ ^[[:space:]]*$ ]]; then
+      printf '%s' base
+      return 0
+    fi
+    [[ "${#lines[@]}" -eq 1 ]] || return 1
+    [[ "${lines[0]}" =~ ^([0-9][0-9A-Za-z_]{3,63})([[:space:]]+\(head\))?$ ]] || return 1
+    printf '%s' "${BASH_REMATCH[1]}"
+  }
 
   rollback_update() {
     local failure_status="${1:-$?}" rollback_failed=false
@@ -292,16 +330,35 @@ if [[ "$UPDATE" == true ]]; then
       exit "$failure_status"
     fi
     warn "Обновление завершилось ошибкой; восстанавливаю предыдущую конфигурацию и образы"
+    if [[ "$MIGRATION_STATE_CAPTURED" == true ]]; then
+      current_revision=$(read_core_revision "$COMPOSE_UPDATE") || {
+        err "RECOVERY FAILURE: состояние Core DB неизвестно; старый Core не будет запущен"
+        rollback_failed=true
+        current_revision=unknown
+      }
+      if [[ "$current_revision" != unknown && "$current_revision" != "$PREVIOUS_CORE_DB_REVISION" ]]; then
+        MIGRATION_ADVANCED=true
+        warn "Схема Core DB была изменена; выполняю downgrade кодом candidate Core до ${PREVIOUS_CORE_DB_REVISION}"
+        run "${COMPOSE_UPDATE} run --rm --no-deps perum_core alembic downgrade '${PREVIOUS_CORE_DB_REVISION}'" || rollback_failed=true
+        verified_revision=$(read_core_revision "$COMPOSE_UPDATE") || verified_revision=unknown
+        if [[ "$verified_revision" != "$PREVIOUS_CORE_DB_REVISION" ]]; then
+          err "RECOVERY FAILURE: downgrade Core DB не подтверждён; старый Core не будет запущен"
+          rollback_failed=true
+        fi
+      fi
+    fi
     if [[ "$DRY_RUN" != true ]]; then
       cp --preserve=mode,ownership,timestamps "$ROLLBACK_ENV_BACKUP" "${DEPLOY_PATH}/deploy/.env.prod" || rollback_failed=true
     fi
     ROLLBACK_COMPOSE="cd ${DEPLOY_PATH} && CORE_RUNTIME_IMAGE=${PREVIOUS_CORE_RUNTIME_IMAGE} WEB_RUNTIME_IMAGE=${PREVIOUS_WEB_RUNTIME_IMAGE} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
-    run "${ROLLBACK_COMPOSE} config -q" || rollback_failed=true
-    run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null" || rollback_failed=true
-    run "${ROLLBACK_COMPOSE} up -d --pull never --force-recreate perum_core perum_web" || rollback_failed=true
-    wait_for_app_readiness || rollback_failed=true
-    [[ "$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null)" == "$PREVIOUS_CORE_RUNTIME_IMAGE" ]] || rollback_failed=true
-    [[ "$(docker inspect --format '{{.Image}}' perum_web 2>/dev/null)" == "$PREVIOUS_WEB_RUNTIME_IMAGE" ]] || rollback_failed=true
+    if [[ "$rollback_failed" != true ]]; then
+      run "${ROLLBACK_COMPOSE} config -q" || rollback_failed=true
+      run "docker image inspect '${PREVIOUS_CORE_RUNTIME_IMAGE}' >/dev/null && docker image inspect '${PREVIOUS_WEB_RUNTIME_IMAGE}' >/dev/null" || rollback_failed=true
+      run "${ROLLBACK_COMPOSE} up -d --pull never --force-recreate perum_core perum_web" || rollback_failed=true
+      wait_for_app_readiness || rollback_failed=true
+      [[ "$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null)" == "$PREVIOUS_CORE_RUNTIME_IMAGE" ]] || rollback_failed=true
+      [[ "$(docker inspect --format '{{.Image}}' perum_web 2>/dev/null)" == "$PREVIOUS_WEB_RUNTIME_IMAGE" ]] || rollback_failed=true
+    fi
     run "cd ${DEPLOY_PATH} && git checkout --detach '${PREVIOUS_COMMIT}'" || rollback_failed=true
     [[ -n "$ROLLBACK_ENV_BACKUP" ]] && rm -f "$ROLLBACK_ENV_BACKUP"
     if [[ "$rollback_failed" == true ]]; then
@@ -317,6 +374,10 @@ if [[ "$UPDATE" == true ]]; then
 
   step "1" "Проверка текущей Compose-конфигурации..."
   run "${COMPOSE_PREFLIGHT} config -q"
+  PREVIOUS_CORE_DB_REVISION=$(read_core_revision "$COMPOSE_PREFLIGHT") \
+    || die "Не удалось определить единственную текущую Alembic revision Core DB"
+  [[ "$PREVIOUS_CORE_DB_REVISION" == base || "$PREVIOUS_CORE_DB_REVISION" =~ ^[0-9][0-9A-Za-z_]{3,63}$ ]] \
+    || die "Текущая Alembic revision Core DB некорректна"
   require_deploy_disk_headroom
 
   step "2" "Переключение на commit ${COMMIT}..."
@@ -362,12 +423,19 @@ if [[ "$UPDATE" == true ]]; then
     || { err "resolved WEB_IMAGE не является exact runtime sha256 image ID"; false; }
   COMPOSE_UPDATE="cd ${DEPLOY_PATH} && CORE_IMAGE=${CORE_IMAGE} AGENT_IMAGE=${AGENT_IMAGE} WEB_IMAGE=${WEB_IMAGE} CORE_RUNTIME_IMAGE=${EXPECTED_CORE_ID} WEB_RUNTIME_IMAGE=${EXPECTED_WEB_ID} CORE_PULL_POLICY=missing WEB_PULL_POLICY=missing docker compose -f deploy/docker-compose.core.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod"
   run "${COMPOSE_UPDATE} config -q"
+  if [[ "$PREVIOUS_CORE_DB_REVISION" != base ]]; then
+    run "${COMPOSE_UPDATE} run --rm --no-deps perum_core alembic show '${PREVIOUS_CORE_DB_REVISION}' >/dev/null"
+  fi
+  MIGRATION_STATE_CAPTURED=true
 
   step "4" "docker compose up -d --force-recreate perum_core perum_web..."
   run "${COMPOSE_UPDATE} up -d --pull never --force-recreate perum_core perum_web"
 
   step "5" "Ожидание готовности perum_core и perum_web..."
   wait_for_app_readiness
+  CURRENT_CORE_DB_REVISION=$(read_core_revision "$COMPOSE_UPDATE") \
+    || { err "Не удалось подтвердить единственную Alembic revision после запуска candidate Core"; false; }
+  [[ "$CURRENT_CORE_DB_REVISION" != "$PREVIOUS_CORE_DB_REVISION" ]] && MIGRATION_ADVANCED=true
   if [[ "$DRY_RUN" != true ]]; then
     [[ "$(docker inspect --format '{{.Image}}' perum_core 2>/dev/null)" == "$EXPECTED_CORE_ID" ]] \
       || { err "perum_core запущен не из ожидаемого image ID"; false; }
@@ -520,6 +588,8 @@ RELEASE_PUBLISH_TOKEN=${RELEASE_PUBLISH_TOKEN}
 
 # Токен ядро↔воркор ноды (/api/agent/*)
 AGENT_TOKEN=${AGENT_TOKEN}
+AGENT_LEGACY_HTTP_DEADLINE=$(date -u -d '+30 days' +%Y-%m-%dT%H:%M:%SZ)
+WEB_ROLLOUT_LEGACY_DEADLINE=$(date -u -d '+30 days' +%Y-%m-%dT%H:%M:%SZ)
 
 # Домены и TLS — НАСТРАИВАЕТСЯ АВТОМАТИЧЕСКИ
 PUBLIC_BASE_DOMAIN=${DOMAIN}

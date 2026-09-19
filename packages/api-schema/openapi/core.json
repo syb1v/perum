@@ -1153,6 +1153,57 @@
         }
       }
     },
+    "/api/agent/capabilities": {
+      "get": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_agent_capabilities_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Capabilities Api Agent Capabilities Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agent/health": {
       "get": {
         "tags": [
@@ -1819,6 +1870,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AgentNodeActionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/web/rollout": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "summary": "Rollout Web",
+        "operationId": "rollout_web_api_agent_web_rollout_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentWebRolloutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentWebRolloutResponse"
                 }
               }
             }
@@ -3063,6 +3173,164 @@
         }
       }
     },
+    "/api/organizations/{org_id}/billing/pilot-entitlements": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Grant Pilot Entitlement",
+        "operationId": "grant_pilot_entitlement_api_organizations__org_id__billing_pilot_entitlements_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PilotEntitlementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "List Pilot Entitlements",
+        "operationId": "list_pilot_entitlements_api_organizations__org_id__billing_pilot_entitlements_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotEntitlementListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizations/{org_id}/billing/pilot-entitlements/{entitlement_id}/resume": {
+      "post": {
+        "tags": [
+          "organizations"
+        ],
+        "summary": "Resume Pilot Suspension",
+        "operationId": "resume_pilot_suspension_api_organizations__org_id__billing_pilot_entitlements__entitlement_id__resume_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "entitlement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Entitlement Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PilotResumeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/organizations/{org_id}/billing/invoices": {
       "get": {
         "tags": [
@@ -3308,6 +3576,294 @@
                   "type": "object",
                   "additionalProperties": true,
                   "title": "Response Ci Publish Release Api Ci Release Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/web/rollout": {
+      "post": {
+        "tags": [
+          "ci"
+        ],
+        "summary": "Ci Rollout Web",
+        "operationId": "ci_rollout_web_api_ci_web_rollout_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CIWebRolloutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CIWebRolloutResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/deployment/preflight": {
+      "get": {
+        "tags": [
+          "ci"
+        ],
+        "summary": "Ci Deployment Preflight",
+        "operationId": "ci_deployment_preflight_api_ci_deployment_preflight_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Ci Deployment Preflight Api Ci Deployment Preflight Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/node-transport/config": {
+      "post": {
+        "tags": [
+          "ci"
+        ],
+        "summary": "Ci Node Transport Config",
+        "operationId": "ci_node_transport_config_api_ci_node_transport_config_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CINodeTransportConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Ci Node Transport Config Api Ci Node Transport Config Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/node-transport/transitions/{transition_id}": {
+      "get": {
+        "tags": [
+          "ci"
+        ],
+        "summary": "Ci Node Transport Transition Status",
+        "operationId": "ci_node_transport_transition_status_api_ci_node_transport_transitions__transition_id__get",
+        "parameters": [
+          {
+            "name": "transition_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Transition Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CINodeTransportTransitionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ci/node-transport/mark": {
+      "post": {
+        "tags": [
+          "ci"
+        ],
+        "summary": "Ci Mark Node Transport",
+        "operationId": "ci_mark_node_transport_api_ci_node_transport_mark_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CINodeTransportMarkRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CINodeTransportTransitionResponse"
                 }
               }
             }
@@ -7677,6 +8233,86 @@
         ],
         "title": "AgentUpdateSchoolResponse"
       },
+      "AgentWebRolloutRequest": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "pattern": "^ghcr\\.io/[a-z0-9][a-z0-9._-]*/perum-web@sha256:[0-9a-f]{64}$",
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "AgentWebRolloutRequest"
+      },
+      "AgentWebRolloutResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "previous_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Image Id"
+          },
+          "deployed_image_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployed Image Id"
+          },
+          "rolled_back": {
+            "type": "boolean",
+            "title": "Rolled Back",
+            "default": false
+          },
+          "protected_containers_unchanged": {
+            "type": "boolean",
+            "title": "Protected Containers Unchanged",
+            "default": false
+          },
+          "routes_resynced": {
+            "type": "boolean",
+            "title": "Routes Resynced",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "image"
+        ],
+        "title": "AgentWebRolloutResponse"
+      },
       "BootstrapScriptResponse": {
         "properties": {
           "filename": {
@@ -7709,6 +8345,167 @@
           "enrollment_token"
         ],
         "title": "BootstrapScriptResponse"
+      },
+      "CINodeTransportConfigRequest": {
+        "properties": {
+          "node_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Node Id"
+          },
+          "agent_image": {
+            "type": "string",
+            "title": "Agent Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "node_id",
+          "agent_image"
+        ],
+        "title": "CINodeTransportConfigRequest"
+      },
+      "CINodeTransportMarkRequest": {
+        "properties": {
+          "transition_id": {
+            "type": "string",
+            "title": "Transition Id"
+          },
+          "node_id": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Node Id"
+          },
+          "agent_image": {
+            "type": "string",
+            "title": "Agent Image"
+          },
+          "transport": {
+            "type": "string",
+            "pattern": "^https_v1$",
+            "title": "Transport"
+          },
+          "expected_transport": {
+            "type": "string",
+            "pattern": "^(legacy_http|https_v1)$",
+            "title": "Expected Transport"
+          },
+          "expected_transport_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Transport Version"
+          },
+          "expected_web_rollout_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Web Rollout Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transition_id",
+          "node_id",
+          "agent_image",
+          "transport",
+          "expected_transport"
+        ],
+        "title": "CINodeTransportMarkRequest"
+      },
+      "CINodeTransportTransitionResponse": {
+        "properties": {
+          "transition_id": {
+            "type": "string",
+            "title": "Transition Id"
+          },
+          "node_id": {
+            "type": "integer",
+            "title": "Node Id"
+          },
+          "phase": {
+            "type": "string",
+            "pattern": "^(pending|committed|rejected)$",
+            "title": "Phase"
+          },
+          "committed": {
+            "type": "boolean",
+            "title": "Committed"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Reason"
+          },
+          "agent_transport": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Transport"
+          },
+          "agent_transport_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Transport Version"
+          },
+          "web_rollout_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Rollout Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "transition_id",
+          "node_id",
+          "phase",
+          "committed"
+        ],
+        "title": "CINodeTransportTransitionResponse"
       },
       "CIReleaseCreate": {
         "properties": {
@@ -7769,6 +8566,67 @@
           "mobile_manifest"
         ],
         "title": "CIReleaseCreate"
+      },
+      "CIWebRolloutRequest": {
+        "properties": {
+          "image": {
+            "type": "string",
+            "pattern": "^ghcr\\.io/[a-z0-9][a-z0-9._-]*/perum-web@sha256:[0-9a-f]{64}$",
+            "title": "Image"
+          }
+        },
+        "type": "object",
+        "required": [
+          "image"
+        ],
+        "title": "CIWebRolloutRequest"
+      },
+      "CIWebRolloutResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "image": {
+            "type": "string",
+            "title": "Image"
+          },
+          "nodes_total": {
+            "type": "integer",
+            "title": "Nodes Total"
+          },
+          "nodes_succeeded": {
+            "type": "integer",
+            "title": "Nodes Succeeded"
+          },
+          "nodes_failed": {
+            "type": "integer",
+            "title": "Nodes Failed"
+          },
+          "nodes_pending": {
+            "type": "integer",
+            "title": "Nodes Pending",
+            "default": 0
+          },
+          "receipts": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Receipts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "image",
+          "nodes_total",
+          "nodes_succeeded",
+          "nodes_failed",
+          "receipts"
+        ],
+        "title": "CIWebRolloutResponse"
       },
       "CapacityRecommendationResponse": {
         "properties": {
@@ -7927,6 +8785,71 @@
           "domain"
         ],
         "title": "DomainCreate"
+      },
+      "EffectiveEntitlementResponse": {
+        "properties": {
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "subscription",
+              "pilot",
+              "none"
+            ],
+            "title": "Source"
+          },
+          "pilot_entitlement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pilot Entitlement Id"
+          },
+          "pilot_expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pilot Expires At"
+          },
+          "blocked_by_suspension": {
+            "type": "boolean",
+            "title": "Blocked By Suspension"
+          },
+          "suspension_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspension Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "allowed",
+          "source",
+          "pilot_entitlement_id",
+          "pilot_expires_at",
+          "blocked_by_suspension",
+          "suspension_source"
+        ],
+        "title": "EffectiveEntitlementResponse"
       },
       "EnrollRequest": {
         "properties": {
@@ -9353,6 +10276,32 @@
             ],
             "title": "Agent Version"
           },
+          "agent_transport": {
+            "type": "string",
+            "title": "Agent Transport"
+          },
+          "agent_transport_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Transport Version"
+          },
+          "web_rollout_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Rollout Version"
+          },
           "last_heartbeat": {
             "anyOf": [
               {
@@ -9472,6 +10421,9 @@
           "enabled",
           "org_id",
           "agent_version",
+          "agent_transport",
+          "agent_transport_version",
+          "web_rollout_version",
           "last_heartbeat",
           "max_schools",
           "created_at",
@@ -10079,6 +11031,255 @@
         ],
         "title": "OutboundAck"
       },
+      "PilotEntitlementListResponse": {
+        "properties": {
+          "active_pilot_entitlement_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Pilot Entitlement Id"
+          },
+          "pilot_entitlements": {
+            "items": {
+              "$ref": "#/components/schemas/PilotEntitlementResponse"
+            },
+            "type": "array",
+            "title": "Pilot Entitlements"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "active_pilot_entitlement_id",
+          "pilot_entitlements"
+        ],
+        "title": "PilotEntitlementListResponse"
+      },
+      "PilotEntitlementRequest": {
+        "properties": {
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason"
+          },
+          "approval_reference": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Approval Reference"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Idempotency Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expires_at",
+          "reason",
+          "approval_reference",
+          "idempotency_key"
+        ],
+        "title": "PilotEntitlementRequest"
+      },
+      "PilotEntitlementResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "org_id": {
+            "type": "integer",
+            "title": "Org Id"
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Starts At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          },
+          "approval_reference": {
+            "type": "string",
+            "title": "Approval Reference"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "title": "Idempotency Key"
+          },
+          "granted_by": {
+            "type": "integer",
+            "title": "Granted By"
+          },
+          "reconciliation_state": {
+            "type": "string",
+            "title": "Reconciliation State"
+          },
+          "reconciled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled At"
+          },
+          "reconciled_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reconciled By"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "org_id",
+          "starts_at",
+          "expires_at",
+          "reason",
+          "approval_reference",
+          "idempotency_key",
+          "granted_by",
+          "reconciliation_state",
+          "reconciled_at",
+          "reconciled_by",
+          "created_at"
+        ],
+        "title": "PilotEntitlementResponse"
+      },
+      "PilotGrantResponse": {
+        "properties": {
+          "pilot_entitlement": {
+            "$ref": "#/components/schemas/PilotEntitlementResponse"
+          },
+          "effective_entitlement": {
+            "$ref": "#/components/schemas/EffectiveEntitlementResponse"
+          },
+          "created": {
+            "type": "boolean",
+            "title": "Created"
+          },
+          "lifecycle_action": {
+            "type": "string",
+            "const": "none",
+            "title": "Lifecycle Action",
+            "default": "none"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pilot_entitlement",
+          "effective_entitlement",
+          "created"
+        ],
+        "title": "PilotGrantResponse"
+      },
+      "PilotResumeResponse": {
+        "properties": {
+          "pilot_entitlement_id": {
+            "type": "integer",
+            "title": "Pilot Entitlement Id"
+          },
+          "reconciliation_state": {
+            "type": "string",
+            "enum": [
+              "resumed",
+              "resume_partial"
+            ],
+            "title": "Reconciliation State"
+          },
+          "organization_resumed": {
+            "type": "boolean",
+            "title": "Organization Resumed"
+          },
+          "schools_resumed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Schools Resumed"
+          },
+          "schools_skipped": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Schools Skipped"
+          },
+          "schools_failed": {
+            "items": {
+              "$ref": "#/components/schemas/SchoolResumeFailure"
+            },
+            "type": "array",
+            "title": "Schools Failed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "pilot_entitlement_id",
+          "reconciliation_state",
+          "organization_resumed",
+          "schools_resumed",
+          "schools_skipped",
+          "schools_failed"
+        ],
+        "title": "PilotResumeResponse"
+      },
       "PlanUpdate": {
         "properties": {
           "plan": {
@@ -10497,6 +11698,25 @@
         },
         "type": "object",
         "title": "SchoolPatch"
+      },
+      "SchoolResumeFailure": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "slug",
+          "error"
+        ],
+        "title": "SchoolResumeFailure"
       },
       "StatusPatch": {
         "properties": {

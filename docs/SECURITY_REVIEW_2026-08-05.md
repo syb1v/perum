@@ -11,7 +11,7 @@ coursework attachments и requester/operator support boundaries.
 | ID | Severity | Boundary | Status |
 |---|---|---|---|
 | SEC-001 | P0 | Один общий node agent credential принимался всеми нодами | Исправлено в коде; production rotation pending |
-| SEC-002 | P1 | Core передаёт agent credential и tenant secrets к public agent port по HTTP | OPEN |
+| SEC-002 | P1 | Core передаёт agent credential и tenant secrets к public agent port по HTTP | Исправлено в коде; production transition pending |
 | SEC-003 | P1 | Subject Teacher мог читать analytics другого/всех предметов класса | Исправлено |
 | SEC-004 | P1 | Student/Parent мог скачать attachment unpublished homework по ID | Исправлено |
 | SEC-005 | P1 | Former Teacher сохранял coursework mutation authority после revoke assignment | Исправлено |
@@ -26,6 +26,14 @@ coursework attachments и requester/operator support boundaries.
   Teacher analytics и для каждой Teacher coursework mutation.
 - Attachment download для Student/Parent использует тот же publication predicate,
   что и homework listing.
+- Production Core→Agent transport требует HTTPS с approved private CA и exact
+  hostname/IP SAN verification; optional mTLS включается только полной cert/key
+  парой. Direct Agent port удалён, management path публикуется Caddy только по TLS.
+- Existing nodes получают `https_v1` и `web_rollout_v1` только после
+  environment-approved transition по exact-SHA CI artifact. Core независимо
+  проверяет HTTPS identity, health, immutable Agent image и capability, затем
+  атомарно сохраняет idempotent receipt. Rollback возвращает DB к exact прежней
+  Alembic revision до запуска historical image; ambiguous state остаётся hold.
 
 ## Verification
 
@@ -33,18 +41,20 @@ coursework attachments и requester/operator support boundaries.
 - Full Core suite: `255 passed`.
 - Focused Tenant authorization regression: `1 passed`.
 - Full Tenant unit suite: `329 passed`.
+- Hardened Core suite после SEC-002/rollout remediation: `311 passed`; Alembic
+  имеет один head `0040_node_transport_receipts`; deploy smoke пройден.
 - Regression покрывает distinct per-node credentials, отсутствие master token в
   bootstrap/request, analytics exact-subject denial, draft attachment denial и
   assignment-revocation mutation denial.
 
 ## Residual Risk
 
-`SEC-002` остаётся OPEN. Node hostname может быть raw IP, а agent port публикуется
-на всех interfaces; `RemoteNodeClient` использует plaintext HTTP. Простая замена
-scheme на HTTPS не обеспечивает проверяемую server identity и ломает существующий
-IP-based contract. До approved private management network или mTLS/application
-envelope provisioning traffic следует считать способным раскрыть durable tenant
-secrets сетевому наблюдателю.
+`SEC-002` закрыт в repository implementation, но не принят как production
+remediation. До выдачи approved CA/server certificates, controlled transition
+каждой active node, firewall verification и credential rotation существующий
+production transport следует считать legacy risk. Legacy HTTP разрешён только
+для явно отмеченных nodes внутри обязательного bounded deadline; после deadline
+Core fail-closed отклоняет management request.
 
 ## Production Gate
 
@@ -71,3 +81,11 @@ M4 security criterion остаётся незакрытым до выполне�
 Candidates are published, not accepted as production security rollout. Core
 deploy rolled back after disk exhaustion; Tenant remains opt-in and was not rolled
 out. Per-node credential rotation and confidential transport remain mandatory.
+
+## 2026-08-17 Remediation Candidate
+
+Repository implementation готова, но production rollout не выполнялся. Для
+acceptance нужны approved private CA/server certificates с exact SAN, optional
+mTLS identity, future transition deadlines, controlled node workflow receipt,
+закрытый plaintext listener, per-node credential rotation и production
+authorization smoke. До этих evidence общий статус review остаётся **NO-GO**.

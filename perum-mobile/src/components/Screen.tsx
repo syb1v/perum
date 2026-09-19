@@ -9,5 +9,5 @@ export function Screen({ children }: PropsWithChildren) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { flex: 1, paddingHorizontal: 22, paddingVertical: 18 },
+  content: { flex: 1, paddingHorizontal: 20, paddingVertical: 16 },
 });

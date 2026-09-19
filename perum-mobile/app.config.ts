@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...appConfig.android,
       intentFilters: [{ action: "VIEW", autoVerify: true, data: [{ scheme: "https", host: runtime.linkHost, pathPrefix: "/s/" }], category: ["BROWSABLE", "DEFAULT"] }],
     },
-    plugins: [...(appConfig.plugins ?? []), ["expo-notifications", { color: "#2F6B4F", defaultChannel: "default" }]],
+    plugins: [...(appConfig.plugins ?? []), ["expo-notifications", { color: "#0EA5E9", defaultChannel: "default" }]],
     extra: {
       ...appConfig.extra,
       eas: runtime.projectId ? { projectId: runtime.projectId } : undefined,

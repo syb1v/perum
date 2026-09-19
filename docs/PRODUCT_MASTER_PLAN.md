@@ -144,8 +144,11 @@ Incident остаётся MONITORING до owner confirmation и preventive capac
 4. Провести focused authorization/privacy review критических Launch API.
 5. Принять RTO/RPO, ownership и incident runbook.
 
-Security review выполнен, но criterion остаётся OPEN из-за plaintext node agent
-transport и pending production credential rotation; evidence:
+Security remediation для node management transport выполнена в коде: production
+требует private-CA HTTPS с SAN verification, direct Agent port удалён, а existing
+nodes переводятся transactional exact-image workflow. Criterion остаётся OPEN до
+approved certificate provisioning, controlled production transition, credential
+rotation и authorization smoke; evidence:
 `SECURITY_REVIEW_2026-08-05.md`.
 
 ### P1. Pilot and launch

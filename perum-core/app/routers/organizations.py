@@ -9,10 +9,11 @@ from __future__ import annotations
 import hashlib
 import logging
 import secrets as secrets_mod
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,16 +22,19 @@ from app.core.db import get_db
 from app.core.deps import require_platform_admin
 from app.core.locks import keyed_lock, school_key
 from app.core.security import hash_password
-from app.models import EnrollmentToken, Invoice, Node, OrgAdmin, Organization, OrganizationSecret, School, SchoolMetric
+from app.models import EnrollmentToken, Invoice, Node, OrgAdmin, Organization, OrganizationSecret, PilotEntitlement, PlatformAdmin, School, SchoolMetric
 from app.services.billing import (
     PLANS,
+    active_pilot_entitlement,
     billing_state,
+    effective_entitlement,
     get_or_create_subscription,
     is_delinquent,
     plan_price,
     record_payment,
     school_limit,
 )
+from app.schemas.billing import PilotEntitlementListResponse, PilotEntitlementResponse, PilotGrantResponse, PilotResumeResponse
 from app.schemas.organization import (
     OrganizationCreate,
     OrganizationRead,
@@ -333,6 +337,8 @@ async def suspend_organization(org_id: int, db: AsyncSession = Depends(get_db)) 
         raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
     if org.status not in ("active", "suspended"):
         raise HTTPException(status.HTTP_409_CONFLICT, f"организацию в статусе '{org.status}' нельзя заморозить")
+    if org.status == "suspended":
+        return {"id": org.id, "slug": org.slug, "status": org.status}
     schools = (await db.execute(select(School).where(School.org_id == org.id))).scalars().all()
     for school in schools:
         if school.status == "active":
@@ -343,22 +349,40 @@ async def suspend_organization(org_id: int, db: AsyncSession = Depends(get_db)) 
                 logger.error("org %s: suspend school %s failed: %s", org.slug, school.slug, exc)
     org.status = "suspended"
     org.suspended_at = datetime.utcnow()
+    org.suspension_source = "manual"
+    org.suspension_reason = "platform administrator suspension"
     await db.commit()
     return {"id": org.id, "slug": org.slug, "status": org.status}
 
 
-async def _resume_org(org: Organization, db: AsyncSession) -> None:
+async def _resume_org(org: Organization, db: AsyncSession) -> dict:
+    org_resumed = org.status == "suspended"
     org.status = "active"
     org.suspended_at = None
+    org.suspension_source = None
+    org.suspension_reason = None
     await db.commit()
     schools = (await db.execute(select(School).where(School.org_id == org.id))).scalars().all()
+    resumed_schools: list[str] = []
+    skipped_schools: list[str] = []
+    failed_schools: list[dict] = []
     for school in schools:
         if school.status == "suspended" and school.suspended_by == "org":
             try:
                 async with keyed_lock(school_key(school.id)):
                     await unsuspend_school(school, db)
+                resumed_schools.append(school.slug)
             except Exception as exc:  # noqa: BLE001
                 logger.error("org %s: unsuspend school %s failed: %s", org.slug, school.slug, exc)
+                failed_schools.append({"slug": school.slug, "error": str(exc)})
+        else:
+            skipped_schools.append(school.slug)
+    return {
+        "organization_resumed": org_resumed,
+        "schools_resumed": resumed_schools,
+        "schools_skipped": skipped_schools,
+        "schools_failed": failed_schools,
+    }
 
 
 @router.post("/{org_id}/unsuspend")
@@ -521,6 +545,13 @@ class ChargeRequest(BaseModel):
     months: int = Field(default=1, ge=1, le=120)
 
 
+class PilotEntitlementRequest(BaseModel):
+    expires_at: datetime
+    reason: str = Field(min_length=1, max_length=4000)
+    approval_reference: str = Field(min_length=1, max_length=255)
+    idempotency_key: str = Field(min_length=1, max_length=255)
+
+
 async def _active_school_count(db: AsyncSession, org_id: int) -> int:
     return int(await db.scalar(
         select(func.count(School.id)).where(School.org_id == org_id, School.status != "archived")
@@ -529,6 +560,7 @@ async def _active_school_count(db: AsyncSession, org_id: int) -> int:
 
 async def _billing_payload(db: AsyncSession, org: Organization) -> dict:
     sub = await get_or_create_subscription(db, org)
+    now = datetime.utcnow()
     used = await _active_school_count(db, org.id)
     limit = school_limit(org.plan)
     return {
@@ -540,7 +572,8 @@ async def _billing_payload(db: AsyncSession, org: Organization) -> dict:
         "schools_used": used,
         "schools_remaining": max(limit - used, 0),
         "org_status": org.status,
-        "subscription": billing_state(sub, datetime.utcnow()),
+        "subscription": billing_state(sub, now),
+        "effective_entitlement": await effective_entitlement(db, org, sub, now),
         "created_at": org.created_at.isoformat() if org.created_at else None,
     }
 
@@ -597,7 +630,11 @@ async def charge_billing(org_id: int, payload: ChargeRequest, db: AsyncSession =
     sub = await get_or_create_subscription(db, org)
     invoice = await record_payment(db, org, sub, payload.months)
     resumed = False
-    if org.status == "suspended" and not is_delinquent(sub, datetime.utcnow()):
+    if (
+        org.status == "suspended"
+        and org.suspension_source == "billing"
+        and not is_delinquent(sub, datetime.utcnow())
+    ):
         await _resume_org(org, db)
         resumed = True
     return {
@@ -607,6 +644,160 @@ async def charge_billing(org_id: int, payload: ChargeRequest, db: AsyncSession =
         "subscription": billing_state(sub, datetime.utcnow()),
         "resumed": resumed,
     }
+
+
+@router.post(
+    "/{org_id}/billing/pilot-entitlements",
+    status_code=status.HTTP_201_CREATED,
+    response_model=PilotGrantResponse,
+)
+async def grant_pilot_entitlement(
+    org_id: int,
+    payload: PilotEntitlementRequest,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> PilotGrantResponse:
+    org = await _get_org(org_id, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    now = datetime.utcnow()
+    expires_at = payload.expires_at
+    if expires_at.tzinfo is not None:
+        expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
+    if expires_at <= now:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "expires_at must be in the future")
+    reason = payload.reason.strip()
+    approval_reference = payload.approval_reference.strip()
+    idempotency_key = payload.idempotency_key.strip()
+    if not reason or not approval_reference or not idempotency_key:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "reason, approval_reference and idempotency_key must not be blank",
+        )
+    existing = (await db.execute(
+        select(PilotEntitlement).where(PilotEntitlement.idempotency_key == idempotency_key)
+    )).scalars().first()
+    if existing is not None:
+        if existing.org_id != org.id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "idempotency key belongs to another organization")
+        if (
+            existing.expires_at != expires_at
+            or existing.reason != reason
+            or existing.approval_reference != approval_reference
+        ):
+            raise HTTPException(status.HTTP_409_CONFLICT, "idempotency key payload mismatch")
+        sub = await get_or_create_subscription(db, org)
+        return PilotGrantResponse(
+            pilot_entitlement=_pilot_response(existing, datetime.utcnow()),
+            effective_entitlement=await effective_entitlement(db, org, sub, datetime.utcnow()),
+            created=False,
+        )
+    grant = PilotEntitlement(
+        org_id=org.id,
+        starts_at=now,
+        expires_at=expires_at,
+        reason=reason,
+        approval_reference=approval_reference,
+        idempotency_key=idempotency_key,
+        granted_by=admin.id,
+        reconciliation_state="active",
+    )
+    db.add(grant)
+    created = True
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        existing = (await db.execute(
+            select(PilotEntitlement).where(PilotEntitlement.idempotency_key == idempotency_key)
+        )).scalars().first()
+        if existing is None or existing.org_id != org.id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "idempotency key conflict")
+        if (
+            existing.expires_at != expires_at
+            or existing.reason != reason
+            or existing.approval_reference != approval_reference
+        ):
+            raise HTTPException(status.HTTP_409_CONFLICT, "idempotency key payload mismatch")
+        grant = existing
+        created = False
+    await db.refresh(grant)
+    sub = await get_or_create_subscription(db, org)
+    entitlement = await effective_entitlement(db, org, sub, datetime.utcnow())
+    return PilotGrantResponse(
+        pilot_entitlement=_pilot_response(grant, datetime.utcnow()),
+        effective_entitlement=entitlement,
+        created=created,
+    )
+
+
+def _pilot_response(grant: PilotEntitlement, now: datetime) -> PilotEntitlementResponse:
+    return PilotEntitlementResponse(
+        id=grant.id,
+        org_id=grant.org_id,
+        starts_at=grant.starts_at,
+        expires_at=grant.expires_at,
+        reason=grant.reason,
+        approval_reference=grant.approval_reference,
+        idempotency_key=grant.idempotency_key,
+        granted_by=grant.granted_by,
+        reconciliation_state=grant.reconciliation_state,
+        reconciled_at=grant.reconciled_at,
+        reconciled_by=grant.reconciled_by,
+        created_at=grant.created_at,
+        active=grant.starts_at <= now < grant.expires_at,
+    )
+
+
+@router.post(
+    "/{org_id}/billing/pilot-entitlements/{entitlement_id}/resume",
+    response_model=PilotResumeResponse,
+)
+async def resume_pilot_suspension(
+    org_id: int,
+    entitlement_id: int,
+    admin: PlatformAdmin = Depends(require_platform_admin),
+    db: AsyncSession = Depends(get_db),
+) -> PilotResumeResponse:
+    org = await _get_org(org_id, db)
+    grant = await db.get(PilotEntitlement, entitlement_id)
+    if org is None or grant is None or grant.org_id != org_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "pilot entitlement not found")
+    now = datetime.utcnow()
+    if not (grant.starts_at <= now < grant.expires_at):
+        raise HTTPException(status.HTTP_409_CONFLICT, "pilot entitlement is not active")
+    if org.status != "suspended" or org.suspension_source != "pilot":
+        raise HTTPException(status.HTTP_409_CONFLICT, "organization is not suspended by pilot lifecycle")
+    result = await _resume_org(org, db)
+    grant.reconciliation_state = "resume_partial" if result["schools_failed"] else "resumed"
+    grant.reconciled_at = datetime.utcnow()
+    grant.reconciled_by = admin.id
+    await db.commit()
+    return PilotResumeResponse(
+        pilot_entitlement_id=grant.id,
+        reconciliation_state=grant.reconciliation_state,
+        **result,
+    )
+
+
+@router.get("/{org_id}/billing/pilot-entitlements", response_model=PilotEntitlementListResponse)
+async def list_pilot_entitlements(
+    org_id: int, db: AsyncSession = Depends(get_db)
+) -> PilotEntitlementListResponse:
+    org = await _get_org(org_id, db)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "organization not found")
+    rows = (await db.execute(
+        select(PilotEntitlement)
+        .where(PilotEntitlement.org_id == org.id)
+        .order_by(PilotEntitlement.id.desc())
+    )).scalars().all()
+    now = datetime.utcnow()
+    active = await active_pilot_entitlement(db, org.id, now)
+    return PilotEntitlementListResponse(
+        active_pilot_entitlement_id=active.id if active else None,
+        pilot_entitlements=[_pilot_response(grant, now) for grant in rows],
+    )
 
 
 @router.get("/{org_id}/billing/invoices")

@@ -59,6 +59,9 @@ class NodeResponse(BaseModel):
     enabled: bool
     org_id: int | None
     agent_version: str | None
+    agent_transport: str
+    agent_transport_version: str | None
+    web_rollout_version: str | None
     last_heartbeat: datetime | None
     max_schools: int
     # Реальная загрузка (снимок монитор-петли) + латентность ядро→воркер.

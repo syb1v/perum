@@ -394,6 +394,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Capabilities */
+        get: operations["capabilities_api_agent_capabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/agent/health": {
         parameters: {
             query?: never;
@@ -592,6 +609,23 @@ export interface paths {
         put?: never;
         /** Restart Node */
         post: operations["restart_node_api_agent_restart_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/web/rollout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rollout Web */
+        post: operations["rollout_web_api_agent_web_rollout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -907,6 +941,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/organizations/{org_id}/billing/pilot-entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Pilot Entitlements */
+        get: operations["list_pilot_entitlements_api_organizations__org_id__billing_pilot_entitlements_get"];
+        put?: never;
+        /** Grant Pilot Entitlement */
+        post: operations["grant_pilot_entitlement_api_organizations__org_id__billing_pilot_entitlements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/organizations/{org_id}/billing/pilot-entitlements/{entitlement_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resume Pilot Suspension */
+        post: operations["resume_pilot_suspension_api_organizations__org_id__billing_pilot_entitlements__entitlement_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/organizations/{org_id}/billing/invoices": {
         parameters: {
             query?: never;
@@ -970,6 +1039,91 @@ export interface paths {
         put?: never;
         /** Ci Publish Release */
         post: operations["ci_publish_release_api_ci_release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ci/web/rollout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ci Rollout Web */
+        post: operations["ci_rollout_web_api_ci_web_rollout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ci/deployment/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ci Deployment Preflight */
+        get: operations["ci_deployment_preflight_api_ci_deployment_preflight_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ci/node-transport/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ci Node Transport Config */
+        post: operations["ci_node_transport_config_api_ci_node_transport_config_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ci/node-transport/transitions/{transition_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ci Node Transport Transition Status */
+        get: operations["ci_node_transport_transition_status_api_ci_node_transport_transitions__transition_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ci/node-transport/mark": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ci Mark Node Transport */
+        post: operations["ci_mark_node_transport_api_ci_node_transport_mark_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2393,6 +2547,39 @@ export interface components {
             /** Message */
             message?: string | null;
         };
+        /** AgentWebRolloutRequest */
+        AgentWebRolloutRequest: {
+            /** Image */
+            image: string;
+        };
+        /** AgentWebRolloutResponse */
+        AgentWebRolloutResponse: {
+            /** Success */
+            success: boolean;
+            /** Image */
+            image: string;
+            /** Previous Image Id */
+            previous_image_id?: string | null;
+            /** Deployed Image Id */
+            deployed_image_id?: string | null;
+            /**
+             * Rolled Back
+             * @default false
+             */
+            rolled_back: boolean;
+            /**
+             * Protected Containers Unchanged
+             * @default false
+             */
+            protected_containers_unchanged: boolean;
+            /**
+             * Routes Resynced
+             * @default false
+             */
+            routes_resynced: boolean;
+            /** Message */
+            message?: string | null;
+        };
         /** BootstrapScriptResponse */
         BootstrapScriptResponse: {
             /** Filename */
@@ -2405,6 +2592,51 @@ export interface components {
             docker_compose: string;
             /** Enrollment Token */
             enrollment_token: string;
+        };
+        /** CINodeTransportConfigRequest */
+        CINodeTransportConfigRequest: {
+            /** Node Id */
+            node_id: number;
+            /** Agent Image */
+            agent_image: string;
+        };
+        /** CINodeTransportMarkRequest */
+        CINodeTransportMarkRequest: {
+            /** Transition Id */
+            transition_id: string;
+            /** Node Id */
+            node_id: number;
+            /** Agent Image */
+            agent_image: string;
+            /** Transport */
+            transport: string;
+            /** Expected Transport */
+            expected_transport: string;
+            /** Expected Transport Version */
+            expected_transport_version?: string | null;
+            /** Expected Web Rollout Version */
+            expected_web_rollout_version?: string | null;
+        };
+        /** CINodeTransportTransitionResponse */
+        CINodeTransportTransitionResponse: {
+            /** Transition Id */
+            transition_id: string;
+            /** Node Id */
+            node_id: number;
+            /** Phase */
+            phase: string;
+            /** Committed */
+            committed: boolean;
+            /** Error Code */
+            error_code?: string | null;
+            /** Error Reason */
+            error_reason?: string | null;
+            /** Agent Transport */
+            agent_transport?: string | null;
+            /** Agent Transport Version */
+            agent_transport_version?: string | null;
+            /** Web Rollout Version */
+            web_rollout_version?: string | null;
         };
         /** CIReleaseCreate */
         CIReleaseCreate: {
@@ -2427,6 +2659,33 @@ export interface components {
             /** Source Commit */
             source_commit?: string | null;
             mobile_manifest: components["schemas"]["MobileReleaseManifestV1"];
+        };
+        /** CIWebRolloutRequest */
+        CIWebRolloutRequest: {
+            /** Image */
+            image: string;
+        };
+        /** CIWebRolloutResponse */
+        CIWebRolloutResponse: {
+            /** Success */
+            success: boolean;
+            /** Image */
+            image: string;
+            /** Nodes Total */
+            nodes_total: number;
+            /** Nodes Succeeded */
+            nodes_succeeded: number;
+            /** Nodes Failed */
+            nodes_failed: number;
+            /**
+             * Nodes Pending
+             * @default 0
+             */
+            nodes_pending: number;
+            /** Receipts */
+            receipts: {
+                [key: string]: unknown;
+            }[];
         };
         /** CapacityRecommendationResponse */
         CapacityRecommendationResponse: {
@@ -2484,6 +2743,24 @@ export interface components {
         DomainCreate: {
             /** Domain */
             domain: string;
+        };
+        /** EffectiveEntitlementResponse */
+        EffectiveEntitlementResponse: {
+            /** Allowed */
+            allowed: boolean;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "subscription" | "pilot" | "none";
+            /** Pilot Entitlement Id */
+            pilot_entitlement_id: number | null;
+            /** Pilot Expires At */
+            pilot_expires_at: string | null;
+            /** Blocked By Suspension */
+            blocked_by_suspension: boolean;
+            /** Suspension Source */
+            suspension_source: string | null;
         };
         /** EnrollRequest */
         EnrollRequest: {
@@ -3012,6 +3289,12 @@ export interface components {
             org_id: number | null;
             /** Agent Version */
             agent_version: string | null;
+            /** Agent Transport */
+            agent_transport: string;
+            /** Agent Transport Version */
+            agent_transport_version: string | null;
+            /** Web Rollout Version */
+            web_rollout_version: string | null;
             /** Last Heartbeat */
             last_heartbeat: string | null;
             /** Max Schools */
@@ -3216,6 +3499,93 @@ export interface components {
             /** Cursor */
             cursor: number;
         };
+        /** PilotEntitlementListResponse */
+        PilotEntitlementListResponse: {
+            /** Active Pilot Entitlement Id */
+            active_pilot_entitlement_id: number | null;
+            /** Pilot Entitlements */
+            pilot_entitlements: components["schemas"]["PilotEntitlementResponse"][];
+        };
+        /** PilotEntitlementRequest */
+        PilotEntitlementRequest: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Reason */
+            reason: string;
+            /** Approval Reference */
+            approval_reference: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+        };
+        /** PilotEntitlementResponse */
+        PilotEntitlementResponse: {
+            /** Id */
+            id: number;
+            /** Org Id */
+            org_id: number;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Reason */
+            reason: string;
+            /** Approval Reference */
+            approval_reference: string;
+            /** Idempotency Key */
+            idempotency_key: string;
+            /** Granted By */
+            granted_by: number;
+            /** Reconciliation State */
+            reconciliation_state: string;
+            /** Reconciled At */
+            reconciled_at: string | null;
+            /** Reconciled By */
+            reconciled_by: number | null;
+            /** Created At */
+            created_at: string | null;
+            /** Active */
+            active?: boolean | null;
+        };
+        /** PilotGrantResponse */
+        PilotGrantResponse: {
+            pilot_entitlement: components["schemas"]["PilotEntitlementResponse"];
+            effective_entitlement: components["schemas"]["EffectiveEntitlementResponse"];
+            /** Created */
+            created: boolean;
+            /**
+             * Lifecycle Action
+             * @default none
+             * @constant
+             */
+            lifecycle_action: "none";
+        };
+        /** PilotResumeResponse */
+        PilotResumeResponse: {
+            /** Pilot Entitlement Id */
+            pilot_entitlement_id: number;
+            /**
+             * Reconciliation State
+             * @enum {string}
+             */
+            reconciliation_state: "resumed" | "resume_partial";
+            /** Organization Resumed */
+            organization_resumed: boolean;
+            /** Schools Resumed */
+            schools_resumed: string[];
+            /** Schools Skipped */
+            schools_skipped: string[];
+            /** Schools Failed */
+            schools_failed: components["schemas"]["SchoolResumeFailure"][];
+        };
         /** PlanUpdate */
         PlanUpdate: {
             /** Plan */
@@ -3365,6 +3735,13 @@ export interface components {
             name?: string | null;
             /** Admin Email */
             admin_email?: string | null;
+        };
+        /** SchoolResumeFailure */
+        SchoolResumeFailure: {
+            /** Slug */
+            slug: string;
+            /** Error */
+            error: string;
         };
         /** StatusPatch */
         StatusPatch: {
@@ -4334,6 +4711,39 @@ export interface operations {
             };
         };
     };
+    capabilities_api_agent_capabilities_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_api_agent_health_get: {
         parameters: {
             query?: never;
@@ -4720,6 +5130,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentNodeActionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rollout_web_api_agent_web_rollout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentWebRolloutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentWebRolloutResponse"];
                 };
             };
             /** @description Validation Error */
@@ -5505,6 +5950,104 @@ export interface operations {
             };
         };
     };
+    list_pilot_entitlements_api_organizations__org_id__billing_pilot_entitlements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotEntitlementListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_pilot_entitlement_api_organizations__org_id__billing_pilot_entitlements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PilotEntitlementRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotGrantResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_pilot_suspension_api_organizations__org_id__billing_pilot_entitlements__entitlement_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                org_id: number;
+                entitlement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PilotResumeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invoices_api_organizations__org_id__billing_invoices_get: {
         parameters: {
             query?: never;
@@ -5663,6 +6206,179 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ci_rollout_web_api_ci_web_rollout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CIWebRolloutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CIWebRolloutResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ci_deployment_preflight_api_ci_deployment_preflight_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ci_node_transport_config_api_ci_node_transport_config_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CINodeTransportConfigRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ci_node_transport_transition_status_api_ci_node_transport_transitions__transition_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                transition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CINodeTransportTransitionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ci_mark_node_transport_api_ci_node_transport_mark_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CINodeTransportMarkRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CINodeTransportTransitionResponse"];
                 };
             };
             /** @description Validation Error */

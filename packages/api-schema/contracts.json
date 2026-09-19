@@ -104,7 +104,12 @@
     "/api/auth/login",
     "/api/public/tenant-discovery",
     "/api/organizations",
+    "/api/organizations/{org_id}/billing/pilot-entitlements",
+    "/api/organizations/{org_id}/billing/pilot-entitlements/{entitlement_id}/resume",
     "/api/schools",
+    "/api/ci/web/rollout",
+    "/api/ci/node-transport/config",
+    "/api/ci/node-transport/mark",
     "/api/support/tickets"
     ,"/api/support/escalations/pending"
     ,"/api/support/escalations/{ticket_id}"

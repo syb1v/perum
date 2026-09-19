@@ -213,7 +213,45 @@ jobs:
         run: |
           docker compose --env-file deploy/.env.prod.example \
             -f deploy/docker-compose.core.yml \
-            -f deploy/docker-compose.prod.yml config --quiet
+             -f deploy/docker-compose.prod.yml config --quiet
+
+  agent-transition-image:
+    name: Publish immutable Agent transition candidate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish exact-SHA Agent candidate
+        id: agent
+        uses: docker/build-push-action@v6
+        with:
+          context: perum-core
+          file: perum-core/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/perum-core:agent-transition-${{ github.sha }}
+      - name: Record candidate provenance
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          IMAGE: ghcr.io/${{ github.repository_owner }}/perum-core
+          DIGEST: ${{ steps.agent.outputs.digest }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          jq -n --arg source_sha "$SOURCE_SHA" --arg image "$IMAGE" --arg digest "$DIGEST" \
+            '{source_sha:$source_sha,image:$image,digest:$digest}' > agent-transition-provenance.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-transition-provenance
+          path: agent-transition-provenance.json
+          retention-days: 30
 
   mobile-checks:
     name: perum-mobile (tsc + tests + export)
@@ -286,6 +324,6 @@ jobs:
       - name: Parse workflow YAML
         run: |
           pip install pyyaml
-          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml', '.github/workflows/production-diagnostics.yml', '.github/workflows/production-disk-recovery.yml', '.github/workflows/production-school-route-recovery.yml', '.github/workflows/production-cloudflare-ipv6-recovery.yml', '.github/workflows/production-cloudflare-dns-preflight.yml')]"
+          python -c "import yaml; [yaml.safe_load(open(path)) for path in ('.github/workflows/ci.yml', '.github/workflows/release.yml', '.github/workflows/scanner-images.yml', '.github/workflows/synthetic-monitor.yml', '.github/workflows/production-diagnostics.yml', '.github/workflows/production-disk-recovery.yml', '.github/workflows/production-school-route-recovery.yml', '.github/workflows/production-cloudflare-ipv6-recovery.yml', '.github/workflows/production-cloudflare-dns-preflight.yml', '.github/workflows/production-node-agent-tls-transition.yml')]"
       - name: Run deploy shell regressions
         run: bash deploy/tests/test_deploy_scripts.sh

@@ -17,6 +17,6 @@ export function RootShell({ children }: PropsWithChildren) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background }, content: { flex: 1 },
-  offline: { backgroundColor: '#E9A23B', paddingHorizontal: 16, paddingVertical: 7 }, offlineText: { color: '#2B2113', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  error: { alignItems: 'center', backgroundColor: '#FDECEA', flexDirection: 'row', gap: 12, justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 9 }, errorText: { color: colors.danger, flex: 1, fontSize: 13 }, close: { color: colors.danger, fontSize: 13, fontWeight: '700' },
+  offline: { backgroundColor: '#92400E', paddingHorizontal: 16, paddingVertical: 8 }, offlineText: { color: '#FEF3C7', fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  error: { alignItems: 'center', backgroundColor: '#35151A', flexDirection: 'row', gap: 12, justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }, errorText: { color: '#FCA5A5', flex: 1, fontSize: 13 }, close: { color: '#FCA5A5', fontSize: 13, fontWeight: '700' },
 });

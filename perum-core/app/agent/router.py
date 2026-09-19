@@ -26,6 +26,8 @@ from app.agent.schemas import (
     AgentSuspendSchoolRequest,
     AgentUpdateSchoolRequest,
     AgentUpdateSchoolResponse,
+    AgentWebRolloutRequest,
+    AgentWebRolloutResponse,
 )
 from app.agent.service import (
     deprovision_school_on_node,
@@ -41,6 +43,7 @@ from app.agent.service import (
     suspend_school_on_node,
     unsuspend_school_on_node,
     update_school_on_node,
+    rollout_web_on_node,
     apply_social_runtime_on_node,
 )
 from app.core.config import get_settings
@@ -48,14 +51,14 @@ from app.core.db import get_db
 
 router = APIRouter()
 
+WEB_ROLLOUT_CAPABILITY = "web_rollout_v1"
+
 
 async def require_agent_token(authorization: str | None = Header(default=None)) -> None:
-    """Аутентификация запросов ядро→воркер по общему секрету AGENT_TOKEN. Если токен
-    в настройках не задан (dev) — проверка пропускается. Вешается на мутирующие
-    эндпоинты управления школами; /whoami и /health остаются открытыми (liveness)."""
+    """Аутентификация запросов ядро→воркер по общему секрету AGENT_TOKEN."""
     token = get_settings().AGENT_TOKEN
     if not token:
-        return
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "agent authentication is not configured")
     presented = ""
     if authorization and authorization.lower().startswith("bearer "):
         presented = authorization[7:]
@@ -74,6 +77,17 @@ async def whoami(db: AsyncSession = Depends(get_db)) -> dict:
         "org_name": state.org_name if state else None,
         "release_tag": state.release_tag if state else None,
         "core_url": settings.CORE_URL if settings.ROLE == "org_agent" else None,
+    }
+
+
+@router.get("/capabilities", dependencies=[Depends(require_agent_token)])
+async def capabilities() -> dict:
+    settings = get_settings()
+    if settings.ROLE != "org_agent":
+        raise HTTPException(400, "capabilities endpoint only available in org_agent mode")
+    return {
+        "agent_image": settings.AGENT_IMAGE,
+        "capabilities": [WEB_ROLLOUT_CAPABILITY],
     }
 
 
@@ -182,6 +196,16 @@ async def restart_node(db: AsyncSession = Depends(get_db)) -> AgentNodeActionRes
     if get_settings().ROLE != "org_agent":
         raise HTTPException(400, "restart only available in org_agent mode")
     return await restart_node_stack(db)
+
+
+@router.post("/web/rollout", response_model=AgentWebRolloutResponse, dependencies=[Depends(require_agent_token)])
+async def rollout_web(
+    req: AgentWebRolloutRequest,
+    db: AsyncSession = Depends(get_db),
+) -> AgentWebRolloutResponse:
+    if get_settings().ROLE != "org_agent":
+        raise HTTPException(400, "web rollout only available in org_agent mode")
+    return await rollout_web_on_node(db, req)
 
 
 @router.post("/heartbeat", response_model=AgentHeartbeatResponse, dependencies=[Depends(require_agent_token)])

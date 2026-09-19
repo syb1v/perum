@@ -115,12 +115,13 @@ async def require_billing_ok(
     операции, которые создают/изменяют ресурсы (создание/реправижининг/обновление
     школ). Read-only и просмотр биллинга остаются доступны, чтобы орг видела, что
     надо оплатить."""
-    from app.services.billing import get_or_create_subscription, is_delinquent
+    from app.services.billing import effective_entitlement, get_or_create_subscription
 
     org = await db.get(Organization, org_admin.org_id)
     if org is not None:
         sub = await get_or_create_subscription(db, org)
-        if is_delinquent(sub, datetime.utcnow()):
+        entitlement = await effective_entitlement(db, org, sub, datetime.utcnow())
+        if not entitlement["allowed"]:
             raise HTTPException(
                 status.HTTP_402_PAYMENT_REQUIRED,
                 "подписка просрочена — оплатите, чтобы создавать и изменять школы",

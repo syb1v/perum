@@ -1,11 +1,19 @@
+import { borders, colors as tokenColors, radii, shadows, spacing, surfaces, text, typography } from '@perum/design-tokens';
+
 export const colors = {
-  background: '#F3F0E8',
-  surface: '#FFFCF5',
-  ink: '#17231D',
-  muted: '#68756D',
-  primary: '#185C45',
-  primarySoft: '#DCEBE3',
-  border: '#D8D8CE',
-  danger: '#A23B32',
+  background: surfaces.primary,
+  surface: surfaces.card,
+  ink: text.primary,
+  muted: text.secondary,
+  primary: tokenColors.accent.primary,
+  primarySoft: 'rgba(14, 165, 233, 0.15)',
+  border: borders.default,
+  danger: tokenColors.semantic.danger,
   white: '#FFFFFF',
-};
+  secondarySurface: surfaces.secondary,
+  input: surfaces.input,
+  borderHover: borders.hover,
+  placeholder: text.placeholder,
+} as const;
+
+export { borders, radii, shadows, spacing, text, typography };

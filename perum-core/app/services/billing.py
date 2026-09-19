@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Invoice, Node, Organization, School, SchoolDomain, Subscription
+from app.models import Invoice, Node, Organization, PilotEntitlement, School, SchoolDomain, Subscription
 
 logger = logging.getLogger("perum.billing")
 
@@ -79,6 +79,54 @@ def billing_state(sub: Subscription | None, now: datetime) -> dict:
         "days_left": days_left,
         "delinquent": is_delinquent(sub, now),
     }
+
+
+def effective_entitlement_state(
+    sub: Subscription | None,
+    pilot: PilotEntitlement | None,
+    now: datetime,
+    suspension_source: str | None = None,
+) -> dict:
+    subscription_valid = not is_delinquent(sub, now)
+    pilot_valid = pilot is not None and pilot.starts_at <= now < pilot.expires_at
+    source = "subscription" if subscription_valid else "pilot" if pilot_valid else "none"
+    blocked_by_suspension = suspension_source is not None
+    return {
+        "allowed": (subscription_valid or pilot_valid) and not blocked_by_suspension,
+        "source": source,
+        "pilot_entitlement_id": pilot.id if pilot_valid else None,
+        "pilot_expires_at": pilot.expires_at.isoformat() if pilot_valid else None,
+        "blocked_by_suspension": blocked_by_suspension,
+        "suspension_source": suspension_source,
+    }
+
+
+async def active_pilot_entitlement(
+    db: AsyncSession,
+    org_id: int,
+    now: datetime,
+) -> PilotEntitlement | None:
+    return (await db.execute(
+        select(PilotEntitlement)
+        .where(
+            PilotEntitlement.org_id == org_id,
+            PilotEntitlement.starts_at <= now,
+            PilotEntitlement.expires_at > now,
+        )
+        .order_by(PilotEntitlement.expires_at.desc(), PilotEntitlement.id.desc())
+        .limit(1)
+    )).scalars().first()
+
+
+async def effective_entitlement(
+    db: AsyncSession,
+    org: Organization,
+    sub: Subscription,
+    now: datetime,
+) -> dict:
+    pilot = None if not is_delinquent(sub, now) else await active_pilot_entitlement(db, org.id, now)
+    suspension_source = org.suspension_source if org.status == "suspended" else None
+    return effective_entitlement_state(sub, pilot, now, suspension_source)
 
 
 async def get_or_create_subscription(db: AsyncSession, org: Organization, *, commit: bool = True) -> Subscription:
@@ -229,6 +277,17 @@ async def run_billing_reconciliation(db: AsyncSession) -> dict:
 
     async with keyed_lock(_BILLING_RECONCILIATION_LOCK):
         now = datetime.utcnow()
+        expired_pilots = (await db.execute(
+            select(PilotEntitlement).where(
+                PilotEntitlement.expires_at <= now,
+                PilotEntitlement.reconciliation_state == "active",
+            )
+        )).scalars().all()
+        for pilot in expired_pilots:
+            pilot.reconciliation_state = "expired_non_destructive"
+            pilot.reconciled_at = now
+        if expired_pilots:
+            await db.commit()
         orgs = (await db.execute(select(Organization).where(Organization.status == "active"))).scalars().all()
         delinquent: list[str] = []
         invoices_created: list[str] = []
@@ -264,6 +323,7 @@ async def run_billing_reconciliation(db: AsyncSession) -> dict:
         "invoices_existing": invoices_existing,
         "subscriptions_marked_past_due": subscriptions_marked_past_due,
         "suspended": [],
+        "pilot_expirations_reconciled": [pilot.id for pilot in expired_pilots],
     }
 async def check_org_limits(db: AsyncSession, org: Organization) -> dict:
     """Полная проверка лимитов организации: школы, ноды, домены, лендинги."""

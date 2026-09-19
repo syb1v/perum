@@ -103,6 +103,8 @@ class Organization(Base):
     activated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    suspension_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    suspension_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     plan_tier: Mapped[str] = mapped_column(
         String(32), nullable=False, default="starter", server_default="starter",
@@ -396,6 +398,14 @@ class AgentState(Base):
     org_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     core_url: Mapped[str] = mapped_column(String(255), nullable=False)
     release_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    desired_web_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    web_rollout_target_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    web_rollout_previous_image_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    web_rollout_previous_image_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    web_rollout_phase: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    web_rollout_started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    web_rollout_updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    web_rollout_error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     enrolled_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
@@ -459,6 +469,35 @@ class Invoice(Base):
     provider_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class PilotEntitlement(Base):
+    __tablename__ = "pilot_entitlements"
+    __table_args__ = (
+        CheckConstraint("expires_at > starts_at", name="ck_pilot_entitlements_valid_window"),
+        UniqueConstraint("idempotency_key", name="uq_pilot_entitlements_idempotency_key"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    starts_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    approval_reference: Mapped[str] = mapped_column(String(255), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    granted_by: Mapped[int] = mapped_column(
+        ForeignKey("platform_admins.id", ondelete="RESTRICT"), nullable=False
+    )
+    reconciliation_state: Mapped[str] = mapped_column(
+        String(40), nullable=False, default="active", server_default="active"
+    )
+    reconciled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reconciled_by: Mapped[int | None] = mapped_column(
+        ForeignKey("platform_admins.id", ondelete="RESTRICT"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
 
 
 class ContactLead(Base):
@@ -552,6 +591,11 @@ class Node(Base):
     )
 
     agent_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    agent_transport: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="legacy_http", server_default="legacy_http"
+    )
+    agent_transport_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    web_rollout_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
     last_heartbeat: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     max_schools: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
 
@@ -576,6 +620,26 @@ class Node(Base):
     assignments: Mapped[list["NodeAssignment"]] = relationship(
         back_populates="node", cascade="all, delete-orphan"
     )
+
+
+class NodeTransportTransition(Base):
+    __tablename__ = "node_transport_transitions"
+
+    transition_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    node_id: Mapped[int] = mapped_column(
+        ForeignKey("nodes.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    expected_transport: Mapped[str] = mapped_column(String(20), nullable=False)
+    expected_transport_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    expected_web_rollout_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    agent_image: Mapped[str] = mapped_column(String(255), nullable=False)
+    phase: Mapped[str] = mapped_column(String(20), nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    error_reason: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    resulting_transport: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    resulting_transport_version: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    resulting_web_rollout_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    committed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class NodeAssignment(Base):

@@ -6,6 +6,10 @@
 
 ## [Unreleased] — 2026-09-19
 
+- Mobile visual language выровнен с Web: shared design tokens теперь задают dark surfaces, cyan/blue accent, typography, borders, radii и shadows; native shell, login, home и ключевые states переведены на эту систему без изменения API, cache или backend semantics.
+
+## [Unreleased] — 2026-09-19
+
 - Добавлен ручной GitHub Actions workflow на macOS для native iOS Release archive без code signing и упаковки результата в `PERUM-unsigned.ipa` artifact.
 
 ## [Unreleased] — 2026-08-17

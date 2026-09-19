@@ -25,6 +25,11 @@ services:
   perum_core:
     environment:
       DATABASE_URL: postgresql+asyncpg://perum:${CONTROL_DB_PASSWORD}@perum_control_db:5432/perum_control
+      AGENT_LEGACY_HTTP_DEADLINE: ${AGENT_LEGACY_HTTP_DEADLINE:?set a future UTC transition deadline}
+      WEB_ROLLOUT_LEGACY_DEADLINE: ${WEB_ROLLOUT_LEGACY_DEADLINE:?set a future UTC transition deadline}
+    volumes:
+      - perum_backups:/backups
+      - ./secrets/agent-tls:/run/secrets/agent-tls:ro
 
   perum_control_db:
     environment:

@@ -1,0 +1,372 @@
+name: Production node Agent TLS transition
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_id:
+        description: Core node ID to transition
+        required: true
+        type: string
+      release_sha:
+        description: Full main commit SHA with successful CI Agent build
+        required: true
+        type: string
+      transition_id:
+        description: Optional transition UUID to resume
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: production-node-agent-tls-transition-${{ inputs.node_id }}
+  cancel-in-progress: false
+
+jobs:
+  transition:
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate approved production prerequisites and successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.NODE_SSH_KNOWN_HOSTS }}
+          JUMP_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          TLS_SOURCE_DIR: ${{ vars.NODE_TLS_PROVISIONED_DIR }}
+        run: |
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'release_sha must be a full lowercase commit SHA.' >&2; exit 1; }
+          for name in CORE_URL TOKEN SSH_USER SSH_KEY SSH_KNOWN_HOSTS JUMP_HOST TLS_SOURCE_DIR; do
+            [ -n "${!name}" ] || { echo "Missing production environment prerequisite: $name" >&2; exit 1; }
+          done
+          main_sha="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          [ "$RELEASE_SHA" = "$main_sha" ] || { echo 'release_sha must equal the current main SHA.' >&2; exit 1; }
+          ci="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&branch=main&event=push&per_page=20" --jq '.workflow_runs | map(select(.conclusion == "success")) | first | .conclusion // ""')"
+          [ "$ci" = success ] || { echo "No successful CI for $RELEASE_SHA." >&2; exit 1; }
+
+      - name: Download exact successful CI Agent digest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          run_id="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&branch=main&event=push&per_page=20" --jq '.workflow_runs | map(select(.conclusion == "success")) | first | .id // ""')"
+          [ -n "$run_id" ] || { echo "No successful exact-SHA CI build for $RELEASE_SHA." >&2; exit 1; }
+          gh run download "$run_id" --repo "$GITHUB_REPOSITORY" --name agent-transition-provenance --dir ci-provenance
+          jq -e --arg sha "$RELEASE_SHA" --arg image "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/perum-core" \
+            '.source_sha == $sha and (.digest | test("^sha256:[0-9a-f]{64}$")) and (.image | ascii_downcase) == $image' \
+            ci-provenance/agent-transition-provenance.json >/dev/null
+          image="$(jq -r '.image + "@" + .digest' ci-provenance/agent-transition-provenance.json)"
+          echo "AGENT_IMAGE=${image,,}" >> "$GITHUB_ENV"
+
+      - name: Obtain generated node configuration from Core
+        env:
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          NODE_ID: ${{ inputs.node_id }}
+        run: |
+          jq -n --argjson node_id "$NODE_ID" --arg agent_image "$AGENT_IMAGE" '{node_id:$node_id,agent_image:$agent_image}' > request.json
+          curl --fail-with-body -sS -X POST "${CORE_URL%/}/api/ci/node-transport/config" -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' --data @request.json > node-config.json
+          jq -e --argjson node_id "$NODE_ID" --arg image "$AGENT_IMAGE" '.node_id == $node_id and .agent_image == $image and (.hostname | length > 0)' node-config.json >/dev/null
+           jq -r '.docker_compose' node-config.json > docker-compose.yml
+           jq -r '.caddyfile' node-config.json > Caddyfile
+           transition_id='${{ inputs.transition_id }}'
+           if [ -n "$transition_id" ]; then
+             [[ "$transition_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] || { echo 'transition_id must be a canonical lowercase UUID.' >&2; exit 1; }
+           else
+             transition_id="$(cat /proc/sys/kernel/random/uuid)"
+           fi
+           echo "TRANSITION_ID=$transition_id" >> "$GITHUB_ENV"
+
+      - name: Install approved TLS files and transition Agent
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.NODE_SSH_KNOWN_HOSTS }}
+          SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          JUMP_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          JUMP_PORT: ${{ vars.DEPLOY_SSH_PORT || 22 }}
+          TLS_SOURCE_DIR: ${{ vars.NODE_TLS_PROVISIONED_DIR }}
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          NODE_ID: ${{ inputs.node_id }}
+        run: |
+          install -m 600 /dev/null ssh-key
+          printf '%s\n' "$SSH_KEY" > ssh-key
+          install -d -m 700 "$HOME/.ssh"
+          install -m 600 /dev/null "$HOME/.ssh/known_hosts"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          host="$(jq -r '.hostname' node-config.json)"
+          port="$(jq -r '.ssh_port' node-config.json)"
+          agent_port="$(jq -r '.agent_port' node-config.json)"
+          legacy_port="$(jq -r '.legacy_http_port' node-config.json)"
+          prior_transport="$(jq -r '.agent_transport' node-config.json)"
+          mtls_required="$(jq -r '.mtls_required' node-config.json)"
+           ssh_opts=(-i ssh-key -o BatchMode=yes -o StrictHostKeyChecking=yes -o "ProxyJump=${SSH_USER}@${JUMP_HOST}:${JUMP_PORT}" -p "$port")
+           scp_opts=(-i ssh-key -o BatchMode=yes -o StrictHostKeyChecking=yes -o "ProxyJump=${SSH_USER}@${JUMP_HOST}:${JUMP_PORT}" -P "$port")
+            RECEIPT_PROTECTED=false
+            ROLLBACK_AUTHORIZATION=none
+            TRANSPORT_UNCERTAIN=false
+            query_receipt_state() {
+              local curl_status http_status
+              set +e
+              http_status="$(curl --max-time 10 -sS -o transition-state.json -w '%{http_code}' "${CORE_URL%/}/api/ci/node-transport/transitions/${TRANSITION_ID}" -H "Authorization: Bearer ${TOKEN}")"
+              curl_status=$?
+              set -e
+              RECEIPT_STATE=unavailable
+              [ "$curl_status" -eq 0 ] || return 0
+              if [ "$http_status" = 404 ]; then
+                RECEIPT_STATE=no-receipt
+              elif [ "$http_status" = 200 ] && jq -e --arg transition_id "$TRANSITION_ID" --argjson node_id "$NODE_ID" \
+                '.transition_id == $transition_id and .node_id == $node_id and ((.phase == "committed" and .committed == true) or ((.phase | IN("pending", "rejected")) and .committed == false))' transition-state.json >/dev/null; then
+                RECEIPT_STATE="$(jq -r '.phase' transition-state.json)"
+              fi
+            }
+            inspect_remote_phase() {
+              ssh "${ssh_opts[@]}" "${SSH_USER}@${host}" 'rollback=/opt/perum-node/.tls-transition-rollback; if [ ! -d "$rollback" ]; then printf none; elif [ -f "$rollback/phase" ]; then cat "$rollback/phase"; else printf unknown; fi'
+            }
+            rollback_remote() {
+              [ "$ROLLBACK_AUTHORIZATION" = no-receipt ] || [ "$ROLLBACK_AUTHORIZATION" = rejected ] || {
+                echo "Remote rollback denied without authoritative rejected/no-receipt proof." >&2
+                return 1
+              }
+              ssh "${ssh_opts[@]}" "${SSH_USER}@${host}" bash -s -- "$legacy_port" <<'ROLLBACK' || {
+           set -euo pipefail
+           legacy_port="$1" dir=/opt/perum-node rollback=/opt/perum-node/.tls-transition-rollback
+           exec 9>"$dir/.deploy.lock"
+           flock -n 9
+           [ -d "$rollback" ]
+           phase="$(<"$rollback/phase")"
+           candidate_image="$(<"$rollback/candidate-image")"
+           old_revision="$(<"$rollback/alembic-revision")"
+           [[ "$old_revision" =~ ^[0-9][0-9a-z_]{3,63}$ ]]
+           if [ "$phase" = migration-started ] || [ "$phase" = migrated ] || [ "$phase" = candidate-ready ]; then
+             current_revision="$(AGENT_IMAGE="$candidate_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" run --rm --no-deps perum_agent alembic current 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+             if [ "$current_revision" != "$old_revision" ]; then
+               AGENT_IMAGE="$candidate_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" run --rm --no-deps perum_agent alembic downgrade "$old_revision" >/dev/null
+             fi
+             current_revision="$(AGENT_IMAGE="$candidate_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" run --rm --no-deps perum_agent alembic current 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+             [ "$current_revision" = "$old_revision" ] || { echo 'Refusing to restart old Agent against an unknown DB revision.' >&2; exit 1; }
+           fi
+           cp -a "$rollback/docker-compose.yml" "$dir/docker-compose.yml"
+           cp -a "$rollback/Caddyfile" "$dir/caddy/Caddyfile"
+           docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" -f "$rollback/docker-compose.rollback.yml" up -d --no-deps --force-recreate perum_agent caddy >/dev/null
+           [ "$(docker inspect -f '{{.Image}}' perum_agent)" = "$(<"$rollback/perum_agent.image-id")" ]
+           [ "$(docker inspect -f '{{.Image}}' caddy)" = "$(<"$rollback/caddy.image-id")" ]
+           if [ "$(<"$rollback/prior-transport")" = legacy_http ]; then
+             curl --fail --silent --show-error --connect-timeout 5 "http://127.0.0.1:${legacy_port}/api/agent/health" >/dev/null
+           fi
+           printf '%s\n' rolled-back > "$rollback/phase"
+           ROLLBACK
+               echo "Remote rollback failed; rollback material remains on the node." >&2
+               return 1
+             }
+           }
+           transition_failed() {
+             status="${1:-$?}"
+             trap - ERR INT TERM
+             set +e
+              if [ "$RECEIPT_PROTECTED" = true ]; then exit "$status"; fi
+              if [ "$TRANSPORT_UNCERTAIN" = true ]; then
+                ROLLBACK_AUTHORIZATION=none
+                query_receipt_state
+                if [ "$RECEIPT_STATE" = no-receipt ]; then
+                  ROLLBACK_AUTHORIZATION=no-receipt
+                else
+                  [ "$RECEIPT_STATE" = pending ] || [ "$RECEIPT_STATE" = committed ] || echo "Core receipt could not authoritatively prove no receipt after SSH disconnect." >&2
+                  echo "Disconnected transition is protected from rollback; rerun with transition_id=${TRANSITION_ID}." >&2
+                  exit "$status"
+                fi
+                phase="$(inspect_remote_phase 2>/dev/null)" || phase=unreachable
+                case "$phase" in
+                  none|rolled-back) echo "Transport failed before mutation or after verified rollback." >&2 ;;
+                 prepared|migration-started|migrated|candidate-ready) rollback_remote && echo "Disconnected pre-receipt transition was inspected and rolled back." >&2 ;;
+                 *) echo "Mutation state is not safely determinable. Candidate/rollback material is retained in recoverable hold; rerun with transition_id=${TRANSITION_ID}." >&2 ;;
+               esac
+             elif rollback_remote; then
+               echo "Transition did not commit; node rollback was verified." >&2
+             else
+               phase="$(inspect_remote_phase 2>/dev/null)" || phase=unreachable
+               [ "$phase" = none ] || echo "Transition did not commit and node rollback verification failed; rollback material was retained." >&2
+             fi
+             exit "$status"
+           }
+            trap 'transition_failed $?' ERR
+            trap 'transition_failed 130' INT
+            trap 'transition_failed 143' TERM
+            query_receipt_state
+            case "$RECEIPT_STATE" in
+              pending|committed) RECEIPT_PROTECTED=true ;;
+              rejected)
+                ROLLBACK_AUTHORIZATION=rejected
+                phase="$(inspect_remote_phase 2>/dev/null)" || {
+                  echo "Rejected transition could not be inspected; rollback material is retained." >&2
+                  exit 2
+                }
+                case "$phase" in
+                  prepared|migration-started|migrated|candidate-ready) rollback_remote ;;
+                  none|rolled-back) ;;
+                  *) echo "Rejected transition has ambiguous rollback material; node is held." >&2; exit 2 ;;
+                esac
+                exit 1
+                ;;
+              no-receipt) ROLLBACK_AUTHORIZATION=no-receipt ;;
+              *) echo "Core receipt is unavailable or ambiguous; refusing SSH mutation or rollback." >&2; exit 2 ;;
+            esac
+            set +e
+            scp "${scp_opts[@]}" docker-compose.yml Caddyfile "${SSH_USER}@${host}:/tmp/"
+            copy_status=$?
+            set -e
+            if [ "$copy_status" -ne 0 ]; then
+              [ "$copy_status" -eq 255 ] && TRANSPORT_UNCERTAIN=true
+              transition_failed "$copy_status"
+            fi
+            set +e
+           ssh "${ssh_opts[@]}" "${SSH_USER}@${host}" bash -s -- "$TLS_SOURCE_DIR" "$AGENT_IMAGE" "$agent_port" "$legacy_port" "$host" "$mtls_required" "$prior_transport" "$TRANSITION_ID" <<'REMOTE'
+          set -euo pipefail
+          source_dir="$1" agent_image="$2" agent_port="$3" legacy_port="$4" expected_hostname="$5" mtls_required="$6" prior_transport="$7" transition_id="$8"
+          dir=/opt/perum-node
+          exec 9>"$dir/.deploy.lock"
+          flock -n 9
+           rollback="$dir/.tls-transition-rollback"
+           if [ -d "$rollback" ]; then
+             [ -f "$rollback/transition-id" ] && [ "$(<"$rollback/transition-id")" = "$transition_id" ] || { echo "Rollback material belongs to another transition." >&2; exit 1; }
+             [ -f "$rollback/phase" ] && [ "$(<"$rollback/phase")" = candidate-ready ] || { echo "Retained transition is not a verified candidate." >&2; exit 1; }
+             exit 0
+          fi
+          install -d -m 700 "$rollback"
+          cp -a "$dir/docker-compose.yml" "$rollback/docker-compose.yml"
+          cp -a "$dir/caddy/Caddyfile" "$rollback/Caddyfile"
+          docker inspect perum_agent > "$rollback/perum_agent.inspect.json"
+          docker inspect caddy > "$rollback/caddy.inspect.json"
+          docker inspect -f '{{.Config.Image}}' perum_agent > "$rollback/perum_agent.image-ref"
+           docker inspect -f '{{.Image}}' perum_agent > "$rollback/perum_agent.image-id"
+           docker inspect -f '{{.Config.Image}}' caddy > "$rollback/caddy.image-ref"
+           docker inspect -f '{{.Image}}' caddy > "$rollback/caddy.image-id"
+           for image_file in perum_agent.image-id caddy.image-id; do
+             image_id="$(<"$rollback/$image_file")"
+             [[ "$image_id" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "Captured rollback image ID is invalid." >&2; exit 1; }
+             docker image inspect "$image_id" >/dev/null
+           done
+           cat > "$rollback/docker-compose.rollback.yml" <<ROLLBACK_COMPOSE
+           services:
+             perum_agent:
+               image: $(<"$rollback/perum_agent.image-id")
+             caddy:
+               image: $(<"$rollback/caddy.image-id")
+           ROLLBACK_COMPOSE
+             printf '%s\n' "$prior_transport" > "$rollback/prior-transport"
+             printf '%s\n' "$transition_id" > "$rollback/transition-id"
+            old_revision="$(docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" run --rm --no-deps perum_agent alembic current 2>/dev/null | tr -d '\r' | awk '{print $1}')"
+             [[ "$old_revision" =~ ^[0-9][0-9a-z_]{3,63}$ ]] || { echo "Could not capture one valid pre-transition Alembic revision." >&2; exit 1; }
+             printf '%s\n' "$old_revision" > "$rollback/alembic-revision"
+             printf '%s\n' "$agent_image" > "$rollback/candidate-image"
+             printf '%s\n' prepared > "$rollback/phase"
+          for file in server.crt server.key; do
+            [ -f "$source_dir/$file" ] || { echo "Missing operator-provisioned TLS file: $source_dir/$file" >&2; exit 1; }
+          done
+          install -d -m 700 /etc/perum/node-tls "$dir/caddy"
+          install -m 600 "$source_dir/server.key" /etc/perum/node-tls/server.key
+          install -m 644 "$source_dir/server.crt" /etc/perum/node-tls/server.crt
+          if [ -f "$source_dir/client-ca.crt" ]; then install -m 644 "$source_dir/client-ca.crt" /etc/perum/node-tls/client-ca.crt; fi
+           install -m 600 /tmp/docker-compose.yml "$dir/docker-compose.yml"
+           install -m 644 /tmp/Caddyfile "$dir/caddy/Caddyfile"
+           install -m 600 /tmp/docker-compose.yml "$rollback/docker-compose.final.yml"
+           install -m 644 /tmp/Caddyfile "$rollback/Caddyfile.final"
+           rm -f /tmp/docker-compose.yml /tmp/Caddyfile
+          test -f "$dir/.env"
+           docker pull "$agent_image"
+           candidate_image_id="$(docker image inspect -f '{{.Id}}' "$agent_image")"
+           [[ "$candidate_image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
+           AGENT_IMAGE="$agent_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" config -q
+            printf '%s\n' migration-started > "$rollback/phase"
+            AGENT_IMAGE="$agent_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" run --rm perum_agent alembic upgrade head
+            printf '%s\n' migrated > "$rollback/phase"
+           AGENT_IMAGE="$agent_image" docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" up -d --no-deps --force-recreate perum_agent caddy
+           [ "$(docker inspect -f '{{.Image}}' perum_agent)" = "$candidate_image_id" ]
+          ca="$source_dir/ca.crt"
+          [ -f "$ca" ] || ca="$source_dir/server.crt"
+          curl_identity=()
+          if [ "$mtls_required" = true ]; then
+            for file in verification-client.crt verification-client.key; do
+              [ -f "$source_dir/$file" ] || { echo "Missing operator-provisioned mTLS verification file: $source_dir/$file" >&2; exit 1; }
+            done
+            curl_identity=(--cert "$source_dir/verification-client.crt" --key "$source_dir/verification-client.key")
+          fi
+          token="$(while IFS= read -r line; do [ "${line%%=*}" = AGENT_TOKEN ] && { printf '%s' "${line#*=}"; break; }; done < "$dir/.env")"
+          [ -n "$token" ]
+          for attempt in $(seq 1 30); do
+            curl --fail --silent --show-error --cacert "$ca" "${curl_identity[@]}" -H "Authorization: Bearer $token" "https://${expected_hostname}:${agent_port}/api/agent/health" >/dev/null && break
+            sleep 2
+          done
+           whoami="$(curl --fail --silent --show-error --cacert "$ca" "${curl_identity[@]}" -H "Authorization: Bearer $token" "https://${expected_hostname}:${agent_port}/api/agent/whoami")"
+           capabilities="$(curl --fail --silent --show-error --cacert "$ca" "${curl_identity[@]}" -H "Authorization: Bearer $token" "https://${expected_hostname}:${agent_port}/api/agent/capabilities")"
+           jq -e '.role == "org_agent"' <<<"$whoami" >/dev/null
+           jq -e --arg image "$agent_image" '.agent_image == $image and (.capabilities | index("web_rollout_v1") != null)' <<<"$capabilities" >/dev/null
+           curl --fail --silent --show-error --cacert "$ca" "${curl_identity[@]}" -H "Authorization: Bearer $token" "https://${expected_hostname}:${agent_port}/api/agent/health" >/dev/null
+           if curl --silent --show-error --connect-timeout 3 "http://127.0.0.1:${legacy_port}/api/agent/health" >/dev/null; then
+              echo 'Candidate unexpectedly exposes legacy HTTP management.' >&2
+              exit 1
+            fi
+            printf '%s\n' candidate-ready > "$rollback/phase"
+           REMOTE
+           install_status=$?
+           set -e
+           if [ "$install_status" -ne 0 ]; then
+             [ "$install_status" -eq 255 ] && TRANSPORT_UNCERTAIN=true
+             transition_failed "$install_status"
+           fi
+             transition_id="$TRANSITION_ID"
+            jq -n --arg transition_id "$transition_id" --argjson node_id "$NODE_ID" --arg agent_image "$AGENT_IMAGE" \
+             --arg expected_transport "$prior_transport" --argjson expected_transport_version "$(jq '.agent_transport_version' node-config.json)" \
+              --argjson expected_web_rollout_version "$(jq '.web_rollout_version' node-config.json)" \
+              '{transition_id:$transition_id,node_id:$node_id,agent_image:$agent_image,transport:"https_v1",expected_transport:$expected_transport,expected_transport_version:$expected_transport_version,expected_web_rollout_version:$expected_web_rollout_version}' > mark.json
+              query_receipt_state
+              if [ "$RECEIPT_STATE" = no-receipt ]; then
+                RECEIPT_PROTECTED=true
+                curl --max-time 30 -sS -X POST "${CORE_URL%/}/api/ci/node-transport/mark" -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' --data @mark.json > mark-response.json || true
+              elif [ "$RECEIPT_STATE" = unavailable ]; then
+                echo "Core receipt is unavailable. Candidate remains HTTPS-only and rollback material is retained; rerun with transition_id=${transition_id}." >&2
+                exit 2
+              else
+               RECEIPT_PROTECTED=true
+            fi
+            state=unknown
+            for attempt in $(seq 1 12); do
+              status="$(curl --max-time 10 -sS -o transition-state.json -w '%{http_code}' "${CORE_URL%/}/api/ci/node-transport/transitions/${transition_id}" -H "Authorization: Bearer ${TOKEN}" || true)"
+              if [ "$status" = 200 ] && jq -e --argjson node_id "$NODE_ID" --arg image "$AGENT_IMAGE" '.committed == true and .node_id == $node_id and .agent_transport == "https_v1" and .agent_transport_version == $image and .web_rollout_version == "web_rollout_v1"' transition-state.json >/dev/null; then state=committed; break; fi
+              if [ "$status" = 200 ] && jq -e '.phase == "rejected" and (.error_code | type == "string")' transition-state.json >/dev/null; then state=rejected; break; fi
+              sleep 5
+            done
+              if [ "$state" = rejected ]; then RECEIPT_PROTECTED=false; ROLLBACK_AUTHORIZATION=rejected; transition_failed 1; fi
+            if [ "$state" != committed ]; then
+              echo "Core transition state is pending or unavailable. Candidate remains HTTPS-only and rollback materials are retained; rerun with transition_id=${transition_id}." >&2
+              exit 2
+            fi
+            ssh "${ssh_opts[@]}" "${SSH_USER}@${host}" bash -s -- "$TLS_SOURCE_DIR" "$agent_port" "$legacy_port" "$host" "$mtls_required" <<'FINALIZE'
+            set -euo pipefail
+            source_dir="$1" agent_port="$2" legacy_port="$3" expected_hostname="$4" mtls_required="$5" dir=/opt/perum-node rollback=/opt/perum-node/.tls-transition-rollback
+            exec 9>"$dir/.deploy.lock"
+            flock -n 9
+            [ -d "$rollback" ] || exit 0
+            cp -a "$rollback/docker-compose.final.yml" "$dir/docker-compose.yml"
+            cp -a "$rollback/Caddyfile.final" "$dir/caddy/Caddyfile"
+            docker compose --env-file "$dir/.env" -f "$dir/docker-compose.yml" up -d --no-deps --force-recreate caddy
+            ca="$source_dir/ca.crt"
+            [ -f "$ca" ] || ca="$source_dir/server.crt"
+            curl_identity=()
+            if [ "$mtls_required" = true ]; then
+              curl_identity=(--cert "$source_dir/verification-client.crt" --key "$source_dir/verification-client.key")
+            fi
+            token="$(while IFS= read -r line; do [ "${line%%=*}" = AGENT_TOKEN ] && { printf '%s' "${line#*=}"; break; }; done < "$dir/.env")"
+            curl --fail --silent --show-error --cacert "$ca" "${curl_identity[@]}" -H "Authorization: Bearer $token" "https://${expected_hostname}:${agent_port}/api/agent/health" >/dev/null
+            if curl --silent --show-error --connect-timeout 3 "http://127.0.0.1:${legacy_port}/api/agent/health" >/dev/null; then
+             echo 'Legacy HTTP management port remains reachable after committed transition.' >&2
+             exit 1
+           fi
+           rm -rf "$rollback"
+           FINALIZE

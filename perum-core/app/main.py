@@ -249,9 +249,10 @@ async def lifespan(app: FastAPI):
     if settings.ROLE == "org_agent":
         # Узел орг: подключиться к ядру по enrollment-токену (платформенные сидинг
         # и Caddy-синк тут не нужны).
-        from app.agent.service import enroll_on_boot
+        from app.agent.service import enroll_on_boot, reconcile_desired_web_on_startup
 
         await enroll_on_boot()
+        tasks.append(asyncio.create_task(reconcile_desired_web_on_startup()))
     else:
         await _seed_bootstrap_admin()
         await _sync_caddy_routes()

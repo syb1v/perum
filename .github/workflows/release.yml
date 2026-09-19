@@ -35,7 +35,7 @@ on:
         default: false
 
 concurrency:
-  group: release-${{ github.event.workflow_run.head_sha || github.sha }}
+  group: release-production
   cancel-in-progress: false
 
 env:
@@ -43,8 +43,29 @@ env:
   RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
 
 jobs:
+  manual-release-gate:
+    if: github.event_name == 'workflow_dispatch'
+    environment: production
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Require successful CI evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusion="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&branch=main&event=push&per_page=20" --jq '.workflow_runs | map(select(.conclusion == "success")) | first | .conclusion // ""')"
+          [ "$conclusion" = success ] || {
+            echo "No successful CI workflow evidence for ${RELEASE_SHA}." >&2
+            exit 1
+          }
+
   changes:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    needs: manual-release-gate
+    if: >-
+      always() && (needs.manual-release-gate.result == 'success' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     outputs:
       core: ${{ steps.filter.outputs.core == 'true' || inputs.force_core == true }}
@@ -183,8 +204,8 @@ jobs:
     # == 'true'). Без переменной/секретов job пропускается — текущий прод не ломается.
     needs: [changes, build]
     if: >-
-      vars.DEPLOY_ENABLED == 'true' &&
-      (needs.changes.outputs.core == 'true' || needs.changes.outputs.web == 'true')
+      needs.changes.outputs.web == 'true' ||
+      (needs.changes.outputs.core == 'true' && vars.DEPLOY_ENABLED == 'true')
     environment: production
     runs-on: ubuntu-latest
     steps:
@@ -194,12 +215,22 @@ jobs:
           DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_ENABLED: ${{ vars.DEPLOY_ENABLED }}
+          AGENT_LEGACY_HTTP_DEADLINE: ${{ vars.AGENT_LEGACY_HTTP_DEADLINE }}
+          WEB_ROLLOUT_LEGACY_DEADLINE: ${{ vars.WEB_ROLLOUT_LEGACY_DEADLINE }}
         run: |
           missing=()
+          [ "$DEPLOY_ENABLED" = true ] || missing+=(DEPLOY_ENABLED=true)
           [ -n "$DEPLOY_SSH_HOST" ] || missing+=(DEPLOY_SSH_HOST)
           [ -n "$DEPLOY_SSH_USER" ] || missing+=(DEPLOY_SSH_USER)
           [ -n "$DEPLOY_PATH" ] || missing+=(DEPLOY_PATH)
           [ -n "$DEPLOY_SSH_KEY" ] || missing+=(DEPLOY_SSH_KEY)
+          for name in AGENT_LEGACY_HTTP_DEADLINE WEB_ROLLOUT_LEGACY_DEADLINE; do
+            value="${!name}"
+            [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || missing+=("$name=future UTC timestamp")
+            epoch="$(date -u -d "$value" +%s 2>/dev/null || true)"
+            [[ "$epoch" =~ ^[0-9]+$ ]] && (( epoch > $(date -u +%s) )) || missing+=("$name=not expired")
+          done
           if [ "${#missing[@]}" -gt 0 ]; then
             printf 'Missing production deploy configuration: %s\n' "${missing[*]}" >&2
             echo 'Configure host/user/path as production environment variables and only the SSH key as a production environment secret.' >&2
@@ -286,6 +317,66 @@ jobs:
             [ -z "$CORE_RUNTIME_IMAGE" ] || deploy_args+=(--core-runtime-image "$CORE_RUNTIME_IMAGE")
             [ -z "$WEB_RUNTIME_IMAGE" ] || deploy_args+=(--web-runtime-image "$WEB_RUNTIME_IMAGE")
             bash "${DEPLOY_PATH}/deploy/scripts/deploy-core.sh" "${deploy_args[@]}"
+
+      - name: Verify deployed Core legacy-node preflight
+        env:
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+        run: |
+          [ -n "$CORE_URL" ] || { echo 'Missing production CORE_URL for post-deploy preflight.' >&2; exit 1; }
+          [ -n "$TOKEN" ] || { echo 'Missing production RELEASE_PUBLISH_TOKEN for post-deploy preflight.' >&2; exit 1; }
+          curl --retry 6 --retry-all-errors --fail-with-body -sS "${CORE_URL%/}/api/ci/deployment/preflight" \
+            -H "Authorization: Bearer ${TOKEN}" > deployment-preflight.json
+          jq -e '.ready == true and (.legacy_nodes | type == "number")' deployment-preflight.json >/dev/null
+
+  organization-node-web-rollout:
+    name: Roll out Web to active organization nodes
+    needs: [changes, build, deploy]
+    if: >-
+      always() && needs.changes.outputs.web == 'true'
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful build, control-plane deploy, and rollout credentials
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+        run: |
+          [ "$BUILD_RESULT" = success ] || { echo "Web build did not succeed: $BUILD_RESULT" >&2; exit 1; }
+          [ "$DEPLOY_RESULT" = success ] || { echo "Web control-plane deploy did not succeed: $DEPLOY_RESULT" >&2; exit 1; }
+          [ -n "$CORE_URL" ] || { echo 'Missing production CORE_URL.' >&2; exit 1; }
+          [ -n "$TOKEN" ] || { echo 'Missing production RELEASE_PUBLISH_TOKEN.' >&2; exit 1; }
+
+      - name: Download published Web digest
+        uses: actions/download-artifact@v4
+        with:
+          name: perum-web-digest
+          path: release-digests
+
+      - name: Roll out immutable Web image through Core
+        env:
+          CORE_URL: ${{ vars.CORE_URL }}
+          TOKEN: ${{ secrets.RELEASE_PUBLISH_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          digest="$(<release-digests/perum-web)"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo 'Invalid perum-web build digest artifact.' >&2; exit 1; }
+          image="ghcr.io/${OWNER,,}/perum-web@${digest}"
+          jq -n --arg image "$image" '{image:$image}' > web-rollout-payload.json
+          status="$(curl -sS -o web-rollout-response.json -w '%{http_code}' -X POST "${CORE_URL%/}/api/ci/web/rollout" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data @web-rollout-payload.json)"
+          if [ "$status" != 200 ]; then
+            jq -c . web-rollout-response.json >&2 || true
+            echo "organization-node Web rollout failed: HTTP $status" >&2
+            exit 1
+          fi
+          jq -c . web-rollout-response.json
+          jq -e '.success == true and .nodes_failed == 0' web-rollout-response.json >/dev/null
+          jq -r '"Web rollout: succeeded=\(.nodes_succeeded), pending_legacy=\(.nodes_pending), failed=\(.nodes_failed)"' web-rollout-response.json
 
   tenant-release:
     # Только если РЕАЛЬНО изменился код тенанта — тогда есть что выкатывать школам.

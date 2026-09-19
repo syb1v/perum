@@ -141,8 +141,20 @@ class Settings(BaseSettings):
     # Ядро шлёт его в Authorization: Bearer; воркер проверяет. Пусто → проверка
     # выключена (dev). Задаётся одинаковым в .env ядра и в compose ноды.
     AGENT_TOKEN: str = Field(default="")
-    # Порт, на котором воркер ноды слушает API (публикуется compose'ом ноды).
+    # Dedicated TLS management listener exposed by node Caddy.
     AGENT_PORT: int = Field(default=3001)
+    AGENT_LEGACY_HTTP_PORT: int = Field(default=3000)
+    AGENT_LEGACY_HTTP_DEADLINE: str = Field(
+        default="", description="UTC ISO-8601 deadline for explicitly legacy production nodes"
+    )
+    WEB_ROLLOUT_LEGACY_DEADLINE: str = Field(
+        default="", description="UTC ISO-8601 deadline for workload nodes without Web rollout capability"
+    )
+    AGENT_SCHEME: str = Field(default="http", description="Core-to-Agent transport: http (dev/test) | https")
+    AGENT_CA_CERT: str = Field(default="", description="Private CA bundle used to verify node management certificates")
+    AGENT_CLIENT_CERT: str = Field(default="", description="Optional Core mTLS client certificate")
+    AGENT_CLIENT_KEY: str = Field(default="", description="Optional Core mTLS client private key")
+    AGENT_MTLS_REQUIRED: bool = Field(default=False, description="Require and verify a Core client certificate at node Caddy")
     # Образ ядра, который ставится на ноде как воркер (ROLE=org_agent). Тот же
     # perum-core, что и платформа. Bootstrap-скрипт ноды подставляет его в compose.
     AGENT_IMAGE: str = Field(default="")
@@ -168,6 +180,12 @@ class Settings(BaseSettings):
                 raise ValueError("SCANNER_RELAY_TOTAL_TIMEOUT_S must exceed connect timeout")
             if self.SCANNER_CLAMD_CPUS <= 0 or self.SCANNER_UPDATER_CPUS <= 0 or self.SCANNER_RELAY_CPUS <= 0:
                 raise ValueError("scanner CPU limits must be positive")
+        if self.AGENT_SCHEME not in {"http", "https"}:
+            raise ValueError("AGENT_SCHEME must be http or https")
+        if bool(self.AGENT_CLIENT_CERT) != bool(self.AGENT_CLIENT_KEY):
+            raise ValueError("AGENT_CLIENT_CERT and AGENT_CLIENT_KEY must be configured together")
+        if self.AGENT_MTLS_REQUIRED and not (self.AGENT_CLIENT_CERT and self.AGENT_CLIENT_KEY):
+            raise ValueError("AGENT_MTLS_REQUIRED requires AGENT_CLIENT_CERT and AGENT_CLIENT_KEY")
         if self.ENVIRONMENT != "prod":
             return self
         insecure = []
@@ -177,6 +195,10 @@ class Settings(BaseSettings):
             insecure.append("SECRETS_ENCRYPTION_KEY")
         if not self.AGENT_TOKEN:
             insecure.append("AGENT_TOKEN")
+        if self.AGENT_SCHEME != "https":
+            insecure.append("AGENT_SCHEME=https")
+        if not self.AGENT_CA_CERT:
+            insecure.append("AGENT_CA_CERT")
         if not self.BOOTSTRAP_ADMIN_PASSWORD:
             insecure.append("BOOTSTRAP_ADMIN_PASSWORD")
         if insecure:

@@ -86,6 +86,8 @@ async def create_node(payload: NodeCreate, db: AsyncSession = Depends(get_db)) -
         org_id=payload.org_id,
         max_schools=payload.max_schools,
         status="pending_bootstrap",
+        agent_transport="https_v1",
+        web_rollout_version="web_rollout_v1",
     )
     db.add(node)
     await db.commit()
@@ -130,7 +132,6 @@ async def update_node(node_id: int, payload: NodeUpdate, db: AsyncSession = Depe
         if payload.status not in ("pending_bootstrap", "active", "draining", "offline", "decommissioned"):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid status")
         node.status = payload.status
-
     await db.commit()
     await db.refresh(node)
     return NodeResponse.model_validate(node)

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import fcntl
 import json
 import logging
 import time
@@ -32,6 +34,8 @@ from app.agent.schemas import (
     AgentSocialRuntimeConfigResponse,
     AgentUpdateSchoolRequest,
     AgentUpdateSchoolResponse,
+    AgentWebRolloutRequest,
+    AgentWebRolloutResponse,
 )
 from app.core.config import get_settings
 from app.core.db import SessionLocal
@@ -176,8 +180,6 @@ async def restart_node_stack(db: AsyncSession) -> "AgentNodeActionResponse":
     redis, caddy, docker_proxy) И самого воркора. Сервер не перезагружается. Воркор
     перезапускает себя в фоне ПОСЛЕ отправки ответа — связь ядро→воркор на время
     рестарта пропадёт и вернётся (ожидаемо: монитор покажет offline→active)."""
-    import asyncio
-
     from app.agent.schemas import AgentNodeActionResponse
 
     docker = DockerClient()
@@ -514,7 +516,7 @@ async def provision_landing_on_node(db: AsyncSession, req) -> "AgentLandingRespo
         return AgentLandingResponse(success=False, domain=req.domain, message=str(exc))
 
 
-async def _resync_node_caddy_routes() -> None:
+async def _resync_node_caddy_routes(*, strict: bool = False) -> None:
     """Восстановить все Caddy-маршруты ноды после рестарта Caddy-контейнера.
 
     Node Caddy хранит runtime-конфиг в памяти — после рестарта Caddy все маршруты,
@@ -534,10 +536,13 @@ async def _resync_node_caddy_routes() -> None:
 
     caddy = get_caddy_admin()
     docker = DockerClient()
+    errors: list[str] = []
     try:
         async with SessionLocal() as db:
             state = await db.scalar(_sel(_AS).limit(1))
             if not state:
+                if strict:
+                    raise RuntimeError("agent is not enrolled")
                 return
 
             # Синхронизировать ВСЕ организации в локальной БД (pool-нода может
@@ -558,6 +563,7 @@ async def _resync_node_caddy_routes() -> None:
                     logger.info("node caddy sync: landing %s", org.domain)
                 except Exception as exc:
                     logger.warning("node caddy sync: landing %s failed: %s", org.domain, exc)
+                    errors.append(f"landing {org.domain}: {exc}")
 
             active = (await db.execute(
                 _sel(_SD, _Sch).join(_Sch, _SD.school_id == _Sch.id)
@@ -574,6 +580,7 @@ async def _resync_node_caddy_routes() -> None:
                     logger.info("node caddy sync: school %s", domain.domain)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("node caddy sync: school %s failed: %s", domain.domain, exc)
+                    errors.append(f"school {domain.domain}: {exc}")
 
             suspended = (await db.execute(
                 _sel(_SD, _Sch).join(_Sch, _SD.school_id == _Sch.id)
@@ -585,8 +592,217 @@ async def _resync_node_caddy_routes() -> None:
                     logger.info("node caddy sync: suspended school %s -> 503", domain.domain)
                 except Exception as exc:  # noqa: BLE001
                     logger.warning("node caddy sync: suspended school %s failed: %s", domain.domain, exc)
+                    errors.append(f"school {domain.domain}: {exc}")
     except Exception as exc:  # noqa: BLE001
         logger.warning("node caddy route sync skipped: %s", exc)
+        errors.append(str(exc))
+    if strict and errors:
+        raise RuntimeError("Caddy route resync failed: " + "; ".join(errors))
+
+
+def _web_image_repository(image: str) -> str:
+    return image.rsplit("@sha256:", 1)[0]
+
+
+def _clear_web_rollout(state: AgentState) -> None:
+    state.web_rollout_target_image = None
+    state.web_rollout_previous_image_id = None
+    state.web_rollout_previous_image_ref = None
+    state.web_rollout_phase = None
+    state.web_rollout_started_at = None
+    state.web_rollout_updated_at = None
+    state.web_rollout_error_code = None
+
+
+async def _set_web_rollout_phase(
+    db: AsyncSession,
+    state: AgentState,
+    phase: str,
+    error_code: str | None = None,
+) -> None:
+    state.web_rollout_phase = phase
+    state.web_rollout_updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    state.web_rollout_error_code = error_code
+    await db.commit()
+
+
+async def _validate_web_target(docker: DockerClient, target: str) -> str:
+    if not await docker.web_container_has_digest(target):
+        raise RuntimeError("perum_web target digest is not running")
+    image_id, _, _ = await docker.inspect_web_container()
+    await docker.wait_for_healthy("perum_web", timeout_s=180, require_healthcheck=True)
+    if await docker.container_image_id("perum_web") != image_id:
+        raise RuntimeError("perum_web runtime image identity mismatch")
+    await _resync_node_caddy_routes(strict=True)
+    return image_id
+
+
+async def _recover_web_rollout_transaction(
+    db: AsyncSession,
+    state: AgentState,
+    docker: DockerClient,
+) -> bool:
+    target = state.web_rollout_target_image
+    phase = state.web_rollout_phase
+    if not target or not phase:
+        return True
+
+    if phase in {"swapped", "validated", "finalizing"} and await docker.web_container_has_digest(target):
+        try:
+            await _validate_web_target(docker, target)
+            await _set_web_rollout_phase(db, state, "finalizing")
+            await docker.finalize_web_container()
+            state.desired_web_image = target
+            _clear_web_rollout(state)
+            await db.commit()
+            return True
+        except Exception:
+            await db.rollback()
+            await _set_web_rollout_phase(db, state, phase, "target_finalize_failed")
+
+    previous_image_id = state.web_rollout_previous_image_id
+    if not previous_image_id:
+        await _set_web_rollout_phase(db, state, phase, "previous_image_missing")
+        return False
+    try:
+        await docker.recover_previous_web_container(previous_image_id)
+        await docker.wait_for_healthy("perum_web", timeout_s=180, require_healthcheck=True)
+        current_image_id, current_image_ref, _ = await docker.inspect_web_container()
+        if current_image_id != previous_image_id:
+            raise RuntimeError("restored Web image identity mismatch")
+        if state.web_rollout_previous_image_ref and current_image_ref != state.web_rollout_previous_image_ref:
+            raise RuntimeError("restored Web image reference mismatch")
+        await _resync_node_caddy_routes(strict=True)
+        await docker.finalize_web_container()
+        _clear_web_rollout(state)
+        await db.commit()
+        return True
+    except Exception:
+        await db.rollback()
+        await _set_web_rollout_phase(db, state, phase, "rollback_recovery_failed")
+        return False
+
+
+async def rollout_web_on_node(
+    db: AsyncSession,
+    req: AgentWebRolloutRequest,
+) -> AgentWebRolloutResponse:
+    settings = get_settings()
+    configured = settings.WEB_IMAGE
+    if (
+        not configured
+        or "@sha256:" not in configured
+        or _web_image_repository(req.image) != _web_image_repository(configured)
+    ):
+        return AgentWebRolloutResponse(success=False, image=req.image, message="Web image is not trusted")
+
+    state = await get_agent_state(db)
+    if state is None:
+        return AgentWebRolloutResponse(success=False, image=req.image, message="Agent is not enrolled")
+
+    docker = DockerClient()
+    previous_image_id: str | None = None
+    deployed_image_id: str | None = None
+    protected_before: frozenset[tuple[str, str]] | None = None
+    lock_file = open("/tmp/perum-web-rollout.lock", "a+")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return AgentWebRolloutResponse(success=False, image=req.image, message="Web rollout already in progress")
+        if not await _recover_web_rollout_transaction(db, state, docker):
+            return AgentWebRolloutResponse(success=False, image=req.image, message="Web rollout recovery failed")
+
+        previous_image_id, previous_image_ref, protected_before = await docker.inspect_web_container()
+        runtime_matches = await docker.web_container_has_digest(req.image)
+        if runtime_matches:
+            deployed_image_id = previous_image_id
+        else:
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            state.web_rollout_target_image = req.image
+            state.web_rollout_previous_image_id = previous_image_id
+            state.web_rollout_previous_image_ref = previous_image_ref
+            state.web_rollout_started_at = now
+            state.web_rollout_updated_at = now
+            state.web_rollout_error_code = None
+            state.web_rollout_phase = "prepared"
+            await db.commit()
+            deployed_image_id, protected_after = await docker.replace_web_container(req.image)
+            if protected_after != protected_before:
+                raise RuntimeError("protected container identity changed during swap")
+            await _set_web_rollout_phase(db, state, "swapped")
+        validated_image_id = await _validate_web_target(docker, req.image)
+        if deployed_image_id != validated_image_id:
+            raise RuntimeError("perum_web runtime image identity mismatch")
+        rollout_names = {"perum_web", "perum_web.rollback"}
+        if await docker.container_identities(exclude=rollout_names) != protected_before:
+            raise RuntimeError("protected container identity changed")
+        if not runtime_matches:
+            await _set_web_rollout_phase(db, state, "validated")
+            await _set_web_rollout_phase(db, state, "finalizing")
+            await docker.finalize_web_container()
+            _clear_web_rollout(state)
+        state.desired_web_image = req.image
+        await db.commit()
+        return AgentWebRolloutResponse(
+            success=True,
+            image=req.image,
+            previous_image_id=previous_image_id,
+            deployed_image_id=deployed_image_id,
+            protected_containers_unchanged=True,
+            routes_resynced=True,
+        )
+    except Exception as exc:
+        await db.rollback()
+        rolled_back = False
+        message = "Web rollout failed"
+        if state.web_rollout_phase == "swapped":
+            await _set_web_rollout_phase(db, state, "prepared", "target_validation_failed")
+        if state.web_rollout_phase is not None:
+            rolled_back = await _recover_web_rollout_transaction(db, state, docker)
+            if not rolled_back:
+                message = "Web rollout and rollback failed"
+        protected_unchanged = False
+        if protected_before is not None:
+            try:
+                protected_unchanged = await docker.container_identities(
+                    exclude={"perum_web", "perum_web.rollback"}
+                ) == protected_before
+            except Exception:
+                pass
+        return AgentWebRolloutResponse(
+            success=False,
+            image=req.image,
+            previous_image_id=previous_image_id,
+            deployed_image_id=deployed_image_id,
+            rolled_back=rolled_back,
+            protected_containers_unchanged=protected_unchanged,
+            message=message,
+        )
+    finally:
+        lock_file.close()
+
+
+async def reconcile_desired_web_on_startup() -> None:
+    try:
+        async with SessionLocal() as db:
+            state = await get_agent_state(db)
+            if state is None:
+                return
+            docker = DockerClient()
+            if not await _recover_web_rollout_transaction(db, state, docker):
+                logger.warning("agent: unfinished Web rollout recovery failed")
+                return
+            if state.desired_web_image is None:
+                return
+            image = state.desired_web_image
+            if await docker.web_container_has_digest(image):
+                return
+            receipt = await rollout_web_on_node(db, AgentWebRolloutRequest(image=image))
+            if not receipt.success:
+                logger.warning("agent: desired Web image reconciliation failed: %s", receipt.message)
+    except Exception as exc:
+        logger.warning("agent: desired Web image reconciliation failed: %s", exc)
 
 
 async def deprovision_landing_on_node(db: AsyncSession, org_slug: str, domain: str | None = None) -> "AgentLandingResponse":

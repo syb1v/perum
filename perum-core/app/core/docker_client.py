@@ -285,7 +285,7 @@ class DockerClient:
                 raise DockerClientError(f"container '{name}' configuration drift")
         await asyncio.to_thread(_assert)
 
-    async def wait_for_healthy(self, name: str, *, timeout_s: int) -> None:
+    async def wait_for_healthy(self, name: str, *, timeout_s: int, require_healthcheck: bool = False) -> None:
         """Poll a container until its healthcheck reports healthy.
 
         A container with no healthcheck is treated as healthy once it is
@@ -306,7 +306,7 @@ class DockerClient:
             status, health = last
             if health == "healthy":
                 return
-            if health is None and status == "running":
+            if health is None and status == "running" and not require_healthcheck:
                 return
             if status in ("exited", "dead"):
                 raise DockerClientError(
@@ -563,6 +563,187 @@ class DockerClient:
                 return False
 
         return await asyncio.to_thread(_remove)
+
+    async def inspect_web_container(self, *, name: str = "perum_web") -> tuple[str, str, frozenset[tuple[str, str]]]:
+        def _inspect() -> tuple[str, str, frozenset[tuple[str, str]]]:
+            container = self.client.containers.get(name)
+            container.reload()
+            container.image.reload()
+            attrs = container.attrs
+            config = attrs.get("Config") or {}
+            host = attrs.get("HostConfig") or {}
+            image_config = container.image.attrs.get("Config") or {}
+            env = dict(item.split("=", 1) for item in config.get("Env") or [] if "=" in item)
+            image_env = dict(item.split("=", 1) for item in image_config.get("Env") or [] if "=" in item)
+            expected_env = image_env | {"NODE_ENV": "production"}
+            networks = set(((attrs.get("NetworkSettings") or {}).get("Networks") or {}))
+            valid = (
+                env == expected_env
+                and networks == {"perum_internal"}
+                and host.get("NetworkMode") == "perum_internal"
+                and (host.get("RestartPolicy") or {}).get("Name") == "unless-stopped"
+                and not any((host.get("PortBindings") or {}).values())
+                and not bool(host.get("PublishAllPorts"))
+                and not (attrs.get("Mounts") or [])
+                and not (host.get("Binds") or [])
+                and not bool(host.get("Privileged"))
+                and not bool(host.get("ReadonlyRootfs"))
+                and not (host.get("CapAdd") or [])
+                and not (host.get("CapDrop") or [])
+                and not (host.get("SecurityOpt") or [])
+                and not (host.get("Tmpfs") or {})
+                and not (host.get("Devices") or [])
+                and not (host.get("ExtraHosts") or [])
+                and not (host.get("Dns") or [])
+                and not (host.get("Memory") or 0)
+                and not (host.get("NanoCpus") or 0)
+                and host.get("PidsLimit") in {None, 0}
+                and config.get("Cmd") == image_config.get("Cmd")
+                and config.get("Entrypoint") == image_config.get("Entrypoint")
+                and config.get("Healthcheck") == image_config.get("Healthcheck")
+                and (config.get("User") or "") == (image_config.get("User") or "")
+                and (config.get("WorkingDir") or "") == (image_config.get("WorkingDir") or "")
+            )
+            if not valid:
+                raise DockerClientError("perum_web runtime configuration drift")
+            protected = frozenset(
+                (item.name, item.id)
+                for item in self.client.containers.list(all=True)
+                if item.name not in {name, f"{name}.rollback"}
+            )
+            return attrs["Image"], config.get("Image") or attrs["Image"], protected
+
+        return await asyncio.to_thread(_inspect)
+
+    async def replace_web_container(self, image: str, *, name: str = "perum_web") -> tuple[str, frozenset[tuple[str, str]]]:
+        def _replace() -> tuple[str, frozenset[tuple[str, str]]]:
+            backup_name = f"{name}.rollback"
+            try:
+                stale_backup = self.client.containers.get(backup_name)
+            except NotFound:
+                pass
+            else:
+                stale_backup.remove(force=True)
+            old = self.client.containers.get(name)
+            old.reload()
+            old_attrs = old.attrs
+            protected = frozenset(
+                (container.name, container.id)
+                for container in self.client.containers.list(all=True)
+                if container.name not in {name, backup_name}
+            )
+            pulled = self.client.images.pull(image)
+            expected_digest = image.rsplit("@", 1)[1]
+            repo_digests = pulled.attrs.get("RepoDigests") or []
+            if not any(item.endswith(f"@{expected_digest}") for item in repo_digests):
+                raise DockerClientError("pulled perum-web image does not expose the requested digest")
+
+            old.rename(backup_name)
+            old.stop(timeout=10)
+            try:
+                replacement = self.client.containers.create(
+                    image=pulled.id,
+                    name=name,
+                    environment={"NODE_ENV": "production"},
+                    network="perum_internal",
+                    restart_policy={"Name": "unless-stopped"},
+                )
+                replacement.start()
+            except Exception:
+                try:
+                    self.client.containers.get(name).remove(force=True)
+                except NotFound:
+                    pass
+                old.rename(name)
+                old.start()
+                raise
+            return pulled.id, protected
+
+        return await asyncio.to_thread(_replace)
+
+    async def web_container_has_digest(self, image: str, *, name: str = "perum_web") -> bool:
+        try:
+            return image in await self.container_repo_digests(name)
+        except NotFound:
+            return False
+
+    async def rollback_web_container(self, image_id: str, *, name: str = "perum_web") -> None:
+        def _rollback() -> None:
+            backup = self.client.containers.get(f"{name}.rollback")
+            backup.reload()
+            if backup.attrs["Image"] != image_id:
+                raise DockerClientError("rollback image identity mismatch")
+            try:
+                self.client.containers.get(name).remove(force=True)
+            except NotFound:
+                pass
+            backup.rename(name)
+            backup.start()
+
+        await asyncio.to_thread(_rollback)
+
+    async def recover_previous_web_container(self, image_id: str, *, name: str = "perum_web") -> None:
+        def _recover() -> None:
+            backup_name = f"{name}.rollback"
+            try:
+                backup = self.client.containers.get(backup_name)
+            except NotFound:
+                current = self.client.containers.get(name)
+                current.reload()
+                if current.attrs["Image"] != image_id:
+                    raise DockerClientError("recorded Web rollback container is missing")
+                current.start()
+                return
+            backup.reload()
+            if backup.attrs["Image"] != image_id:
+                raise DockerClientError("rollback image identity mismatch")
+            try:
+                current = self.client.containers.get(name)
+                current.remove(force=True)
+            except NotFound:
+                pass
+            backup.rename(name)
+            backup.start()
+
+        await asyncio.to_thread(_recover)
+
+    async def finalize_web_container(self, *, name: str = "perum_web") -> None:
+        def _finalize() -> None:
+            try:
+                self.client.containers.get(f"{name}.rollback").remove(force=True)
+            except NotFound:
+                pass
+
+        await asyncio.to_thread(_finalize)
+
+    async def container_image_id(self, name: str) -> str:
+        def _image_id() -> str:
+            container = self.client.containers.get(name)
+            container.reload()
+            return container.attrs["Image"]
+
+        return await asyncio.to_thread(_image_id)
+
+    async def container_repo_digests(self, name: str) -> frozenset[str]:
+        def _repo_digests() -> frozenset[str]:
+            container = self.client.containers.get(name)
+            container.reload()
+            container.image.reload()
+            return frozenset(container.image.attrs.get("RepoDigests") or [])
+
+        return await asyncio.to_thread(_repo_digests)
+
+    async def container_identities(self, *, exclude: set[str] | None = None) -> frozenset[tuple[str, str]]:
+        excluded = exclude or set()
+
+        def _identities() -> frozenset[tuple[str, str]]:
+            return frozenset(
+                (container.name, container.id)
+                for container in self.client.containers.list(all=True)
+                if container.name not in excluded
+            )
+
+        return await asyncio.to_thread(_identities)
 
 
 _docker_client: DockerClient | None = None
