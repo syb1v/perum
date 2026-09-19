@@ -413,3 +413,4 @@
 | 410 | 2026-09-19 | _______ | feat(mobile): выровнен native visual language с Web design system |
 | 411 | 2026-09-19 | _______ | fix(web): обновлены уязвимые production dependency chains |
 | 412 | 2026-09-19 | _______ | fix(deps): очищен workspace audit без downgrade Expo SDK 57 |
+| 413 | 2026-09-19 | _______ | fix(contracts): восстановлена совместимость openapi-typescript и Redocly |
