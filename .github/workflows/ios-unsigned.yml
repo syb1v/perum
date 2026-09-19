@@ -60,7 +60,7 @@ jobs:
           set -euo pipefail
           workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
           test -n "$workspace" || { echo "No iOS workspace found"; exit 1; }
-          scheme="$(xcodebuild -list -json -workspace "$workspace" | jq -r '[.workspace.schemes[] | select(startswith("Pods-") | not)][0] // empty')"
+          scheme="$(xcodebuild -list -json -workspace "$workspace" | jq -r '[.workspace.schemes[] | select(. == "PERUM")][0] // ([.workspace.schemes[] | select(startswith("Pods-") | not) | select(. != "EASClient")][0] // empty)')"
           test -n "$scheme" || { echo "No application Xcode scheme found"; exit 1; }
           xcodebuild \
             -workspace "$workspace" \
